@@ -107,7 +107,7 @@ Step 2: Deploy Backend to Render
    - Build Command: 
      pip install -r eksms/requirements.txt && python eksms/manage.py collectstatic --noinput
    - Start Command:
-     gunicorn eksms.eksms.wsgi:application --bind 0.0.0.0:$PORT --workers 4
+     gunicorn eksms.eksms.wsgi:application --bind 0.0.0.0:$PORT --workers 1
    - Instance Type: Free
 
 5. Add Environment Variables (from .env.render):
