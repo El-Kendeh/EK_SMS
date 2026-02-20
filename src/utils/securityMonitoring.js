@@ -212,9 +212,11 @@ export class SuspiciousActivityMonitor {
   }
 }
 
-export default {
+const SECURITY_MONITOR = {
   SecurityLogger,
   RateLimiter,
   SessionTimeout,
   SuspiciousActivityMonitor,
 };
+
+export default SECURITY_MONITOR;

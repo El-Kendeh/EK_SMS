@@ -92,10 +92,12 @@ export const initializeSecurityListeners = () => {
   };
 };
 
-export default {
+const CSP_UTILS = {
   generateCSPHeader,
   applyCSPMetaTag,
   getCSPReportingEndpoint,
   handleCSPViolation,
   initializeSecurityListeners,
 };
+
+export default CSP_UTILS;
