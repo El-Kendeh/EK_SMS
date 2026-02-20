@@ -1,33 +1,14 @@
-import { useEffect } from 'react';
-import logo from './logo.svg';
+import React from 'react';
 import './App.css';
-import { SecurityLogger } from './utils/securityMonitoring';
 
 function App() {
-  // Log page load
-  useEffect(() => {
-    SecurityLogger.info('App loaded');
-  }, []);
+  const logoUrl = process.env.PUBLIC_URL + '/logo.jpeg';
 
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-        <p style={{ fontSize: '12px', color: '#666' }}>
-          Security features enabled. Check console for security logs.
-        </p>
-      </header>
+    <div className="App plain-bg">
+      <div className="logo-container">
+        <img src={logoUrl} alt="logo" className="logo-zoom" />
+      </div>
     </div>
   );
 }

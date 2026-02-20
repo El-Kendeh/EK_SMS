@@ -7,6 +7,48 @@
   pointer-events: none;
 }
 
+.plain-bg {
+  background-color: #ffffff;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-zoom {
+  max-width: 60vmin;
+  max-height: 60vmin;
+  width: auto;
+  height: auto;
+  will-change: transform;
+  transition: transform 300ms ease-in-out;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .logo-zoom {
+    animation: zoomInOut 6s ease-in-out infinite;
+  }
+}
+
+@keyframes zoomInOut {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .App-logo {
     animation: App-logo-spin infinite 20s linear;
