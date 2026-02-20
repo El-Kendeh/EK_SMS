@@ -105,9 +105,9 @@ Step 2: Deploy Backend to Render
    - Name: ek-sms-backend
    - Environment: Python 3
    - Build Command: 
-     pip install -r requirements.txt && python manage.py collectstatic --noinput
+     pip install -r eksms/requirements.txt && python eksms/manage.py collectstatic --noinput
    - Start Command:
-     gunicorn eksms.wsgi:application --bind 0.0.0.0:$PORT
+     gunicorn eksms.eksms.wsgi:application --bind 0.0.0.0:$PORT --workers 4
    - Instance Type: Free
 
 5. Add Environment Variables (from .env.render):

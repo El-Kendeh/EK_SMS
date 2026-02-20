@@ -3,11 +3,10 @@ web:
   plan: free
   name: ek-sms-backend
   runtime: python312
-  rootDir: eksms
   buildCommand: |
-    pip install -r requirements.txt
-    python manage.py collectstatic --noinput
-  startCommand: gunicorn eksms.wsgi:application --bind 0.0.0.0:$PORT
+    pip install -r eksms/requirements.txt
+    python eksms/manage.py collectstatic --noinput
+  startCommand: gunicorn eksms.eksms.wsgi:application --bind 0.0.0.0:$PORT --workers 4
   envVars:
     - key: DEBUG
       value: 'False'
