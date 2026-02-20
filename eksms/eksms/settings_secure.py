@@ -58,8 +58,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'eksms.middleware.SecurityHeadersMiddleware',  # Custom security headers
-    'eksms.middleware.AuditLoggingMiddleware',  # Security logging
+    'eksms.eksms.middleware.SecurityHeadersMiddleware',  # Custom security headers
+    'eksms.eksms.middleware.AuditLoggingMiddleware',  # Security logging
 ]
 
 ROOT_URLCONF = 'eksms.urls'
