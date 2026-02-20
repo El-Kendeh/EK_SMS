@@ -1,22 +1,34 @@
 """
-URL configuration for eksms project.
+URL configuration for eksms project with security considerations.
 
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/6.0/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
 from django.urls import path
+from django.views.generic import RedirectView
+from django.views.defaults import page_not_found, server_error
+from .views import favicon_view
 
 urlpatterns = [
+    # Favicon
+    path('favicon.jpeg', favicon_view, name='favicon'),
+    
+    # Root URL redirects to admin
+    path('', RedirectView.as_view(url='admin/', permanent=False)),
+    
+    # Admin interface
     path('admin/', admin.site.urls),
+    
+    # API endpoints should be added here
+    # Example: path('api/auth/', include('api.urls')),
 ]
+
+# Custom error handlers for better security (don't expose stack traces in production)
+handler404 = page_not_found
+handler500 = server_error
+
+# Security configuration for admin site
+admin.site.site_header = "SMS Administration"
+admin.site.site_title = "SMS Admin"
+admin.site.index_title = "Welcome to SMS Administration"

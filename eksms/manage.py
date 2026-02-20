@@ -6,7 +6,8 @@ import sys
 
 def main():
     """Run administrative tasks."""
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'eksms.settings')
+    # Use secure settings by default
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'eksms.settings_secure')
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:
