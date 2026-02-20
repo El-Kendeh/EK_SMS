@@ -62,7 +62,7 @@ MIDDLEWARE = [
     'eksms.eksms.middleware.AuditLoggingMiddleware',  # Security logging
 ]
 
-ROOT_URLCONF = 'eksms.urls'
+ROOT_URLCONF = 'eksms.eksms.urls'
 
 TEMPLATES = [
     {
