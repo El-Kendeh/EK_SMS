@@ -3,9 +3,9 @@
  * Run this in your main App.js or index.js
  */
 
-import { initializeSecurityListeners } from './utils/csp';
-import { SessionTimeout, SecurityLogger } from './utils/securityMonitoring';
-import SECURITY_CONFIG from './config/security';
+import { initializeSecurityListeners } from '../utils/csp';
+import { SessionTimeout, SecurityLogger } from '../utils/securityMonitoring';
+import SECURITY_CONFIG from '../config/security';
 
 /**
  * Initialize all security features

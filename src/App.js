@@ -1,10 +1,11 @@
+import { useEffect } from 'react';
 import logo from './logo.svg';
 import './App.css';
 import { SecurityLogger } from './utils/securityMonitoring';
 
 function App() {
   // Log page load
-  React.useEffect(() => {
+  useEffect(() => {
     SecurityLogger.info('App loaded');
   }, []);
 
