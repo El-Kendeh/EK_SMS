@@ -1,54 +1,54 @@
-# Dockerfile with Security Best Practices
+ Dockerfile with Security Best Practices
 
 ```dockerfile
-# Multi-stage build for smaller final image
+ Multi-stage build for smaller final image
 FROM python:3.11-slim as builder
 
 WORKDIR /app
 
-# Install build dependencies
+ Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install Python dependencies
+ Copy requirements and install Python dependencies
 COPY requirements.txt .
 RUN pip install --user --no-cache-dir -r requirements.txt
 
-# Final stage
+ Final stage
 FROM python:3.11-slim
 
 WORKDIR /app
 
-# Create non-root user for security
+ Create non-root user for security
 RUN useradd -m -u 1000 djangouser
 
-# Install runtime dependencies only
+ Install runtime dependencies only
 RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy Python packages from builder
+ Copy Python packages from builder
 COPY --from=builder /root/.local /home/djangouser/.local
 
-# Copy application code
+ Copy application code
 COPY --chown=djangouser:djangouser . .
 
-# Set environment path
+ Set environment path
 ENV PATH=/home/djangouser/.local/bin:$PATH
 
-# Security: Run as non-root user
+ Security: Run as non-root user
 USER djangouser
 
-# Expose port (non-privileged)
+ Expose port (non-privileged)
 EXPOSE 8000
 
-# Health check
+ Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health/ || exit 1
 
-# Run gunicorn with secure defaults
+ Run gunicorn with secure defaults
 CMD [
     "gunicorn",
     "eksms.wsgi:application",
@@ -63,7 +63,7 @@ CMD [
 ]
 ```
 
-## Docker Compose with Security
+ Docker Compose with Security
 
 ```yaml
 version: '3.8'
@@ -77,7 +77,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    # Security
+     Security
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
       interval: 10s
@@ -86,7 +86,7 @@ services:
     networks:
       - backend
     restart: unless-stopped
-    # Don't expose DB to external network
+     Don't expose DB to external network
 
   web:
     build: .
@@ -112,7 +112,7 @@ services:
     networks:
       - backend
     restart: unless-stopped
-    # Security: read-only filesystem except for necessary dirs
+     Security: read-only filesystem except for necessary dirs
     read_only: true
     tmpfs:
       - /tmp
@@ -153,23 +153,23 @@ networks:
     driver: bridge
 ```
 
-## Docker Security Best Practices Applied
+ Docker Security Best Practices Applied
 
-1. **Multi-stage build** - Reduces final image size
-2. **Non-root user** - Runs as `djangouser` (UID 1000)
-3. **Minimal base image** - Uses `python:3.11-slim`
-4. **Health checks** - Container health monitoring
-5. **Read-only filesystem** - Except for temp directories
-6. **Dropped capabilities** - No unnecessary Linux capabilities
-7. **Network isolation** - Backend network separate from public
-8. **Environment variables** - Sensitive data from .env, not hardcoded
-9. **Dependency caching** - Multi-stage build optimization
-10. **Updated packages** - Always use latest patch versions
+1. Multi-stage build - Reduces final image size
+2. Non-root user - Runs as `djangouser` (UID 1000)
+3. Minimal base image - Uses `python:3.11-slim`
+4. Health checks - Container health monitoring
+5. Read-only filesystem - Except for temp directories
+6. Dropped capabilities - No unnecessary Linux capabilities
+7. Network isolation - Backend network separate from public
+8. Environment variables - Sensitive data from .env, not hardcoded
+9. Dependency caching - Multi-stage build optimization
+10. Updated packages - Always use latest patch versions
 
-## Nginx Configuration for SSL/TLS
+ Nginx Configuration for SSL/TLS
 
 ```nginx
-# nginx.conf
+ nginx.conf
 user nginx;
 worker_processes auto;
 error_log /var/log/nginx/error.log warn;
@@ -196,7 +196,7 @@ http {
     types_hash_max_size 2048;
     client_max_body_size 20M;
 
-    # Security Headers
+     Security Headers
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
     add_header X-Frame-Options "DENY" always;
     add_header X-Content-Type-Options "nosniff" always;
@@ -204,59 +204,59 @@ http {
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
     add_header Permissions-Policy "geolocation=(), microphone=(), camera=()" always;
 
-    # Rate limiting
+     Rate limiting
     limit_req_zone $binary_remote_addr zone=api_limit:10m rate=10r/s;
     limit_req_zone $binary_remote_addr zone=login_limit:10m rate=5r/m;
 
-    # Upstream Django app
+     Upstream Django app
     upstream django {
         server web:8000;
     }
 
-    # Redirect HTTP to HTTPS
+     Redirect HTTP to HTTPS
     server {
         listen 80;
         server_name _;
         return 301 https://$host$request_uri;
     }
 
-    # HTTPS server
+     HTTPS server
     server {
         listen 443 ssl http2;
         server_name yourdomain.com www.yourdomain.com;
 
-        # SSL certificates
+         SSL certificates
         ssl_certificate /etc/nginx/ssl/cert.pem;
         ssl_certificate_key /etc/nginx/ssl/key.pem;
 
-        # SSL configuration
+         SSL configuration
         ssl_protocols TLSv1.2 TLSv1.3;
         ssl_ciphers HIGH:!aNULL:!MD5;
         ssl_prefer_server_ciphers on;
         ssl_session_cache shared:SSL:10m;
         ssl_session_timeout 10m;
 
-        # Gzip compression
+         Gzip compression
         gzip on;
         gzip_vary on;
         gzip_min_length 1024;
         gzip_types text/plain text/css text/xml text/javascript 
                    application/x-javascript application/xml+rss;
 
-        # Static files
+         Static files
         location /static/ {
             alias /app/staticfiles/;
             expires 30d;
             add_header Cache-Control "public, immutable";
         }
 
-        # Media files
+         Media files
         location /media/ {
             alias /app/media/;
             expires 7d;
         }
 
-        # API - with rate limiting
+         API - with rate limiting
         location /api/ {
             limit_req zone=api_limit burst=20 nodelay;
             proxy_pass http://django;
@@ -266,7 +266,7 @@ http {
             proxy_set_header X-Forwarded-Proto $scheme;
         }
 
-        # Login endpoint - stricter rate limiting
+         Login endpoint - stricter rate limiting
         location /api/auth/login/ {
             limit_req zone=login_limit burst=5 nodelay;
             proxy_pass http://django;
@@ -276,11 +276,11 @@ http {
             proxy_set_header X-Forwarded-Proto $scheme;
         }
 
-        # Admin - restricted access
+         Admin - restricted access
         location /admin/ {
-            # Restrict to specific IPs (optional)
-            # allow 10.0.0.0/8;
-            # deny all;
+             Restrict to specific IPs (optional)
+             allow 10.0.0.0/8;
+             deny all;
             
             proxy_pass http://django;
             proxy_set_header Host $host;
@@ -289,7 +289,7 @@ http {
             proxy_set_header X-Forwarded-Proto $scheme;
         }
 
-        # Django app
+         Django app
         location / {
             proxy_pass http://django;
             proxy_set_header Host $host;
@@ -302,7 +302,7 @@ http {
 }
 ```
 
-## Deployment Checklist
+ Deployment Checklist
 
 - [ ] Generate strong SSL certificates (Let's Encrypt recommended)
 - [ ] Set secure environment variables
@@ -317,24 +317,24 @@ http {
 - [ ] Set up backup strategy for database volume
 - [ ] Configure monitoring and alerting
 
-## Running Production Deployment
+ Running Production Deployment
 
 ```bash
-# Deploy with docker-compose
+ Deploy with docker-compose
 docker-compose -f docker-compose.yml up -d
 
-# View logs
+ View logs
 docker-compose logs -f
 
-# Run migrations after first deploy
+ Run migrations after first deploy
 docker-compose exec web python eksms/manage.py migrate
 
-# Collect static files
+ Collect static files
 docker-compose exec web python eksms/manage.py collectstatic --noinput
 
-# Create superuser
+ Create superuser
 docker-compose exec web python eksms/manage.py createsuperuser
 
-# Stop services
+ Stop services
 docker-compose down
 ```

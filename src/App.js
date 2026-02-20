@@ -1,7 +1,13 @@
 import logo from './logo.svg';
 import './App.css';
+import { SecurityLogger } from './utils/securityMonitoring';
 
 function App() {
+  // Log page load
+  React.useEffect(() => {
+    SecurityLogger.info('App loaded');
+  }, []);
+
   return (
     <div className="App">
       <header className="App-header">
@@ -17,6 +23,9 @@ function App() {
         >
           Learn React
         </a>
+        <p style={{ fontSize: '12px', color: '#666' }}>
+          Security features enabled. Check console for security logs.
+        </p>
       </header>
     </div>
   );

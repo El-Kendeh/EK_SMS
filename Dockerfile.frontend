@@ -1,0 +1,35 @@
+# Frontend Dockerfile - React App with improved build
+FROM node:18-slim AS builder
+
+WORKDIR /app
+
+# Install dependencies with npm ci for reproducible builds
+COPY package*.json ./
+
+RUN npm ci --legacy-peer-deps && npm cache clean --force
+
+COPY . .
+
+# Build the app
+RUN npm run build
+
+# Production stage with serve
+FROM node:18-slim
+
+WORKDIR /app
+
+# Install serve to run the app
+RUN npm install -g serve@latest
+
+# Copy built app from builder
+COPY --from=builder /app/build ./build
+
+EXPOSE 3000
+
+ENV REACT_APP_API_URL=http://localhost:8000 \
+    NODE_ENV=production
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:3000/ || exit 1
+
+CMD ["serve", "-s", "build", "-l", "3000"]

@@ -1,0 +1,29 @@
+web:
+  type: web
+  plan: free
+  name: ek-sms-backend
+  runtime: python312
+  rootDir: eksms
+  buildCommand: |
+    pip install -r requirements.txt
+    python manage.py collectstatic --noinput
+  startCommand: gunicorn eksms.wsgi:application --bind 0.0.0.0:$PORT
+  envVars:
+    - key: DEBUG
+      value: 'False'
+    - key: PYTHONUNBUFFERED
+      value: '1'
+    - key: SECRET_KEY
+      generateValue: true
+    - key: ALLOWED_HOSTS
+      value: 'ek-sms-backend.onrender.com,*.onrender.com'
+    - key: CORS_ALLOWED_ORIGINS
+      value: 'https://ek-sms-one.vercel.app'
+    - key: SECURE_SSL_REDIRECT
+      value: 'True'
+    - key: SESSION_COOKIE_SECURE
+      value: 'True'
+    - key: CSRF_COOKIE_SECURE
+      value: 'True'
+    - key: SECURE_HSTS_SECONDS
+      value: '31536000'

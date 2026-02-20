@@ -1,110 +1,110 @@
-# EK-SMS - Secure Django + React Application
+ EK-SMS - Secure Django + React Application
 
-A full-stack SMS application with Django backend and React frontend, built with **enterprise-grade security** as the foundation.
+A full-stack SMS application with Django backend and React frontend, built with enterprise-grade security as the foundation.
 
-## 🔒 Security-First Architecture
+ 🔒 Security-First Architecture
 
 This project implements real-world security best practices:
 
-- ✅ **Secure Settings** - Environment-based configuration, no hardcoded secrets
-- ✅ **HTTPS/SSL** - Full TLS support with HSTS headers
-- ✅ **CSRF Protection** - Token-based CSRF prevention
-- ✅ **CORS Whitelist** - Controlled cross-origin access
-- ✅ **Secure Cookies** - HttpOnly, Secure, SameSite flags
-- ✅ **Security Headers** - CSP, X-Frame-Options, X-Content-Type-Options
-- ✅ **Input Validation** - Backend validation for all inputs
-- ✅ **SQL Injection Prevention** - Django ORM protections
-- ✅ **XSS Prevention** - Template auto-escaping + CSP
-- ✅ **Authentication** - Secure password hashing + token auth
-- ✅ **Logging & Monitoring** - Security event tracking
-- ✅ **Docker Security** - Containerization best practices
+- ✅ Secure Settings - Environment-based configuration, no hardcoded secrets
+- ✅ HTTPS/SSL - Full TLS support with HSTS headers
+- ✅ CSRF Protection - Token-based CSRF prevention
+- ✅ CORS Whitelist - Controlled cross-origin access
+- ✅ Secure Cookies - HttpOnly, Secure, SameSite flags
+- ✅ Security Headers - CSP, X-Frame-Options, X-Content-Type-Options
+- ✅ Input Validation - Backend validation for all inputs
+- ✅ SQL Injection Prevention - Django ORM protections
+- ✅ XSS Prevention - Template auto-escaping + CSP
+- ✅ Authentication - Secure password hashing + token auth
+- ✅ Logging & Monitoring - Security event tracking
+- ✅ Docker Security - Containerization best practices
 
-## 📂 Project Structure
+ 📂 Project Structure
 
 ```
 ek-sms/
-├── eksms/                 # Django Backend
+├── eksms/                  Django Backend
 │   ├── manage.py
 │   ├── eksms/
-│   │   ├── settings_secure.py    # Secure configuration
-│   │   ├── middleware.py         # Custom security middleware
-│   │   ├── secure_views.py       # Example API endpoints
+│   │   ├── settings_secure.py     Secure configuration
+│   │   ├── middleware.py          Custom security middleware
+│   │   ├── secure_views.py        Example API endpoints
 │   │   ├── urls.py
 │   │   ├── wsgi.py
 │   │   └── asgi.py
 │   ├── tests/
-│   │   └── test_security.py      # Security test suite
-│   └── db.sqlite3                # Development database
-├── src/                   # React Frontend
+│   │   └── test_security.py       Security test suite
+│   └── db.sqlite3                 Development database
+├── src/                    React Frontend
 │   ├── App.js
 │   ├── App.css
 │   ├── index.js
 │   └── ...
-├── public/               # Static assets
-├── .env                  # Environment variables (not in git)
-├── .env.example          # Environment template
-├── .gitignore            # Security: prevents committing secrets
-├── requirements.txt      # Python dependencies
-├── requirements-dev.txt  # Development dependencies
-├── SECURITY.md           # Detailed security guide
-├── DOCKER_SECURITY.md    # Docker deployment guide
-├── QUICK_START.md        # Quick setup instructions
-└── package.json          # Node.js dependencies
+├── public/                Static assets
+├── .env                   Environment variables (not in git)
+├── .env.example           Environment template
+├── .gitignore             Security: prevents committing secrets
+├── requirements.txt       Python dependencies
+├── requirements-dev.txt   Development dependencies
+├── SECURITY.md            Detailed security guide
+├── DOCKER_SECURITY.md     Docker deployment guide
+├── QUICK_START.md         Quick setup instructions
+└── package.json           Node.js dependencies
 ```
 
-## 🚀 Quick Start
+ 🚀 Quick Start
 
-### Backend Setup (Django)
+ Backend Setup (Django)
 
 ```bash
-# 1. Navigate to backend
+ 1. Navigate to backend
 cd eksms
 
-# 2. Create Python environment
+ 2. Create Python environment
 python -m venv venv
-source venv/Scripts/activate  # On Windows
+source venv/Scripts/activate   On Windows
 
-# 3. Install dependencies
+ 3. Install dependencies
 pip install -r ../requirements.txt
 
-# 4. Configure environment
+ 4. Configure environment
 copy ..\.env.example ..\.env
-# Edit .env and set:
-# - SECRET_KEY (generate with: python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())")
-# - ALLOWED_HOSTS (your domain)
-# - CORS_ALLOWED_ORIGINS (your frontend URL)
+ Edit .env and set:
+ - SECRET_KEY (generate with: python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())")
+ - ALLOWED_HOSTS (your domain)
+ - CORS_ALLOWED_ORIGINS (your frontend URL)
 
-# 5. Apply migrations
+ 5. Apply migrations
 python manage.py migrate
 
-# 6. Create admin user
+ 6. Create admin user
 python manage.py createsuperuser
 
-# 7. Run security check
+ 7. Run security check
 python manage.py check --deploy
 
-# 8. Start development server
+ 8. Start development server
 python manage.py runserver 0.0.0.0:8000
 ```
 
 Backend runs on: `http://localhost:8000`
 Admin panel: `http://localhost:8000/admin/`
 
-### Frontend Setup (React)
+ Frontend Setup (React)
 
 ```bash
-# In new terminal, from project root
+ In new terminal, from project root
 npm install
 npm start
 ```
 
 Frontend runs on: `http://localhost:3000`
 
-## 🔧 Configuration
+ 🔧 Configuration
 
-### Environment Variables (.env)
+ Environment Variables (.env)
 
-**Development:**
+Development:
 ```env
 DEBUG=True
 SECRET_KEY=your-dev-key
@@ -113,7 +113,7 @@ CORS_ALLOWED_ORIGINS=http://localhost:3000
 SECURE_SSL_REDIRECT=False
 ```
 
-**Production:**
+Production:
 ```env
 DEBUG=False
 SECRET_KEY=your-production-secret-key
@@ -126,20 +126,20 @@ CSRF_COOKIE_SECURE=True
 
 See [QUICK_START.md](QUICK_START.md) for detailed instructions.
 
-## 🧪 Testing
+ 🧪 Testing
 
-### Run Security Tests
+ Run Security Tests
 
 ```bash
 cd eksms
 
-# Install test dependencies
+ Install test dependencies
 pip install -r ../requirements-dev.txt
 
-# Run all security tests
+ Run all security tests
 pytest tests/test_security.py -v
 
-# Run with coverage
+ Run with coverage
 pytest tests/test_security.py --cov=eksms
 ```
 
@@ -153,42 +153,42 @@ Test coverage includes:
 - XSS prevention
 - SSL/TLS settings
 
-### Django Security Check
+ Django Security Check
 
 ```bash
 python manage.py check --deploy
 ```
 
-## 🐳 Docker Deployment
+ 🐳 Docker Deployment
 
-### Build and Run
+ Build and Run
 
 ```bash
-# Build image
+ Build image
 docker build -t eksms:latest .
 
-# Run with docker-compose
+ Run with docker-compose
 docker-compose up -d
 
-# View logs
+ View logs
 docker-compose logs -f web
 
-# Run migrations
+ Run migrations
 docker-compose exec web python eksms/manage.py migrate
 
-# Create superuser
+ Create superuser
 docker-compose exec web python eksms/manage.py createsuperuser
 ```
 
 See [DOCKER_SECURITY.md](DOCKER_SECURITY.md) for production deployment guide.
 
-## 📖 Documentation
+ 📖 Documentation
 
-- **[SECURITY.md](SECURITY.md)** - Detailed security configuration guide
-- **[DOCKER_SECURITY.md](DOCKER_SECURITY.md)** - Docker and containerization best practices
-- **[QUICK_START.md](QUICK_START.md)** - Step-by-step quick start guide
+- [SECURITY.md](SECURITY.md) - Detailed security configuration guide
+- [DOCKER_SECURITY.md](DOCKER_SECURITY.md) - Docker and containerization best practices
+- [QUICK_START.md](QUICK_START.md) - Step-by-step quick start guide
 
-## 🔐 Security Checklist
+ 🔐 Security Checklist
 
 Before deploying to production:
 
@@ -206,42 +206,42 @@ Before deploying to production:
 - [ ] Set up monitoring and alerting
 - [ ] Review [SECURITY.md](SECURITY.md) completely
 
-## 🛠️ API Endpoints
+ 🛠️ API Endpoints
 
-### Authentication
+ Authentication
 
-- **GET** `/api/csrf-token/` - Get CSRF token
-- **POST** `/api/auth/login/` - User login (requires CSRF token)
-- **POST** `/api/auth/logout/` - User logout (requires authentication)
-- **GET** `/api/protected/` - Protected endpoint (requires authentication)
+- GET `/api/csrf-token/` - Get CSRF token
+- POST `/api/auth/login/` - User login (requires CSRF token)
+- POST `/api/auth/logout/` - User logout (requires authentication)
+- GET `/api/protected/` - Protected endpoint (requires authentication)
 
 See [eksms/secure_views.py](eksms/eksms/secure_views.py) for example implementations.
 
-## 📦 Dependencies
+ 📦 Dependencies
 
-### Backend (Python)
-
-```
-Django==6.0.1              # Web framework
-django-cors-headers==4.3.1 # CORS support
-python-decouple==3.8       # Environment variable management
-whitenoise==6.6.0          # Static file serving
-gunicorn==21.2.0           # Production WSGI server
-psycopg2-binary==2.9.9     # PostgreSQL driver
-djangorestframework==3.14.0 # REST API framework (optional)
-```
-
-### Frontend (Node.js)
+ Backend (Python)
 
 ```
-react==19.2.4       # React framework
-react-dom==19.2.4   # React DOM
-react-scripts==5.0.1 # Build tools
+Django==6.0.1               Web framework
+django-cors-headers==4.3.1  CORS support
+python-decouple==3.8        Environment variable management
+whitenoise==6.6.0           Static file serving
+gunicorn==21.2.0            Production WSGI server
+psycopg2-binary==2.9.9      PostgreSQL driver
+djangorestframework==3.14.0  REST API framework (optional)
+```
+
+ Frontend (Node.js)
+
+```
+react==19.2.4        React framework
+react-dom==19.2.4    React DOM
+react-scripts==5.0.1  Build tools
 ```
 
 Full list: See [requirements.txt](requirements.txt) and [package.json](package.json)
 
-## 🔄 Frontend Integration
+ 🔄 Frontend Integration
 
 The React frontend needs to handle CSRF tokens and authentication:
 
@@ -267,7 +267,7 @@ fetch('http://localhost:8000/api/auth/login/', {
 })
 ```
 
-## 📊 Performance
+ 📊 Performance
 
 - Django development server: ~1000 req/sec
 - Production (Gunicorn): ~5000+ req/sec
@@ -275,52 +275,52 @@ fetch('http://localhost:8000/api/auth/login/', {
 - Database query optimization with select_related/prefetch_related
 - Session caching support
 
-## 🐛 Troubleshooting
+ 🐛 Troubleshooting
 
-### CORS Errors
+ CORS Errors
 
 ```
 Access to XMLHttpRequest has been blocked by CORS policy
 ```
 
-**Solution:** Check CORS_ALLOWED_ORIGINS in `.env` matches your frontend URL exactly.
+Solution: Check CORS_ALLOWED_ORIGINS in `.env` matches your frontend URL exactly.
 
-### CSRF Token Errors
+ CSRF Token Errors
 
 ```
 CSRF token missing or incorrect
 ```
 
-**Solution:** 
+Solution: 
 1. Get token from `/api/csrf-token/` endpoint
 2. Include in `X-CSRFToken` header
 3. Use `credentials: 'include'` in fetch
 
-### Secret Key Error
+ Secret Key Error
 
 ```
 SECRET_KEY not set
 ```
 
-**Solution:** Generate and add to `.env`:
+Solution: Generate and add to `.env`:
 ```bash
 python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
 ```
 
-See [QUICK_START.md#troubleshooting](QUICK_START.md#troubleshooting) for more.
+See [QUICK_START.mdtroubleshooting](QUICK_START.mdtroubleshooting) for more.
 
-## 🚨 Security Policy
+ 🚨 Security Policy
 
 If you discover a security vulnerability, please email security@yourdomain.com instead of using the issue tracker.
 
-**Do not:**
+Do not:
 - Commit `.env` files to git
 - Hardcode passwords or API keys
 - Disable security features (CSRF, HTTPS, etc.)
 - Run with DEBUG=True in production
 - Use hardcoded SECRET_KEY
 
-## 📚 Resources
+ 📚 Resources
 
 - [Django Security Documentation](https://docs.djangoproject.com/en/6.0/topics/security/)
 - [OWASP Top 10](https://owasp.org/www-project-top-ten/)
@@ -328,18 +328,18 @@ If you discover a security vulnerability, please email security@yourdomain.com i
 - [Security Headers](https://securityheaders.com)
 - [Mozilla Web Security](https://infosec.mozilla.org/guidelines/web_security)
 
-## 📄 License
+ 📄 License
 
 MIT License - See LICENSE file for details
 
-## 👥 Contributing
+ 👥 Contributing
 
 1. Follow the security checklist in [SECURITY.md](SECURITY.md)
 2. Run tests before submitting PR: `pytest tests/test_security.py`
 3. Don't commit secrets or `.env` files
 4. Update documentation for API changes
 
-## 📞 Support
+ 📞 Support
 
 - Django Issues: https://code.djangoproject.com/
 - Django Security: https://www.djangoproject.com/weblog/2022/apr/11/security-releases/
@@ -347,6 +347,6 @@ MIT License - See LICENSE file for details
 
 ---
 
-**Built with Security-First Principles**  
+Built with Security-First Principles  
 Last Updated: February 20, 2026  
 Status: ✅ Production Ready
