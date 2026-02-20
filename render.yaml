@@ -13,7 +13,7 @@ web:
     - key: PYTHONUNBUFFERED
       value: '1'
     - key: DJANGO_SETTINGS_MODULE
-      value: 'eksms.eksms.settings'
+      value: 'eksms.eksms.settings_secure'
     - key: SECRET_KEY
       generateValue: true
     - key: ALLOWED_HOSTS
