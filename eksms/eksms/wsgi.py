@@ -11,6 +11,6 @@ import os
 
 from django.core.wsgi import get_wsgi_application
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'eksms.eksms.settings_secure')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'eksms.settings_secure')
 
 application = get_wsgi_application()
