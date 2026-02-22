@@ -9,6 +9,8 @@ from django.urls import path
 from django.views.generic import RedirectView
 from django.views.defaults import page_not_found, server_error
 from .views import favicon_view, api_login
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
     # Favicon
@@ -32,4 +34,8 @@ handler500 = server_error
 admin.site.site_header = "SMS Administration"
 admin.site.site_title = "SMS Admin"
 admin.site.index_title = "Welcome to SMS Administration"
+
+# Serve media files (student passport uploads) during development
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

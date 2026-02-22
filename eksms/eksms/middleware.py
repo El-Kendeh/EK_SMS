@@ -21,7 +21,7 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
         # Enable XSS protection in older browsers
         response['X-XSS-Protection'] = '1; mode=block'
         
-        # Prevent clickjacking
+        # Prevent clickjacking (frame-ancestors should be in CSP, but X-Frame-Options is for older browsers)
         response['X-Frame-Options'] = 'DENY'
         
         # Referrer Policy
@@ -32,6 +32,22 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
             'geolocation=(), microphone=(), camera=(), payment=(), '
             'usb=(), accelerometer=(), gyroscope=(), magnetometer=()'
         )
+        
+        # Content Security Policy Header
+        # Note: This complements the meta tag in the HTML (meta tags have limitations)
+        csp_header = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data: https:; "
+            "font-src 'self'; "
+            "media-src 'self' data:; "
+            "connect-src 'self' http://localhost:8000 http://web:8000; "
+            "frame-ancestors 'none'; "
+            "base-uri 'self'; "
+            "form-action 'self'"
+        )
+        response['Content-Security-Policy'] = csp_header
         
         return response
 

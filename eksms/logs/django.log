@@ -76,3 +76,492 @@ WARNING 2026-02-20 14:34:35,960 middleware 7260 13444 Sensitive endpoint accesse
 WARNING 2026-02-20 14:59:42,062 middleware 7260 16568 Sensitive endpoint accessed: GET /admin/login/ by 127.0.0.1 (AnonymousUser)
 WARNING 2026-02-20 14:59:48,371 middleware 7260 10652 Sensitive endpoint accessed: GET /admin/ by 127.0.0.1 (ek_sms0000)
 WARNING 2026-02-20 15:13:48,113 middleware 8 139453350799040 Sensitive endpoint accessed: GET /admin/login/ by 172.18.0.1 (AnonymousUser)
+WARNING 2026-02-22 11:25:27,135 middleware 21908 22312 Sensitive endpoint accessed: GET /admin/ by 127.0.0.1 (AnonymousUser)
+WARNING 2026-02-22 11:25:27,220 middleware 21908 22312 Sensitive endpoint accessed: GET /admin/login/ by 127.0.0.1 (AnonymousUser)
+WARNING 2026-02-22 11:25:34,078 middleware 21908 3912 Sensitive endpoint accessed: POST /admin/login/ by 127.0.0.1 (AnonymousUser)
+WARNING 2026-02-22 11:25:36,772 middleware 21908 3912 Sensitive endpoint accessed: GET /admin/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 11:25:43,145 middleware 21908 20056 Sensitive endpoint accessed: GET /admin/auth/user/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 11:25:43,637 middleware 21908 3912 Sensitive endpoint accessed: GET /admin/jsi18n/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 11:26:00,880 middleware 21908 17852 Sensitive endpoint accessed: GET /admin/auth/user/2/change/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 11:26:01,422 middleware 21908 19192 Sensitive endpoint accessed: GET /admin/jsi18n/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 11:26:05,242 middleware 21908 17852 Sensitive endpoint accessed: GET /admin/auth/user/2/password/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 11:26:32,211 middleware 21908 17852 Sensitive endpoint accessed: POST /admin/auth/user/2/password/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 11:26:50,897 middleware 21908 17852 Sensitive endpoint accessed: POST /admin/auth/user/2/password/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 11:26:54,012 middleware 21908 17852 Sensitive endpoint accessed: GET /admin/auth/user/2/change/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 11:26:54,180 middleware 21908 17852 Sensitive endpoint accessed: GET /admin/jsi18n/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 15:17:41,414 middleware 17908 22320 Sensitive endpoint accessed: GET /admin/ by 127.0.0.1 (AnonymousUser)
+WARNING 2026-02-22 15:17:41,468 middleware 17908 22320 Sensitive endpoint accessed: GET /admin/login/ by 127.0.0.1 (AnonymousUser)
+WARNING 2026-02-22 15:17:45,329 middleware 17908 22320 Sensitive endpoint accessed: POST /admin/login/ by 127.0.0.1 (AnonymousUser)
+WARNING 2026-02-22 15:17:47,667 middleware 17908 22320 Sensitive endpoint accessed: GET /admin/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 15:17:50,941 middleware 17908 22320 Sensitive endpoint accessed: GET /admin/auth/user/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 15:17:51,249 middleware 17908 22320 Sensitive endpoint accessed: GET /admin/jsi18n/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 15:17:55,465 middleware 17908 22320 Sensitive endpoint accessed: GET /admin/auth/user/2/change/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 15:17:55,699 middleware 17908 22320 Sensitive endpoint accessed: GET /admin/jsi18n/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 16:19:27,849 middleware 16620 19328 Sensitive endpoint accessed: GET /admin/auth/user/2/change/ by 127.0.0.1 (AnonymousUser)
+WARNING 2026-02-22 16:19:27,921 middleware 16620 19328 Sensitive endpoint accessed: GET /admin/login/ by 127.0.0.1 (AnonymousUser)
+WARNING 2026-02-22 16:19:32,494 middleware 16620 9624 Sensitive endpoint accessed: POST /admin/login/ by 127.0.0.1 (AnonymousUser)
+WARNING 2026-02-22 16:19:35,221 middleware 16620 9624 Sensitive endpoint accessed: GET /admin/auth/user/2/change/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 16:19:35,518 middleware 16620 14356 Sensitive endpoint accessed: GET /admin/jsi18n/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 16:22:44,589 middleware 2224 4200 Sensitive endpoint accessed: GET /admin/auth/user/2/change/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 16:22:44,956 middleware 2224 4200 Sensitive endpoint accessed: GET /admin/jsi18n/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 16:22:48,511 middleware 2224 4200 Sensitive endpoint accessed: GET /admin/auth/user/2/change/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 16:22:48,687 middleware 2224 4200 Sensitive endpoint accessed: GET /admin/jsi18n/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 16:34:26,455 middleware 2224 17132 Sensitive endpoint accessed: GET /admin/auth/user/2/change/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 16:34:26,663 middleware 2224 17132 Sensitive endpoint accessed: GET /admin/jsi18n/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 16:46:40,150 middleware 1608 9180 Sensitive endpoint accessed: GET /admin/auth/user/2/change/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 16:46:40,504 middleware 1608 9180 Sensitive endpoint accessed: GET /admin/jsi18n/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 16:46:45,168 middleware 1608 9180 Sensitive endpoint accessed: GET /admin/eksms_core/classroom/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 16:46:45,368 middleware 1608 22340 Sensitive endpoint accessed: GET /admin/jsi18n/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 16:46:48,728 middleware 1608 9180 Sensitive endpoint accessed: GET /admin/eksms_core/classroom/add/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 16:46:48,902 middleware 1608 9180 Sensitive endpoint accessed: GET /admin/jsi18n/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 16:46:54,966 middleware 1608 9180 Sensitive endpoint accessed: GET /admin/eksms_core/parentstudent/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 16:46:55,134 middleware 1608 9180 Sensitive endpoint accessed: GET /admin/jsi18n/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 16:46:57,831 middleware 1608 9180 Sensitive endpoint accessed: GET /admin/eksms_core/parentstudent/add/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 16:46:57,998 middleware 1608 9180 Sensitive endpoint accessed: GET /admin/jsi18n/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 16:47:00,669 middleware 1608 18024 Sensitive endpoint accessed: GET /admin/autocomplete/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 16:47:04,962 middleware 1608 18024 Sensitive endpoint accessed: GET /admin/autocomplete/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 16:47:13,304 middleware 1608 18024 Sensitive endpoint accessed: GET /admin/eksms_core/parent/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 16:47:13,417 middleware 1608 18024 Sensitive endpoint accessed: GET /admin/jsi18n/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 16:47:15,569 middleware 1608 18024 Sensitive endpoint accessed: GET /admin/eksms_core/parent/add/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 16:47:15,797 middleware 1608 18024 Sensitive endpoint accessed: GET /admin/jsi18n/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 16:47:30,909 middleware 1608 12420 Sensitive endpoint accessed: GET /admin/eksms_core/academicyear/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 16:47:31,087 middleware 1608 12420 Sensitive endpoint accessed: GET /admin/jsi18n/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 16:47:33,422 middleware 1608 12420 Sensitive endpoint accessed: GET /admin/eksms_core/academicyear/add/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 16:47:33,576 middleware 1608 12420 Sensitive endpoint accessed: GET /admin/jsi18n/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 16:47:41,101 middleware 1608 12420 Sensitive endpoint accessed: GET /admin/eksms_core/term/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 16:47:41,246 middleware 1608 12420 Sensitive endpoint accessed: GET /admin/jsi18n/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 16:47:43,825 middleware 1608 12420 Sensitive endpoint accessed: GET /admin/eksms_core/term/add/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 16:47:43,963 middleware 1608 12420 Sensitive endpoint accessed: GET /admin/jsi18n/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 16:48:12,281 middleware 1608 12420 Sensitive endpoint accessed: GET /admin/eksms_core/student/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 16:48:12,439 middleware 1608 12420 Sensitive endpoint accessed: GET /admin/jsi18n/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 16:48:15,466 middleware 1608 12420 Sensitive endpoint accessed: GET /admin/eksms_core/student/add/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 16:48:15,636 middleware 1608 12420 Sensitive endpoint accessed: GET /admin/jsi18n/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 16:48:28,261 middleware 1608 12420 Sensitive endpoint accessed: GET /admin/autocomplete/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 16:48:30,633 middleware 1608 12420 Sensitive endpoint accessed: GET /admin/autocomplete/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 18:03:04,980 middleware 21560 14624 Sensitive endpoint accessed: GET /admin/eksms_core/student/add/ by 127.0.0.1 (AnonymousUser)
+WARNING 2026-02-22 18:03:05,111 middleware 21560 14624 Sensitive endpoint accessed: GET /admin/login/ by 127.0.0.1 (AnonymousUser)
+WARNING 2026-02-22 18:03:09,942 middleware 21560 14624 Sensitive endpoint accessed: POST /admin/login/ by 127.0.0.1 (AnonymousUser)
+WARNING 2026-02-22 18:03:12,782 middleware 21560 14624 Sensitive endpoint accessed: GET /admin/eksms_core/student/add/ by 127.0.0.1 (ek_sms0000)
+ERROR 2026-02-22 18:03:13,407 log 21560 14624 Internal Server Error: /admin/eksms_core/student/add/
+Traceback (most recent call last):
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\core\handlers\base.py", line 220, in _get_response
+    response = response.render()
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\response.py", line 114, in render
+    self.content = self.rendered_content
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\response.py", line 92, in rendered_content
+    return template.render(context, self._request)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\backends\django.py", line 61, in render
+    return self.template.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 175, in render
+    return self._render(context)
+           ~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 167, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 1005, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 966, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\loader_tags.py", line 157, in render
+    return compiled_parent._render(context)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 167, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 1005, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 966, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\loader_tags.py", line 157, in render
+    return compiled_parent._render(context)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 167, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 1005, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 966, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\loader_tags.py", line 157, in render
+    return compiled_parent._render(context)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 167, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 1005, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 966, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\loader_tags.py", line 63, in render
+    result = block.nodelist.render(context)
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 1005, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 966, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\loader_tags.py", line 63, in render
+    result = block.nodelist.render(context)
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 1005, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 966, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\contrib\admin\templatetags\base.py", line 45, in render
+    return super().render(context)
+           ~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\library.py", line 271, in render
+    new_context = context.new(_dict)
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\context.py", line 265, in new
+    new_context = super().new(values)
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\context.py", line 110, in new
+    new_context = copy(self)
+  File "C:\Python314\Lib\copy.py", line 82, in copy
+    return copier(x)
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\context.py", line 158, in __copy__
+    duplicate = super().__copy__()
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\context.py", line 39, in __copy__
+    duplicate.dicts = self.dicts[:]
+    ^^^^^^^^^^^^^^^
+AttributeError: 'super' object has no attribute 'dicts' and no __dict__ for setting new attributes
+WARNING 2026-02-22 18:03:13,434 middleware 21560 14624 Response 500: GET /admin/eksms_core/student/add/ from 127.0.0.1
+ERROR 2026-02-22 18:03:13,442 basehttp 21560 14624 "GET /admin/eksms_core/student/add/ HTTP/1.1" 500 475253
+WARNING 2026-02-22 18:03:14,541 middleware 21560 14624 Response 404: GET /favicon.ico from 127.0.0.1
+WARNING 2026-02-22 18:03:14,542 log 21560 14624 Not Found: /favicon.ico
+WARNING 2026-02-22 18:03:14,543 basehttp 21560 14624 "GET /favicon.ico HTTP/1.1" 404 2591
+WARNING 2026-02-22 18:56:30,000 middleware 3324 6248 Sensitive endpoint accessed: GET /admin/eksms_core/student/add/ by 127.0.0.1 (ek_sms0000)
+ERROR 2026-02-22 18:56:30,936 log 3324 6248 Internal Server Error: /admin/eksms_core/student/add/
+Traceback (most recent call last):
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\core\handlers\base.py", line 220, in _get_response
+    response = response.render()
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\response.py", line 114, in render
+    self.content = self.rendered_content
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\response.py", line 92, in rendered_content
+    return template.render(context, self._request)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\backends\django.py", line 61, in render
+    return self.template.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 175, in render
+    return self._render(context)
+           ~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 167, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 1005, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 966, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\loader_tags.py", line 157, in render
+    return compiled_parent._render(context)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 167, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 1005, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 966, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\loader_tags.py", line 157, in render
+    return compiled_parent._render(context)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 167, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 1005, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 966, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\loader_tags.py", line 157, in render
+    return compiled_parent._render(context)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 167, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 1005, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 966, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\loader_tags.py", line 63, in render
+    result = block.nodelist.render(context)
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 1005, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 966, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\loader_tags.py", line 63, in render
+    result = block.nodelist.render(context)
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 1005, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 966, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\contrib\admin\templatetags\base.py", line 45, in render
+    return super().render(context)
+           ~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\library.py", line 278, in render
+    return t.render(new_context)
+           ~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 172, in render
+    if context.template is None:
+       ^^^^^^^^^^^^^^^^
+AttributeError: 'RequestContext' object has no attribute 'template'
+WARNING 2026-02-22 18:56:30,960 middleware 3324 6248 Response 500: GET /admin/eksms_core/student/add/ from 127.0.0.1
+ERROR 2026-02-22 18:56:30,963 basehttp 3324 6248 "GET /admin/eksms_core/student/add/ HTTP/1.1" 500 427080
+WARNING 2026-02-22 18:56:36,540 middleware 3324 6248 Sensitive endpoint accessed: GET /admin/eksms_core/student/add/ by 127.0.0.1 (ek_sms0000)
+ERROR 2026-02-22 18:56:36,733 log 3324 6248 Internal Server Error: /admin/eksms_core/student/add/
+Traceback (most recent call last):
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\core\handlers\base.py", line 220, in _get_response
+    response = response.render()
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\response.py", line 114, in render
+    self.content = self.rendered_content
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\response.py", line 92, in rendered_content
+    return template.render(context, self._request)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\backends\django.py", line 61, in render
+    return self.template.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 175, in render
+    return self._render(context)
+           ~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 167, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 1005, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 966, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\loader_tags.py", line 157, in render
+    return compiled_parent._render(context)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 167, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 1005, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 966, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\loader_tags.py", line 157, in render
+    return compiled_parent._render(context)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 167, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 1005, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 966, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\loader_tags.py", line 157, in render
+    return compiled_parent._render(context)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 167, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 1005, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 966, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\loader_tags.py", line 63, in render
+    result = block.nodelist.render(context)
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 1005, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 966, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\loader_tags.py", line 63, in render
+    result = block.nodelist.render(context)
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 1005, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 966, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\contrib\admin\templatetags\base.py", line 45, in render
+    return super().render(context)
+           ~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\library.py", line 278, in render
+    return t.render(new_context)
+           ~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 172, in render
+    if context.template is None:
+       ^^^^^^^^^^^^^^^^
+AttributeError: 'RequestContext' object has no attribute 'template'
+WARNING 2026-02-22 18:56:36,747 middleware 3324 6248 Response 500: GET /admin/eksms_core/student/add/ from 127.0.0.1
+ERROR 2026-02-22 18:56:36,749 basehttp 3324 6248 "GET /admin/eksms_core/student/add/ HTTP/1.1" 500 427080
+WARNING 2026-02-22 18:56:55,308 middleware 3324 6248 Sensitive endpoint accessed: GET /admin/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 18:57:00,855 middleware 3324 6248 Sensitive endpoint accessed: GET /admin/eksms_core/student/ by 127.0.0.1 (ek_sms0000)
+ERROR 2026-02-22 18:57:01,051 log 3324 6248 Internal Server Error: /admin/eksms_core/student/
+Traceback (most recent call last):
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\core\handlers\base.py", line 220, in _get_response
+    response = response.render()
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\response.py", line 114, in render
+    self.content = self.rendered_content
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\response.py", line 92, in rendered_content
+    return template.render(context, self._request)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\backends\django.py", line 61, in render
+    return self.template.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 175, in render
+    return self._render(context)
+           ~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 167, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 1005, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 966, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\loader_tags.py", line 157, in render
+    return compiled_parent._render(context)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 167, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 1005, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 966, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\loader_tags.py", line 157, in render
+    return compiled_parent._render(context)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 167, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 1005, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 966, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\loader_tags.py", line 157, in render
+    return compiled_parent._render(context)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 167, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 1005, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 966, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\loader_tags.py", line 63, in render
+    result = block.nodelist.render(context)
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 1005, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 966, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\loader_tags.py", line 63, in render
+    result = block.nodelist.render(context)
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 1005, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 966, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\loader_tags.py", line 63, in render
+    result = block.nodelist.render(context)
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 1005, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 966, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\contrib\admin\templatetags\base.py", line 45, in render
+    return super().render(context)
+           ~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\library.py", line 278, in render
+    return t.render(new_context)
+           ~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\Princess Magbie\AppData\Roaming\Python\Python314\site-packages\django\template\base.py", line 172, in render
+    if context.template is None:
+       ^^^^^^^^^^^^^^^^
+AttributeError: 'RequestContext' object has no attribute 'template'
+WARNING 2026-02-22 18:57:01,070 middleware 3324 6248 Response 500: GET /admin/eksms_core/student/ from 127.0.0.1
+ERROR 2026-02-22 18:57:01,072 basehttp 3324 6248 "GET /admin/eksms_core/student/ HTTP/1.1" 500 464353
+WARNING 2026-02-22 19:30:07,942 middleware 18140 4272 Sensitive endpoint accessed: GET /admin/eksms_core/student/add/ by 127.0.0.1 (AnonymousUser)
+WARNING 2026-02-22 19:30:08,564 middleware 18140 4272 Sensitive endpoint accessed: GET /admin/eksms_core/student/add/ by 127.0.0.1 (AnonymousUser)
+WARNING 2026-02-22 19:30:08,579 middleware 18140 14448 Sensitive endpoint accessed: GET /admin/login/ by 127.0.0.1 (AnonymousUser)
+WARNING 2026-02-22 19:30:09,101 middleware 18140 4272 Sensitive endpoint accessed: GET /admin/login/ by 127.0.0.1 (AnonymousUser)
+WARNING 2026-02-22 19:30:14,089 middleware 18140 4272 Sensitive endpoint accessed: POST /admin/login/ by 127.0.0.1 (AnonymousUser)
+WARNING 2026-02-22 19:30:16,505 middleware 18140 4272 Sensitive endpoint accessed: GET /admin/eksms_core/student/add/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 19:30:17,477 middleware 18140 4272 Sensitive endpoint accessed: GET /admin/jsi18n/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 19:30:22,231 middleware 18140 4272 Sensitive endpoint accessed: GET /admin/eksms_core/parent/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 19:30:23,048 middleware 18140 4272 Sensitive endpoint accessed: GET /admin/jsi18n/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 19:30:26,860 middleware 18140 4272 Sensitive endpoint accessed: GET /admin/eksms_core/parent/add/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 19:30:27,033 middleware 18140 4272 Sensitive endpoint accessed: GET /admin/jsi18n/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 19:30:42,904 middleware 18140 4272 Sensitive endpoint accessed: GET /admin/autocomplete/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 19:30:45,587 middleware 18140 4272 Sensitive endpoint accessed: GET /admin/eksms_core/parentstudent/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 19:30:45,715 middleware 18140 4272 Sensitive endpoint accessed: GET /admin/jsi18n/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 19:30:48,226 middleware 18140 4272 Sensitive endpoint accessed: GET /admin/eksms_core/parentstudent/add/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 19:30:48,349 middleware 18140 4272 Sensitive endpoint accessed: GET /admin/jsi18n/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 19:30:52,465 middleware 18140 4272 Sensitive endpoint accessed: GET /admin/eksms_core/student/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 19:30:52,617 middleware 18140 4272 Sensitive endpoint accessed: GET /admin/jsi18n/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 19:30:54,817 middleware 18140 4272 Sensitive endpoint accessed: GET /admin/eksms_core/student/add/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 19:30:54,980 middleware 18140 4272 Sensitive endpoint accessed: GET /admin/jsi18n/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 19:31:09,996 middleware 18140 4272 Sensitive endpoint accessed: GET /admin/eksms_core/parentstudent/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 19:31:10,238 middleware 18140 4272 Sensitive endpoint accessed: GET /admin/jsi18n/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 19:31:12,635 middleware 18140 4272 Sensitive endpoint accessed: GET /admin/eksms_core/parentstudent/add/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 19:31:12,766 middleware 18140 4272 Sensitive endpoint accessed: GET /admin/jsi18n/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 19:31:16,267 middleware 18140 4272 Sensitive endpoint accessed: GET /admin/eksms_core/student/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 19:31:16,378 middleware 18140 4272 Sensitive endpoint accessed: GET /admin/jsi18n/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 19:31:18,717 middleware 18140 4272 Sensitive endpoint accessed: GET /admin/eksms_core/student/add/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 19:31:18,867 middleware 18140 4272 Sensitive endpoint accessed: GET /admin/jsi18n/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 19:31:21,518 middleware 18140 4272 Sensitive endpoint accessed: GET /admin/autocomplete/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 19:31:28,110 middleware 18140 4272 Sensitive endpoint accessed: GET /admin/autocomplete/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 19:31:37,172 middleware 18140 4272 Sensitive endpoint accessed: GET /admin/eksms_core/parent/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 19:31:37,294 middleware 18140 4272 Sensitive endpoint accessed: GET /admin/jsi18n/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 19:31:39,812 middleware 18140 4272 Sensitive endpoint accessed: GET /admin/eksms_core/parent/add/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 19:31:39,956 middleware 18140 4272 Sensitive endpoint accessed: GET /admin/jsi18n/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 19:31:41,564 middleware 18140 4272 Sensitive endpoint accessed: GET /admin/autocomplete/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 19:31:44,817 middleware 18140 4272 Sensitive endpoint accessed: GET /admin/autocomplete/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-22 19:31:52,806 middleware 18140 4272 Sensitive endpoint accessed: GET /admin/autocomplete/ by 127.0.0.1 (ek_sms0000)
