@@ -6,14 +6,14 @@ web:
   buildCommand: |
     pip install -r eksms/requirements.txt
     python eksms/manage.py collectstatic --noinput
-  startCommand: gunicorn eksms.eksms.wsgi:application --bind 0.0.0.0:$PORT --workers 1
+  startCommand: gunicorn eksms.wsgi:application --bind 0.0.0.0:$PORT --workers 1
   envVars:
     - key: DEBUG
       value: 'False'
     - key: PYTHONUNBUFFERED
       value: '1'
     - key: DJANGO_SETTINGS_MODULE
-      value: 'eksms.eksms.settings_secure'
+      value: 'eksms.settings_secure'
     - key: SECRET_KEY
       generateValue: true
     - key: ALLOWED_HOSTS
