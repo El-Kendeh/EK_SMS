@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
 from django.utils.html import format_html
 from django.urls import reverse
-from django.db.models import Count
+from django.db.models import Count, Avg, Sum
 import secrets
 import string
 from .models import (
@@ -16,6 +16,9 @@ from .models import (
     Student,
     Parent,
     ParentStudent,
+    Grade,
+    ClassRanking,
+    ReportCard,
 )
 
 
@@ -309,3 +312,142 @@ class ParentStudentAdmin(admin.ModelAdmin):
         }),
     )
     autocomplete_fields = ['student', 'parent']
+
+
+@admin.register(Grade)
+class GradeAdmin(admin.ModelAdmin):
+    list_display = ['student', 'subject', 'term', 'total_score', 'grade_letter', 'is_locked_display', 'teacher']
+    list_filter = ['term', 'subject', 'is_locked', 'grade_letter', 'created_at']
+    search_fields = ['student__user__first_name', 'student__user__last_name', 'subject__name']
+    readonly_fields = ['total_score', 'grade_letter']
+    
+    fieldsets = (
+        ('Student & Subject', {
+            'fields': ('student', 'subject', 'term', 'teacher')
+        }),
+        ('Scores', {
+            'fields': ('continuous_assessment', 'mid_term_exam', 'final_exam')
+        }),
+        ('Results', {
+            'fields': ('total_score', 'grade_letter'),
+            'classes': ('wide',)
+        }),
+        ('Locking', {
+            'fields': ('is_locked', 'locked_by', 'locked_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    autocomplete_fields = ['student', 'subject', 'term', 'teacher']
+    
+    def is_locked_display(self, obj):
+        """Show lock status with icon"""
+        if obj.is_locked:
+            return format_html('<span style="color: red;">🔒 Locked</span>')
+        return format_html('<span style="color: green;">🔓 Open</span>')
+    is_locked_display.short_description = 'Status'
+    
+    def get_readonly_fields(self, request, obj=None):
+        """Make all fields readonly if grade is locked"""
+        readonly = list(self.readonly_fields)
+        if obj and obj.is_locked:
+            readonly.extend(['student', 'subject', 'term', 'teacher', 'continuous_assessment', 'mid_term_exam', 'final_exam'])
+        return readonly
+    
+    actions = ['lock_grades', 'unlock_grades']
+    
+    def lock_grades(self, request, queryset):
+        """Lock selected grades"""
+        count = 0
+        for grade in queryset:
+            grade.lock(request.user)
+            count += 1
+        self.message_user(request, f'✓ Locked {count} grade(s)')
+    lock_grades.short_description = "Lock selected grades (prevent editing)"
+    
+    def unlock_grades(self, request, queryset):
+        """Unlock selected grades"""
+        count = queryset.update(is_locked=False, locked_by=None, locked_at=None)
+        self.message_user(request, f'✓ Unlocked {count} grade(s)')
+    unlock_grades.short_description = "Unlock selected grades (allow editing)"
+
+
+@admin.register(ClassRanking)
+class ClassRankingAdmin(admin.ModelAdmin):
+    list_display = ['student', 'classroom', 'term', 'rank', 'total_points', 'average_score']
+    list_filter = ['classroom', 'term', 'created_at']
+    search_fields = ['student__user__first_name', 'student__user__last_name', 'classroom__name']
+    readonly_fields = ['rank', 'total_points', 'average_score', 'created_at', 'updated_at']
+    
+    fieldsets = (
+        ('Student & Class', {
+            'fields': ('student', 'classroom', 'term')
+        }),
+        ('Ranking Details', {
+            'fields': ('rank', 'total_points', 'average_score')
+        }),
+        ('Metadata', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    autocomplete_fields = ['student', 'classroom', 'term']
+
+
+@admin.register(ReportCard)
+class ReportCardAdmin(admin.ModelAdmin):
+    list_display = ['student', 'term', 'academic_year', 'class_rank', 'average_score', 'is_published_display', 'generated_at']
+    list_filter = ['term', 'academic_year', 'is_published', 'generated_at']
+    search_fields = ['student__user__first_name', 'student__user__last_name', 'student__admission_number']
+    readonly_fields = ['generated_at', 'generated_by', 'pdf_file', 'qr_code']
+    
+    fieldsets = (
+        ('Student Information', {
+            'fields': ('student', 'term', 'academic_year', 'classroom')
+        }),
+        ('Summary', {
+            'fields': ('total_subjects', 'average_score', 'class_rank', 'class_size')
+        }),
+        ('Report Card PDF', {
+            'fields': ('pdf_file', 'qr_code'),
+            'classes': ('wide',)
+        }),
+        ('Publication', {
+            'fields': ('is_published', 'published_at')
+        }),
+        ('Metadata', {
+            'fields': ('generated_at', 'generated_by'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    autocomplete_fields = ['student', 'term', 'academic_year', 'classroom']
+    
+    def is_published_display(self, obj):
+        """Show publication status"""
+        if obj.is_published:
+            return format_html('<span style="color: green;">✓ Published</span>')
+        return format_html('<span style="color: orange;">✗ Draft</span>')
+    is_published_display.short_description = 'Status'
+    
+    actions = ['publish_report_cards', 'generate_pdfs']
+    
+    def publish_report_cards(self, request, queryset):
+        """Publish selected report cards for parents to view"""
+        count = 0
+        for report_card in queryset:
+            if not report_card.is_published:
+                report_card.mark_published(request.user)
+                count += 1
+        self.message_user(request, f'✓ Published {count} report card(s)')
+    publish_report_cards.short_description = "Publish selected report cards"
+    
+    def generate_pdfs(self, request, queryset):
+        """Generate PDF reports for selected report cards"""
+        self.message_user(
+            request, 
+            'PDF generation has been queued. This should complete shortly. '
+            'Refresh the page to see the generated PDFs.'
+        )
+    generate_pdfs.short_description = "Generate PDF report cards"

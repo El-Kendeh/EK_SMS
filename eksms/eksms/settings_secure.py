@@ -46,6 +46,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'corsheaders',  # CORS support
+    'django_otp',  # Two-Factor Authentication
+    'django_otp.plugins.otp_totp',  # Time-based One-Time Password
     'eksms_core.apps.EksmsCoreConfig',  # Academic management app
 ]
 
@@ -57,6 +59,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django_otp.middleware.OTPMiddleware',  # Two-Factor Authentication check
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'eksms.middleware.SecurityHeadersMiddleware',  # Custom security headers

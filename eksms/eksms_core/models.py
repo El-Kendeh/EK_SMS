@@ -171,3 +171,184 @@ class ParentStudent(models.Model):
 
     def __str__(self):
         return f"{self.student} - {self.parent}"
+
+
+class Grade(models.Model):
+    """Student grades for subjects"""
+    GRADE_SCALE = [
+        ('A', 'A (90-100)'),
+        ('B', 'B (80-89)'),
+        ('C', 'C (70-79)'),
+        ('D', 'D (60-69)'),
+        ('E', 'E (0-59)'),
+        ('I', 'Incomplete'),
+    ]
+    
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='grades')
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
+    term = models.ForeignKey(Term, on_delete=models.CASCADE, related_name='grades')
+    teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    # Score breakdown (raw marks)
+    continuous_assessment = models.DecimalField(
+        max_digits=5, decimal_places=2, default=0,
+        validators=[MinValueValidator(0)],
+        help_text="Continuous Assessment / Class Work (0-20)"
+    )
+    mid_term_exam = models.DecimalField(
+        max_digits=5, decimal_places=2, default=0,
+        validators=[MinValueValidator(0)],
+        help_text="Mid-term Exam Score (0-30)"
+    )
+    final_exam = models.DecimalField(
+        max_digits=5, decimal_places=2, default=0,
+        validators=[MinValueValidator(0)],
+        help_text="Final Exam Score (0-50)"
+    )
+    
+    # Calculated fields
+    total_score = models.DecimalField(
+        max_digits=5, decimal_places=2, default=0,
+        help_text="Auto-calculated: CA + Mid-term + Final (max 100)"
+    )
+    grade_letter = models.CharField(
+        max_length=1, choices=GRADE_SCALE, default='I',
+        help_text="Auto-calculated letter grade"
+    )
+    
+    # Status
+    is_locked = models.BooleanField(
+        default=False, 
+        help_text="Locked grades cannot be edited"
+    )
+    locked_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='locked_grades'
+    )
+    locked_at = models.DateTimeField(null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('student', 'subject', 'term')
+        ordering = ['student', 'subject']
+        verbose_name_plural = "Grades"
+        indexes = [
+            models.Index(fields=['student', 'term']),
+            models.Index(fields=['subject', 'term']),
+        ]
+
+    def __str__(self):
+        return f"{self.student} - {self.subject} ({self.term}): {self.grade_letter}"
+
+    def calculate_total(self):
+        """Calculate total score from components"""
+        self.total_score = min(
+            self.continuous_assessment + self.mid_term_exam + self.final_exam,
+            100
+        )
+        self.calculate_grade_letter()
+        return self.total_score
+
+    def calculate_grade_letter(self):
+        """Convert score to letter grade"""
+        if self.total_score >= 90:
+            self.grade_letter = 'A'
+        elif self.total_score >= 80:
+            self.grade_letter = 'B'
+        elif self.total_score >= 70:
+            self.grade_letter = 'C'
+        elif self.total_score >= 60:
+            self.grade_letter = 'D'
+        elif self.total_score > 0:
+            self.grade_letter = 'E'
+        else:
+            self.grade_letter = 'I'
+
+    def save(self, *args, **kwargs):
+        if not self.is_locked:
+            self.calculate_total()
+        super().save(*args, **kwargs)
+
+    def lock(self, user):
+        """Lock grade to prevent further edits"""
+        if not self.is_locked:
+            self.is_locked = True
+            self.locked_by = user
+            self.locked_at = timezone.now()
+            self.save()
+
+    def unlock(self):
+        """Unlock grade for editing"""
+        if self.is_locked:
+            self.is_locked = False
+            self.locked_by = None
+            self.locked_at = None
+            self.save()
+
+
+class ClassRanking(models.Model):
+    """Ranking of students in a class for a term"""
+    classroom = models.ForeignKey(ClassRoom, on_delete=models.CASCADE, related_name='rankings')
+    student = models.ForeignKey(Student, on_delete=models.CASCADE)
+    term = models.ForeignKey(Term, on_delete=models.CASCADE)
+    
+    rank = models.IntegerField(help_text="Rank in class (1 is top)")
+    total_points = models.DecimalField(
+        max_digits=7, decimal_places=2,
+        help_text="Sum of all subject grades"
+    )
+    average_score = models.DecimalField(
+        max_digits=5, decimal_places=2,
+        help_text="Average across all subjects"
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('classroom', 'student', 'term')
+        ordering = ['term', 'rank']
+        verbose_name_plural = "Class Rankings"
+
+    def __str__(self):
+        return f"{self.student} - Rank {self.rank} in {self.classroom} ({self.term})"
+
+
+class ReportCard(models.Model):
+    """Generated report card for a student"""
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='report_cards')
+    term = models.ForeignKey(Term, on_delete=models.CASCADE)
+    academic_year = models.ForeignKey(AcademicYear, on_delete=models.CASCADE)
+    classroom = models.ForeignKey(ClassRoom, on_delete=models.CASCADE)
+    
+    # Summary data
+    total_subjects = models.IntegerField(default=0)
+    average_score = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    class_rank = models.IntegerField(null=True, blank=True)
+    class_size = models.IntegerField(default=0)
+    
+    # PDF generation
+    pdf_file = models.FileField(upload_to='report_cards/', null=True, blank=True)
+    qr_code = models.CharField(max_length=255, null=True, blank=True, help_text="QR code for verification")
+    
+    # Status
+    generated_at = models.DateTimeField(auto_now_add=True)
+    generated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    is_published = models.BooleanField(default=False, help_text="Can parents view this report card?")
+    published_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        unique_together = ('student', 'term', 'academic_year')
+        ordering = ['-academic_year', '-term']
+        verbose_name_plural = "Report Cards"
+
+    def __str__(self):
+        return f"Report Card - {self.student} ({self.term}: {self.academic_year})"
+
+    def mark_published(self, user=None):
+        """Publish report card for parent viewing"""
+        self.is_published = True
+        self.published_at = timezone.now()
+        self.save()

@@ -1,0 +1,54 @@
+{% extends "admin/base_site.html" %}
+
+{% block title %}Backup Codes{% endblock %}
+
+{% block extrahead %}
+<style>
+    .backup-tokens-container {
+        max-width: 500px;
+        margin: 50px auto;
+        padding: 20px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        background-color: #f9f9f9;
+    }
+    .backup-codes {
+        background-color: #fff3cd;
+        border: 1px solid #ffc107;
+        padding: 10px;
+        border-radius: 5px;
+        margin: 20px 0;
+    }
+    .backup-codes h3 {
+        color: #856404;
+        margin-top: 0;
+    }
+    .backup-codes code {
+        display: block;
+        padding: 5px;
+        background-color: white;
+        border-radius: 3px;
+        margin: 5px 0;
+        font-family: monospace;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="backup-tokens-container">
+    <h1>New Backup Codes Generated</h1>
+    
+    <p>
+        Your new backup codes have been generated. Save them in a safe place.
+    </p>
+    
+    <div class="backup-codes">
+        <h3>Backup Codes</h3>
+        {% for token in backup_tokens %}
+        <code>{{ token }}</code>
+        {% endfor %}
+    </div>
+    
+    <a href="{% url 'admin:index' %}" class="button">Back to Admin</a>
+</div>
+{% endblock %}

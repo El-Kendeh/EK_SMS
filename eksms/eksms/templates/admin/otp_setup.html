@@ -1,0 +1,102 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Setup Two-Factor Authentication{% endblock %}
+
+{% block extrahead %}
+<style>
+    .otp-setup-container {
+        max-width: 500px;
+        margin: 50px auto;
+        padding: 20px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        background-color: #f9f9f9;
+    }
+    .qr-code-img {
+        border: 1px solid #333;
+        padding: 10px;
+        background-color: white;
+        margin: 20px 0;
+        text-align: center;
+    }
+    .qr-code-img img {
+        max-width: 300px;
+    }
+    .backup-tokens {
+        background-color: #fff3cd;
+        border: 1px solid #ffc107;
+        padding: 10px;
+        border-radius: 5px;
+        margin: 20px 0;
+    }
+    .backup-tokens h3 {
+        color: #856404;
+        margin-top: 0;
+    }
+    .backup-tokens p {
+        color: #856404;
+        font-size: 14px;
+    }
+    .backup-tokens code {
+        display: block;
+        padding: 5px;
+        background-color: white;
+        border-radius: 3px;
+        margin: 5px 0;
+        font-family: monospace;
+    }
+    .error {
+        color: #721c24;
+        background-color: #f8d7da;
+        border: 1px solid #f5c6cb;
+        padding: 10px;
+        border-radius: 5px;
+        margin: 10px 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="otp-setup-container">
+    <h1>Enable Two-Factor Authentication (2FA)</h1>
+    
+    {% if error %}
+    <div class="error">{{ error }}</div>
+    {% endif %}
+    
+    <p>
+        Scan the QR code below with your authenticator app (Google Authenticator, Microsoft Authenticator, Authy, etc.)
+        or enter the code manually if you prefer.
+    </p>
+    
+    {% if qr_code_url %}
+    <div class="qr-code-img">
+        <img src="data:image/png;base64,{{ qr_code_url }}" alt="QR Code">
+        <p><strong>Manual Entry Code:</strong> <code>{{ device.key }}</code></p>
+    </div>
+    {% endif %}
+    
+    <form method="post">
+        {% csrf_token %}
+        <div>
+            <label for="otp_token">Enter the 6-digit code from your authenticator app:</label>
+            <input type="text" id="otp_token" name="otp_token" maxlength="6" placeholder="000000" 
+                   pattern="[0-9]{6}" required style="padding: 10px; font-size: 18px; letter-spacing: 5px;">
+        </div>
+        <button type="submit" style="margin-top: 10px; padding: 10px 20px;">Verify and Enable 2FA</button>
+    </form>
+    
+    {% if backup_tokens %}
+    <div class="backup-tokens">
+        <h3>⚠ Save Your Backup Codes</h3>
+        <p>
+            Save these 10 backup codes in a safe place. You can use them to access your account if you lose access to your authenticator app.
+        </p>
+        {% for token in backup_tokens %}
+        <code>{{ token }}</code>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
