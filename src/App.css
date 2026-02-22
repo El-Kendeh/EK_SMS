@@ -2,6 +2,19 @@
   text-align: center;
 }
 
+.loading-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: #ffffff;
+}
+
+.loading-spinner {
+  font-size: 1.2rem;
+  color: #1e40af;
+}
+
 .App-logo {
   height: 40vmin;
   pointer-events: none;

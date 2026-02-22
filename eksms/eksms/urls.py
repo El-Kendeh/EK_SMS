@@ -8,20 +8,20 @@ from django.contrib import admin
 from django.urls import path
 from django.views.generic import RedirectView
 from django.views.defaults import page_not_found, server_error
-from .views import favicon_view
+from .views import favicon_view, api_login
 
 urlpatterns = [
     # Favicon
     path('favicon.jpeg', favicon_view, name='favicon'),
+    
+    # API endpoints
+    path('api/login/', api_login, name='api_login'),
     
     # Root URL redirects to admin
     path('', RedirectView.as_view(url='admin/', permanent=False)),
     
     # Admin interface
     path('admin/', admin.site.urls),
-    
-    # API endpoints should be added here
-    # Example: path('api/auth/', include('api.urls')),
 ]
 
 # Custom error handlers for better security (don't expose stack traces in production)
@@ -32,3 +32,4 @@ handler500 = server_error
 admin.site.site_header = "SMS Administration"
 admin.site.site_title = "SMS Admin"
 admin.site.index_title = "Welcome to SMS Administration"
+
