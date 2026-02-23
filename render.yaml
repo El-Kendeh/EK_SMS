@@ -6,8 +6,8 @@ web:
   buildCommand: |
     pip install --upgrade pip setuptools wheel
     pip install --prefer-binary -r eksms/requirements.txt
-    python eksms/manage.py collectstatic --noinput
-  startCommand: gunicorn eksms.wsgi:application --bind 0.0.0.0:$PORT --workers 1
+    cd eksms && python manage.py collectstatic --noinput --clear
+  startCommand: gunicorn wsgi:application --bind 0.0.0.0:$PORT --workers 1
   envVars:
     - key: DEBUG
       value: 'False'
