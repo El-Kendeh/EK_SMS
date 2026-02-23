@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=65.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ek-sms"
+version = "1.0.0"
+description = "Educational Knowledge - School Management System"
+readme = "README.md"
+requires-python = ">=3.12"
+license = {text = "MIT"}
+authors = [
+    {name = "Development Team", email = "dev@ek-sms.local"}
+]
+
+[tool.setuptools]
+packages = ["eksms"]
+
+[tool.pip]
+# Use binary distributions when available (pre-built wheels)
+only-binary = [":all:"]
+
+# Fallback to source if needed, but use offline mode to speed up installs
+prefer-binary = true

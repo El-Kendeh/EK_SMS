@@ -2,10 +2,11 @@ web:
   type: web
   plan: free
   name: ek-sms-backend
-  runtime: python312
+  runtime: python314
   rootDir: eksms
   buildCommand: |
-    pip install -r requirements.txt
+    pip install --upgrade pip setuptools wheel
+    pip install --prefer-binary -r requirements.txt
     python manage.py collectstatic --noinput
   startCommand: gunicorn eksms.wsgi:application --bind 0.0.0.0:$PORT --workers 1
   envVars:
