@@ -4,9 +4,76 @@ from django.core.validators import MinValueValidator
 from django.utils import timezone
 
 
+class School(models.Model):
+    """Represents a school in the system"""
+    name = models.CharField(max_length=255, unique=True, help_text="School name")
+    code = models.CharField(max_length=50, unique=True, help_text="School code/ID")
+    email = models.EmailField(help_text="School contact email")
+    phone = models.CharField(max_length=20, blank=True, help_text="School contact phone")
+    address = models.TextField(blank=True, help_text="School physical address")
+    principal_name = models.CharField(max_length=255, blank=True, help_text="Principal/Head of School name")
+    
+    # Registration details
+    registration_date = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True, help_text="Is this school active in the system?")
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, 
+                                   related_name='created_schools', help_text="Super admin who registered this school")
+
+    class Meta:
+        ordering = ['name']
+        verbose_name_plural = "Schools"
+
+    def __str__(self):
+        return f"{self.name} ({self.code})"
+
+
+class SchoolAdmin(models.Model):
+    """Links a user to a school as an admin who manages that school"""
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='school_admin_profile')
+    school = models.OneToOneField(School, on_delete=models.CASCADE, related_name='admin')
+    
+    # Role details
+    job_title = models.CharField(max_length=100, blank=True, help_text="e.g., School Administrator, Headmaster")
+    
+    # Access control - Academic Management
+    can_manage_academics = models.BooleanField(default=True, help_text="Can manage academic years, terms, and classes")
+    
+    # Access control - Staff Management
+    can_create_staff_accounts = models.BooleanField(default=True, help_text="Can create and manage staff accounts (teachers, etc.)")
+    can_manage_staff_roles = models.BooleanField(default=True, help_text="Can assign and modify staff member roles")
+    can_activate_deactivate_staff = models.BooleanField(default=True, help_text="Can activate/deactivate staff accounts")
+    
+    # Access control - Data Management
+    can_manage_teachers = models.BooleanField(default=True, help_text="Can manage teacher records and assignments")
+    can_manage_students = models.BooleanField(default=True, help_text="Can manage student registrations and enrollments")
+    can_manage_parents = models.BooleanField(default=True, help_text="Can manage parent/guardian accounts and links")
+    can_manage_grades = models.BooleanField(default=True, help_text="Can manage grading system and enter grades")
+    can_manage_reports = models.BooleanField(default=True, help_text="Can generate and publish reports")
+    can_view_audit_logs = models.BooleanField(default=False, help_text="Can view audit logs")
+    
+    # Status
+    is_active = models.BooleanField(default=True)
+    
+    # Metadata
+    appointed_date = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "School Admin"
+        verbose_name_plural = "School Admins"
+
+    def __str__(self):
+        return f"{self.user.get_full_name()} - Admin of {self.school.name}"
+
+
 class AcademicYear(models.Model):
     """Represents an academic year (e.g., 2024-2025)"""
-    name = models.CharField(max_length=100, unique=True, help_text="e.g., 2024-2025")
+    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='academic_years', null=True, blank=True)
+    name = models.CharField(max_length=100, help_text="e.g., 2024-2025")
     start_date = models.DateField(help_text="Academic year start date")
     end_date = models.DateField(help_text="Academic year end date")
     is_active = models.BooleanField(default=False, help_text="Only one year should be active at a time")
@@ -16,6 +83,7 @@ class AcademicYear(models.Model):
     class Meta:
         ordering = ['-start_date']
         verbose_name_plural = "Academic Years"
+        unique_together = ('school', 'name')
 
     def __str__(self):
         return self.name
@@ -47,8 +115,9 @@ class Term(models.Model):
 
 class Subject(models.Model):
     """Represents a school subject"""
-    name = models.CharField(max_length=100, unique=True)
-    code = models.CharField(max_length=20, unique=True)
+    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='subjects', null=True, blank=True)
+    name = models.CharField(max_length=100, help_text="Subject name")
+    code = models.CharField(max_length=20, help_text="Subject code")
     description = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -56,6 +125,7 @@ class Subject(models.Model):
 
     class Meta:
         ordering = ['name']
+        unique_together = ('school', 'code')
 
     def __str__(self):
         return f"{self.name} ({self.code})"
@@ -63,8 +133,9 @@ class Subject(models.Model):
 
 class ClassRoom(models.Model):
     """Represents a class/form (e.g., Grade 10A, Grade 10B)"""
+    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='classrooms', null=True, blank=True)
     name = models.CharField(max_length=50, help_text="e.g., Grade 10A")
-    code = models.CharField(max_length=20, unique=True)
+    code = models.CharField(max_length=20, help_text="Unique code within school")
     form_number = models.IntegerField(validators=[MinValueValidator(1)], help_text="Form/Grade number (e.g., 10)")
     capacity = models.IntegerField(default=50)
     is_active = models.BooleanField(default=True)
@@ -75,6 +146,7 @@ class ClassRoom(models.Model):
         ordering = ['form_number', 'name']
         verbose_name = "Class"
         verbose_name_plural = "Classes"
+        unique_together = ('school', 'code')
 
     def __str__(self):
         return self.name
@@ -82,8 +154,9 @@ class ClassRoom(models.Model):
 
 class Teacher(models.Model):
     """Represents a teacher"""
+    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='teachers', null=True, blank=True)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='teacher_profile')
-    employee_id = models.CharField(max_length=50, unique=True)
+    employee_id = models.CharField(max_length=50, help_text="Must be unique per school")
     phone_number = models.CharField(max_length=20, blank=True)
     qualification = models.CharField(max_length=255, blank=True)
     hire_date = models.DateField(default=timezone.now)
@@ -93,6 +166,7 @@ class Teacher(models.Model):
 
     class Meta:
         ordering = ['user__last_name', 'user__first_name']
+        unique_together = ('school', 'employee_id')
 
     def __str__(self):
         return f"{self.user.get_full_name()} ({self.employee_id})"
@@ -120,8 +194,9 @@ class TeacherSubjectClass(models.Model):
 
 class Student(models.Model):
     """Represents a student"""
+    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='students', null=True, blank=True)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='student_profile')
-    admission_number = models.CharField(max_length=50, unique=True)
+    admission_number = models.CharField(max_length=50, help_text="Must be unique per school")
     classroom = models.ForeignKey(ClassRoom, on_delete=models.SET_NULL, null=True, related_name='students')
     academic_year = models.ForeignKey(AcademicYear, on_delete=models.SET_NULL, null=True)
     admission_date = models.DateField(default=timezone.now)
@@ -134,6 +209,7 @@ class Student(models.Model):
 
     class Meta:
         ordering = ['classroom', 'user__last_name', 'user__first_name']
+        unique_together = ('school', 'admission_number')
 
     def __str__(self):
         return f"{self.user.get_full_name()} ({self.admission_number})"
@@ -141,6 +217,7 @@ class Student(models.Model):
 
 class Parent(models.Model):
     """Represents a parent/guardian"""
+    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='parents', null=True, blank=True)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='parent_profile')
     phone_number = models.CharField(max_length=20)
     relationship = models.CharField(max_length=50, help_text="e.g., Father, Mother, Guardian")
@@ -562,3 +639,130 @@ class ReportCard(models.Model):
         self.is_published = True
         self.published_at = timezone.now()
         self.save()
+
+class SchoolStaffAccount(models.Model):
+    """Manages staff accounts created by school admins for various roles"""
+    
+    ROLE_CHOICES = [
+        ('TEACHER', 'Teacher'),
+        ('STUDENT', 'Student'),
+        ('PARENT', 'Parent/Guardian'),
+        ('STAFF', 'Administrative Staff'),
+        ('ACCOUNTANT', 'Accountant'),
+        ('REGISTRAR', 'Registrar'),
+        ('LIBRARIAN', 'Librarian'),
+        ('COUNSELOR', 'Counselor'),
+    ]
+    
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='school_staff_account')
+    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='staff_accounts')
+    
+    # Role and assignment
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, help_text="Staff member role/position")
+    job_title = models.CharField(max_length=150, blank=True, help_text="Job title/position (e.g., Mathematics Teacher)")
+    department = models.CharField(max_length=100, blank=True, help_text="Department (e.g., Science, Administration)")
+    
+    # Related entities (optional - for linking to specific roles)
+    teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True, blank=True, related_name='staff_account')
+    student = models.ForeignKey(Student, on_delete=models.SET_NULL, null=True, blank=True, related_name='staff_account')
+    parent = models.ForeignKey(Parent, on_delete=models.SET_NULL, null=True, blank=True, related_name='staff_account')
+    
+    # Permissions management by role
+    can_create_announcements = models.BooleanField(default=False, help_text="Can post announcements")
+    can_submit_assignments = models.BooleanField(default=False, help_text="Can submit assignments")
+    can_view_results = models.BooleanField(default=False, help_text="Can view grades/results")
+    can_edit_content = models.BooleanField(default=False, help_text="Can modify educational content")
+    
+    # Status tracking
+    is_active = models.BooleanField(default=True, help_text="Is this staff account active?")
+    account_status = models.CharField(
+        max_length=20,
+        choices=[
+            ('PENDING', 'Pending Activation'),
+            ('ACTIVE', 'Active'),
+            ('SUSPENDED', 'Suspended'),
+            ('TERMINATED', 'Terminated'),
+        ],
+        default='PENDING',
+        help_text="Current status of the staff account"
+    )
+    
+    # Contact details
+    phone_number = models.CharField(max_length=20, blank=True)
+    alternate_email = models.EmailField(blank=True)
+    
+    # Metadata
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_staff_accounts')
+    created_at = models.DateTimeField(auto_now_add=True)
+    activated_at = models.DateTimeField(null=True, blank=True, help_text="When was this account activated?")
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        unique_together = ('user', 'school')  # One staff account per user per school
+        verbose_name = "School Staff Account"
+        verbose_name_plural = "School Staff Accounts"
+        permissions = [
+            ('can_approve_staff_accounts', 'Can approve pending staff accounts'),
+            ('can_suspend_staff', 'Can suspend staff accounts'),
+        ]
+    
+    def __str__(self):
+        return f"{self.user.get_full_name()} - {self.get_role_display()} ({self.school.name})"
+    
+    def activate_account(self):
+        """Activate the staff account"""
+        self.is_active = True
+        self.account_status = 'ACTIVE'
+        self.activated_at = timezone.now()
+        self.user.is_active = True
+        self.save()
+        self.user.save()
+    
+    def suspend_account(self):
+        """Suspend the staff account"""
+        self.is_active = False
+        self.account_status = 'SUSPENDED'
+        self.user.is_active = False
+        self.save()
+        self.user.save()
+    
+    def terminate_account(self):
+        """Terminate the staff account"""
+        self.is_active = False
+        self.account_status = 'TERMINATED'
+        self.user.is_active = False
+        self.save()
+        self.user.save()
+
+
+class StaffAccountAuditLog(models.Model):
+    """Tracks all changes to staff accounts for audit purposes"""
+    
+    ACTION_CHOICES = [
+        ('CREATED', 'Account Created'),
+        ('ACTIVATED', 'Account Activated'),
+        ('UPDATED', 'Account Updated'),
+        ('SUSPENDED', 'Account Suspended'),
+        ('TERMINATED', 'Account Terminated'),
+        ('ROLE_CHANGED', 'Role Changed'),
+        ('PERMISSIONS_CHANGED', 'Permissions Changed'),
+    ]
+    
+    staff_account = models.ForeignKey(SchoolStaffAccount, on_delete=models.CASCADE, related_name='audit_logs')
+    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
+    description = models.TextField(blank=True, help_text="Details of the change")
+    changed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='staff_audit_changes')
+    old_values = models.JSONField(null=True, blank=True, help_text="Previous values before change")
+    new_values = models.JSONField(null=True, blank=True, help_text="New values after change")
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Staff Account Audit Log"
+        verbose_name_plural = "Staff Account Audit Logs"
+    
+    def __str__(self):
+        return f"{self.staff_account} - {self.get_action_display()} - {self.created_at}"
