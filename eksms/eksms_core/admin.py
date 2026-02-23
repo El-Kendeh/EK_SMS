@@ -19,6 +19,9 @@ from .models import (
     Grade,
     ClassRanking,
     ReportCard,
+    GradeAuditLog,
+    GradeChangeAlert,
+    GradeVerification,
 )
 
 
@@ -451,3 +454,207 @@ class ReportCardAdmin(admin.ModelAdmin):
             'Refresh the page to see the generated PDFs.'
         )
     generate_pdfs.short_description = "Generate PDF report cards"
+
+
+@admin.register(GradeAuditLog)
+class GradeAuditLogAdmin(admin.ModelAdmin):
+    list_display = ['grade', 'action', 'actor', 'logged_at', 'hash_status', 'is_tampered']
+    list_filter = ['action', 'logged_at', 'grade__term', 'grade__subject']
+    search_fields = ['grade__student__user__first_name', 'grade__student__user__last_name', 
+                     'grade__subject__name', 'actor__username']
+    readonly_fields = ['grade', 'action', 'actor', 'old_values', 'new_values', 'ip_address',
+                      'user_agent', 'record_hash', 'merkle_hash', 'logged_at']
+    date_hierarchy = 'logged_at'
+    
+    fieldsets = (
+        ('Change Information', {
+            'fields': ('grade', 'action', 'actor', 'change_reason')
+        }),
+        ('Values', {
+            'fields': ('old_values', 'new_values')
+        }),
+        ('Context', {
+            'fields': ('ip_address', 'user_agent')
+        }),
+        ('Cryptographic Verification', {
+            'fields': ('record_hash', 'merkle_hash'),
+            'classes': ('collapse',)
+        }),
+        ('Timestamp', {
+            'fields': ('logged_at',)
+        }),
+    )
+    
+    def hash_status(self, obj):
+        """Show hash verification status"""
+        if obj.is_hash_valid():
+            return format_html('<span style="color: green;">✓ Valid</span>')
+        return format_html('<span style="color: red;">✗ Invalid</span>')
+    hash_status.short_description = 'Hash Status'
+    
+    def is_tampered(self, obj):
+        """Check if record appears tampered"""
+        if not obj.is_hash_valid():
+            return format_html('<span style="color: red; font-weight: bold;">TAMPERED</span>')
+        return format_html('<span style="color: green;">✓ OK</span>')
+    is_tampered.short_description = 'Tampering Detection'
+    
+    def has_add_permission(self, request):
+        """Audit logs should not be manually created"""
+        return False
+    
+    def has_delete_permission(self, request, obj=None):
+        """Audit logs are immutable"""
+        return False
+
+
+@admin.register(GradeChangeAlert)
+class GradeChangeAlertAdmin(admin.ModelAdmin):
+    list_display = ['grade', 'severity_badge', 'alert_type', 'status_badge', 'triggered_at', 'email_status']
+    list_filter = ['severity', 'status', 'triggered_at', 'alert_type', 'email_sent']
+    search_fields = ['grade__student__user__first_name', 'grade__student__user__last_name',
+                     'grade__subject__name', 'triggered_by__username', 'description']
+    readonly_fields = ['grade', 'triggered_by', 'triggered_at', 'old_value', 'new_value',
+                      'email_sent', 'email_sent_at', 'email_sent_to']
+    date_hierarchy = 'triggered_at'
+    
+    fieldsets = (
+        ('Alert Details', {
+            'fields': ('grade', 'severity', 'alert_type', 'description')
+        }),
+        ('What Changed', {
+            'fields': ('old_value', 'new_value')
+        }),
+        ('Who & Where', {
+            'fields': ('triggered_by', 'ip_address', 'triggered_at')
+        }),
+        ('Response', {
+            'fields': ('status', 'acknowledged_by', 'acknowledged_at', 'investigation_notes')
+        }),
+        ('Notifications', {
+            'fields': ('email_sent', 'email_sent_to', 'email_sent_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    actions = ['mark_acknowledged', 'mark_resolved', 'mark_false_alarm']
+    
+    def severity_badge(self, obj):
+        """Color-coded severity indicator"""
+        colors = {
+            'LOW': '#FFC107',
+            'MEDIUM': '#FF9800',
+            'HIGH': '#FF5722',
+            'CRITICAL': '#F44336',
+        }
+        color = colors.get(obj.severity, '#999')
+        return format_html(
+            f'<span style="background-color: {color}; color: white; padding: 3px 8px; '
+            f'border-radius: 3px; font-weight: bold;">{obj.get_severity_display()}</span>'
+        )
+    severity_badge.short_description = 'Severity'
+    
+    def status_badge(self, obj):
+        """Status indicator"""
+        colors = {
+            'NEW': '#2196F3',
+            'ACKNOWLEDGED': '#FF9800',
+            'INVESTIGATED': '#00BCD4',
+            'RESOLVED': '#4CAF50',
+            'FALSE_ALARM': '#9E9E9E',
+        }
+        color = colors.get(obj.status, '#999')
+        return format_html(
+            f'<span style="background-color: {color}; color: white; padding: 3px 8px; '
+            f'border-radius: 3px;">{obj.get_status_display()}</span>'
+        )
+    status_badge.short_description = 'Status'
+    
+    def email_status(self, obj):
+        """Email notification status"""
+        if obj.email_sent:
+            return format_html(f'✓ Sent to {obj.email_sent_to}')
+        return format_html('<span style="color: #999;">Not sent</span>')
+    email_status.short_description = 'Email Notification'
+    
+    def mark_acknowledged(self, request, queryset):
+        """Mark alerts as acknowledged"""
+        count = 0
+        for alert in queryset:
+            alert.acknowledge(request.user, 'Acknowledged via bulk action')
+            count += 1
+        self.message_user(request, f'✓ Acknowledged {count} alert(s)')
+    mark_acknowledged.short_description = 'Mark as acknowledged'
+    
+    def mark_resolved(self, request, queryset):
+        """Mark alerts as resolved"""
+        count = queryset.update(status='RESOLVED')
+        self.message_user(request, f'✓ Resolved {count} alert(s)')
+    mark_resolved.short_description = 'Mark as resolved'
+    
+    def mark_false_alarm(self, request, queryset):
+        """Mark alerts as false alarms"""
+        count = queryset.update(status='FALSE_ALARM')
+        self.message_user(request, f'✓ Marked {count} alert(s) as false alarms')
+    mark_false_alarm.short_description = 'Mark as false alarm'
+
+
+@admin.register(GradeVerification)
+class GradeVerificationAdmin(admin.ModelAdmin):
+    list_display = ['grade', 'verification_status', 'issued_at', 'expires_at', 'verification_count', 'validity']
+    list_filter = ['issued_at', 'is_verified', 'expires_at']
+    search_fields = ['grade__student__user__first_name', 'grade__student__user__last_name',
+                     'verification_token']
+    readonly_fields = ['grade', 'verification_token', 'qr_code_data', 'issued_at', 
+                      'sha256_hash', 'merkle_leaf', 'merkle_root', 'issued_by',
+                      'verification_attempts', 'last_verification_at']
+    
+    fieldsets = (
+        ('Grade Reference', {
+            'fields': ('grade',)
+        }),
+        ('Verification Codes', {
+            'fields': ('verification_token', 'qr_code_data')
+        }),
+        ('Cryptographic Hashes', {
+            'fields': ('sha256_hash', 'merkle_leaf', 'merkle_root'),
+            'classes': ('collapse',)
+        }),
+        ('Issue Information', {
+            'fields': ('issued_by', 'issued_at')
+        }),
+        ('Expiration', {
+            'fields': ('expires_at',)
+        }),
+        ('Verification History', {
+            'fields': ('is_verified', 'verification_attempts', 'last_verification_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def verification_status(self, obj):
+        """Show verification status"""
+        if obj.is_verified:
+            return format_html('<span style="color: green;">✓ Verified</span>')
+        return format_html('<span style="color: orange;">⏳ Not Verified</span>')
+    verification_status.short_description = 'Status'
+    
+    def validity(self, obj):
+        """Show if verification token is still valid"""
+        if obj.is_valid():
+            return format_html('<span style="color: green;">✓ Valid</span>')
+        return format_html('<span style="color: red;">✗ Expired</span>')
+    validity.short_description = 'Token Validity'
+    
+    def verification_count(self, obj):
+        """Show number of verification attempts"""
+        return f'{obj.verification_attempts} attempt(s)'
+    verification_count.short_description = 'Verification Attempts'
+    
+    def has_add_permission(self, request):
+        """Verification records are auto-created"""
+        return False
+    
+    def has_delete_permission(self, request, obj=None):
+        """Verification records should not be deleted"""
+        return False

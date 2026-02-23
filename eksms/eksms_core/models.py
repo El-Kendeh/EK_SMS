@@ -316,6 +316,216 @@ class ClassRanking(models.Model):
         return f"{self.student} - Rank {self.rank} in {self.classroom} ({self.term})"
 
 
+class GradeAuditLog(models.Model):
+    """Immutable audit trail for all grade changes - Event Sourcing"""
+    ACTION_CHOICES = [
+        ('CREATE', 'Grade Created'),
+        ('UPDATE', 'Grade Updated'),
+        ('LOCK', 'Grade Locked'),
+        ('UNLOCK', 'Grade Unlocked'),
+        ('VIEW', 'Grade Viewed'),
+        ('DELETE_ATTEMPT', 'Delete Attempt'),
+        ('ARCHIVE', 'Grade Archived'),
+    ]
+    
+    grade = models.ForeignKey(Grade, on_delete=models.CASCADE, related_name='audit_logs')
+    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
+    actor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, 
+                            related_name='grade_audit_actions')
+    
+    # Before and after snapshots
+    old_values = models.JSONField(default=dict, null=True, blank=True, 
+                                 help_text="Previous values before this change")
+    new_values = models.JSONField(default=dict, null=True, blank=True, 
+                                 help_text="New values after this change")
+    
+    # Context
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True, help_text="Browser/client info")
+    change_reason = models.TextField(blank=True, help_text="Why was this change made?")
+    
+    # Cryptographic Hash for tamper detection
+    record_hash = models.CharField(max_length=256, db_index=True, 
+                                  help_text="SHA256 hash of record for integrity")
+    merkle_hash = models.CharField(max_length=256, db_index=True, 
+                                  help_text="Merkle tree hash including all previous records")
+    
+    # Immutable record timestamp
+    logged_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['grade', '-logged_at']
+        indexes = [
+            models.Index(fields=['grade', '-logged_at']),
+            models.Index(fields=['actor', '-logged_at']),
+            models.Index(fields=['action', '-logged_at']),
+            models.Index(fields=['record_hash']),
+        ]
+        verbose_name_plural = "Grade Audit Logs"
+
+    def __str__(self):
+        return f"{self.get_action_display()} - {self.grade} by {self.actor} at {self.logged_at}"
+
+    def is_hash_valid(self):
+        """Verify the record hasn't been tampered with"""
+        import hashlib
+        import json
+        
+        snapshot = {
+            'grade_id': self.grade_id,
+            'action': self.action,
+            'actor': self.actor_id,
+            'old_values': self.old_values,
+            'new_values': self.new_values,
+            'logged_at': str(self.logged_at),
+        }
+        computed_hash = hashlib.sha256(json.dumps(snapshot, sort_keys=True).encode()).hexdigest()
+        return computed_hash == self.record_hash
+
+
+class GradeChangeAlert(models.Model):
+    """Alert system for suspicious grade change attempts"""
+    SEVERITY_CHOICES = [
+        ('LOW', 'Low - Minor edit'),
+        ('MEDIUM', 'Medium - Significant change'),
+        ('HIGH', 'High - Major alteration'),
+        ('CRITICAL', 'Critical - Locked grade modified'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('NEW', 'New Alert'),
+        ('ACKNOWLEDGED', 'Acknowledged'),
+        ('INVESTIGATED', 'Investigated'),
+        ('RESOLVED', 'Resolved'),
+        ('FALSE_ALARM', 'False Alarm'),
+    ]
+    
+    grade = models.ForeignKey(Grade, on_delete=models.CASCADE, related_name='change_alerts')
+    
+    # What happened
+    severity = models.CharField(max_length=20, choices=SEVERITY_CHOICES)
+    alert_type = models.CharField(max_length=100, db_index=True)  # e.g., "locked_grade_edit_attempt"
+    description = models.TextField()
+    
+    # Who triggered it
+    triggered_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, 
+                                    related_name='triggered_alerts')
+    triggered_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    
+    # Old and new values
+    old_value = models.JSONField(default=dict, blank=True)
+    new_value = models.JSONField(default=dict, blank=True)
+    
+    # Response
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='NEW', db_index=True)
+    acknowledged_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                       related_name='acknowledged_alerts')
+    acknowledged_at = models.DateTimeField(null=True, blank=True)
+    investigation_notes = models.TextField(blank=True)
+    
+    # Email notification tracking
+    email_sent = models.BooleanField(default=False)
+    email_sent_to = models.EmailField(blank=True)
+    email_sent_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-triggered_at']
+        indexes = [
+            models.Index(fields=['grade', '-triggered_at']),
+            models.Index(fields=['severity', '-triggered_at']),
+            models.Index(fields=['status']),
+            models.Index(fields=['triggered_by', '-triggered_at']),
+        ]
+        verbose_name_plural = "Grade Change Alerts"
+
+    def __str__(self):
+        return f"{self.get_severity_display()} - {self.alert_type} on {self.grade}"
+
+    def acknowledge(self, user, notes=""):
+        """Mark alert as acknowledged"""
+        self.status = 'ACKNOWLEDGED'
+        self.acknowledged_by = user
+        self.acknowledged_at = timezone.now()
+        self.investigation_notes = notes
+        self.save()
+
+    def resolve(self):
+        """Mark alert as resolved"""
+        self.status = 'RESOLVED'
+        self.save()
+
+
+class GradeVerification(models.Model):
+    """QR Code and cryptographic verification for grades"""
+    grade = models.OneToOneField(Grade, on_delete=models.CASCADE, related_name='verification')
+    
+    # Verification codes
+    verification_token = models.CharField(max_length=256, unique=True, db_index=True,
+                                         help_text="Unique token for verification")
+    qr_code_data = models.TextField(help_text="Encoded data in QR code")
+    
+    # Cryptographic signatures
+    sha256_hash = models.CharField(max_length=64, db_index=True)  # SHA256 of grade data
+    merkle_leaf = models.CharField(max_length=64, help_text="This record's Merkle tree leaf")
+    merkle_root = models.CharField(max_length=64, db_index=True, 
+                                  help_text="Merkle root of all grades up to this point")
+    
+    # Chain of custody
+    issued_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True,
+                                 related_name='issued_verifications')
+    issued_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    expires_at = models.DateTimeField(help_text="Verification expires after this date")
+    
+    # Verification attempts
+    verification_attempts = models.IntegerField(default=0)
+    last_verification_at = models.DateTimeField(null=True, blank=True)
+    is_verified = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name_plural = "Grade Verifications"
+
+    def __str__(self):
+        return f"Verification for {self.grade}"
+
+    def generate_verification_token(self):
+        """Generate unique verification token"""
+        import hashlib
+        import json
+        from django.utils import timezone as tz
+        
+        data = {
+            'grade_id': self.grade_id,
+            'student': str(self.grade.student),
+            'subject': str(self.grade.subject),
+            'total_score': float(self.grade.total_score),
+            'grade_letter': self.grade.grade_letter,
+            'term': str(self.grade.term),
+            'issued_at': str(tz.now()),
+        }
+        
+        token = hashlib.sha256(json.dumps(data, sort_keys=True).encode()).hexdigest()
+        self.verification_token = token
+        self.qr_code_data = f"GRADE-{token}"
+        return token
+
+    def verify_qr_code(self, token):
+        """Verify a QR code token"""
+        self.verification_attempts += 1
+        if self.verification_token == token:
+            self.is_verified = True
+            self.last_verification_at = timezone.now()
+            self.save()
+            return True
+        self.save()
+        return False
+
+    def is_valid(self):
+        """Check if verification is still valid"""
+        from django.utils import timezone as tz
+        return self.expires_at > tz.now()
+
+
 class ReportCard(models.Model):
     """Generated report card for a student"""
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='report_cards')
