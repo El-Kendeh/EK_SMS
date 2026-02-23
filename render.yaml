@@ -5,10 +5,12 @@ web:
   runtime: python314
   buildCommand: |
     pip install --upgrade pip setuptools wheel
-    pip install --prefer-binary -r requirements.txt
+    pip install --prefer-binary -r eksms/requirements.txt
     cd eksms && python manage.py collectstatic --noinput
-  startCommand: cd eksms && gunicorn eksms.wsgi:application --bind 0.0.0.0:$PORT --workers 1
+  startCommand: gunicorn eksms.wsgi:application --bind 0.0.0.0:$PORT --workers 1 --chdir eksms
   envVars:
+    - key: PYTHONPATH
+      value: '/opt/render/project/src/eksms'
     - key: DEBUG
       value: 'False'
     - key: PYTHONUNBUFFERED
