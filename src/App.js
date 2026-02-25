@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
+import { ThemeProvider } from './context/ThemeContext';
 import Landing   from './components/Landing';
 import Login     from './components/login';
 import Register  from './components/Register';
@@ -46,12 +47,14 @@ function App() {
   }
 
   return (
-    <div className="App">
-      {page === 'landing'   && <Landing   onNavigate={navigate} />}
-      {page === 'login'     && <Login     onNavigate={navigate} />}
-      {page === 'register'  && <Register  onNavigate={navigate} />}
-      {page === 'dashboard' && <Dashboard onNavigate={navigate} />}
-    </div>
+    <ThemeProvider>
+      <div className="App">
+        {page === 'landing'   && <Landing   onNavigate={navigate} />}
+        {page === 'login'     && <Login     onNavigate={navigate} />}
+        {page === 'register'  && <Register  onNavigate={navigate} />}
+        {page === 'dashboard' && <Dashboard onNavigate={navigate} />}
+      </div>
+    </ThemeProvider>
   );
 }
 

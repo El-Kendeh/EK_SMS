@@ -390,3 +390,54 @@
     transition: none !important;
   }
 }
+
+/* ============================================================
+   Light Theme overrides
+   ============================================================ */
+[data-theme="light"] {
+  --bg-primary:    #F1F5F9;
+  --bg-card:       #FFFFFF;
+  --bg-input:      #F8FAFC;
+  --border-subtle: #E2E8F0;
+  --border-focus:  #0284C7;
+  --accent:        #0284C7;
+  --accent-hover:  #0369A1;
+  --accent-glow:   rgba(2, 132, 199, 0.18);
+  --text-primary:  #0F172A;
+  --text-secondary:#475569;
+  --text-muted:    #94A3B8;
+  --error-bg:      rgba(239, 68, 68, 0.08);
+  --error-text:    #DC2626;
+}
+
+[data-theme="light"] .login-page {
+  background: linear-gradient(135deg, #E8F1FF 0%, #F5F9FF 60%);
+}
+
+[data-theme="light"] .login-card {
+  box-shadow: 0 4px 32px rgba(0, 0, 0, 0.08), 0 0 0 1px var(--border-subtle);
+}
+
+[data-theme="light"] .login-logo-circle {
+  background: linear-gradient(135deg, #0369A1 0%, #0284C7 100%);
+  box-shadow: 0 8px 24px rgba(2, 132, 199, 0.28);
+}
+
+[data-theme="light"] .login-logo-dot {
+  background: #0369A1;
+  border-color: var(--bg-card);
+}
+
+[data-theme="light"] .btn-primary { color: #ffffff; }
+
+[data-theme="light"] .btn-outline { color: var(--text-primary); }
+
+[data-theme="light"] .btn-outline:hover {
+  background: rgba(2, 132, 199, 0.04);
+  border-color: #CBD5E1;
+}
+
+[data-theme="light"] .spin {
+  border-color: rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+}

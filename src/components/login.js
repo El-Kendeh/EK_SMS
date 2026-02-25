@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './Login.css';
+import ThemeToggle from './ThemeToggle';
 
 /* ---- Inline SVG icons (no extra deps) ---- */
 const GradCapIcon = () => (
@@ -97,6 +98,9 @@ function Login({ onNavigate }) {
 
   return (
     <div className="login-page">
+      {/* Theme toggle */}
+      <ThemeToggle />
+
       {/* Back to home */}
       <button
         className="login-back-link"
@@ -116,8 +120,8 @@ function Login({ onNavigate }) {
           </div>
         </div>
 
-        <h1 className="login-title">Welcome back</h1>
-        <p className="login-subtitle">Sign in to your EK-SMS account</p>
+        <h1 className="login-title">Welcome Back</h1>
+        <p className="login-subtitle">Access your institution's management dashboard</p>
 
         {error && (
           <div className="login-error" role="alert">
@@ -200,7 +204,7 @@ function Login({ onNavigate }) {
 
         {/* Divider */}
         <div className="login-divider" style={{ marginTop: '20px' }}>
-          <span>New to EK-SMS?</span>
+          <span>Don't have an account?</span>
         </div>
 
         {/* Register CTA */}
@@ -216,7 +220,7 @@ function Login({ onNavigate }) {
 
       {/* Page footer */}
       <p className="login-footer">
-        © 2026 EK-SMS — School Management System. All rights reserved.
+        © 2026 EK-SMS · EL-KENDEH School Management System. All rights reserved.
       </p>
     </div>
   );

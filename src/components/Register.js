@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './Register.css';
+import ThemeToggle from './ThemeToggle';
 
 /* ================================================================
    SVG Icons
@@ -280,6 +281,7 @@ function Register({ onNavigate }) {
   if (submitted) {
     return (
       <div className="reg-page">
+        <ThemeToggle />
         <div className="reg-card">
           <div className="reg-success">
             <div className="success-icon-wrap">
@@ -313,6 +315,9 @@ function Register({ onNavigate }) {
      ================================================================ */
   return (
     <div className="reg-page">
+      {/* Theme toggle */}
+      <ThemeToggle />
+
       {/* Back to home */}
       <button
         className="reg-back-link"
@@ -372,6 +377,9 @@ function Register({ onNavigate }) {
         {/* ── STEP 1: Basic Information ── */}
         {step === 1 && (
           <div className="reg-form">
+            <p className="step-intro">
+              Tell us about your institution — this is how it will appear across EK-SMS.
+            </p>
             <Field id="institutionName" label="Institution Name" required>
               <input
                 id="institutionName"
@@ -429,6 +437,9 @@ function Register({ onNavigate }) {
         {/* ── STEP 2: Location ── */}
         {step === 2 && (
           <div className="reg-form">
+            <p className="step-intro">
+              Where is your institution located? This helps with directory listings and reports.
+            </p>
             <Field id="address" label="Street Address" required>
               <input
                 id="address"
@@ -484,6 +495,9 @@ function Register({ onNavigate }) {
         {/* ── STEP 3: Contact ── */}
         {step === 3 && (
           <div className="reg-form">
+            <p className="step-intro">
+              Provide your institution's official contact details for communication and verification.
+            </p>
             <Field id="phone" label="Phone Number" required>
               <input
                 id="phone"
@@ -523,8 +537,9 @@ function Register({ onNavigate }) {
         {/* ── STEP 4: Admin Account ── */}
         {step === 4 && (
           <div className="reg-form">
-            <p style={{ fontSize: '0.875rem', color: '#8892A8', margin: '0 0 4px' }}>
-              This account will be the primary administrator for your institution.
+            <p className="step-intro">
+              Create the primary administrator account. This person will have full access
+              to manage students, staff, grades, and settings for your institution.
             </p>
 
             <div className="reg-form-grid">
@@ -618,6 +633,10 @@ function Register({ onNavigate }) {
         {/* ── STEP 5: School Settings ── */}
         {step === 5 && (
           <div className="reg-form">
+            <p className="step-intro">
+              Configure how EK-SMS operates for your institution. These settings can be
+              updated later from your admin dashboard.
+            </p>
             <Field
               id="capacity"
               label="Student Capacity"
@@ -679,8 +698,9 @@ function Register({ onNavigate }) {
         {/* ── STEP 6: Review ── */}
         {step === 6 && (
           <div>
-            <p style={{ fontSize: '0.875rem', color: '#8892A8', marginBottom: '18px' }}>
-              Please review your information before submitting.
+            <p className="step-intro" style={{ marginBottom: '18px' }}>
+              Please review your information carefully before submitting. You can go back
+              to any step to make changes.
             </p>
 
             <ReviewSection title="Basic Information" icon={<InfoIcon />}>
@@ -757,11 +777,11 @@ function Register({ onNavigate }) {
       <p className="reg-footer-signin">
         Already have an account?{' '}
         <button type="button" onClick={() => onNavigate && onNavigate('login')}>
-          Sign in
+          Sign in here
         </button>
       </p>
       <p className="reg-footer">
-        © 2026 EK-SMS — School Management System.
+        © 2026 EK-SMS · EL-KENDEH School Management System.
       </p>
     </div>
   );

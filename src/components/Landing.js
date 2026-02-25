@@ -1,79 +1,68 @@
 import React from 'react';
 import './Landing.css';
+import ThemeToggle from './ThemeToggle';
 
 const FEATURES = [
   'Student Management',
   'Grade Tracking',
   'Teacher Portals',
-  'Attendance',
-  'Reports',
+  'Attendance Tracking',
+  'Academic Reports',
   'Multi-Role Access',
+  'Staff Management',
+  'Parent Communication',
+];
+
+const TRUST_ITEMS = [
+  'Free to get started',
+  'Secure & role-based access',
+  'Built for African institutions',
 ];
 
 /* ---- Inline SVG Icons ---- */
 const IconSchool = () => (
-  <svg width="38" height="38" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden="true">
     <path
-      d="M12 3L2 8l10 5 10-5-10-5zM2 13l10 5 10-5M2 18l10 5 10-5"
-      stroke="#ffffff"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
+      d="M12 3L2 8l10 5 10-5-10-5z"
+      stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+    />
+    <path
+      d="M2 13l10 5 10-5"
+      stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+    />
+    <path
+      d="M2 18l10 5 10-5"
+      stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
     />
   </svg>
 );
 
 const IconRegister = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <path
-      d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <polyline
-      points="17 21 17 13 7 13 7 21"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <polyline
-      points="7 3 7 8 15 8"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"
+      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <polyline points="17 21 17 13 7 13 7 21"
+      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <polyline points="7 3 7 8 15 8"
+      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 
 const IconSignIn = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <path
-      d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <polyline
-      points="10 17 15 12 10 7"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <line
-      x1="15"
-      y1="12"
-      x2="3"
-      y2="12"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-    />
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"
+      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <polyline points="10 17 15 12 10 7"
+      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <line x1="15" y1="12" x2="3" y2="12"
+      stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+);
+
+const IconCheck = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <polyline points="20 6 9 17 4 12"
+      stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 
@@ -81,6 +70,9 @@ const IconSignIn = () => (
 export default function Landing({ onNavigate }) {
   return (
     <div className="landing">
+      {/* Theme toggle */}
+      <ThemeToggle />
+
       {/* Ambient background glows */}
       <div className="landing-glow landing-glow--tr" aria-hidden="true" />
       <div className="landing-glow landing-glow--bl" aria-hidden="true" />
@@ -88,7 +80,7 @@ export default function Landing({ onNavigate }) {
       <div className="landing-content">
 
         {/* Logo icon */}
-        <div className="landing-logo" aria-hidden="true">
+        <div className="landing-logo" aria-label="EK-SMS logo">
           <IconSchool />
         </div>
 
@@ -105,8 +97,9 @@ export default function Landing({ onNavigate }) {
 
         {/* Subtitle */}
         <p className="landing-subtitle">
-          The all-in-one platform for schools, universities, and tertiary institutions.
-          Manage students, grades, teachers, and administration — all in one place.
+          The all-in-one school management platform designed for African institutions.
+          Simplify enrollment, academics, attendance, and staff management —
+          all from one secure dashboard.
         </p>
 
         {/* Feature pills */}
@@ -115,6 +108,16 @@ export default function Landing({ onNavigate }) {
             <li key={f} className="landing-feature-pill">{f}</li>
           ))}
         </ul>
+
+        {/* Trust bar */}
+        <div className="landing-trust" aria-label="Why choose EK-SMS">
+          {TRUST_ITEMS.map((t) => (
+            <span key={t} className="landing-trust__item">
+              <IconCheck />
+              {t}
+            </span>
+          ))}
+        </div>
 
         {/* CTA buttons */}
         <div className="landing-ctas">
@@ -133,6 +136,11 @@ export default function Landing({ onNavigate }) {
             Sign In
           </button>
         </div>
+
+        {/* Footer note */}
+        <p className="landing-footer-note">
+          © 2026 EK-SMS · EL-KENDEH School Management System
+        </p>
 
       </div>
     </div>
