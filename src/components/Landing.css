@@ -1,3 +1,6 @@
+/* Google Font — Space Grotesk for animated accent word */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700;800&display=swap');
+
 /* ============================================================
    EK-SMS Landing Page  —  Dark Hero
    ============================================================ */
@@ -133,7 +136,51 @@
   line-height: 1.75;
   color: var(--landing-muted);
   max-width: 540px;
-  margin: 0 auto 3rem;
+  margin: 0 auto 0;
+}
+
+/* Second subtitle line — contains the animated word */
+.landing-subtitle--animated {
+  margin: 0.5rem auto 3rem;
+  font-size: 1.1rem;
+  font-weight: 500;
+  /* Extra line-height so the big word doesn't feel cramped */
+  line-height: 2.2;
+}
+
+/* ---- Cycling animated word — Space Grotesk, large, glowing ---- */
+.cycling-word {
+  display: inline-block;
+  font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: clamp(1.75rem, 5.5vw, 2.25rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  vertical-align: middle;
+  /* GPU-composited transitions only */
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity   0.3s ease;
+  will-change: transform, opacity;
+}
+
+/* Word is fully visible and in place */
+.cycling-word--visible {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+/* Word exits — slides up and fades out */
+.cycling-word--exit {
+  transform: translateY(-22px) scale(0.96);
+  opacity: 0;
+}
+
+/* Word enters — starts below, invisible; transition carries it to visible */
+.cycling-word--enter {
+  transform: translateY(22px) scale(0.96);
+  opacity: 0;
+  /* No transition on enter — jump to position instantly, animate out on next state */
+  transition: none;
 }
 
 /* ---- Feature pills ---- */
@@ -223,6 +270,10 @@
   .landing-cta,
   .landing-feature-pill        { transition: none; }
   .landing-cta:hover           { transform: none; }
+  /* Cycling word: word still changes, but no slide — just instant fade */
+  .cycling-word,
+  .cycling-word--enter         { transition: opacity 0.15s ease !important; transform: none !important; }
+  .cycling-word--exit          { transform: none !important; }
 }
 
 /* ---- Responsive ---- */

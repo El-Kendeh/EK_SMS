@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import './Landing.css';
 import ThemeToggle from './ThemeToggle';
 
@@ -66,6 +66,57 @@ const IconCheck = () => (
   </svg>
 );
 
+/* ---- Animated cycling words ---- */
+const CYCLING_WORDS = [
+  { text: 'enrollment',       color: '#00B4D8' }, // cyan
+  { text: 'academics',        color: '#22D3A3' }, // teal
+  { text: 'attendance',       color: '#A78BFA' }, // violet
+  { text: 'staff management', color: '#FB923C' }, // orange
+  { text: 'grade reporting',  color: '#F472B6' }, // pink
+  { text: 'scheduling',       color: '#60A5FA' }, // blue
+  { text: 'student progress', color: '#34D399' }, // emerald
+  { text: 'communication',    color: '#FBBF24' }, // amber
+];
+
+function AnimatedWord() {
+  const [index, setIndex] = useState(0);
+  const [phase, setPhase] = useState('visible'); // 'visible' | 'exit' | 'enter'
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      // 1. Slide current word out (up + fade)
+      setPhase('exit');
+
+      setTimeout(() => {
+        // 2. Swap to next word, position it below (invisible)
+        setIndex((i) => (i + 1) % CYCLING_WORDS.length);
+        setPhase('enter');
+
+        // 3. After one paint, animate it into place
+        setTimeout(() => setPhase('visible'), 30);
+      }, 300); // matches CSS exit transition duration
+    }, 2600); // display time per word
+
+    return () => clearInterval(id);
+  }, []);
+
+  const { text, color } = CYCLING_WORDS[index];
+
+  return (
+    <span
+      className={`cycling-word cycling-word--${phase}`}
+      style={{
+        color,
+        textShadow: `0 0 22px ${color}70, 0 0 48px ${color}30`,
+      }}
+      aria-live="polite"
+      aria-atomic="true"
+    >
+      {text}
+    </span>
+  );
+}
+
 /* ---- Component ---- */
 export default function Landing({ onNavigate }) {
   return (
@@ -98,8 +149,9 @@ export default function Landing({ onNavigate }) {
         {/* Subtitle */}
         <p className="landing-subtitle">
           The all-in-one school management platform designed for African institutions.
-          Simplify enrollment, academics, attendance, and staff management —
-          all from one secure dashboard.
+        </p>
+        <p className="landing-subtitle landing-subtitle--animated">
+          Simplify <AnimatedWord /> — all from one secure dashboard.
         </p>
 
         {/* Feature pills */}

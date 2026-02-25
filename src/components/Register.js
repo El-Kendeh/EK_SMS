@@ -85,6 +85,44 @@ const ReviewIcon = () => (
   </svg>
 );
 
+/* ---- Field-specific icons ---- */
+const BuildingIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <rect x="2" y="7" width="20" height="14" rx="2" />
+    <path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16" />
+  </svg>
+);
+
+const MailIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <rect x="2" y="4" width="20" height="16" rx="2" />
+    <path d="M2 7l10 7 10-7" />
+  </svg>
+);
+
+const GlobeIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <circle cx="12" cy="12" r="10" />
+    <line x1="2" y1="12" x2="22" y2="12" />
+    <path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" />
+  </svg>
+);
+
+const LockIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <rect x="3" y="11" width="18" height="11" rx="2" />
+    <path d="M7 11V7a5 5 0 0110 0v4" />
+  </svg>
+);
+
+const UsersIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+  </svg>
+);
+
 /* ================================================================
    Constants
    ================================================================ */
@@ -136,7 +174,39 @@ const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: CURRENT_YEAR - 1799 }, (_, i) => CURRENT_YEAR - i);
 
 /* ================================================================
-   Helper: field component
+   Password Strength Indicator
+   ================================================================ */
+function PasswordStrength({ password }) {
+  if (!password) return null;
+  let score = 0;
+  if (password.length >= 8)        score++;
+  if (/[A-Z]/.test(password))     score++;
+  if (/[0-9]/.test(password))     score++;
+  if (/[^A-Za-z0-9]/.test(password)) score++;
+  const colors = ['', '#EF4444', '#F97316', '#EAB308', '#22D3A3'];
+  const labels = ['', 'Weak', 'Fair', 'Good', 'Strong'];
+  return (
+    <div className="pwd-strength">
+      <div className="pwd-strength-bars">
+        {[1, 2, 3, 4].map((i) => (
+          <div
+            key={i}
+            className="pwd-strength-bar"
+            style={i <= score ? { background: colors[score] } : undefined}
+          />
+        ))}
+      </div>
+      {score > 0 && (
+        <span className="pwd-strength-label" style={{ color: colors[score] }}>
+          {labels[score]}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/* ================================================================
+   Helper: Field wrapper
    ================================================================ */
 function Field({ id, label, required, hint, children }) {
   return (
@@ -155,11 +225,11 @@ function Field({ id, label, required, hint, children }) {
    Main Register Component
    ================================================================ */
 function Register({ onNavigate }) {
-  const [step, setStep]           = useState(1);
-  const [submitted, setSubmitted] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError]         = useState('');
-  const [showPwd, setShowPwd]     = useState(false);
+  const [step, setStep]               = useState(1);
+  const [submitted, setSubmitted]     = useState(false);
+  const [isLoading, setIsLoading]     = useState(false);
+  const [error, setError]             = useState('');
+  const [showPwd, setShowPwd]         = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
   const [form, setForm] = useState({
@@ -318,7 +388,6 @@ function Register({ onNavigate }) {
      ================================================================ */
   return (
     <div className="reg-page">
-      {/* Theme toggle */}
       <ThemeToggle />
 
       {/* Back to home */}
@@ -331,18 +400,16 @@ function Register({ onNavigate }) {
       </button>
 
       <div className="reg-card">
-        {/* Card Header */}
+        {/* Card Header — centered stacked layout */}
         <div className="reg-header">
           <div className="reg-logo-circle">
             <GradCapIcon />
           </div>
-          <div className="reg-header-text">
-            <h1 className="reg-title">Register Your Institution</h1>
-            <p className="reg-step-label">
-              Step {step} of {STEPS.length} —{' '}
-              <span>{STEPS[step - 1].label}</span>
-            </p>
-          </div>
+          <h1 className="reg-title">Register Your Institution</h1>
+          <p className="reg-step-label">
+            Step {step} of {STEPS.length} —{' '}
+            <span>{STEPS[step - 1].label}</span>
+          </p>
         </div>
 
         {/* Stepper */}
@@ -351,7 +418,7 @@ function Register({ onNavigate }) {
             <div className="stepper-fill" style={{ width: `${fillPct}%` }} />
           </div>
           {STEPS.map((s, i) => {
-            const num = i + 1;
+            const num      = i + 1;
             const isDone   = step > num;
             const isActive = step === num;
             return (
@@ -383,16 +450,20 @@ function Register({ onNavigate }) {
             <p className="step-intro">
               Tell us about your institution — this is how it will appear across EK-SMS.
             </p>
+
             <Field id="institutionName" label="Institution Name" required>
-              <input
-                id="institutionName"
-                className="reg-input"
-                type="text"
-                placeholder="e.g. Greenfield Academy"
-                value={form.institutionName}
-                onChange={set('institutionName')}
-                autoFocus
-              />
+              <div className="input-wrap">
+                <span className="input-icon"><BuildingIcon /></span>
+                <input
+                  id="institutionName"
+                  className="reg-input with-icon"
+                  type="text"
+                  placeholder="e.g. Greenfield Academy"
+                  value={form.institutionName}
+                  onChange={set('institutionName')}
+                  autoFocus
+                />
+              </div>
             </Field>
 
             <Field id="institutionType" label="Institution Type" required>
@@ -444,16 +515,20 @@ function Register({ onNavigate }) {
             <p className="step-intro">
               Where is your institution located? This helps with directory listings and reports.
             </p>
+
             <Field id="address" label="Street Address" required>
-              <input
-                id="address"
-                className="reg-input"
-                type="text"
-                placeholder="e.g. 61 New Castle Street, Kissy"
-                value={form.address}
-                onChange={set('address')}
-                autoFocus
-              />
+              <div className="input-wrap">
+                <span className="input-icon"><LocationIcon /></span>
+                <input
+                  id="address"
+                  className="reg-input with-icon"
+                  type="text"
+                  placeholder="e.g. 61 New Castle Street, Kissy"
+                  value={form.address}
+                  onChange={set('address')}
+                  autoFocus
+                />
+              </div>
             </Field>
 
             <div className="reg-form-grid">
@@ -502,38 +577,48 @@ function Register({ onNavigate }) {
             <p className="step-intro">
               Provide your institution's official contact details for communication and verification.
             </p>
+
             <Field id="phone" label="Phone Number" required>
-              <input
-                id="phone"
-                className="reg-input"
-                type="tel"
-                placeholder="+232 88 232 603"
-                value={form.phone}
-                onChange={set('phone')}
-                autoFocus
-              />
+              <div className="input-wrap">
+                <span className="input-icon"><ContactIcon /></span>
+                <input
+                  id="phone"
+                  className="reg-input with-icon"
+                  type="tel"
+                  placeholder="+232 88 232 603"
+                  value={form.phone}
+                  onChange={set('phone')}
+                  autoFocus
+                />
+              </div>
             </Field>
 
             <Field id="email" label="Institutional Email" required>
-              <input
-                id="email"
-                className="reg-input"
-                type="email"
-                placeholder="info@iconhighschool.edu.sl"
-                value={form.email}
-                onChange={set('email')}
-              />
+              <div className="input-wrap">
+                <span className="input-icon"><MailIcon /></span>
+                <input
+                  id="email"
+                  className="reg-input with-icon"
+                  type="email"
+                  placeholder="info@iconhighschool.edu.sl"
+                  value={form.email}
+                  onChange={set('email')}
+                />
+              </div>
             </Field>
 
-            <Field id="website" label="Website" hint="Optional">
-              <input
-                id="website"
-                className="reg-input"
-                type="url"
-                placeholder="https://www.iconhighschool.edu.sl"
-                value={form.website}
-                onChange={set('website')}
-              />
+            <Field id="website" label="Website" hint="Optional — include https://...">
+              <div className="input-wrap">
+                <span className="input-icon"><GlobeIcon /></span>
+                <input
+                  id="website"
+                  className="reg-input with-icon"
+                  type="url"
+                  placeholder="https://www.iconhighschool.edu.sl"
+                  value={form.website}
+                  onChange={set('website')}
+                />
+              </div>
             </Field>
           </div>
         )}
@@ -548,52 +633,57 @@ function Register({ onNavigate }) {
 
             <div className="reg-form-grid">
               <Field id="firstName" label="First Name" required>
-                <input
-                  id="firstName"
-                  className="reg-input"
-                  type="text"
-                  placeholder="Ishma"
-                  value={form.firstName}
-                  onChange={set('firstName')}
-                  autoFocus
-                />
+                <div className="input-wrap">
+                  <span className="input-icon"><AdminIcon /></span>
+                  <input
+                    id="firstName"
+                    className="reg-input with-icon"
+                    type="text"
+                    placeholder="Ishma"
+                    value={form.firstName}
+                    onChange={set('firstName')}
+                    autoFocus
+                  />
+                </div>
               </Field>
 
               <Field id="lastName" label="Last Name" required>
-                <input
-                  id="lastName"
-                  className="reg-input"
-                  type="text"
-                  placeholder="Rogers"
-                  value={form.lastName}
-                  onChange={set('lastName')}
-                />
+                <div className="input-wrap">
+                  <span className="input-icon"><AdminIcon /></span>
+                  <input
+                    id="lastName"
+                    className="reg-input with-icon"
+                    type="text"
+                    placeholder="Rogers"
+                    value={form.lastName}
+                    onChange={set('lastName')}
+                  />
+                </div>
               </Field>
             </div>
 
             <Field id="adminEmail" label="Admin Email" required>
-              <input
-                id="adminEmail"
-                className="reg-input"
-                type="email"
-                placeholder="admin@iconhighschool.edu.sl"
-                value={form.adminEmail}
-                onChange={set('adminEmail')}
-                autoComplete="email"
-              />
+              <div className="input-wrap">
+                <span className="input-icon"><MailIcon /></span>
+                <input
+                  id="adminEmail"
+                  className="reg-input with-icon"
+                  type="email"
+                  placeholder="admin@iconhighschool.edu.sl"
+                  value={form.adminEmail}
+                  onChange={set('adminEmail')}
+                  autoComplete="email"
+                />
+              </div>
             </Field>
 
-            <Field
-              id="password"
-              label="Password"
-              required
-              hint="Use uppercase, lowercase, numbers and symbols"
-            >
+            <Field id="password" label="Password" required>
               <div className="input-wrap">
+                <span className="input-icon"><LockIcon /></span>
                 <input
                   id="password"
                   type={showPwd ? 'text' : 'password'}
-                  className="reg-input with-toggle"
+                  className="reg-input with-icon with-toggle"
                   placeholder="Min. 8 characters"
                   value={form.password}
                   onChange={set('password')}
@@ -608,14 +698,16 @@ function Register({ onNavigate }) {
                   {showPwd ? <EyeOffIcon /> : <EyeIcon />}
                 </button>
               </div>
+              <PasswordStrength password={form.password} />
             </Field>
 
-            <Field id="confirmPassword" label="Confirm Password" required>
+            <Field id="confirmPassword" label="Confirm Password" required hint="Use uppercase, lowercase, numbers and a symbol">
               <div className="input-wrap">
+                <span className="input-icon"><LockIcon /></span>
                 <input
                   id="confirmPassword"
                   type={showConfirm ? 'text' : 'password'}
-                  className="reg-input with-toggle"
+                  className="reg-input with-icon with-toggle"
                   placeholder="Re-enter password"
                   value={form.confirmPassword}
                   onChange={set('confirmPassword')}
@@ -641,21 +733,25 @@ function Register({ onNavigate }) {
               Configure how EK-SMS operates for your institution. These settings can be
               updated later from your admin dashboard.
             </p>
+
             <Field
               id="capacity"
               label="Student Capacity"
               hint="Approximate maximum number of enrolled students"
             >
-              <input
-                id="capacity"
-                className="reg-input"
-                type="number"
-                min="1"
-                placeholder="1000"
-                value={form.capacity}
-                onChange={set('capacity')}
-                autoFocus
-              />
+              <div className="input-wrap">
+                <span className="input-icon"><UsersIcon /></span>
+                <input
+                  id="capacity"
+                  className="reg-input with-icon"
+                  type="number"
+                  min="1"
+                  placeholder="1000"
+                  value={form.capacity}
+                  onChange={set('capacity')}
+                  autoFocus
+                />
+              </div>
             </Field>
 
             <Field id="academicSystem" label="Academic System">
@@ -747,8 +843,8 @@ function Register({ onNavigate }) {
           </div>
         )}
 
-        {/* Navigation */}
-        <div className="reg-nav">
+        {/* Navigation — solo class removes placeholder div on step 1 */}
+        <div className={`reg-nav${step === 1 ? ' solo' : ''}`}>
           {step > 1 ? (
             <button type="button" className="btn-back" onClick={back}>
               <ArrowLeftIcon /> Back

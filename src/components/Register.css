@@ -2,8 +2,6 @@
    EK-SMS Registration Wizard — Dark Theme
    ============================================================ */
 
-/* Re-use the same CSS custom properties from Login.css via :root */
-
 /* ---- Page Shell ---- */
 .reg-page {
   min-height: 100vh;
@@ -42,46 +40,47 @@
 /* ---- Card ---- */
 .reg-card {
   width: 100%;
-  max-width: 540px;
+  max-width: 560px;
   background: #111827;
   border-radius: 16px;
-  padding: 40px 40px 36px;
+  padding: 40px 44px 36px;
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55),
               0 0 0 1px #2A3347;
 }
 
-/* ---- Card Header ---- */
+/* ---- Card Header — centered stacked ---- */
 .reg-header {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 14px;
-  margin-bottom: 20px;
+  text-align: center;
+  gap: 8px;
+  margin-bottom: 28px;
 }
 
 .reg-logo-circle {
   flex-shrink: 0;
-  width: 48px;
-  height: 48px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   background: linear-gradient(135deg, #1E6FD9 0%, #00B4D8 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 6px 18px rgba(0, 180, 216, 0.3);
+  box-shadow: 0 6px 20px rgba(0, 180, 216, 0.32);
+  margin-bottom: 4px;
 }
 
 .reg-logo-circle svg {
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
 }
-
-.reg-header-text {}
 
 .reg-title {
   font-size: 1.375rem;
   font-weight: 700;
   color: #FFFFFF;
-  margin: 0 0 3px;
+  margin: 0;
   letter-spacing: -0.2px;
 }
 
@@ -101,15 +100,15 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 32px;
+  margin-bottom: 28px;
   position: relative;
 }
 
 .stepper-track {
   position: absolute;
-  top: 14px;
-  left: 14px;
-  right: 14px;
+  top: 16px;          /* half of 32px circle */
+  left: 16px;
+  right: 16px;
   height: 2px;
   background: #2A3347;
   z-index: 0;
@@ -131,15 +130,15 @@
 }
 
 .step-circle {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 700;
-  transition: background 0.3s, border-color 0.3s;
+  transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
   border: 2px solid #2A3347;
   background: #111827;
   color: #4A5568;
@@ -149,7 +148,7 @@
   background: #00B4D8;
   border-color: #00B4D8;
   color: #fff;
-  box-shadow: 0 0 0 4px rgba(0, 180, 216, 0.2);
+  box-shadow: 0 0 0 5px rgba(0, 180, 216, 0.18);
 }
 
 .step-circle.done {
@@ -159,8 +158,8 @@
 }
 
 .step-circle.done svg {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
 }
 
 .step-name {
@@ -171,8 +170,20 @@
   white-space: nowrap;
 }
 
-.step-name.active { color: #00B4D8; }
+.step-name.active { color: #00B4D8; font-weight: 600; }
 .step-name.done   { color: #8892A8; }
+
+/* ---- Step intro callout ---- */
+.step-intro {
+  font-size: 0.875rem;
+  color: #8892A8;
+  line-height: 1.65;
+  margin: 0 0 8px;
+  padding: 10px 14px;
+  background: rgba(0, 180, 216, 0.05);
+  border-left: 2px solid rgba(0, 180, 216, 0.35);
+  border-radius: 0 6px 6px 0;
+}
 
 /* ---- Form Body ---- */
 .reg-form {
@@ -313,6 +324,37 @@
 .input-toggle:hover { color: #8892A8; }
 .input-toggle svg { width: 17px; height: 17px; }
 
+/* ---- Password Strength ---- */
+.pwd-strength {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.pwd-strength-bars {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+}
+
+.pwd-strength-bar {
+  height: 3px;
+  flex: 1;
+  border-radius: 2px;
+  background: #2A3347;
+  transition: background 0.35s ease;
+}
+
+.pwd-strength-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  min-width: 38px;
+  text-align: right;
+  transition: color 0.35s ease;
+}
+
 /* ---- Error Banner ---- */
 .reg-error {
   background: rgba(239, 68, 68, 0.1);
@@ -333,6 +375,18 @@
   justify-content: space-between;
   margin-top: 28px;
   gap: 12px;
+}
+
+/* Step 1 has no Back button — Continue spans full width */
+.reg-nav.solo {
+  display: block;
+}
+
+.reg-nav.solo .btn-next {
+  width: 100%;
+  justify-content: center;
+  margin-left: 0;
+  padding: 13px 24px;
 }
 
 .btn-back {
@@ -590,13 +644,6 @@
   box-shadow: 0 6px 20px rgba(0, 180, 216, 0.3);
 }
 
-/* ---- Capacity helper row ---- */
-.capacity-hint {
-  font-size: 0.75rem;
-  color: #4A5568;
-  margin-top: 3px;
-}
-
 /* ---- Footer ---- */
 .reg-footer {
   text-align: center;
@@ -627,9 +674,9 @@
 .reg-footer-signin button:hover { color: #009DC4; }
 
 /* ---- Responsive ---- */
-@media (max-width: 560px) {
+@media (max-width: 600px) {
   .reg-card {
-    padding: 28px 18px 24px;
+    padding: 28px 20px 24px;
     border-radius: 12px;
   }
 
@@ -638,7 +685,7 @@
   }
 
   .stepper {
-    margin-bottom: 24px;
+    margin-bottom: 20px;
   }
 
   .step-name {
@@ -652,15 +699,15 @@
 
 @media (max-width: 360px) {
   .step-circle {
-    width: 24px;
-    height: 24px;
+    width: 26px;
+    height: 26px;
     font-size: 0.6875rem;
   }
 
   .stepper-track {
-    top: 12px;
-    left: 12px;
-    right: 12px;
+    top: 13px;
+    left: 13px;
+    right: 13px;
   }
 }
 
@@ -676,6 +723,8 @@
    ============================================================ */
 [data-theme="light"] .reg-page {
   background: linear-gradient(135deg, #E8F1FF 0%, #F5F9FF 60%);
+  background-image: linear-gradient(135deg, #E8F1FF 0%, #F5F9FF 60%);
+  background-size: auto;
 }
 
 [data-theme="light"] .reg-card {
@@ -693,7 +742,7 @@
 
 [data-theme="light"] .reg-logo-circle {
   background: linear-gradient(135deg, #0369A1 0%, #0284C7 100%);
-  box-shadow: 0 6px 18px rgba(2, 132, 199, 0.28);
+  box-shadow: 0 6px 20px rgba(2, 132, 199, 0.28);
 }
 
 /* Stepper */
@@ -709,7 +758,7 @@
   background: #0284C7;
   border-color: #0284C7;
   color: #fff;
-  box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.18);
+  box-shadow: 0 0 0 5px rgba(2, 132, 199, 0.15);
 }
 [data-theme="light"] .step-circle.done {
   background: #0284C7;
@@ -720,6 +769,13 @@
 [data-theme="light"] .step-name         { color: #94A3B8; }
 [data-theme="light"] .step-name.active  { color: #0284C7; }
 [data-theme="light"] .step-name.done    { color: #64748B; }
+
+/* Step intro callout */
+[data-theme="light"] .step-intro {
+  color: #475569;
+  background: rgba(2, 132, 199, 0.05);
+  border-left-color: rgba(2, 132, 199, 0.3);
+}
 
 /* Form fields */
 [data-theme="light"] .form-field label { color: #475569; }
@@ -754,15 +810,15 @@
   color: #0F172A;
 }
 
+/* Password strength */
+[data-theme="light"] .pwd-strength-bar { background: #E2E8F0; }
+
 /* Error */
 [data-theme="light"] .reg-error {
   background: rgba(239, 68, 68, 0.08);
   border-color: #EF4444;
   color: #DC2626;
 }
-
-/* Step intro text */
-[data-theme="light"] .step-intro { color: #475569; }
 
 /* Navigation buttons */
 [data-theme="light"] .btn-back {
@@ -816,23 +872,6 @@
 [data-theme="light"] .success-email-note strong { color: #0F172A; }
 
 /* Footer */
-[data-theme="light"] .reg-footer              { color: #94A3B8; }
-[data-theme="light"] .reg-footer-signin       { color: #94A3B8; }
+[data-theme="light"] .reg-footer               { color: #94A3B8; }
+[data-theme="light"] .reg-footer-signin        { color: #94A3B8; }
 [data-theme="light"] .reg-footer-signin button { color: #0284C7; }
-
-/* ---- Step intro description ---- */
-.step-intro {
-  font-size: 0.875rem;
-  color: #8892A8;
-  line-height: 1.65;
-  margin: 0 0 6px;
-}
-
-/* Grid must not show in light mode (background shorthand already resets it) */
-[data-theme="light"] .reg-page {
-  background-image: linear-gradient(135deg, #E8F1FF 0%, #F5F9FF 60%);
-  background-size: auto;
-}
-
-/* Updated label color for light mode */
-[data-theme="light"] .form-field label { color: #475569; }
