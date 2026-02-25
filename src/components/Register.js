@@ -132,6 +132,9 @@ const COUNTRIES = [
   'United States', 'Canada', 'Australia', 'Other',
 ];
 
+const CURRENT_YEAR = new Date().getFullYear();
+const YEARS = Array.from({ length: CURRENT_YEAR - 1799 }, (_, i) => CURRENT_YEAR - i);
+
 /* ================================================================
    Helper: field component
    ================================================================ */
@@ -385,7 +388,7 @@ function Register({ onNavigate }) {
                 id="institutionName"
                 className="reg-input"
                 type="text"
-                placeholder="e.g. Icon High School"
+                placeholder="e.g. Greenfield Academy"
                 value={form.institutionName}
                 onChange={set('institutionName')}
                 autoFocus
@@ -399,7 +402,7 @@ function Register({ onNavigate }) {
                 value={form.institutionType}
                 onChange={set('institutionType')}
               >
-                <option value="">Select institution type</option>
+                <option value="">Select type...</option>
                 {INSTITUTION_TYPES.map((t) => (
                   <option key={t} value={t}>{t}</option>
                 ))}
@@ -407,25 +410,26 @@ function Register({ onNavigate }) {
             </Field>
 
             <div className="reg-form-grid">
-              <Field id="established" label="Year Established" hint="e.g. 2008">
-                <input
+              <Field id="established" label="Year Established">
+                <select
                   id="established"
-                  className="reg-input"
-                  type="number"
-                  placeholder="2008"
-                  min="1800"
-                  max={new Date().getFullYear()}
+                  className="reg-select"
                   value={form.established}
                   onChange={set('established')}
-                />
+                >
+                  <option value="">Select year...</option>
+                  {YEARS.map((y) => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
               </Field>
 
-              <Field id="motto" label="School Motto">
+              <Field id="motto" label="School Motto (optional)">
                 <input
                   id="motto"
                   className="reg-input"
                   type="text"
-                  placeholder="e.g. Persistence"
+                  placeholder="e.g. Excellence in Education"
                   value={form.motto}
                   onChange={set('motto')}
                 />

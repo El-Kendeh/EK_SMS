@@ -16,7 +16,11 @@
 /* ---- Wrapper ---- */
 .landing {
   min-height: 100vh;
-  background: var(--landing-bg);
+  background-color: var(--landing-bg);
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.022) 1px, transparent 1px);
+  background-size: 60px 60px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -381,4 +385,10 @@
 @media (max-width: 640px) {
   .landing-trust { gap: 0.4rem 1.25rem; margin-bottom: 2.25rem; }
   .landing-footer-note { margin-top: 2.5rem; }
+}
+
+/* Disable grid in light mode */
+[data-theme="light"] .landing {
+  background-image: linear-gradient(160deg, #E8F1FF 0%, #F5F9FF 50%, #EAF2FF 100%);
+  background-size: auto;
 }
