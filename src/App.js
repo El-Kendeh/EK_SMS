@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
-import Login    from './components/login';
-import Register from './components/Register';
+import Landing   from './components/Landing';
+import Login     from './components/login';
+import Register  from './components/Register';
 import Dashboard from './components/superadmin/dashboard';
 
 function App() {
-  const [page, setPage]         = useState('loading');
+  const [page, setPage]           = useState('loading');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     const user  = localStorage.getItem('user');
-    setPage(token && user ? 'dashboard' : 'login');
+    // Authenticated users go straight to dashboard; everyone else sees the landing page
+    setPage(token && user ? 'dashboard' : 'landing');
     setIsLoading(false);
   }, []);
 
@@ -19,17 +21,18 @@ function App() {
   useEffect(() => {
     const handleStorage = () => {
       const token = localStorage.getItem('token');
-      setPage(token ? 'dashboard' : 'login');
+      setPage(token ? 'dashboard' : 'landing');
     };
     window.addEventListener('storage', handleStorage);
     return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
   const navigate = (target) => {
+    // 'home' is an alias for the landing page
+    if (target === 'home') { setPage('landing'); return; }
     if (target === 'dashboard') {
-      // Verify token exists before going to dashboard
       const token = localStorage.getItem('token');
-      if (!token) { setPage('login'); return; }
+      if (!token) { setPage('landing'); return; }
     }
     setPage(target);
   };
@@ -44,8 +47,9 @@ function App() {
 
   return (
     <div className="App">
-      {page === 'login'     && <Login    onNavigate={navigate} />}
-      {page === 'register'  && <Register onNavigate={navigate} />}
+      {page === 'landing'   && <Landing   onNavigate={navigate} />}
+      {page === 'login'     && <Login     onNavigate={navigate} />}
+      {page === 'register'  && <Register  onNavigate={navigate} />}
       {page === 'dashboard' && <Dashboard onNavigate={navigate} />}
     </div>
   );
