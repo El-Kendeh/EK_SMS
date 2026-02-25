@@ -193,41 +193,49 @@ function Register({ onNavigate }) {
   const validate = () => {
     setError('');
     if (step === 1) {
-      if (!form.institutionName.trim()) return setError('Institution name is required.'), false;
-      if (!form.institutionType)         return setError('Please select an institution type.'), false;
+      if (!form.institutionName.trim()) { setError('Institution name is required.'); return false; }
+      if (!form.institutionType)         { setError('Please select an institution type.'); return false; }
     }
     if (step === 2) {
-      if (!form.address.trim()) return setError('Street address is required.'), false;
-      if (!form.city.trim())    return setError('City is required.'), false;
-      if (!form.country)        return setError('Please select a country.'), false;
+      if (!form.address.trim()) { setError('Street address is required.'); return false; }
+      if (!form.city.trim())    { setError('City is required.'); return false; }
+      if (!form.country)        { setError('Please select a country.'); return false; }
     }
     if (step === 3) {
-      if (!form.phone.trim()) return setError('Phone number is required.'), false;
-      if (!form.email.trim()) return setError('Institutional email is required.'), false;
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
-        return setError('Please enter a valid email address.'), false;
+      if (!form.phone.trim()) { setError('Phone number is required.'); return false; }
+      if (!form.email.trim()) { setError('Institutional email is required.'); return false; }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+        setError('Please enter a valid email address.'); return false;
+      }
     }
     if (step === 4) {
-      if (!form.firstName.trim())  return setError('First name is required.'), false;
-      if (!form.lastName.trim())   return setError('Last name is required.'), false;
-      if (!form.adminEmail.trim()) return setError('Admin email is required.'), false;
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.adminEmail))
-        return setError('Please enter a valid admin email address.'), false;
-      if (form.password.length < 8)
-        return setError('Password must be at least 8 characters.'), false;
-      if (!/[A-Z]/.test(form.password))
-        return setError('Password must contain at least one uppercase letter.'), false;
-      if (!/[0-9]/.test(form.password))
-        return setError('Password must contain at least one number.'), false;
-      if (!/[^A-Za-z0-9]/.test(form.password))
-        return setError('Password must contain at least one symbol.'), false;
-      if (form.password !== form.confirmPassword)
-        return setError('Passwords do not match.'), false;
+      if (!form.firstName.trim())  { setError('First name is required.'); return false; }
+      if (!form.lastName.trim())   { setError('Last name is required.'); return false; }
+      if (!form.adminEmail.trim()) { setError('Admin email is required.'); return false; }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.adminEmail)) {
+        setError('Please enter a valid admin email address.'); return false;
+      }
+      if (form.password.length < 8) {
+        setError('Password must be at least 8 characters.'); return false;
+      }
+      if (!/[A-Z]/.test(form.password)) {
+        setError('Password must contain at least one uppercase letter.'); return false;
+      }
+      if (!/[0-9]/.test(form.password)) {
+        setError('Password must contain at least one number.'); return false;
+      }
+      if (!/[^A-Za-z0-9]/.test(form.password)) {
+        setError('Password must contain at least one symbol.'); return false;
+      }
+      if (form.password !== form.confirmPassword) {
+        setError('Passwords do not match.'); return false;
+      }
     }
     if (step === 5) {
       const cap = parseInt(form.capacity, 10);
-      if (isNaN(cap) || cap < 1)
-        return setError('Please enter a valid student capacity.'), false;
+      if (isNaN(cap) || cap < 1) {
+        setError('Please enter a valid student capacity.'); return false;
+      }
     }
     return true;
   };
