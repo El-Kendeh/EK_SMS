@@ -2,17 +2,47 @@
   text-align: center;
 }
 
+/* ---- Global dark base ---- */
+body {
+  margin: 0;
+  background: #080D1A;
+}
+
+/* ---- App loading screen ---- */
+.app-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: #080D1A;
+}
+
+.app-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(0, 180, 216, 0.2);
+  border-top-color: #00B4D8;
+  border-radius: 50%;
+  animation: appSpin 0.8s linear infinite;
+  will-change: transform;
+}
+
+@keyframes appSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* Legacy loading classes kept for Dashboard compatibility */
 .loading-container {
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background: #ffffff;
+  background: #080D1A;
 }
 
 .loading-spinner {
   font-size: 1.2rem;
-  color: #1e40af;
+  color: #00B4D8;
 }
 
 .App-logo {

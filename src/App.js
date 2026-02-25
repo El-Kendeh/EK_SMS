@@ -1,51 +1,52 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
-import Login from './components/login';
+import Login    from './components/login';
+import Register from './components/Register';
 import Dashboard from './components/superadmin/dashboard';
 
 function App() {
-  const [currentPage, setCurrentPage] = useState('login');
+  const [page, setPage]         = useState('loading');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is authenticated on app load
     const token = localStorage.getItem('token');
-    const user = localStorage.getItem('user');
-
-    if (token && user) {
-      setCurrentPage('dashboard');
-    } else {
-      setCurrentPage('login');
-    }
+    const user  = localStorage.getItem('user');
+    setPage(token && user ? 'dashboard' : 'login');
     setIsLoading(false);
   }, []);
 
-  // Listen for storage changes (login/logout in other tabs)
+  // Sync logout across tabs
   useEffect(() => {
-    const handleStorageChange = () => {
+    const handleStorage = () => {
       const token = localStorage.getItem('token');
-      if (!token) {
-        setCurrentPage('login');
-      } else {
-        setCurrentPage('dashboard');
-      }
+      setPage(token ? 'dashboard' : 'login');
     };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
   }, []);
+
+  const navigate = (target) => {
+    if (target === 'dashboard') {
+      // Verify token exists before going to dashboard
+      const token = localStorage.getItem('token');
+      if (!token) { setPage('login'); return; }
+    }
+    setPage(target);
+  };
 
   if (isLoading) {
     return (
-      <div className="App loading-container">
-        <div className="loading-spinner">Loading...</div>
+      <div className="App app-loading">
+        <div className="app-spinner" />
       </div>
     );
   }
 
   return (
     <div className="App">
-      {currentPage === 'login' ? <Login /> : <Dashboard />}
+      {page === 'login'     && <Login    onNavigate={navigate} />}
+      {page === 'register'  && <Register onNavigate={navigate} />}
+      {page === 'dashboard' && <Dashboard onNavigate={navigate} />}
     </div>
   );
 }
