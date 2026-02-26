@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import { ThemeProvider } from './context/ThemeContext';
-import Landing   from './components/Landing';
-import Login     from './components/login';
-import Register  from './components/Register';
-import Dashboard from './components/superadmin/dashboard';
+import Landing from './components/Landing';
+import Login from './components/login';
+import Register from './components/Register';
+import ThemeToggle from './components/ThemeToggle';
 
 function App() {
-  const [page, setPage]           = useState('loading');
+  const [page, setPage] = useState('loading');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    const user  = localStorage.getItem('user');
+    const user = localStorage.getItem('user');
     // Authenticated users go straight to dashboard; everyone else sees the landing page
     setPage(token && user ? 'dashboard' : 'landing');
     setIsLoading(false);
@@ -49,9 +49,9 @@ function App() {
   return (
     <ThemeProvider>
       <div className="App">
-        {page === 'landing'   && <Landing   onNavigate={navigate} />}
-        {page === 'login'     && <Login     onNavigate={navigate} />}
-        {page === 'register'  && <Register  onNavigate={navigate} />}
+        {page === 'landing' && <Landing onNavigate={navigate} />}
+        {page === 'login' && <Login onNavigate={navigate} />}
+        {page === 'register' && <Register onNavigate={navigate} />}
         {page === 'dashboard' && <Dashboard onNavigate={navigate} />}
       </div>
     </ThemeProvider>
