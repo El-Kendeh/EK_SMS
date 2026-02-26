@@ -3,17 +3,24 @@ import sys
 
 # Get the directory where this file (project/eksms/wsgi.py) is located
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# Path to the inner Django project directory
+INNER_EKSMS = os.path.join(BASE_DIR, 'eksms')
 
-# Add the BASE_DIR to the beginning of the path
-# This allows 'import eksms' to find the inner eksms package, 
-# just like when running manage.py
+# Ensure the container directory is in path
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
-# Set settings module
+# FIX: Name collision between outer folder 'eksms' and inner package 'eksms'
+# Extending the 'eksms' package path allows Django to find submodules 
+# like 'settings_secure' inside the nested directory.
+import eksms
+if hasattr(eksms, '__path__') and INNER_EKSMS not in eksms.__path__:
+    eksms.__path__.append(INNER_EKSMS)
+
+# Force settings module
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'eksms.settings_secure')
 
-# Standard Django WSGI application
+# Initialize Django
 import django
 django.setup()
 
