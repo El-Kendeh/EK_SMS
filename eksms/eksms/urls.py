@@ -8,7 +8,7 @@ from django.contrib import admin
 from django.urls import path
 from django.views.generic import RedirectView
 from django.views.defaults import page_not_found, server_error
-from .views import favicon_view, api_login
+from .views import favicon_view, api_login, api_register
 from django.conf import settings
 from django.conf.urls.static import static
 
@@ -17,7 +17,8 @@ urlpatterns = [
     path('favicon.jpeg', favicon_view, name='favicon'),
     
     # API endpoints
-    path('api/login/', api_login, name='api_login'),
+    path('api/login/',    api_login,    name='api_login'),
+    path('api/register/', api_register, name='api_register'),
     
     # Root URL redirects to admin
     path('', RedirectView.as_view(url='admin/', permanent=False)),

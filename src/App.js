@@ -1,52 +1,60 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
-import Login from './components/login';
+import { ThemeProvider } from './context/ThemeContext';
+import Landing   from './components/Landing';
+import Login     from './components/login';
+import Register  from './components/Register';
 import Dashboard from './components/superadmin/dashboard';
 
 function App() {
-  const [currentPage, setCurrentPage] = useState('login');
+  const [page, setPage]           = useState('loading');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is authenticated on app load
     const token = localStorage.getItem('token');
-    const user = localStorage.getItem('user');
-
-    if (token && user) {
-      setCurrentPage('dashboard');
-    } else {
-      setCurrentPage('login');
-    }
+    const user  = localStorage.getItem('user');
+    // Authenticated users go straight to dashboard; everyone else sees the landing page
+    setPage(token && user ? 'dashboard' : 'landing');
     setIsLoading(false);
   }, []);
 
-  // Listen for storage changes (login/logout in other tabs)
+  // Sync logout across tabs
   useEffect(() => {
-    const handleStorageChange = () => {
+    const handleStorage = () => {
       const token = localStorage.getItem('token');
-      if (!token) {
-        setCurrentPage('login');
-      } else {
-        setCurrentPage('dashboard');
-      }
+      setPage(token ? 'dashboard' : 'landing');
     };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
   }, []);
+
+  const navigate = (target) => {
+    // 'home' is an alias for the landing page
+    if (target === 'home') { setPage('landing'); return; }
+    if (target === 'dashboard') {
+      const token = localStorage.getItem('token');
+      if (!token) { setPage('landing'); return; }
+    }
+    setPage(target);
+  };
 
   if (isLoading) {
     return (
-      <div className="App loading-container">
-        <div className="loading-spinner">Loading...</div>
+      <div className="App app-loading">
+        <div className="app-spinner" />
       </div>
     );
   }
 
   return (
-    <div className="App">
-      {currentPage === 'login' ? <Login /> : <Dashboard />}
-    </div>
+    <ThemeProvider>
+      <div className="App">
+        {page === 'landing'   && <Landing   onNavigate={navigate} />}
+        {page === 'login'     && <Login     onNavigate={navigate} />}
+        {page === 'register'  && <Register  onNavigate={navigate} />}
+        {page === 'dashboard' && <Dashboard onNavigate={navigate} />}
+      </div>
+    </ThemeProvider>
   );
 }
 
