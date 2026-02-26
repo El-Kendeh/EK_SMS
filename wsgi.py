@@ -1,27 +1,24 @@
 """
-WSGI wrapper for Render.com deployment.
-This file sits at the project root and properly imports the Django WSGI application.
+Minimal WSGI wrapper for production deployment
 """
-
 import os
 import sys
-import django
 
-# Add the eksms directory to the Python path
-base_dir = os.path.dirname(os.path.abspath(__file__))
-eksms_dir = os.path.join(base_dir, 'eksms')
-sys.path.insert(0, eksms_dir)
-sys.path.insert(0, base_dir)
+# Get the directory where this file is located
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Set Django settings module
+# Add project directories to path
+sys.path.insert(0, os.path.join(BASE_DIR, 'eksms'))
+sys.path.insert(0, BASE_DIR)
+
+# Configure Django settings
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'eksms.settings_secure')
 
-# Setup Django
+# Import and initialize Django
+import django
 django.setup()
 
-# Import the WSGI application
-from eksms.wsgi import application
+# Import the application
+from django.core.wsgi import get_wsgi_application
+application = get_wsgi_application()
 
-if __name__ == "__main__":
-    from django.core.management import execute_from_command_line
-    execute_from_command_line(sys.argv)
