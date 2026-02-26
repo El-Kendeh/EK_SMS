@@ -4,7 +4,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import Landing from './components/Landing';
 import Login from './components/login';
 import Register from './components/Register';
-import ThemeToggle from './components/ThemeToggle';
+import Dashboard from './components/superadmin/Dashboard';
 
 function App() {
   const [page, setPage] = useState('loading');
