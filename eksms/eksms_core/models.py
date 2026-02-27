@@ -16,6 +16,7 @@ class School(models.Model):
     # Registration details
     registration_date = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True, help_text="Is this school active in the system?")
+    is_approved = models.BooleanField(default=False, help_text="Has this school been reviewed and approved by a super admin?")
     
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)

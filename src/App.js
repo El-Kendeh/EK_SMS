@@ -5,6 +5,7 @@ import Landing from './components/Landing';
 import Login from './components/login';
 import Register from './components/Register';
 import Dashboard from './components/superadmin/Dashboard';
+import SchoolAdminDashboard from './components/schooladmin/dashboard';
 
 function App() {
   const [page, setPage] = useState('loading');
@@ -16,9 +17,14 @@ function App() {
     let user = null;
     try { if (userStr) user = JSON.parse(userStr); } catch (e) { }
 
-    // Only superusers go to this dashboard
-    if (token && user && user.is_superuser) {
-      setPage('dashboard');
+    if (token && user) {
+      if (user.is_superuser) {
+        setPage('dashboard');
+      } else if (user.role === 'school_admin') {
+        setPage('sa-dashboard');
+      } else {
+        setPage('landing');
+      }
     } else {
       setPage('landing');
     }
@@ -33,8 +39,14 @@ function App() {
       let user = null;
       try { if (userStr) user = JSON.parse(userStr); } catch (e) { }
 
-      if (token && user && user.is_superuser) {
-        setPage('dashboard');
+      if (token && user) {
+        if (user.is_superuser) {
+          setPage('dashboard');
+        } else if (user.role === 'school_admin') {
+          setPage('sa-dashboard');
+        } else {
+          setPage('landing');
+        }
       } else {
         setPage('landing');
       }
@@ -68,6 +80,7 @@ function App() {
         {page === 'login' && <Login onNavigate={navigate} />}
         {page === 'register' && <Register onNavigate={navigate} />}
         {page === 'dashboard' && <Dashboard onNavigate={navigate} />}
+        {page === 'sa-dashboard' && <SchoolAdminDashboard onNavigate={navigate} />}
       </div>
     </ThemeProvider>
   );

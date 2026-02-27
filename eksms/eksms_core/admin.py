@@ -93,8 +93,8 @@ class SchoolFilterMixin:
 @admin.register(School)
 class SchoolModelAdmin(SuperAdminRequiredMixin, admin.ModelAdmin):
     """Admin for School registration - Only Super Admins"""
-    list_display = ['name', 'code', 'email', 'phone', 'principal_name', 'is_active', 'get_admin_name', 'registration_date']
-    list_filter = ['is_active', 'registration_date', 'created_at']
+    list_display = ['name', 'code', 'email', 'phone', 'principal_name', 'is_active', 'is_approved', 'get_admin_name', 'registration_date']
+    list_filter = ['is_active', 'is_approved', 'registration_date', 'created_at']
     search_fields = ['name', 'code', 'email', 'principal_name']
     readonly_fields = ['registration_date', 'created_at', 'updated_at', 'created_by']
     
@@ -109,7 +109,7 @@ class SchoolModelAdmin(SuperAdminRequiredMixin, admin.ModelAdmin):
             'fields': ('principal_name',)
         }),
         ('Status', {
-            'fields': ('is_active',)
+            'fields': ('is_active', 'is_approved')
         }),
         ('Audit Information', {
             'fields': ('registration_date', 'created_by', 'created_at', 'updated_at'),

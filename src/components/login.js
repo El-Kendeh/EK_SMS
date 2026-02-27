@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './Login.css';
+import { SECURITY_CONFIG } from '../config/security';
 import ThemeToggle from './ThemeToggle';
 
 /* ---- Inline SVG icons (no extra deps) ---- */
@@ -73,7 +74,7 @@ function Login({ onNavigate }) {
 
     setIsLoading(true);
     try {
-      const response = await fetch('https://ek-sms-backend.onrender.com/api/login/', {
+      const response = await fetch(`${SECURITY_CONFIG.API_URL}/api/login/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim(), password }),
@@ -91,11 +92,10 @@ function Login({ onNavigate }) {
       if (onNavigate) {
         if (data.user.is_superuser) {
           onNavigate('dashboard');
+        } else if (data.user.role === 'school_admin') {
+          onNavigate('sa-dashboard');
         } else {
-          // For now, redirect non-superusers back to landing or show a message
-          // Ideally they go to a school-admin dashboard later
           onNavigate('home');
-          setError('This dashboard is restricted to superusers. School admin dashboards coming soon.');
         }
       }
     } catch (err) {

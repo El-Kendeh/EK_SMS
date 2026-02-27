@@ -88,9 +88,10 @@ def api_login(request):
             from eksms_core.models import SchoolAdmin
             sa = SchoolAdmin.objects.select_related('school').get(user=user, is_active=True)
             school_data = {
-                'id':   sa.school.id,
-                'name': sa.school.name,
-                'code': sa.school.code,
+                'id':          sa.school.id,
+                'name':        sa.school.name,
+                'code':        sa.school.code,
+                'is_approved': sa.school.is_approved,
             }
         except Exception:
             if not (user.is_superuser or user.is_staff):
@@ -248,6 +249,7 @@ def api_register(request):
             address=full_address,
             principal_name=f"{first_name} {last_name}",
             is_active=True,
+            is_approved=False,
             created_by=user,
         )
 

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './Register.css';
+import { SECURITY_CONFIG } from '../config/security';
 import ThemeToggle from './ThemeToggle';
 
 /* ================================================================
@@ -328,7 +329,7 @@ function Register({ onNavigate }) {
     setError('');
     setIsLoading(true);
     try {
-      const response = await fetch('https://ek-sms-backend.onrender.com/api/register/', {
+      const response = await fetch(`${SECURITY_CONFIG.API_URL}/api/register/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
