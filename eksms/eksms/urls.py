@@ -8,7 +8,7 @@ from django.contrib import admin
 from django.urls import path
 from django.views.generic import RedirectView
 from django.views.defaults import page_not_found, server_error
-from .views import favicon_view, api_login, api_register
+from .views import favicon_view, api_login, api_register, api_get_schools, api_approve_school
 from django.conf import settings
 from django.conf.urls.static import static
 
@@ -19,6 +19,8 @@ urlpatterns = [
     # API endpoints
     path('api/login/',    api_login,    name='api_login'),
     path('api/register/', api_register, name='api_register'),
+    path('api/schools/', api_get_schools, name='api_get_schools'),
+    path('api/schools/approve/', api_approve_school, name='api_approve_school'),
     
     # Root URL redirects to admin
     path('', RedirectView.as_view(url='admin/', permanent=False)),

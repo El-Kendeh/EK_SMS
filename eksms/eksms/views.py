@@ -15,6 +15,28 @@ import uuid
 from pathlib import Path
 
 
+def verify_superuser(request):
+    """
+    Helper to verify if a request is from a superuser based on the custom token.
+    Expects header: 'Authorization': 'Bearer token_<user_id>_<uuid>'
+    """
+    token = request.headers.get('Authorization', '')
+    if not token.startswith('Bearer token_'):
+        return None
+    try:
+        actual_token = token.replace('Bearer ', '')
+        parts = actual_token.split('_')
+        if len(parts) < 3:
+            return None
+        user_id = parts[1]
+        user = User.objects.get(id=user_id)
+        if user.is_superuser:
+            return user
+    except Exception:
+        pass
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Favicon
 # ---------------------------------------------------------------------------
@@ -279,5 +301,80 @@ def api_register(request):
 
     except json.JSONDecodeError:
         return JsonResponse({'success': False, 'message': 'Invalid JSON payload.'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+# ---------------------------------------------------------------------------
+# Superadmin: Manage Schools
+# ---------------------------------------------------------------------------
+
+@require_http_methods(["GET"])
+@csrf_exempt
+def api_get_schools(request):
+    """
+    GET /api/schools/
+    Requires Superadmin token.
+    Returns list of all schools.
+    """
+    admin_user = verify_superuser(request)
+    if not admin_user:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+    
+    from eksms_core.models import School
+    schools = School.objects.all().order_by('-registration_date')
+    
+    school_list = []
+    for s in schools:
+        school_list.append({
+            'id': s.id,
+            'name': s.name,
+            'code': s.code,
+            'email': s.email,
+            'phone': s.phone,
+            'address': s.address,
+            'principal_name': s.principal_name,
+            'is_approved': s.is_approved,
+            'is_active': s.is_active,
+            'registration_date': s.registration_date.isoformat(),
+        })
+    
+    return JsonResponse({'success': True, 'schools': school_list})
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def api_approve_school(request):
+    """
+    POST /api/schools/approve/
+    Body: { school_id, action: 'approve' | 'reject' }
+    Requires Superadmin token.
+    """
+    admin_user = verify_superuser(request)
+    if not admin_user:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+    
+    try:
+        data = json.loads(request.body)
+        school_id = data.get('school_id')
+        action = data.get('action', 'approve')
+        
+        from eksms_core.models import School
+        school = School.objects.get(id=school_id)
+        
+        if action == 'approve':
+            school.is_approved = True
+            school.save()
+            return JsonResponse({'success': True, 'message': f'School "{school.name}" approved successfully.'})
+        elif action == 'reject':
+            # Archive or delete reject schools to keep the system clean
+            school_name = school.name
+            school.delete()
+            return JsonResponse({'success': True, 'message': f'School "{school_name}" rejected and removed.'})
+        
+        return JsonResponse({'success': False, 'message': 'Invalid action.'}, status=400)
+            
+    except School.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'School not found.'}, status=404)
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
