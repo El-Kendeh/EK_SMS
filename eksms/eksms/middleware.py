@@ -42,7 +42,7 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
             "img-src 'self' data: https:; "
             "font-src 'self'; "
             "media-src 'self' data:; "
-            "connect-src 'self' http://localhost:8000 http://web:8000; "
+            "connect-src 'self' http://localhost:8000 http://web:8000 https://ek-sms-backend.onrender.com; "
             "frame-ancestors 'none'; "
             "base-uri 'self'; "
             "form-action 'self'"

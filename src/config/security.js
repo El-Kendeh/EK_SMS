@@ -5,7 +5,7 @@
 export const SECURITY_CONFIG = {
   // API Configuration
   API_URL: process.env.REACT_APP_API_URL || 'http://localhost:8000',
-  
+
   // Security Headers
   SECURE_HEADERS: {
     'X-Content-Type-Options': 'nosniff',
@@ -62,7 +62,7 @@ export const SECURITY_CONFIG = {
     'style-src': ["'self'", "'unsafe-inline'"],
     'img-src': ["'self'", 'data:', 'https:'],
     'font-src': ["'self'"],
-    'connect-src': ["'self'"],
+    'connect-src': ["'self'", 'https://ek-sms-backend.onrender.com', 'http://localhost:8000'],
     'frame-ancestors': ["'none'"],
     'base-uri': ["'self'"],
     'form-action': ["'self'"],
@@ -80,7 +80,7 @@ export const SECURITY_CONFIG = {
   // Security Headers for Production
   PRODUCTION_HEADERS: {
     'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
-    'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+    'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https://ek-sms-backend.onrender.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
     'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
   },
 };
