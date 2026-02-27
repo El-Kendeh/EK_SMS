@@ -127,12 +127,12 @@ const UsersIcon = () => (
    Constants
    ================================================================ */
 const STEPS = [
-  { key: 'info',     label: 'Info' },
+  { key: 'info', label: 'Info' },
   { key: 'location', label: 'Location' },
-  { key: 'contact',  label: 'Contact' },
-  { key: 'admin',    label: 'Admin' },
+  { key: 'contact', label: 'Contact' },
+  { key: 'admin', label: 'Admin' },
   { key: 'settings', label: 'Settings' },
-  { key: 'review',   label: 'Review' },
+  { key: 'review', label: 'Review' },
 ];
 
 const INSTITUTION_TYPES = [
@@ -146,17 +146,17 @@ const INSTITUTION_TYPES = [
 ];
 
 const ACADEMIC_SYSTEMS = [
-  { value: 'semester',  label: 'Semester System (2 terms)' },
+  { value: 'semester', label: 'Semester System (2 terms)' },
   { value: 'trimester', label: 'Trimester System (3 terms)' },
-  { value: 'quarter',   label: 'Quarter System (4 terms)' },
-  { value: 'annual',    label: 'Annual System (1 term)' },
+  { value: 'quarter', label: 'Quarter System (4 terms)' },
+  { value: 'annual', label: 'Annual System (1 term)' },
 ];
 
 const GRADING_SYSTEMS = [
   { value: 'percentage', label: 'Percentage (0–100%)' },
-  { value: 'letter',     label: 'Letter Grades (A–F)' },
-  { value: 'gpa',        label: 'GPA Scale (0–4.0)' },
-  { value: 'custom',     label: 'Custom System' },
+  { value: 'letter', label: 'Letter Grades (A–F)' },
+  { value: 'gpa', label: 'GPA Scale (0–4.0)' },
+  { value: 'custom', label: 'Custom System' },
 ];
 
 const LANGUAGES = [
@@ -179,9 +179,9 @@ const YEARS = Array.from({ length: CURRENT_YEAR - 1799 }, (_, i) => CURRENT_YEAR
 function PasswordStrength({ password }) {
   if (!password) return null;
   let score = 0;
-  if (password.length >= 8)        score++;
-  if (/[A-Z]/.test(password))     score++;
-  if (/[0-9]/.test(password))     score++;
+  if (password.length >= 8) score++;
+  if (/[A-Z]/.test(password)) score++;
+  if (/[0-9]/.test(password)) score++;
   if (/[^A-Za-z0-9]/.test(password)) score++;
   const colors = ['', '#EF4444', '#F97316', '#EAB308', '#22D3A3'];
   const labels = ['', 'Weak', 'Fair', 'Good', 'Strong'];
@@ -225,11 +225,11 @@ function Field({ id, label, required, hint, children }) {
    Main Register Component
    ================================================================ */
 function Register({ onNavigate }) {
-  const [step, setStep]               = useState(1);
-  const [submitted, setSubmitted]     = useState(false);
-  const [isLoading, setIsLoading]     = useState(false);
-  const [error, setError]             = useState('');
-  const [showPwd, setShowPwd]         = useState(false);
+  const [step, setStep] = useState(1);
+  const [submitted, setSubmitted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [showPwd, setShowPwd] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
   const [form, setForm] = useState({
@@ -268,12 +268,12 @@ function Register({ onNavigate }) {
     setError('');
     if (step === 1) {
       if (!form.institutionName.trim()) { setError('Institution name is required.'); return false; }
-      if (!form.institutionType)         { setError('Please select an institution type.'); return false; }
+      if (!form.institutionType) { setError('Please select an institution type.'); return false; }
     }
     if (step === 2) {
       if (!form.address.trim()) { setError('Street address is required.'); return false; }
-      if (!form.city.trim())    { setError('City is required.'); return false; }
-      if (!form.country)        { setError('Please select a country.'); return false; }
+      if (!form.city.trim()) { setError('City is required.'); return false; }
+      if (!form.country) { setError('Please select a country.'); return false; }
     }
     if (step === 3) {
       if (!form.phone.trim()) { setError('Phone number is required.'); return false; }
@@ -283,8 +283,8 @@ function Register({ onNavigate }) {
       }
     }
     if (step === 4) {
-      if (!form.firstName.trim())  { setError('First name is required.'); return false; }
-      if (!form.lastName.trim())   { setError('Last name is required.'); return false; }
+      if (!form.firstName.trim()) { setError('First name is required.'); return false; }
+      if (!form.lastName.trim()) { setError('Last name is required.'); return false; }
       if (!form.adminEmail.trim()) { setError('Admin email is required.'); return false; }
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.adminEmail)) {
         setError('Please enter a valid admin email address.'); return false;
@@ -328,7 +328,7 @@ function Register({ onNavigate }) {
     setError('');
     setIsLoading(true);
     try {
-      const response = await fetch('/api/register/', {
+      const response = await fetch('https://ek-sms-backend.onrender.com/api/register/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
@@ -418,8 +418,8 @@ function Register({ onNavigate }) {
             <div className="stepper-fill" style={{ width: `${fillPct}%` }} />
           </div>
           {STEPS.map((s, i) => {
-            const num      = i + 1;
-            const isDone   = step > num;
+            const num = i + 1;
+            const isDone = step > num;
             const isActive = step === num;
             return (
               <div className="step-item" key={s.key}>
@@ -805,34 +805,34 @@ function Register({ onNavigate }) {
 
             <ReviewSection title="Basic Information" icon={<InfoIcon />}>
               <ReviewRow label="Institution Name" value={form.institutionName} />
-              <ReviewRow label="Type"             value={form.institutionType} />
-              <ReviewRow label="Established"      value={form.established || '—'} />
-              <ReviewRow label="Motto"            value={form.motto || '—'} />
+              <ReviewRow label="Type" value={form.institutionType} />
+              <ReviewRow label="Established" value={form.established || '—'} />
+              <ReviewRow label="Motto" value={form.motto || '—'} />
             </ReviewSection>
 
             <ReviewSection title="Location" icon={<LocationIcon />}>
               <ReviewRow label="Address" value={form.address} />
-              <ReviewRow label="City"    value={form.city} />
-              <ReviewRow label="Region"  value={form.region || '—'} />
+              <ReviewRow label="City" value={form.city} />
+              <ReviewRow label="Region" value={form.region || '—'} />
               <ReviewRow label="Country" value={form.country} />
             </ReviewSection>
 
             <ReviewSection title="Contact" icon={<ContactIcon />}>
-              <ReviewRow label="Phone"   value={form.phone} />
-              <ReviewRow label="Email"   value={form.email} />
+              <ReviewRow label="Phone" value={form.phone} />
+              <ReviewRow label="Email" value={form.email} />
               <ReviewRow label="Website" value={form.website || '—'} muted={!form.website} />
             </ReviewSection>
 
             <ReviewSection title="Administrator" icon={<AdminIcon />}>
-              <ReviewRow label="Name"  value={`${form.firstName} ${form.lastName}`} />
+              <ReviewRow label="Name" value={`${form.firstName} ${form.lastName}`} />
               <ReviewRow label="Email" value={form.adminEmail} />
             </ReviewSection>
 
             <ReviewSection title="School Settings" icon={<SettingsIcon />}>
-              <ReviewRow label="Capacity"        value={`${form.capacity} students`} />
+              <ReviewRow label="Capacity" value={`${form.capacity} students`} />
               <ReviewRow label="Academic System" value={ACADEMIC_SYSTEMS.find(s => s.value === form.academicSystem)?.label} />
-              <ReviewRow label="Grading"         value={GRADING_SYSTEMS.find(g => g.value === form.gradingSystem)?.label} />
-              <ReviewRow label="Language"        value={form.language} />
+              <ReviewRow label="Grading" value={GRADING_SYSTEMS.find(g => g.value === form.gradingSystem)?.label} />
+              <ReviewRow label="Language" value={form.language} />
             </ReviewSection>
 
             <p className="terms-note" style={{ marginTop: '16px' }}>

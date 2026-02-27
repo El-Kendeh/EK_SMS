@@ -55,12 +55,12 @@ const AlertIcon = () => (
    Login Component
    =================================================================== */
 function Login({ onNavigate }) {
-  const [email, setEmail]         = useState('');
-  const [password, setPassword]   = useState('');
-  const [showPwd, setShowPwd]     = useState(false);
-  const [remember, setRemember]   = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPwd, setShowPwd] = useState(false);
+  const [remember, setRemember] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError]         = useState('');
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -73,7 +73,7 @@ function Login({ onNavigate }) {
 
     setIsLoading(true);
     try {
-      const response = await fetch('/api/login/', {
+      const response = await fetch('https://ek-sms-backend.onrender.com/api/login/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim(), password }),
@@ -88,7 +88,16 @@ function Login({ onNavigate }) {
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
 
-      if (onNavigate) onNavigate('dashboard');
+      if (onNavigate) {
+        if (data.user.is_superuser) {
+          onNavigate('dashboard');
+        } else {
+          // For now, redirect non-superusers back to landing or show a message
+          // Ideally they go to a school-admin dashboard later
+          onNavigate('home');
+          setError('This dashboard is restricted to superusers. School admin dashboards coming soon.');
+        }
+      }
     } catch (err) {
       setError(err.message || 'An error occurred. Please try again.');
     } finally {

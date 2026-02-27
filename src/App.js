@@ -12,9 +12,16 @@ function App() {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    const user = localStorage.getItem('user');
-    // Authenticated users go straight to dashboard; everyone else sees the landing page
-    setPage(token && user ? 'dashboard' : 'landing');
+    const userStr = localStorage.getItem('user');
+    let user = null;
+    try { if (userStr) user = JSON.parse(userStr); } catch (e) { }
+
+    // Only superusers go to this dashboard
+    if (token && user && user.is_superuser) {
+      setPage('dashboard');
+    } else {
+      setPage('landing');
+    }
     setIsLoading(false);
   }, []);
 
@@ -22,7 +29,15 @@ function App() {
   useEffect(() => {
     const handleStorage = () => {
       const token = localStorage.getItem('token');
-      setPage(token ? 'dashboard' : 'landing');
+      const userStr = localStorage.getItem('user');
+      let user = null;
+      try { if (userStr) user = JSON.parse(userStr); } catch (e) { }
+
+      if (token && user && user.is_superuser) {
+        setPage('dashboard');
+      } else {
+        setPage('landing');
+      }
     };
     window.addEventListener('storage', handleStorage);
     return () => window.removeEventListener('storage', handleStorage);

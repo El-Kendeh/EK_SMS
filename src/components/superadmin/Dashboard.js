@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import './Dashboard.css';
 
-function Dashboard() {
+function Dashboard({ onNavigate }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -13,23 +13,31 @@ function Dashboard() {
 
     if (!token || !userData) {
       // Redirect to login if not authenticated
-      window.location.href = '/';
+      if (onNavigate) onNavigate('home');
+      else window.location.href = '/';
       return;
     }
 
     try {
-      setUser(JSON.parse(userData));
+      const parsedUser = JSON.parse(userData);
+      if (!parsedUser.is_superuser) {
+        if (onNavigate) onNavigate('home');
+        else window.location.href = '/';
+        return;
+      }
+      setUser(parsedUser);
       setIsLoading(false);
     } catch (err) {
       setError('Failed to load user data');
       setIsLoading(false);
     }
-  }, []);
+  }, [onNavigate]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    window.location.href = '/';
+    if (onNavigate) onNavigate('home');
+    else window.location.href = '/';
   };
 
   if (isLoading) {
