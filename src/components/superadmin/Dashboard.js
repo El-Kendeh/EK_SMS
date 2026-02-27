@@ -156,6 +156,26 @@ function Dashboard({ onNavigate }) {
         </header>
 
         <div className="dashboard-content">
+          {error && (
+            <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-6 rounded shadow-sm">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <span className="text-red-400">⚠️</span>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-red-700">
+                    {error}
+                    <button
+                      onClick={() => { setError(''); fetchSchools(); }}
+                      className="ml-4 font-bold underline hover:text-red-800"
+                    >
+                      Retry
+                    </button>
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
           {activeTab === 'dashboard' && (
             <>
               <section className="stats-grid">
