@@ -148,6 +148,7 @@ SECURE_CONTENT_SECURITY_POLICY = {
     'style-src': ("'self'", "'unsafe-inline'"),
     'img-src': ("'self'", 'data:', 'https:'),
     'font-src': ("'self'",),
+    'connect-src': ("'self'", "https://ek-sms-backend.onrender.com", "http://localhost:8000"),
 }
 
 # HTTP Strict Transport Security (HSTS)
