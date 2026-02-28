@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import './Register.css';
 import { SECURITY_CONFIG } from '../config/security';
 import ThemeToggle from './ThemeToggle';
+import PruhLogo from './PruhLogo';
 
 /* ================================================================
    SVG Icons
@@ -379,7 +380,7 @@ function Register({ onNavigate }) {
             </button>
           </div>
         </div>
-        <p className="reg-footer">© 2026 EK-SMS — School Management System.</p>
+        <p className="reg-footer">© 2026 EK-SMS. School Management System.</p>
       </div>
     );
   }
@@ -403,9 +404,7 @@ function Register({ onNavigate }) {
       <div className="reg-card">
         {/* Card Header — centered stacked layout */}
         <div className="reg-header">
-          <div className="reg-logo-circle">
-            <GradCapIcon />
-          </div>
+          <PruhLogo size={52} showText={false} variant="blue" />
           <h1 className="reg-title">Register Your Institution</h1>
           <p className="reg-step-label">
             Step {step} of {STEPS.length} —{' '}
@@ -449,7 +448,7 @@ function Register({ onNavigate }) {
         {step === 1 && (
           <div className="reg-form">
             <p className="step-intro">
-              Tell us about your institution — this is how it will appear across EK-SMS.
+              Tell us about your institution: This is how it will appear across EK-SMS.
             </p>
 
             <Field id="institutionName" label="Institution Name" required>

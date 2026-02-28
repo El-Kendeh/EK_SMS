@@ -2,25 +2,18 @@ import React, { useState } from 'react';
 import './Login.css';
 import { SECURITY_CONFIG } from '../config/security';
 import ThemeToggle from './ThemeToggle';
+import PruhLogo from './PruhLogo';
 
-/* ---- Inline SVG icons (no extra deps) ---- */
-const GradCapIcon = () => (
-  <svg viewBox="0 0 24 24" fill="white" aria-hidden="true">
-    <path d="M12 3L1 9l4 2.18V15c0 .92 4.03 3 7 3s7-2.08 7-3v-3.82L23 9 12 3zm6.18 7L12 13.72 5.82 10 12 6.28 18.18 10zM19 13.99l-7 3.79-7-3.79V12.7l7 3.79 7-3.79v1.29z" />
+/* ---- Icons ---- */
+const ArrowLeftIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M19 12H5M12 5l-7 7 7 7" />
   </svg>
 );
 
-const MailIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <rect x="2" y="4" width="20" height="16" rx="2" />
-    <path d="M2 7l10 7 10-7" />
-  </svg>
-);
-
-const LockIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <rect x="3" y="11" width="18" height="11" rx="2" />
-    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+const ArrowRightIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M5 12h14M12 5l7 7-7 7" />
   </svg>
 );
 
@@ -35,12 +28,6 @@ const EyeOffIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24" />
     <line x1="1" y1="1" x2="23" y2="23" />
-  </svg>
-);
-
-const ArrowLeftIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M19 12H5M12 5l-7 7 7 7" />
   </svg>
 );
 
@@ -107,31 +94,29 @@ function Login({ onNavigate }) {
 
   return (
     <div className="login-page">
-      {/* Theme toggle */}
       <ThemeToggle />
 
-      {/* Back to home */}
-      <button
-        className="login-back-link"
-        onClick={() => onNavigate && onNavigate('home')}
-        type="button"
-      >
-        <ArrowLeftIcon />
-        Back to home
-      </button>
-
       <div className="login-card">
-        {/* Logo */}
-        <div className="login-logo-wrap">
-          <div className="login-logo-circle">
-            <GradCapIcon />
-            <span className="login-logo-dot" aria-hidden="true" />
-          </div>
+
+        {/* ── PRUH brand ── */}
+        <div className="login-brand">
+          <PruhLogo size={30} showText={true} textColor="#ffffff" variant="blue" />
         </div>
 
-        <h1 className="login-title">Welcome Back</h1>
-        <p className="login-subtitle">Access your institution's management dashboard</p>
+        {/* ── Portal label (top-center) ── */}
+        <p className="login-portal-label">Sign-in Portal</p>
 
+        {/* ── Back to Home (inside card, top-left) ── */}
+        <button
+          className="login-back-btn"
+          type="button"
+          onClick={() => onNavigate && onNavigate('home')}
+        >
+          <ArrowLeftIcon />
+          Back to Home
+        </button>
+
+        {/* ── Error banner ── */}
         {error && (
           <div className="login-error" role="alert">
             <AlertIcon />
@@ -139,35 +124,33 @@ function Login({ onNavigate }) {
           </div>
         )}
 
+        {/* ── Form ── */}
         <form onSubmit={handleSubmit} className="login-form" noValidate>
+
           {/* Email */}
           <div className="form-field">
-            <label htmlFor="login-email">Email address</label>
-            <div className="input-wrap">
-              <span className="input-icon"><MailIcon /></span>
-              <input
-                id="login-email"
-                type="email"
-                className="form-input"
-                placeholder="admin@school.edu"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                autoComplete="email"
-                required
-              />
-            </div>
+            <label htmlFor="login-email" className="sr-only">Email or National ID</label>
+            <input
+              id="login-email"
+              type="email"
+              className="form-input"
+              placeholder="Email or National ID"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              required
+            />
           </div>
 
           {/* Password */}
           <div className="form-field">
-            <label htmlFor="login-password">Password</label>
+            <label htmlFor="login-password" className="sr-only">Password</label>
             <div className="input-wrap">
-              <span className="input-icon"><LockIcon /></span>
               <input
                 id="login-password"
                 type={showPwd ? 'text' : 'password'}
                 className="form-input has-toggle"
-                placeholder="••••••••••••"
+                placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
@@ -199,20 +182,28 @@ function Login({ onNavigate }) {
               className="forgot-link"
               onClick={() => onNavigate && onNavigate('forgot')}
             >
-              Forgot password?
+              Forgot Password?
             </button>
           </div>
 
-          {/* Sign In */}
-          <button type="submit" className="btn-primary" disabled={isLoading}>
-            {isLoading
-              ? <span className="btn-spinner"><span className="spin" />Signing in…</span>
-              : 'Sign in'}
+          {/* Login button — pill + gradient + arrow */}
+          <button type="submit" className="btn-login" disabled={isLoading}>
+            {isLoading ? (
+              <span className="btn-spinner">
+                <span className="spin" />
+                Signing in…
+              </span>
+            ) : (
+              <>
+                <span>Login</span>
+                <ArrowRightIcon />
+              </>
+            )}
           </button>
         </form>
 
         {/* Divider */}
-        <div className="login-divider" style={{ marginTop: '20px' }}>
+        <div className="login-divider" style={{ marginTop: '24px' }}>
           <span>Don't have an account?</span>
         </div>
 
@@ -225,6 +216,7 @@ function Login({ onNavigate }) {
         >
           Register your institution
         </button>
+
       </div>
 
       {/* Page footer */}

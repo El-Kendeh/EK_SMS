@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './Landing.css';
 import ThemeToggle from './ThemeToggle';
+import PruhLogo from './PruhLogo';
 
 const FEATURES = [
   'Student Management',
@@ -130,9 +131,9 @@ export default function Landing({ onNavigate }) {
 
       <div className="landing-content">
 
-        {/* Logo icon */}
-        <div className="landing-logo" aria-label="EK-SMS logo">
-          <IconSchool />
+        {/* PRUH ownership mark */}
+        <div className="landing-logo">
+          <PruhLogo size={72} showText={true} textColor="#ffffff" variant="blue" />
         </div>
 
         {/* Brand badge */}
@@ -151,7 +152,7 @@ export default function Landing({ onNavigate }) {
           The all-in-one school management platform designed for African institutions.
         </p>
         <p className="landing-subtitle landing-subtitle--animated">
-          Simplify <AnimatedWord /> — all from one secure dashboard.
+          Simplify <AnimatedWord /> all from one secure dashboard.
         </p>
 
         {/* Feature pills */}

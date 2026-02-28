@@ -69,20 +69,15 @@
   width: 100%;
 }
 
-/* ---- Logo circle ---- */
+/* ---- PRUH ownership mark ---- */
 .landing-logo {
-  width: 92px;
-  height: 92px;
-  background: var(--landing-accent);
-  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 2.25rem;
-  box-shadow:
-    0 0 0 8px rgba(0, 180, 216, 0.1),
-    0 0 48px rgba(0, 180, 216, 0.28);
   flex-shrink: 0;
+  /* Subtle glow behind the logo mark */
+  filter: drop-shadow(0 0 28px rgba(27, 63, 175, 0.45));
 }
 
 /* ---- Brand badge ---- */
