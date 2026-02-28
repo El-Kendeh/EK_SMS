@@ -111,33 +111,46 @@
 .login-back-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  background: none;
+  gap: 7px;
+  background: linear-gradient(135deg, #5b21b6 0%, #7c3aed 50%, #a855f7 100%);
   border: none;
+  border-radius: 999px;
   cursor: pointer;
-  padding: 4px 0;
-  color: var(--accent);
-  font-size: 0.8125rem;
-  font-weight: 500;
+  padding: 9px 20px;
+  color: #ffffff;
+  font-size: 0.8rem;
+  font-weight: 600;
   font-family: inherit;
+  letter-spacing: 0.02em;
   margin-bottom: 24px;
-  transition: color 0.2s, gap 0.2s;
-  opacity: 0.85;
+  box-shadow: 0 4px 18px rgba(124, 58, 237, 0.45);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.login-back-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 60%);
+  border-radius: inherit;
+  pointer-events: none;
 }
 
 .login-back-btn:hover {
-  color: #fff;
-  gap: 10px;
-  opacity: 1;
+  transform: translateY(-2px);
+  box-shadow: 0 7px 26px rgba(168, 85, 247, 0.6);
+}
+
+.login-back-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 3px 12px rgba(124, 58, 237, 0.4);
 }
 
 .login-back-btn svg {
   flex-shrink: 0;
-  transition: transform 0.2s;
-}
-
-.login-back-btn:hover svg {
-  transform: translateX(-3px);
+  filter: drop-shadow(0 0 3px rgba(255,255,255,0.5));
 }
 
 /* ---- Error Banner ---- */

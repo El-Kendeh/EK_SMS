@@ -20,22 +20,49 @@
 
 .reg-back-link {
   align-self: flex-start;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  color: #8892A8;
-  background: none;
+  gap: 7px;
+  background: linear-gradient(135deg, #5b21b6 0%, #7c3aed 50%, #a855f7 100%);
   border: none;
+  border-radius: 999px;
   cursor: pointer;
-  font-size: 0.875rem;
-  font-weight: 500;
-  padding: 0;
-  margin-bottom: 24px;
-  transition: color 0.2s;
+  padding: 9px 20px;
+  color: #ffffff;
+  font-size: 0.8rem;
+  font-weight: 600;
   font-family: inherit;
+  letter-spacing: 0.02em;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 18px rgba(124, 58, 237, 0.45);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  position: relative;
+  overflow: hidden;
 }
 
-.reg-back-link:hover { color: #FFFFFF; }
+.reg-back-link::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 60%);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.reg-back-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 7px 26px rgba(168, 85, 247, 0.6);
+}
+
+.reg-back-link:active {
+  transform: translateY(0);
+  box-shadow: 0 3px 12px rgba(124, 58, 237, 0.4);
+}
+
+.reg-back-link svg {
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 3px rgba(255,255,255,0.5));
+}
 
 /* ---- Card ---- */
 .reg-card {
@@ -717,8 +744,6 @@
 
 [data-theme="light"] .reg-title { color: #0F172A; }
 
-[data-theme="light"] .reg-back-link { color: #475569; }
-[data-theme="light"] .reg-back-link:hover { color: #0F172A; }
 
 [data-theme="light"] .reg-step-label { color: #475569; }
 [data-theme="light"] .reg-step-label span { color: #0284C7; }

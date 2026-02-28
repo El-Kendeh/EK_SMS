@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import './Landing.css';
-import ThemeToggle from './ThemeToggle';
 import PruhLogo from './PruhLogo';
 
 const FEATURES = [
@@ -105,9 +104,6 @@ function AnimatedWord() {
 export default function Landing({ onNavigate }) {
   return (
     <div className="landing">
-      {/* Theme toggle */}
-      <ThemeToggle />
-
       {/* Ambient background glows */}
       <div className="landing-glow landing-glow--tr" aria-hidden="true" />
       <div className="landing-glow landing-glow--bl" aria-hidden="true" />

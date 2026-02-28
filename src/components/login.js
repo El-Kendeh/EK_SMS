@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import './Login.css';
 import { SECURITY_CONFIG } from '../config/security';
-import ThemeToggle from './ThemeToggle';
 import PruhLogo from './PruhLogo';
 
 /* ---- Icons ---- */
-const ArrowLeftIcon = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M19 12H5M12 5l-7 7 7 7" />
+const SparkleIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M12 2 L13.5 9.5 L21 11 L13.5 12.5 L12 20 L10.5 12.5 L3 11 L10.5 9.5 Z" />
+    <path d="M19 2 L19.8 5.2 L23 6 L19.8 6.8 L19 10 L18.2 6.8 L15 6 L18.2 5.2 Z" opacity="0.7" />
+    <path d="M5 16 L5.6 18.4 L8 19 L5.6 19.6 L5 22 L4.4 19.6 L2 19 L4.4 18.4 Z" opacity="0.6" />
   </svg>
 );
 
@@ -94,8 +95,6 @@ function Login({ onNavigate }) {
 
   return (
     <div className="login-page">
-      <ThemeToggle />
-
       <div className="login-card">
 
         {/* ── PRUH brand ── */}
@@ -112,7 +111,7 @@ function Login({ onNavigate }) {
           type="button"
           onClick={() => onNavigate && onNavigate('home')}
         >
-          <ArrowLeftIcon />
+          <SparkleIcon />
           Back to Home
         </button>
 
