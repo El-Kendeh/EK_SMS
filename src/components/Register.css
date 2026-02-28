@@ -853,3 +853,365 @@
 [data-theme="light"] .reg-footer               { color: #94A3B8; }
 [data-theme="light"] .reg-footer-signin        { color: #94A3B8; }
 [data-theme="light"] .reg-footer-signin button { color: #0284C7; }
+
+/* ============================================================
+   NEW FIELD STYLES — Badge Upload, Color Picker, Time, 2FA, Legal
+   ============================================================ */
+
+/* ---- Field tag badge (e.g. "Optional", "Used for…") ---- */
+.field-tag {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: #00B4D8;
+  background: rgba(0, 180, 216, 0.1);
+  border-radius: 4px;
+  padding: 1px 6px;
+  vertical-align: middle;
+  letter-spacing: 0;
+}
+
+/* ---- Non-blocking field warning ---- */
+.field-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin-top: 7px;
+  padding: 9px 12px;
+  background: rgba(234, 179, 8, 0.08);
+  border: 1px solid rgba(234, 179, 8, 0.25);
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  color: #CA8A04;
+  line-height: 1.45;
+}
+.field-warning svg { flex-shrink: 0; margin-top: 1px; }
+
+/* ---- Logo / Badge Upload ---- */
+.logo-upload { display: flex; flex-direction: column; gap: 0; }
+
+.logo-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 22px 16px;
+  background: rgba(0, 180, 216, 0.03);
+  border: 2px dashed rgba(0, 180, 216, 0.25);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  color: inherit;
+  font-family: inherit;
+}
+.logo-dropzone:hover {
+  border-color: rgba(0, 180, 216, 0.55);
+  background: rgba(0, 180, 216, 0.07);
+}
+.logo-dropzone-icon { color: #00B4D8; }
+.logo-dropzone-icon svg { width: 24px; height: 24px; }
+.logo-dropzone-label { font-size: 0.9375rem; font-weight: 600; color: var(--text-primary, #fff); }
+.logo-dropzone-sub   { font-size: 0.75rem; color: var(--text-muted, #4A5568); }
+.logo-dropzone-btn {
+  margin-top: 4px;
+  padding: 6px 18px;
+  border-radius: 6px;
+  background: rgba(0, 180, 216, 0.12);
+  border: 1px solid rgba(0, 180, 216, 0.25);
+  color: #00B4D8;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.logo-preview-wrap {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.12);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+.logo-preview {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.logo-preview-info { display: flex; flex-direction: column; gap: 6px; }
+.logo-preview-ok   { font-size: 0.8125rem; font-weight: 600; color: #22D3A3; }
+.logo-remove-btn {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 6px;
+  color: #FC8181;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.18s;
+}
+.logo-remove-btn:hover { background: rgba(239, 68, 68, 0.2); }
+
+/* ---- School hours time grid ---- */
+.time-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 4px;
+}
+.time-field { display: flex; flex-direction: column; gap: 6px; }
+.time-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-secondary, #8892A8);
+}
+.time-label svg { width: 13px; height: 13px; }
+.time-input { width: 100%; color-scheme: dark; }
+
+/* ---- Brand Colour Picker ---- */
+.brand-color-picker { display: flex; flex-direction: column; gap: 0; }
+
+.color-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 0;
+}
+
+.color-swatch {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2.5px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  flex-shrink: 0;
+  padding: 0;
+}
+.color-swatch:hover { transform: scale(1.15); }
+.color-swatch.selected {
+  border-color: #fff;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.35);
+  transform: scale(1.1);
+}
+
+.color-swatch--custom {
+  background: conic-gradient(
+    red 0deg, yellow 60deg, lime 120deg, cyan 180deg, blue 240deg, magenta 300deg, red 360deg
+  );
+  position: relative;
+  overflow: hidden;
+}
+.color-swatch--custom input[type="color"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+}
+
+.color-preview-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding: 9px 14px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+.color-preview-hex {
+  font-family: 'Courier New', monospace;
+  font-size: 0.6875rem;
+  opacity: 0.8;
+}
+
+/* ---- 2FA Option ---- */
+.tfa-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: rgba(0, 180, 216, 0.05);
+  border: 1px solid rgba(0, 180, 216, 0.2);
+  border-radius: 10px;
+  margin-top: 4px;
+  cursor: pointer;
+}
+.tfa-option input[type="checkbox"] {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+  margin-top: 3px;
+  accent-color: #00B4D8;
+  cursor: pointer;
+}
+.tfa-option-label { cursor: pointer; flex: 1; }
+.tfa-option-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-primary, #fff);
+  margin-bottom: 5px;
+}
+.tfa-option-title svg { width: 16px; height: 16px; color: #00B4D8; flex-shrink: 0; }
+.tfa-badge {
+  display: inline-block;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 1px 7px;
+  background: rgba(34, 211, 163, 0.15);
+  border-radius: 4px;
+  color: #22D3A3;
+  letter-spacing: 0.01em;
+}
+.tfa-option-desc {
+  font-size: 0.8125rem;
+  color: var(--text-secondary, #8892A8);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ---- Legal & Compliance Checkboxes ---- */
+.legal-checks { display: flex; flex-direction: column; gap: 12px; }
+
+.legal-check-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.legal-check-item:hover {
+  border-color: rgba(0, 180, 216, 0.2);
+  background: rgba(0, 180, 216, 0.03);
+}
+.legal-check-item.checked {
+  border-color: rgba(34, 211, 163, 0.3);
+  background: rgba(34, 211, 163, 0.04);
+}
+.legal-check-item input[type="checkbox"] {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+  margin-top: 3px;
+  accent-color: #22D3A3;
+  cursor: pointer;
+}
+.legal-check-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.legal-check-text strong {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary, #fff);
+}
+.legal-check-text span {
+  font-size: 0.8125rem;
+  color: var(--text-secondary, #8892A8);
+  line-height: 1.5;
+}
+
+/* ---- Review step — badge row + color dot ---- */
+.review-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 6px;
+}
+.review-badge {
+  width: 52px;
+  height: 52px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.review-badge-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #22D3A3;
+}
+.review-color-dot {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   Light-theme overrides for new fields
+   ============================================================ */
+[data-theme="light"] .logo-dropzone {
+  background: rgba(2, 132, 199, 0.02);
+  border-color: rgba(2, 132, 199, 0.2);
+}
+[data-theme="light"] .logo-dropzone:hover {
+  border-color: rgba(2, 132, 199, 0.5);
+  background: rgba(2, 132, 199, 0.06);
+}
+[data-theme="light"] .logo-preview-wrap {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+[data-theme="light"] .logo-remove-btn {
+  background: rgba(239, 68, 68, 0.07);
+  border-color: rgba(239, 68, 68, 0.2);
+  color: #DC2626;
+}
+[data-theme="light"] .field-warning {
+  background: rgba(234, 179, 8, 0.06);
+  border-color: rgba(234, 179, 8, 0.2);
+  color: #92400E;
+}
+[data-theme="light"] .tfa-option {
+  background: rgba(2, 132, 199, 0.04);
+  border-color: rgba(2, 132, 199, 0.18);
+}
+[data-theme="light"] .legal-check-item {
+  background: rgba(0, 0, 0, 0.02);
+  border-color: rgba(0, 0, 0, 0.07);
+}
+[data-theme="light"] .legal-check-item:hover {
+  border-color: rgba(2, 132, 199, 0.2);
+  background: rgba(2, 132, 199, 0.03);
+}
+[data-theme="light"] .legal-check-item.checked {
+  border-color: rgba(15, 118, 110, 0.3);
+  background: rgba(15, 118, 110, 0.04);
+}
+[data-theme="light"] .legal-check-text strong { color: #0F172A; }
+[data-theme="light"] .legal-check-text span   { color: #475569; }
+[data-theme="light"] .tfa-option-desc         { color: #475569; }
+[data-theme="light"] .review-badge-row        { border-color: rgba(0,0,0,0.07); }
+[data-theme="light"] .review-badge            { border-color: rgba(0,0,0,0.1); }
+[data-theme="light"] .time-input              { color-scheme: light; }
+[data-theme="light"] .field-tag {
+  background: rgba(2, 132, 199, 0.08);
+  color: #0284C7;
+}
