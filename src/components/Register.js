@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import './Register.css';
 import { SECURITY_CONFIG } from '../config/security';
 import ThemeToggle from './ThemeToggle';
@@ -112,11 +112,6 @@ const ShieldIcon = () => (
     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
   </svg>
 );
-const ClockIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
-  </svg>
-);
 const HashIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <line x1="4" y1="9" x2="20" y2="9" /><line x1="4" y1="15" x2="20" y2="15" />
@@ -156,11 +151,8 @@ const STEPS = [
 const INSTITUTION_TYPES = [
   'Primary School',
   'Secondary School / High School',
-  'University',
-  'Tertiary Institute / College',
-  'Technical / Vocational School',
+  'Primary / Secondary School',
   'International School',
-  'Special Needs School',
 ];
 
 const ACADEMIC_SYSTEMS = [
@@ -183,30 +175,112 @@ const LANGUAGES = [
 ];
 
 const COUNTRIES = [
-  'Sierra Leone', 'Ghana', 'Nigeria', 'Kenya', 'South Africa',
-  'Gambia', 'Liberia', 'Guinea', 'Senegal', 'United Kingdom',
-  'United States', 'Canada', 'Australia', 'Other',
+  /* Primary market — listed first */
+  'Sierra Leone',
+  /* Rest of Africa — alphabetical */
+  'Algeria', 'Angola', 'Benin', 'Botswana', 'Burkina Faso', 'Burundi',
+  'Cameroon', 'Cape Verde', 'Central African Republic', 'Chad', 'Comoros',
+  'Congo (Brazzaville)', 'Congo (DRC)', "Côte d'Ivoire", 'Djibouti',
+  'Egypt', 'Equatorial Guinea', 'Eritrea', 'Eswatini', 'Ethiopia',
+  'Gabon', 'Gambia', 'Ghana', 'Guinea', 'Guinea-Bissau',
+  'Kenya', 'Lesotho', 'Liberia', 'Libya',
+  'Madagascar', 'Malawi', 'Mali', 'Mauritania', 'Mauritius', 'Morocco',
+  'Mozambique', 'Namibia', 'Niger', 'Nigeria',
+  'Rwanda', 'São Tomé & Príncipe', 'Senegal', 'Seychelles', 'Somalia',
+  'South Africa', 'South Sudan', 'Sudan',
+  'Tanzania', 'Togo', 'Tunisia', 'Uganda', 'Zambia', 'Zimbabwe',
+  'Other',
 ];
 
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: CURRENT_YEAR - 1799 }, (_, i) => CURRENT_YEAR - i);
 
-/* Brand color presets */
-const BRAND_COLORS = [
-  { hex: '#1B3FAF', name: 'Royal Blue' },
-  { hex: '#0891B2', name: 'Cyan' },
-  { hex: '#0F766E', name: 'Teal' },
-  { hex: '#7C3AED', name: 'Purple' },
-  { hex: '#DC2626', name: 'Crimson' },
-  { hex: '#EA580C', name: 'Orange' },
-  { hex: '#16A34A', name: 'Green' },
-  { hex: '#92400E', name: 'Brown' },
+/* Brand colour palette — 6 rows × 10 cols (Office-style grid)
+   Each column is a colour family; rows go from lightest → darkest */
+const PALETTE_ROWS = [
+  /* Row 1 — Very light tints */
+  ['#FFFFFF','#FFF2CC','#FCE4D6','#FDECEA','#EBF4EB','#DEEBF7','#E8EAF6','#F3E5F5','#E0F2F1','#FBE9E7'],
+  /* Row 2 — Light tints */
+  ['#F2F2F2','#FFE699','#FFCCB3','#FFAAAA','#B8D9A8','#9DC3E6','#9FA8DA','#CE93D8','#80CBC4','#FFAB91'],
+  /* Row 3 — Medium tints */
+  ['#D9D9D9','#FFD966','#FF9966','#FF6666','#70AD47','#5BA4D2','#7986CB','#BA68C8','#26A69A','#FF7043'],
+  /* Row 4 — Base / saturated */
+  ['#595959','#FFC000','#FF6600','#FF0000','#375623','#0070C0','#3F51B5','#9C27B0','#00897B','#E64A19'],
+  /* Row 5 — Dark shades */
+  ['#404040','#806000','#B34700','#CC0000','#1E3A0D','#005A9E','#283593','#6A1B9A','#00695C','#BF360C'],
+  /* Row 6 — Darkest */
+  ['#000000','#3D2E00','#5C2400','#800000','#0D1F06','#002060','#1A237E','#4A148C','#004D40','#7F1D09'],
+];
+
+/* Standard / named colours — displayed as a second row */
+const STANDARD_COLORS = [
+  { hex: '#C00000', name: 'Dark Red'    },
+  { hex: '#FF0000', name: 'Red'         },
+  { hex: '#FF6600', name: 'Orange'      },
+  { hex: '#FFD700', name: 'Gold'        },
+  { hex: '#FFFF00', name: 'Yellow'      },
+  { hex: '#92D050', name: 'Lime Green'  },
+  { hex: '#00B050', name: 'Green'       },
+  { hex: '#00B0F0', name: 'Sky Blue'    },
+  { hex: '#0070C0', name: 'Blue'        },
+  { hex: '#1B3FAF', name: 'Royal Blue'  },
+  { hex: '#7030A0', name: 'Purple'      },
+  { hex: '#000000', name: 'Black'       },
 ];
 
 /* Public email domains — warning only, not blocking */
 const PUBLIC_DOMAINS = [
   'gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com',
   'icloud.com', 'aol.com', 'live.com', 'msn.com',
+];
+
+/* Country dial codes — Africa first */
+const COUNTRY_CODES = [
+  { code: 'SL', name: 'Sierra Leone',   dial: '+232' },
+  { code: 'GH', name: 'Ghana',          dial: '+233' },
+  { code: 'NG', name: 'Nigeria',        dial: '+234' },
+  { code: 'KE', name: 'Kenya',          dial: '+254' },
+  { code: 'ZA', name: 'South Africa',   dial: '+27'  },
+  { code: 'GM', name: 'Gambia',         dial: '+220' },
+  { code: 'LR', name: 'Liberia',        dial: '+231' },
+  { code: 'GN', name: 'Guinea',         dial: '+224' },
+  { code: 'SN', name: 'Senegal',        dial: '+221' },
+  { code: 'GW', name: 'Guinea-Bissau',  dial: '+245' },
+  { code: 'CI', name: "Côte d'Ivoire",  dial: '+225' },
+  { code: 'ML', name: 'Mali',           dial: '+223' },
+  { code: 'BF', name: 'Burkina Faso',   dial: '+226' },
+  { code: 'TG', name: 'Togo',           dial: '+228' },
+  { code: 'BJ', name: 'Benin',          dial: '+229' },
+  { code: 'NE', name: 'Niger',          dial: '+227' },
+  { code: 'ET', name: 'Ethiopia',       dial: '+251' },
+  { code: 'TZ', name: 'Tanzania',       dial: '+255' },
+  { code: 'UG', name: 'Uganda',         dial: '+256' },
+  { code: 'RW', name: 'Rwanda',         dial: '+250' },
+  { code: 'CM', name: 'Cameroon',       dial: '+237' },
+  { code: 'ZM', name: 'Zambia',         dial: '+260' },
+  { code: 'ZW', name: 'Zimbabwe',       dial: '+263' },
+  { code: 'MZ', name: 'Mozambique',     dial: '+258' },
+  { code: 'AO', name: 'Angola',         dial: '+244' },
+  { code: 'EG', name: 'Egypt',          dial: '+20'  },
+  { code: 'MA', name: 'Morocco',        dial: '+212' },
+  { code: 'TN', name: 'Tunisia',        dial: '+216' },
+  { code: 'GB', name: 'United Kingdom', dial: '+44'  },
+  { code: 'US', name: 'United States',  dial: '+1'   },
+  { code: 'CA', name: 'Canada',         dial: '+1'   },
+  { code: 'AU', name: 'Australia',      dial: '+61'  },
+  { code: 'IN', name: 'India',          dial: '+91'  },
+  { code: 'CN', name: 'China',          dial: '+86'  },
+  { code: 'FR', name: 'France',         dial: '+33'  },
+  { code: 'DE', name: 'Germany',        dial: '+49'  },
+  { code: 'IT', name: 'Italy',          dial: '+39'  },
+  { code: 'ES', name: 'Spain',          dial: '+34'  },
+  { code: 'PT', name: 'Portugal',       dial: '+351' },
+  { code: 'AE', name: 'UAE',            dial: '+971' },
+  { code: 'SA', name: 'Saudi Arabia',   dial: '+966' },
+  { code: 'PK', name: 'Pakistan',       dial: '+92'  },
+  { code: 'BD', name: 'Bangladesh',     dial: '+880' },
+  { code: 'BR', name: 'Brazil',         dial: '+55'  },
+  { code: 'MX', name: 'Mexico',         dial: '+52'  },
 ];
 
 /* ================================================================
@@ -239,62 +313,103 @@ function PasswordStrength({ password }) {
 }
 
 /* ================================================================
-   Brand Color Picker
+   Brand Color Picker — full palette grid (multi-select)
    ================================================================ */
 function BrandColorPicker({ value, onChange }) {
-  const nativeRef = useRef(null);
-  const preview = value || '#1B3FAF';
+  const [colorInput, setColorInput] = useState('');
+
+  const toggleColor = (hex) => {
+    if (value.includes(hex)) {
+      onChange(value.filter((c) => c !== hex));
+    } else {
+      onChange([...value, hex]);
+    }
+  };
+
+  const addCustom = () => {
+    const trimmed = colorInput.trim();
+    if (!trimmed || value.includes(trimmed)) { setColorInput(''); return; }
+    onChange([...value, trimmed]);
+    setColorInput('');
+  };
+
+  const removeColor = (c) => onChange(value.filter((x) => x !== c));
 
   return (
     <div className="brand-color-picker">
-      <div className="color-swatches">
-        {BRAND_COLORS.map(({ hex, name }) => (
+
+      {/* ── Theme Colours — 6 × 10 grid ── */}
+      <p className="palette-section-label">Theme Colours</p>
+      <div className="palette-grid">
+        {PALETTE_ROWS.map((row, ri) => (
+          <div key={ri} className="palette-row">
+            {row.map((hex, ci) => (
+              <button
+                key={`${ri}-${ci}`}
+                type="button"
+                className={`palette-swatch${value.includes(hex) ? ' selected' : ''}`}
+                style={{ background: hex }}
+                onClick={() => toggleColor(hex)}
+                title={hex}
+                aria-label={`${value.includes(hex) ? 'Remove' : 'Select'} ${hex}`}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
+
+      {/* ── Standard Colours — named row ── */}
+      <p className="palette-section-label" style={{ marginTop: '10px' }}>Standard Colours</p>
+      <div className="palette-row">
+        {STANDARD_COLORS.map(({ hex, name }) => (
           <button
             key={hex}
             type="button"
-            className={`color-swatch${value === hex ? ' selected' : ''}`}
+            className={`palette-swatch palette-swatch--std${value.includes(hex) ? ' selected' : ''}`}
             style={{ background: hex }}
-            onClick={() => onChange(hex)}
+            onClick={() => toggleColor(hex)}
             title={name}
-            aria-label={`Select ${name} (${hex})`}
+            aria-label={`${value.includes(hex) ? 'Remove' : 'Select'} ${name}`}
           />
         ))}
-        {/* Native color picker trigger */}
-        <button
-          type="button"
-          className="color-swatch color-swatch--custom"
-          onClick={() => nativeRef.current?.click()}
-          title="Custom color"
-          aria-label="Pick a custom color"
-        >
-          <input
-            ref={nativeRef}
-            type="color"
-            value={value && value.startsWith('#') ? value : '#1B3FAF'}
-            onChange={(e) => onChange(e.target.value)}
-            tabIndex={-1}
-            aria-hidden="true"
-          />
-        </button>
       </div>
 
-      {/* Text input — type hex or a CSS color name */}
-      <div className="input-wrap" style={{ marginTop: '10px' }}>
+      {/* ── Custom colour name input ── */}
+      <div className="input-wrap color-input-row" style={{ marginTop: '12px' }}>
         <span className="input-icon"><PaletteIcon /></span>
         <input
           className="reg-input with-icon"
           type="text"
-          placeholder="e.g. #1B3FAF or navy blue"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
+          placeholder="Type a colour name (e.g. Navy Blue) and press Enter"
+          value={colorInput}
+          onChange={(e) => setColorInput(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCustom(); } }}
         />
+        <button
+          type="button"
+          className="color-add-btn"
+          onClick={addCustom}
+          disabled={!colorInput.trim()}
+        >
+          Add
+        </button>
       </div>
 
-      {/* Live preview bar */}
-      {value && (
-        <div className="color-preview-bar" style={{ background: preview }}>
-          <span>Brand Color Preview</span>
-          <span className="color-preview-hex">{value}</span>
+      {/* ── Selected colours as tags ── */}
+      {value.length > 0 && (
+        <div className="color-tags">
+          {value.map((c) => {
+            const std = STANDARD_COLORS.find((s) => s.hex === c);
+            return (
+              <div key={c} className="color-tag">
+                <span className="color-tag-dot" style={{ background: c }} />
+                <span className="color-tag-name">{std ? std.name : c}</span>
+                <button type="button" className="color-tag-remove" onClick={() => removeColor(c)}>
+                  &times;
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
@@ -345,6 +460,173 @@ function LogoUpload({ preview, inputRef, onChange, onRemove }) {
 }
 
 /* ================================================================
+   Phone Input — country code dropdown + numbers-only field
+   ================================================================ */
+function PhoneInput({ codeValue, numberValue, onCodeChange, onNumberChange, id, placeholder }) {
+  const [open, setOpen]     = useState(false);
+  const [search, setSearch] = useState('');
+  const wrapRef             = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const filtered = COUNTRY_CODES.filter(
+    (c) =>
+      c.name.toLowerCase().includes(search.toLowerCase()) ||
+      c.dial.includes(search)
+  );
+
+  const selected = COUNTRY_CODES.find((c) => c.dial === codeValue) || COUNTRY_CODES[0];
+
+  return (
+    <div className="phone-input-wrap" ref={wrapRef}>
+      {/* Dial code selector */}
+      <button
+        type="button"
+        className="phone-dial-btn"
+        onClick={() => setOpen((v) => !v)}
+        aria-label="Select country code"
+        aria-expanded={open}
+      >
+        <span className="phone-dial-code">{selected.dial}</span>
+        <span className="phone-dial-flag">▾</span>
+      </button>
+
+      {/* Dropdown */}
+      {open && (
+        <div className="phone-dropdown" role="listbox">
+          <div className="phone-search-wrap">
+            <input
+              className="phone-search-input"
+              type="text"
+              placeholder="Search country or code…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              autoFocus
+            />
+          </div>
+          <div className="phone-dropdown-list">
+            {filtered.map((c) => (
+              <button
+                key={`${c.code}-${c.dial}`}
+                type="button"
+                role="option"
+                aria-selected={codeValue === c.dial}
+                className={`phone-dropdown-item${codeValue === c.dial ? ' active' : ''}`}
+                onClick={() => { onCodeChange(c.dial); setOpen(false); setSearch(''); }}
+              >
+                <span className="phone-item-name">{c.name}</span>
+                <span className="phone-item-dial">{c.dial}</span>
+              </button>
+            ))}
+            {filtered.length === 0 && (
+              <p className="phone-no-results">No results</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Numbers-only input */}
+      <input
+        id={id}
+        className="phone-number-input"
+        type="text"
+        inputMode="numeric"
+        placeholder={placeholder || '76 000 000'}
+        value={numberValue}
+        onChange={(e) => onNumberChange(e.target.value.replace(/\D/g, ''))}
+      />
+    </div>
+  );
+}
+
+/* ================================================================
+   Legal Modal — Terms of Service & Privacy Policy (placeholder)
+   ================================================================ */
+function LegalModal({ tab, onClose }) {
+  return (
+    <div className="modal-overlay" role="dialog" aria-modal="true" onClick={onClose}>
+      <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2>{tab === 'terms' ? 'Terms of Service' : 'Privacy Policy'}</h2>
+          <button type="button" className="modal-close-btn" onClick={onClose} aria-label="Close">
+            &times;
+          </button>
+        </div>
+        <div className="modal-body">
+          {tab === 'terms' ? (
+            <>
+              <p className="modal-draft-badge">Draft — Version 1.0 · Effective: April 2026</p>
+
+              <h3>1. Acceptance of Terms</h3>
+              <p>By registering your institution on EK-SMS ("the Platform"), you ("Institution Administrator") agree to be bound by these Terms. If you do not agree, do not use the Platform.</p>
+
+              <h3>2. Platform Use</h3>
+              <p>EK-SMS is a school management system for educational institutions to manage student records, attendance, grades, reports, and communications. Access is restricted to registered institutions and their authorised staff.</p>
+
+              <h3>3. Account Responsibility</h3>
+              <p>The Institution Administrator is responsible for the security of account credentials and all activities under the institution's account. Notify EK-SMS immediately of any unauthorised use.</p>
+
+              <h3>4. Data Ownership</h3>
+              <p>Your institution retains full ownership of all data entered into EK-SMS. EK-SMS will not sell, share, or transfer your data to third parties without explicit consent, except as required by law.</p>
+
+              <h3>5. Acceptable Use</h3>
+              <p>You agree not to use EK-SMS for unlawful purposes, upload malicious content, or attempt to access other institutions' data.</p>
+
+              <h3>6. Termination</h3>
+              <p>EK-SMS may suspend or terminate accounts found in violation of these Terms. Institutions may request account closure at any time by contacting support.</p>
+
+              <h3>7. Limitation of Liability</h3>
+              <p>EK-SMS is provided "as is." EK-SMS shall not be liable for indirect, incidental, or consequential damages from use of the Platform.</p>
+
+              <h3>8. Governing Law</h3>
+              <p>These Terms are governed by the laws of the Republic of Sierra Leone.</p>
+
+              <h3>9. Contact</h3>
+              <p>Questions about these Terms? Email <strong>legal@eksms.sl</strong>.</p>
+            </>
+          ) : (
+            <>
+              <p className="modal-draft-badge">Draft — Version 1.0 · Effective: April 2026</p>
+
+              <h3>1. Information We Collect</h3>
+              <p>EK-SMS collects institution details, administrator contact information provided during registration, and operational data entered by your institution (student records, grades, attendance).</p>
+
+              <h3>2. How We Use Your Information</h3>
+              <p>We use collected information to operate the Platform, provide support, and send service-related notifications. We do not use your data for marketing or advertising.</p>
+
+              <h3>3. Data Storage & Security</h3>
+              <p>All data is stored on secure servers with encryption in transit (TLS) and at rest. Institution data is logically segregated and accessible only to authorised users of your institution.</p>
+
+              <h3>4. Data Retention</h3>
+              <p>Data is retained for the duration of the active account. Upon closure, data is retained for 90 days before permanent deletion, unless earlier deletion is requested.</p>
+
+              <h3>5. Third-Party Services</h3>
+              <p>EK-SMS may use third-party providers for hosting and email delivery. These providers are bound by data processing agreements and may not use your data for their own purposes.</p>
+
+              <h3>6. Your Rights</h3>
+              <p>Institutions have the right to access, correct, export, and request deletion of their data. Submit requests to <strong>privacy@eksms.sl</strong>.</p>
+
+              <h3>7. Children's Privacy</h3>
+              <p>Student data is entered and controlled by the institution. Institutions are responsible for compliance with applicable child data protection laws in their jurisdiction.</p>
+
+              <h3>8. Contact</h3>
+              <p>Privacy inquiries: <strong>privacy@eksms.sl</strong>.</p>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================
    Helper: Field wrapper
    ================================================================ */
 function Field({ id, label, required, hint, children }) {
@@ -377,6 +659,8 @@ function Register({ onNavigate }) {
   const [badgePreview, setBadgePreview] = useState('');
   const badgeInputRef = useRef(null);
 
+  const [legalModal, setLegalModal] = useState(null); /* 'terms' | 'privacy' | null */
+
   const [form, setForm] = useState({
     /* Step 1 — Info */
     institutionName:    '',
@@ -385,27 +669,27 @@ function Register({ onNavigate }) {
     motto:              '',
     registrationNumber: '',
     estimatedTeachers:  '',
-    schoolStartTime:    '08:00',
-    schoolEndTime:      '15:00',
-    brandColor:         '#1B3FAF',
+    brandColors:        ['#1B3FAF'],
     /* Step 2 — Location */
     address: '',
     city:    '',
     region:  '',
     country: '',
     /* Step 3 — Contact */
-    phone:   '',
-    email:   '',
-    website: '',
+    phoneCode:   '+232',
+    phoneNumber: '',
+    email:       '',
+    website:     '',
     /* Step 4 — Admin */
-    firstName:       '',
-    lastName:        '',
-    adminUsername:   '',
-    adminEmail:      '',
-    adminPhone:      '',
-    password:        '',
-    confirmPassword: '',
-    enable2FA:       true,
+    firstName:        '',
+    lastName:         '',
+    adminUsername:    '',
+    adminEmail:       '',
+    adminPhoneCode:   '+232',
+    adminPhoneNumber: '',
+    password:         '',
+    confirmPassword:  '',
+    enable2FA:        true,
     /* Step 5 — Settings */
     capacity:       '1000',
     academicSystem: 'trimester',
@@ -481,8 +765,8 @@ function Register({ onNavigate }) {
       if (!form.country)        { setError('Please select a country.'); return false; }
     }
     if (step === 3) {
-      if (!form.phone.trim())   { setError('Phone number is required.'); return false; }
-      if (!form.email.trim())   { setError('Institutional email is required.'); return false; }
+      if (!form.phoneNumber.trim()) { setError('Phone number is required.'); return false; }
+      if (!form.email.trim())       { setError('Institutional email is required.'); return false; }
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
         setError('Please enter a valid email address.'); return false;
       }
@@ -498,7 +782,7 @@ function Register({ onNavigate }) {
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.adminEmail)) {
         setError('Please enter a valid admin email address.'); return false;
       }
-      if (!form.adminPhone.trim()) { setError('Admin phone number is required.'); return false; }
+      if (!form.adminPhoneNumber.trim()) { setError('Admin phone number is required.'); return false; }
       if (form.password.length < 8)              { setError('Password must be at least 8 characters.'); return false; }
       if (!/[A-Z]/.test(form.password))          { setError('Password must contain at least one uppercase letter.'); return false; }
       if (!/[0-9]/.test(form.password))          { setError('Password must contain at least one number.'); return false; }
@@ -542,6 +826,9 @@ function Register({ onNavigate }) {
     try {
       const payload = {
         ...form,
+        phone:      form.phoneCode + form.phoneNumber,
+        adminPhone: form.adminPhoneCode + form.adminPhoneNumber,
+        brandColor: form.brandColors.join(', '),
         ...(badgeFile ? { schoolBadgeName: badgeFile.name, schoolBadgeSize: badgeFile.size } : {}),
       };
       const response = await fetch(`${SECURITY_CONFIG.API_URL}/api/register/`, {
@@ -714,37 +1001,19 @@ function Register({ onNavigate }) {
                 value={form.motto} onChange={set('motto')} />
             </Field>
 
-            {/* School Hours */}
+            {/* Brand Colors — multi-select */}
             <div className="form-field">
               <label>
-                School Hours
-                <span className="field-tag">Used for attendance &amp; scheduling</span>
-              </label>
-              <div className="time-grid">
-                <div className="time-field">
-                  <label htmlFor="schoolStartTime" className="time-label">
-                    <ClockIcon /> Start Time
-                  </label>
-                  <input id="schoolStartTime" className="reg-input time-input"
-                    type="time" value={form.schoolStartTime} onChange={set('schoolStartTime')} />
-                </div>
-                <div className="time-field">
-                  <label htmlFor="schoolEndTime" className="time-label">
-                    <ClockIcon /> End Time
-                  </label>
-                  <input id="schoolEndTime" className="reg-input time-input"
-                    type="time" value={form.schoolEndTime} onChange={set('schoolEndTime')} />
-                </div>
-              </div>
-            </div>
-
-            {/* Brand Color */}
-            <div className="form-field">
-              <label>
-                School Branding Colour
+                School Branding Colours
                 <span className="field-tag">Used in portal, dashboards &amp; report cards</span>
               </label>
-              <BrandColorPicker value={form.brandColor} onChange={(v) => setForm((p) => ({ ...p, brandColor: v }))} />
+              <p className="input-hint" style={{ marginBottom: 8 }}>
+                Select one or more colours from the presets, or type a colour name and press Enter.
+              </p>
+              <BrandColorPicker
+                value={form.brandColors}
+                onChange={(v) => setForm((p) => ({ ...p, brandColors: v }))}
+              />
             </div>
           </div>
         )}
@@ -788,13 +1057,15 @@ function Register({ onNavigate }) {
             <p className="step-intro">
               Provide your institution's official contact details for communication and verification.
             </p>
-            <Field id="phone" label="Phone Number" required>
-              <div className="input-wrap">
-                <span className="input-icon"><ContactIcon /></span>
-                <input id="phone" className="reg-input with-icon" type="tel"
-                  placeholder="+232 88 232 603"
-                  value={form.phone} onChange={set('phone')} autoFocus />
-              </div>
+            <Field id="phoneNumber" label="Phone Number" required>
+              <PhoneInput
+                id="phoneNumber"
+                codeValue={form.phoneCode}
+                numberValue={form.phoneNumber}
+                onCodeChange={(v) => setForm((p) => ({ ...p, phoneCode: v }))}
+                onNumberChange={(v) => setForm((p) => ({ ...p, phoneNumber: v }))}
+                placeholder="76 000 000"
+              />
             </Field>
             <Field id="email" label="Institutional Email" required>
               <div className="input-wrap">
@@ -867,14 +1138,16 @@ function Register({ onNavigate }) {
               )}
             </Field>
 
-            <Field id="adminPhone" label="Admin Phone Number" required
+            <Field id="adminPhoneNumber" label="Admin Phone Number" required
               hint="Used for two-factor authentication and account recovery.">
-              <div className="input-wrap">
-                <span className="input-icon"><ContactIcon /></span>
-                <input id="adminPhone" className="reg-input with-icon" type="tel"
-                  placeholder="+232 76 000 000"
-                  value={form.adminPhone} onChange={set('adminPhone')} />
-              </div>
+              <PhoneInput
+                id="adminPhoneNumber"
+                codeValue={form.adminPhoneCode}
+                numberValue={form.adminPhoneNumber}
+                onCodeChange={(v) => setForm((p) => ({ ...p, adminPhoneCode: v }))}
+                onNumberChange={(v) => setForm((p) => ({ ...p, adminPhoneNumber: v }))}
+                placeholder="76 000 000"
+              />
             </Field>
 
             <Field id="password" label="Password" required>
@@ -1008,8 +1281,14 @@ function Register({ onNavigate }) {
 
             <p className="terms-note" style={{ marginTop: '20px' }}>
               By proceeding you also agree to the EK-SMS{' '}
-              <a href="#terms">Terms of Service</a> and{' '}
-              <a href="#privacy">Privacy Policy</a>.
+              <button type="button" className="terms-link-btn"
+                onClick={() => setLegalModal('terms')}>
+                Terms of Service
+              </button>{' '}and{' '}
+              <button type="button" className="terms-link-btn"
+                onClick={() => setLegalModal('privacy')}>
+                Privacy Policy
+              </button>.
             </p>
           </div>
         )}
@@ -1032,14 +1311,17 @@ function Register({ onNavigate }) {
               <ReviewRow label="Type"                value={form.institutionType} />
               <ReviewRow label="Reg. Number"         value={form.registrationNumber || '—'} />
               <ReviewRow label="Established"         value={form.established || '—'} />
-              <ReviewRow label="Est. Teachers"       value={form.estimatedTeachers || '—'} />
-              <ReviewRow label="School Hours"        value={`${form.schoolStartTime} – ${form.schoolEndTime}`} />
-              <ReviewRow label="Motto"               value={form.motto || '—'} />
+              <ReviewRow label="Est. Teachers" value={form.estimatedTeachers || '—'} />
+              <ReviewRow label="Motto"          value={form.motto || '—'} />
               <div className="review-row">
-                <span className="review-label">Brand Colour</span>
-                <span className="review-value" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span className="review-color-dot" style={{ background: form.brandColor }} />
-                  {form.brandColor}
+                <span className="review-label">Brand Colours</span>
+                <span className="review-value" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
+                  {form.brandColors.length === 0 ? '—' : form.brandColors.map((c) => (
+                    <span key={c} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span className="review-color-dot" style={{ background: c }} />
+                      <span style={{ fontSize: '0.8rem' }}>{c}</span>
+                    </span>
+                  ))}
                 </span>
               </div>
             </ReviewSection>
@@ -1052,7 +1334,7 @@ function Register({ onNavigate }) {
             </ReviewSection>
 
             <ReviewSection title="Contact" icon={<ContactIcon />}>
-              <ReviewRow label="Phone"   value={form.phone} />
+              <ReviewRow label="Phone"   value={`${form.phoneCode} ${form.phoneNumber}`} />
               <ReviewRow label="Email"   value={form.email} />
               <ReviewRow label="Website" value={form.website || '—'} muted={!form.website} />
             </ReviewSection>
@@ -1061,7 +1343,7 @@ function Register({ onNavigate }) {
               <ReviewRow label="Name"     value={`${form.firstName} ${form.lastName}`} />
               <ReviewRow label="Username" value={form.adminUsername} />
               <ReviewRow label="Email"    value={form.adminEmail} />
-              <ReviewRow label="Phone"    value={form.adminPhone} />
+              <ReviewRow label="Phone"    value={`${form.adminPhoneCode} ${form.adminPhoneNumber}`} />
               <ReviewRow label="2FA"      value={form.enable2FA ? 'Enabled' : 'Disabled'} />
             </ReviewSection>
 
@@ -1115,6 +1397,11 @@ function Register({ onNavigate }) {
         <button type="button" onClick={() => onNavigate && onNavigate('login')}>Sign in here</button>
       </p>
       <p className="reg-footer">© 2026 EK-SMS · EL-KENDEH School Management System.</p>
+
+      {/* Legal modals */}
+      {legalModal && (
+        <LegalModal tab={legalModal} onClose={() => setLegalModal(null)} />
+      )}
     </div>
   );
 }
