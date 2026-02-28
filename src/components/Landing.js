@@ -21,23 +21,6 @@ const TRUST_ITEMS = [
 ];
 
 /* ---- Inline SVG Icons ---- */
-const IconSchool = () => (
-  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <path
-      d="M12 3L2 8l10 5 10-5-10-5z"
-      stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-    />
-    <path
-      d="M2 13l10 5 10-5"
-      stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-    />
-    <path
-      d="M2 18l10 5 10-5"
-      stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-    />
-  </svg>
-);
-
 const IconRegister = () => (
   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
     <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"
