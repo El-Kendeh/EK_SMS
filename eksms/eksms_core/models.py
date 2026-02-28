@@ -13,6 +13,18 @@ class School(models.Model):
     address = models.TextField(blank=True, help_text="School physical address")
     principal_name = models.CharField(max_length=255, blank=True, help_text="Principal/Head of School name")
     
+    # Extended registration fields (saved from registration wizard)
+    city             = models.CharField(max_length=100, blank=True, default='')
+    region           = models.CharField(max_length=100, blank=True, default='')
+    country          = models.CharField(max_length=100, blank=True, default='')
+    institution_type = models.CharField(max_length=100, blank=True, default='')
+    website          = models.URLField(max_length=200, blank=True, default='')
+    motto            = models.CharField(max_length=300, blank=True, default='')
+    capacity         = models.IntegerField(null=True, blank=True)
+    academic_system  = models.CharField(max_length=50, blank=True, default='')
+    admin_email      = models.EmailField(blank=True, default='')
+    changes_requested = models.BooleanField(default=False)
+
     # Registration details
     registration_date = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True, help_text="Is this school active in the system?")

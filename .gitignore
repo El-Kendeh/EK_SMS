@@ -23,6 +23,9 @@ DEVELOPER_CREDENTIALS.md
 # Claude Code (local AI tooling - never push to repo)
 .claude/
 
+#Ignore this folder  don't push
+public/stich-refrence/
+
 # Python
 venv/
 __pycache__/

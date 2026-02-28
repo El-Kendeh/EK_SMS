@@ -1,310 +1,312 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import './SA.css';
 import './Dashboard.css';
 import { SECURITY_CONFIG } from '../../config/security';
+import SAOverview      from './SAOverview';
+import SAApplications  from './SAApplications';
+import SAReview        from './SAReview';
+import SASchools       from './SASchools';
 
-function Dashboard({ onNavigate }) {
-  const [user, setUser] = useState(null);
-  const [schools, setSchools] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+const API = SECURITY_CONFIG.API_URL;
+
+/* ================================================================
+   SVG Icons — inline, no external deps
+   ================================================================ */
+const IcHome = () => (
+  <svg viewBox="0 0 24 24"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H5a1 1 0 01-1-1V9.5z"
+    strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+);
+const IcApplications = () => (
+  <svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"
+    strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+    <rect x="9" y="3" width="6" height="4" rx="1" strokeWidth="1.8"/>
+    <line x1="9" y1="12" x2="15" y2="12" strokeWidth="1.8" strokeLinecap="round"/>
+    <line x1="9" y1="16" x2="13" y2="16" strokeWidth="1.8" strokeLinecap="round"/>
+  </svg>
+);
+const IcSchools = () => (
+  <svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V10.6M19 21V10.6M12 3L2 8h20L12 3z"
+    strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+    <rect x="9" y="13" width="6" height="8" strokeWidth="1.8" rx="1"/>
+  </svg>
+);
+const IcBell = () => (
+  <svg viewBox="0 0 24 24"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+    strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+const IcSettings = () => (
+  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" strokeWidth="1.8"/>
+    <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"
+    strokeWidth="1.8"/>
+  </svg>
+);
+const IcLogout = () => (
+  <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"
+    strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+const IcMenu = () => (
+  <svg viewBox="0 0 24 24"><line x1="3" y1="6"  x2="21" y2="6"  strokeWidth="2" strokeLinecap="round"/>
+    <line x1="3" y1="12" x2="21" y2="12" strokeWidth="2" strokeLinecap="round"/>
+    <line x1="3" y1="18" x2="21" y2="18" strokeWidth="2" strokeLinecap="round"/>
+  </svg>
+);
+
+/* ================================================================
+   Page title helper
+   ================================================================ */
+function getTitle(page, school) {
+  if (page === 'review' && school) return school.name;
+  const map = { overview: 'Dashboard', applications: 'Applications', schools: 'Schools', notifications: 'Notifications', settings: 'Settings' };
+  return map[page] || 'Dashboard';
+}
+
+/* ================================================================
+   Main Dashboard Component
+   ================================================================ */
+export default function Dashboard({ onNavigate }) {
+  const [user,            setUser]            = useState(null);
+  const [activePage,      setActivePage]      = useState('overview');
+  const [selectedSchool,  setSelectedSchool]  = useState(null);
+  const [schools,         setSchools]         = useState([]);
+  const [isLoading,       setIsLoading]       = useState(true);
   const [isActionLoading, setIsActionLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [sidebarOpen,     setSidebarOpen]     = useState(false);
+  const [toast,           setToast]           = useState(null);
 
+  /* ---- Data ---- */
+  const fetchSchools = useCallback(async (tok) => {
+    const token = tok || localStorage.getItem('token');
+    try {
+      const res  = await fetch(`${API}/api/schools/`, { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      if (data.success) setSchools(data.schools);
+    } catch { /* network error — silently ignore */ }
+    finally { setIsLoading(false); }
+  }, []);
+
+  /* ---- Auth guard ---- */
   useEffect(() => {
-    // Check if user is authenticated
-    const token = localStorage.getItem('token');
-    const userData = localStorage.getItem('user');
-
-    if (!token || !userData) {
-      if (onNavigate) onNavigate('home');
-      else window.location.href = '/';
-      return;
-    }
-
+    const token    = localStorage.getItem('token');
+    const userStr  = localStorage.getItem('user');
+    if (!token || !userStr) { onNavigate && onNavigate('home'); return; }
     try {
-      const parsedUser = JSON.parse(userData);
-      if (!parsedUser.is_superuser) {
-        if (onNavigate) onNavigate('home');
-        else window.location.href = '/';
-        return;
-      }
-      setUser(parsedUser);
-      fetchSchools();
-    } catch (err) {
-      setError('Failed to load user data');
-      setIsLoading(false);
-    }
-  }, [onNavigate]);
+      const parsed = JSON.parse(userStr);
+      if (!parsed.is_superuser) { onNavigate && onNavigate('home'); return; }
+      setUser(parsed);
+      fetchSchools(token);
+    } catch { onNavigate && onNavigate('home'); }
+  }, [onNavigate, fetchSchools]);
 
-  const fetchSchools = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${SECURITY_CONFIG.API_URL}/api/schools/`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      const data = await response.json();
-      if (data.success) {
-        setSchools(data.schools);
-      } else {
-        setError(data.message || 'Failed to fetch schools');
-      }
-    } catch (err) {
-      setError('Connection error while fetching schools');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleApprove = async (schoolId, action) => {
-    if (!window.confirm(`Are you sure you want to ${action} this school?`)) return;
-
+  /* ---- Actions ---- */
+  const handleAction = useCallback(async (schoolId, action, note = '') => {
     setIsActionLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${SECURITY_CONFIG.API_URL}/api/schools/approve/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ school_id: schoolId, action })
+      const res   = await fetch(`${API}/api/schools/approve/`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body:    JSON.stringify({ school_id: schoolId, action, note }),
       });
-      const data = await response.json();
+      const data = await res.json();
       if (data.success) {
-        alert(data.message);
-        fetchSchools(); // Refresh list
+        showToast(data.message, 'success');
+        await fetchSchools();
+        setActivePage('applications');
+        setSelectedSchool(null);
       } else {
-        alert(data.message || 'Action failed');
+        showToast(data.message || 'Action failed', 'error');
       }
-    } catch (err) {
-      alert('Connection error');
-    } finally {
-      setIsActionLoading(false);
-    }
+    } catch { showToast('Connection error. Please try again.', 'error'); }
+    finally   { setIsActionLoading(false); }
+  }, [fetchSchools]);
+
+  const showToast = (msg, type = 'info') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 4000);
+  };
+
+  const handleReview = (school) => {
+    setSelectedSchool(school);
+    setActivePage('review');
   };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    if (onNavigate) onNavigate('home');
-    else window.location.href = '/';
+    onNavigate && onNavigate('home');
   };
 
+  const goTo = (page) => {
+    setActivePage(page);
+    setSidebarOpen(false);
+  };
+
+  /* ---- Loading screen ---- */
   if (isLoading) {
     return (
-      <div className="dashboard-container">
-        <div className="loading">Loading System Management...</div>
+      <div className="sa-fullscreen-loader">
+        <div className="sa-loader-ring" />
+        <p className="sa-loader-text">Loading EK-SMS Console…</p>
       </div>
     );
   }
 
-  const pendingSchools = schools.filter(s => !s.is_approved);
-  const approvedSchools = schools.filter(s => s.is_approved);
+  const pendingCount = schools.filter(s => !s.is_approved).length;
+
+  const navItems = [
+    { key: 'overview',      label: 'Dashboard',      icon: <IcHome /> },
+    { key: 'applications',  label: 'Applications',   icon: <IcApplications />, badge: pendingCount },
+    { key: 'schools',       label: 'Schools',        icon: <IcSchools /> },
+    { key: 'notifications', label: 'Notifications',  icon: <IcBell /> },
+    { key: 'settings',      label: 'Settings',       icon: <IcSettings /> },
+  ];
+
+  const isAppRelated = activePage === 'applications' || activePage === 'review';
 
   return (
-    <div className="dashboard-container">
-      <aside className="dashboard-sidebar">
-        <div className="sidebar-header">
-          <h2 className="sidebar-title">EK-SMS</h2>
-          <p className="sidebar-subtitle">Super Admin Console</p>
+    <div className={`sa-wrap${sidebarOpen ? ' sidebar-open' : ''}`}>
+
+      {/* Mobile sidebar overlay */}
+      {sidebarOpen && <div className="sa-overlay" onClick={() => setSidebarOpen(false)} />}
+
+      {/* ===== Sidebar ===== */}
+      <aside className="sa-sidebar">
+        <div className="sa-sidebar-head">
+          <div className="sa-brand">
+            <span className="sa-brand-mark">EK</span>
+            <div>
+              <p className="sa-brand-name">EK-SMS</p>
+              <p className="sa-brand-role">Super Admin</p>
+            </div>
+          </div>
         </div>
 
-        <nav className="sidebar-nav">
-          <ul className="nav-list">
-            <li className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}>
-              <button onClick={() => setActiveTab('dashboard')} className="nav-link border-none bg-transparent w-full text-left">
-                <span className="nav-icon">📊</span>
-                <span className="nav-text">Overview</span>
-              </button>
-            </li>
-            <li className={`nav-item ${activeTab === 'schools' ? 'active' : ''}`}>
-              <button onClick={() => setActiveTab('schools')} className="nav-link border-none bg-transparent w-full text-left">
-                <span className="nav-icon">🏫</span>
-                <span className="nav-text">Manage Schools</span>
-              </button>
-            </li>
-            <li className={`nav-item ${activeTab === 'users' ? 'active' : ''}`}>
-              <button onClick={() => setActiveTab('users')} className="nav-link border-none bg-transparent w-full text-left">
-                <span className="nav-icon">👥</span>
-                <span className="nav-text">Global Users</span>
-              </button>
-            </li>
-          </ul>
+        <nav className="sa-nav">
+          {navItems.map(item => (
+            <button
+              key={item.key}
+              className={`sa-nav-btn${activePage === item.key || (item.key === 'applications' && isAppRelated) ? ' active' : ''}`}
+              onClick={() => goTo(item.key)}
+            >
+              <span className="sa-nav-icon">{item.icon}</span>
+              <span className="sa-nav-label">{item.label}</span>
+              {item.badge > 0 && <span className="sa-nav-badge">{item.badge}</span>}
+            </button>
+          ))}
         </nav>
 
-        <div className="sidebar-footer">
-          <button className="logout-button" onClick={handleLogout}>
-            <span className="logout-icon">🚪</span>
-            <span className="logout-text">Logout</span>
+        <div className="sa-sidebar-foot">
+          <div className="sa-user-chip">
+            <div className="sa-user-avatar">
+              {(user?.full_name || user?.email || 'A')[0].toUpperCase()}
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <p className="sa-user-name">{user?.full_name || user?.username || 'Admin'}</p>
+              <p className="sa-user-role">Super Admin</p>
+            </div>
+          </div>
+          <button className="sa-logout-btn" onClick={handleLogout}>
+            <IcLogout /> Logout
           </button>
         </div>
       </aside>
 
-      <main className="dashboard-main">
-        <header className="dashboard-header">
-          <div className="header-left">
-            <h1 className="page-title">{activeTab === 'dashboard' ? 'System Overview' : activeTab === 'schools' ? 'School Management' : 'Access Control'}</h1>
+      {/* ===== Main area ===== */}
+      <div className="sa-main">
+
+        {/* TopBar */}
+        <header className="sa-topbar">
+          <button className="sa-menu-btn" onClick={() => setSidebarOpen(!sidebarOpen)}>
+            <IcMenu />
+          </button>
+          <div className="sa-breadcrumb">
+            <span className="sa-bc-parent">Admin</span>
+            <span className="sa-bc-sep">›</span>
+            <span className="sa-bc-current">{getTitle(activePage, selectedSchool)}</span>
           </div>
-          <div className="header-right">
-            <div className="user-info">
-              <span className="user-name">{user?.full_name || user?.username}</span>
-              <span className="user-role">System Superuser</span>
+          <div className="sa-topbar-actions">
+            <button className="sa-notif-btn" onClick={() => goTo('notifications')}>
+              <IcBell />
+              {pendingCount > 0 && <span className="sa-notif-dot" />}
+            </button>
+            <div className="sa-avatar-sm">
+              {(user?.full_name || user?.email || 'A')[0].toUpperCase()}
             </div>
           </div>
         </header>
 
-        <div className="dashboard-content">
-          {error && (
-            <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-6 rounded shadow-sm">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <span className="text-red-400">⚠️</span>
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm text-red-700">
-                    {error}
-                    <button
-                      onClick={() => { setError(''); fetchSchools(); }}
-                      className="ml-4 font-bold underline hover:text-red-800"
-                    >
-                      Retry
-                    </button>
-                  </p>
-                </div>
+        {/* Toast */}
+        {toast && <div className={`sa-toast sa-toast--${toast.type}`}>{toast.msg}</div>}
+
+        {/* Page content */}
+        <main className="sa-content">
+          {activePage === 'overview' && (
+            <SAOverview
+              schools={schools}
+              user={user}
+              onReview={handleReview}
+              onNavigate={goTo}
+            />
+          )}
+
+          {activePage === 'applications' && (
+            <SAApplications
+              schools={schools}
+              onReview={handleReview}
+            />
+          )}
+
+          {activePage === 'review' && selectedSchool && (
+            <SAReview
+              school={selectedSchool}
+              onBack={() => { setActivePage('applications'); setSelectedSchool(null); }}
+              onApprove={() => handleAction(selectedSchool.id, 'approve')}
+              onReject={(note) => handleAction(selectedSchool.id, 'reject', note)}
+              onRequestChanges={(note) => handleAction(selectedSchool.id, 'request_changes', note)}
+              isLoading={isActionLoading}
+            />
+          )}
+
+          {activePage === 'schools' && (
+            <SASchools schools={schools} onReview={handleReview} />
+          )}
+
+          {activePage === 'notifications' && (
+            <div className="sa-page-head">
+              <div>
+                <h1 className="sa-page-title">Notifications</h1>
+                <p className="sa-page-sub">System alerts and activity notifications</p>
               </div>
             </div>
           )}
-          {activeTab === 'dashboard' && (
-            <>
-              <section className="stats-grid">
-                <div className="stat-card">
-                  <div className="stat-icon">🏫</div>
-                  <div className="stat-content">
-                    <h3 className="stat-label">Total Schools</h3>
-                    <p className="stat-value">{schools.length}</p>
-                  </div>
-                </div>
-                <div className="stat-card">
-                  <div className="stat-icon">⏳</div>
-                  <div className="stat-content">
-                    <h3 className="stat-label">Pending Approval</h3>
-                    <p className="stat-value">{pendingSchools.length}</p>
-                  </div>
-                </div>
-                <div className="stat-card">
-                  <div className="stat-icon">✅</div>
-                  <div className="stat-content">
-                    <h3 className="stat-label">Active Institutions</h3>
-                    <p className="stat-value">{approvedSchools.length}</p>
-                  </div>
-                </div>
-              </section>
 
-              <section className="schools-section">
-                <div className="section-header">
-                  <h2 className="section-title">New Institution Registrations</h2>
-                </div>
-                <div className="table-container">
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th>Institution</th>
-                        <th>Contact</th>
-                        <th>Registered On</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {pendingSchools.length === 0 ? (
-                        <tr>
-                          <td colSpan="5" className="empty-state">No pending registrations at the moment.</td>
-                        </tr>
-                      ) : (
-                        pendingSchools.map(school => (
-                          <tr key={school.id}>
-                            <td className="school-name-cell">
-                              <span className="school-name">{school.name}</span>
-                              <span className="school-code">Code: {school.code}</span>
-                            </td>
-                            <td>
-                              <div>{school.principal_name}</div>
-                              <div className="text-xs text-gray-500">{school.email}</div>
-                            </td>
-                            <td>{new Date(school.registration_date).toLocaleDateString()}</td>
-                            <td>
-                              <span className="status-badge pending">Pending Review</span>
-                            </td>
-                            <td>
-                              <div className="action-buttons">
-                                <button
-                                  className="btn-action btn-approve"
-                                  onClick={() => handleApprove(school.id, 'approve')}
-                                  disabled={isActionLoading}
-                                >
-                                  Approve
-                                </button>
-                                <button
-                                  className="btn-action btn-reject"
-                                  onClick={() => handleApprove(school.id, 'reject')}
-                                  disabled={isActionLoading}
-                                >
-                                  Reject
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-            </>
+          {activePage === 'settings' && (
+            <div className="sa-page-head">
+              <div>
+                <h1 className="sa-page-title">Settings</h1>
+                <p className="sa-page-sub">System configuration — coming soon</p>
+              </div>
+            </div>
           )}
+        </main>
+      </div>
 
-          {activeTab === 'schools' && (
-            <section className="schools-section">
-              <div className="section-header">
-                <h2 className="section-title">All Registered Institutions</h2>
-              </div>
-              <div className="table-container">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>Institution</th>
-                      <th>Principal</th>
-                      <th>Status</th>
-                      <th>Email</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {schools.map(school => (
-                      <tr key={school.id}>
-                        <td className="school-name-cell">
-                          <span className="school-name">{school.name}</span>
-                          <span className="school-code">{school.code}</span>
-                        </td>
-                        <td>{school.principal_name}</td>
-                        <td>
-                          <span className={`status-badge ${school.is_approved ? 'approved' : 'pending'}`}>
-                            {school.is_approved ? 'Approved' : 'Pending'}
-                          </span>
-                        </td>
-                        <td>{school.email}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          )}
-        </div>
-      </main>
+      {/* Mobile bottom nav */}
+      <nav className="sa-mobile-nav">
+        {navItems.map(item => (
+          <button
+            key={item.key}
+            className={`sa-mob-btn${activePage === item.key || (item.key === 'applications' && isAppRelated) ? ' active' : ''}`}
+            onClick={() => goTo(item.key)}
+          >
+            {item.icon}
+            <span>{item.label}</span>
+            {item.badge > 0 && <span className="sa-mob-badge">{item.badge}</span>}
+          </button>
+        ))}
+      </nav>
     </div>
   );
 }
-
-export default Dashboard;

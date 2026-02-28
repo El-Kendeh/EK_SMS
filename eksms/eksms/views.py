@@ -269,6 +269,15 @@ def api_register(request):
             email=email,
             phone=phone,
             address=full_address,
+            city=city,
+            region=region,
+            country=country,
+            institution_type=institution_type,
+            website=website,
+            motto=motto,
+            capacity=int(capacity) if str(capacity).isdigit() else None,
+            academic_system=academic_system,
+            admin_email=admin_email,
             principal_name=f"{first_name} {last_name}",
             is_active=True,
             is_approved=False,
@@ -326,6 +335,20 @@ def api_get_schools(request):
     
     school_list = []
     for s in schools:
+        # Resolve admin user details via SchoolAdmin profile
+        admin_user_data = {}
+        try:
+            sa = s.admin
+            admin_user_data = {
+                'admin_username': sa.user.username,
+                'admin_first_name': sa.user.first_name,
+                'admin_last_name': sa.user.last_name,
+                'admin_full_name': sa.user.get_full_name(),
+                'admin_email': sa.user.email,
+            }
+        except Exception:
+            pass
+
         school_list.append({
             'id': s.id,
             'name': s.name,
@@ -333,10 +356,21 @@ def api_get_schools(request):
             'email': s.email,
             'phone': s.phone,
             'address': s.address,
+            'city': s.city,
+            'region': s.region,
+            'country': s.country,
+            'institution_type': s.institution_type,
+            'website': s.website,
+            'motto': s.motto,
+            'capacity': s.capacity,
+            'academic_system': s.academic_system,
+            'admin_email': s.admin_email,
             'principal_name': s.principal_name,
             'is_approved': s.is_approved,
             'is_active': s.is_active,
+            'changes_requested': s.changes_requested,
             'registration_date': s.registration_date.isoformat(),
+            **admin_user_data,
         })
     
     return JsonResponse({'success': True, 'schools': school_list})
@@ -358,20 +392,32 @@ def api_approve_school(request):
         data = json.loads(request.body)
         school_id = data.get('school_id')
         action = data.get('action', 'approve')
-        
+        note = data.get('note', '').strip()
+
         from eksms_core.models import School
         school = School.objects.get(id=school_id)
-        
+
         if action == 'approve':
             school.is_approved = True
+            school.changes_requested = False
             school.save()
-            return JsonResponse({'success': True, 'message': f'School "{school.name}" approved successfully.'})
+            return JsonResponse({'success': True, 'message': f'"{school.name}" has been approved. The school admin can now log in.'})
         elif action == 'reject':
-            # Archive or delete reject schools to keep the system clean
             school_name = school.name
             school.delete()
-            return JsonResponse({'success': True, 'message': f'School "{school_name}" rejected and removed.'})
-        
+            msg = f'"{school_name}" has been rejected and removed.'
+            if note:
+                msg += f' Reason: {note}'
+            return JsonResponse({'success': True, 'message': msg})
+        elif action == 'request_changes':
+            school.changes_requested = True
+            school.is_approved = False
+            school.save()
+            msg = f'Change request sent to "{school.name}".'
+            if note:
+                msg += f' Note: {note}'
+            return JsonResponse({'success': True, 'message': msg})
+
         return JsonResponse({'success': False, 'message': 'Invalid action.'}, status=400)
             
     except School.DoesNotExist:
