@@ -14,13 +14,18 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
     <!-- Note: frame-ancestors and X-Frame-Options directives are sent via HTTP headers only -->
     <!-- CSP meta tag: includes only directives supported in meta tags -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; media-src 'self' data:; connect-src 'self' http://localhost:8000 http://web:8000 https://ek-sms-backend.onrender.com; base-uri 'self'; form-action 'self'" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com; media-src 'self' data:; connect-src 'self' http://localhost:8000 http://web:8000 https://ek-sms-backend.onrender.com; base-uri 'self'; form-action 'self'" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <!-- X-Content-Type-Options, X-Frame-Options, and X-XSS-Protection are sent via HTTP headers -->
     
     <!-- CSRF Token Meta Tag -->
     <meta name="csrf-token" content="" />
     
+    <!-- Lexend font for landing page -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+
     <!-- App Manifest -->
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/icon.jpeg" />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
