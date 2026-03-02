@@ -1,4 +1,2 @@
 /* Dashboard.css — layout overrides only. Core styles live in SA.css */
-
-/* Ensure the app root doesn't constrain the dashboard */
-.App { height: 100vh; overflow: hidden; }
+/* .sa-wrap in SA.css already handles height: 100vh + overflow: hidden for the dashboard */

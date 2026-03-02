@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
-from django.core.validators import MinValueValidator
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
 
 
@@ -282,17 +282,17 @@ class Grade(models.Model):
     # Score breakdown (raw marks)
     continuous_assessment = models.DecimalField(
         max_digits=5, decimal_places=2, default=0,
-        validators=[MinValueValidator(0)],
+        validators=[MinValueValidator(0), MaxValueValidator(20)],
         help_text="Continuous Assessment / Class Work (0-20)"
     )
     mid_term_exam = models.DecimalField(
         max_digits=5, decimal_places=2, default=0,
-        validators=[MinValueValidator(0)],
+        validators=[MinValueValidator(0), MaxValueValidator(30)],
         help_text="Mid-term Exam Score (0-30)"
     )
     final_exam = models.DecimalField(
         max_digits=5, decimal_places=2, default=0,
-        validators=[MinValueValidator(0)],
+        validators=[MinValueValidator(0), MaxValueValidator(50)],
         help_text="Final Exam Score (0-50)"
     )
     

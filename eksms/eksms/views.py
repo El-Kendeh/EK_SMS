@@ -8,6 +8,7 @@ from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
+from django.db import transaction
 import json
 import os
 import re
@@ -245,62 +246,68 @@ def api_register(request):
         # ── Full address string ───────────────────────────────────────────────
         full_address = ', '.join(p for p in [address, city, region, country] if p)
 
-        # ── Create Django user ────────────────────────────────────────────────
-        base_username = re.sub(r'[^a-z0-9]', '', admin_email.split('@')[0].lower()) or 'admin'
-        username      = base_username
+        # ── Resolve username from adminUsername field or fall back to email prefix ──
+        requested_username = data.get('adminUsername', '').strip()
+        if requested_username and re.match(r'^[a-zA-Z0-9_-]{3,30}$', requested_username):
+            base_username = requested_username.lower()
+        else:
+            base_username = re.sub(r'[^a-z0-9]', '', admin_email.split('@')[0].lower()) or 'admin'
+        username = base_username
 
         if User.objects.filter(username=username).exists():
             username = base_username + uuid.uuid4().hex[:6]
 
-        user = User.objects.create_user(
-            username=username,
-            email=admin_email,
-            password=password,
-            first_name=first_name,
-            last_name=last_name,
-            is_staff=True,
-            is_active=True,
-        )
+        # ── Create User + School + SchoolAdmin atomically ─────────────────────
+        with transaction.atomic():
+            user = User.objects.create_user(
+                username=username,
+                email=admin_email,
+                password=password,
+                first_name=first_name,
+                last_name=last_name,
+                is_staff=True,
+                is_active=True,
+            )
 
-        # ── Create School record ──────────────────────────────────────────────
-        school = School.objects.create(
-            name=institution_name,
-            code=school_code,
-            email=email,
-            phone=phone,
-            address=full_address,
-            city=city,
-            region=region,
-            country=country,
-            institution_type=institution_type,
-            website=website,
-            motto=motto,
-            capacity=int(capacity) if str(capacity).isdigit() else None,
-            academic_system=academic_system,
-            admin_email=admin_email,
-            principal_name=f"{first_name} {last_name}",
-            is_active=True,
-            is_approved=False,
-            created_by=user,
-        )
+            # ── Create School record ──────────────────────────────────────────
+            school = School.objects.create(
+                name=institution_name,
+                code=school_code,
+                email=email,
+                phone=phone,
+                address=full_address,
+                city=city,
+                region=region,
+                country=country,
+                institution_type=institution_type,
+                website=website,
+                motto=motto,
+                capacity=int(capacity) if str(capacity).isdigit() else None,
+                academic_system=academic_system,
+                admin_email=admin_email,
+                principal_name=f"{first_name} {last_name}",
+                is_active=True,
+                is_approved=False,
+                created_by=user,
+            )
 
-        # ── Create SchoolAdmin profile ────────────────────────────────────────
-        SchoolAdminModel.objects.create(
-            user=user,
-            school=school,
-            job_title=f"{institution_type} Administrator",
-            can_manage_academics=True,
-            can_create_staff_accounts=True,
-            can_manage_staff_roles=True,
-            can_activate_deactivate_staff=True,
-            can_manage_teachers=True,
-            can_manage_students=True,
-            can_manage_parents=True,
-            can_manage_grades=True,
-            can_manage_reports=True,
-            can_view_audit_logs=True,
-            is_active=True,
-        )
+            # ── Create SchoolAdmin profile ────────────────────────────────────
+            SchoolAdminModel.objects.create(
+                user=user,
+                school=school,
+                job_title=f"{institution_type} Administrator",
+                can_manage_academics=True,
+                can_create_staff_accounts=True,
+                can_manage_staff_roles=True,
+                can_activate_deactivate_staff=True,
+                can_manage_teachers=True,
+                can_manage_students=True,
+                can_manage_parents=True,
+                can_manage_grades=True,
+                can_manage_reports=True,
+                can_view_audit_logs=True,
+                is_active=True,
+            )
 
         return JsonResponse({
             'success': True,

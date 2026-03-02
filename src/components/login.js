@@ -50,6 +50,7 @@ function Login({ onNavigate }) {
   const [remember, setRemember] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [forgotMsg, setForgotMsg] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -123,6 +124,15 @@ function Login({ onNavigate }) {
           </div>
         )}
 
+        {/* ── Forgot password info ── */}
+        {forgotMsg && (
+          <div className="login-error" role="status" style={{ background: 'rgba(59,130,246,0.12)', borderColor: 'rgba(59,130,246,0.35)', color: 'var(--text-primary)' }}>
+            <AlertIcon />
+            Password reset is not yet available. Please contact your system administrator.
+            <button type="button" onClick={() => setForgotMsg(false)} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontSize: '1rem', lineHeight: 1 }} aria-label="Dismiss">×</button>
+          </div>
+        )}
+
         {/* ── Form ── */}
         <form onSubmit={handleSubmit} className="login-form" noValidate>
 
@@ -179,7 +189,7 @@ function Login({ onNavigate }) {
             <button
               type="button"
               className="forgot-link"
-              onClick={() => onNavigate && onNavigate('forgot')}
+              onClick={() => setForgotMsg(true)}
             >
               Forgot Password?
             </button>

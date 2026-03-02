@@ -2,10 +2,26 @@ import React, { useState, useEffect, useCallback } from 'react';
 import './SA.css';
 import './Dashboard.css';
 import { SECURITY_CONFIG } from '../../config/security';
-import SAOverview      from './SAOverview';
-import SAApplications  from './SAApplications';
-import SAReview        from './SAReview';
-import SASchools       from './SASchools';
+import SAOverview       from './SAOverview';
+import SAApplications   from './SAApplications';
+import SAReview         from './SAReview';
+import SASchools        from './SASchools';
+import SAAppHistory     from './SAAppHistory';
+import SAVersionCompare from './SAVersionCompare';
+import SARejected       from './SARejected';
+import SARejectionAudit from './SARejectionAudit';
+import SASecurityLogs    from './SASecurityLogs';
+import SAForensics       from './SAForensics';
+import SAAlertBroadcast  from './SAAlertBroadcast';
+import SASystemHealth    from './SASystemHealth';
+import SAGradeReport     from './SAGradeReport';
+import SAGradeIntegrity  from './SAGradeIntegrity';
+import SAGradeAuditDetail from './SAGradeAuditDetail';
+import SAGovernance      from './SAGovernance';
+import SASettings        from './SASettings';
+import SAAnalytics       from './SAAnalytics';
+import SABenchmarks      from './SABenchmarks';
+import SAOnboarding      from './SAOnboarding';
 
 const API = SECURITY_CONFIG.API_URL;
 
@@ -22,6 +38,12 @@ const IcApplications = () => (
     <rect x="9" y="3" width="6" height="4" rx="1" strokeWidth="1.8"/>
     <line x1="9" y1="12" x2="15" y2="12" strokeWidth="1.8" strokeLinecap="round"/>
     <line x1="9" y1="16" x2="13" y2="16" strokeWidth="1.8" strokeLinecap="round"/>
+  </svg>
+);
+const IcRejected = () => (
+  <svg viewBox="0 0 24 24" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10"/>
+    <line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
   </svg>
 );
 const IcSchools = () => (
@@ -52,13 +74,97 @@ const IcMenu = () => (
     <line x1="3" y1="18" x2="21" y2="18" strokeWidth="2" strokeLinecap="round"/>
   </svg>
 );
+const IcSecLogs  = () => (
+  <svg viewBox="0 0 24 24" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+    <line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="9" x2="13" y2="9"/><line x1="9" y1="15" x2="11" y2="15"/>
+  </svg>
+);
+const IcForensics = () => (
+  <svg viewBox="0 0 24 24" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    <line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>
+  </svg>
+);
+const IcBroadcast = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M22 2L11 13"/><path d="M22 2L15 22l-4-9-9-4 22-7z"/>
+  </svg>
+);
+const IcHealth = () => (
+  <svg viewBox="0 0 24 24" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+  </svg>
+);
+const IcGrade = () => (
+  <svg viewBox="0 0 24 24" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 11l3 3L22 4"/>
+    <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+  </svg>
+);
+const IcRequests = () => (
+  <svg viewBox="0 0 24 24" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+    <polyline points="14 2 14 8 20 8"/>
+    <line x1="16" y1="13" x2="8" y2="13"/>
+    <line x1="16" y1="17" x2="8" y2="17"/>
+    <polyline points="10 9 9 9 8 9"/>
+  </svg>
+);
+const IcGovernance = () => (
+  <svg viewBox="0 0 24 24" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+    <line x1="9" y1="12" x2="15" y2="12"/>
+    <line x1="12" y1="9" x2="12" y2="15"/>
+  </svg>
+);
+const IcAnalytics = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/>
+    <line x1="6"  y1="20" x2="6"  y2="14"/><line x1="2" y1="20" x2="22" y2="20"/>
+  </svg>
+);
+const IcBenchmarks = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+  </svg>
+);
+const IcOnboarding = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/>
+    <circle cx="9" cy="7" r="4"/>
+    <polyline points="16 11 18 13 22 9"/>
+  </svg>
+);
 
 /* ================================================================
    Page title helper
    ================================================================ */
 function getTitle(page, school) {
-  if (page === 'review' && school) return school.name;
-  const map = { overview: 'Dashboard', applications: 'Applications', schools: 'Schools', notifications: 'Notifications', settings: 'Settings' };
+  if ((page === 'review' || page === 'app-history' || page === 'version-compare') && school) return school.name;
+  if (page === 'rejection-audit' && school) return school.name;
+  const map = {
+    overview:          'Dashboard',
+    applications:      'Applications',
+    rejected:          'Rejected',
+    schools:           'Schools',
+    notifications:     'Notifications',
+    settings:          'Settings',
+    'app-history':     'History',
+    'version-compare': 'Compare',
+    'rejection-audit': 'Audit',
+    'security-logs':   'Audit Logs',
+    'forensics':       'Forensics',
+    'alert-broadcast': 'Broadcast',
+    'system-health':   'System Health',
+    'grade-report':    'Grade Integrity',
+    'grade-requests':  'Mod. Requests',
+    'grade-audit':     'Audit Detail',
+    'governance':      'Role-Based Access',
+    'analytics':       'School Directory & Analytics',
+    'benchmarks':      'Academic Benchmarks',
+    'onboarding':      'Onboarding Analytics',
+  };
   return map[page] || 'Dashboard';
 }
 
@@ -69,6 +175,8 @@ export default function Dashboard({ onNavigate }) {
   const [user,            setUser]            = useState(null);
   const [activePage,      setActivePage]      = useState('overview');
   const [selectedSchool,  setSelectedSchool]  = useState(null);
+  const [forensicEvent,   setForensicEvent]   = useState(null);
+  const [selectedRequest, setSelectedRequest] = useState(null);
   const [schools,         setSchools]         = useState([]);
   const [isLoading,       setIsLoading]       = useState(true);
   const [isActionLoading, setIsActionLoading] = useState(false);
@@ -88,8 +196,8 @@ export default function Dashboard({ onNavigate }) {
 
   /* ---- Auth guard ---- */
   useEffect(() => {
-    const token    = localStorage.getItem('token');
-    const userStr  = localStorage.getItem('user');
+    const token   = localStorage.getItem('token');
+    const userStr = localStorage.getItem('user');
     if (!token || !userStr) { onNavigate && onNavigate('home'); return; }
     try {
       const parsed = JSON.parse(userStr);
@@ -127,9 +235,51 @@ export default function Dashboard({ onNavigate }) {
     setTimeout(() => setToast(null), 4000);
   };
 
+  /* ---- Navigation helpers ---- */
   const handleReview = (school) => {
     setSelectedSchool(school);
     setActivePage('review');
+  };
+
+  const handleHistory = (school) => {
+    setSelectedSchool(school);
+    setActivePage('app-history');
+  };
+
+  const handleCompare = (school) => {
+    setSelectedSchool(school);
+    setActivePage('version-compare');
+  };
+
+  const handleRejectionAudit = (school) => {
+    setSelectedSchool(school);
+    setActivePage('rejection-audit');
+  };
+
+  const handleReconsider = (school) => {
+    /* Move school back to pending by re-fetching after a toast */
+    showToast(`${school.name} marked for reconsideration.`, 'info');
+    setActivePage('rejected');
+    setSelectedSchool(null);
+  };
+
+  const handleForensic = (event) => {
+    setForensicEvent(event);
+    setActivePage('forensics');
+  };
+
+  const handleGradeDetail = (req) => {
+    setSelectedRequest(req);
+    setActivePage('grade-audit');
+  };
+
+  const handleGradeRequests = () => {
+    setActivePage('grade-requests');
+  };
+
+  const handleGradeBack = () => {
+    setActivePage('grade-requests');
+    setSelectedRequest(null);
   };
 
   const handleLogout = () => {
@@ -138,9 +288,21 @@ export default function Dashboard({ onNavigate }) {
     onNavigate && onNavigate('home');
   };
 
+  const SEC_PAGES   = ['security-logs', 'forensics', 'alert-broadcast', 'system-health'];
+  const GRADE_PAGES = ['grade-report', 'grade-requests', 'grade-audit'];
+
   const goTo = (page) => {
     setActivePage(page);
     setSidebarOpen(false);
+    if (!['review', 'app-history', 'version-compare', 'rejection-audit'].includes(page)) {
+      setSelectedSchool(null);
+    }
+    if (page !== 'forensics') {
+      setForensicEvent(null);
+    }
+    if (!GRADE_PAGES.includes(page)) {
+      setSelectedRequest(null);
+    }
   };
 
   /* ---- Loading screen ---- */
@@ -153,17 +315,32 @@ export default function Dashboard({ onNavigate }) {
     );
   }
 
-  const pendingCount = schools.filter(s => !s.is_approved).length;
+  const pendingCount  = schools.filter(s => !s.is_approved && s.is_active !== false).length;
+  const rejectedCount = schools.filter(s => !s.is_approved && !s.is_active).length;
+
+  const isAppRelated   = ['applications', 'review', 'app-history', 'version-compare'].includes(activePage);
+  const isRejRelated   = ['rejected', 'rejection-audit'].includes(activePage);
+  const isSecRelated   = SEC_PAGES.includes(activePage);
+  const isGradeRelated = GRADE_PAGES.includes(activePage);
 
   const navItems = [
-    { key: 'overview',      label: 'Dashboard',      icon: <IcHome /> },
-    { key: 'applications',  label: 'Applications',   icon: <IcApplications />, badge: pendingCount },
-    { key: 'schools',       label: 'Schools',        icon: <IcSchools /> },
-    { key: 'notifications', label: 'Notifications',  icon: <IcBell /> },
-    { key: 'settings',      label: 'Settings',       icon: <IcSettings /> },
+    { key: 'overview',        label: 'Dashboard',    icon: <IcHome />,         badge: 0,             section: null     },
+    { key: 'applications',    label: 'Applications', icon: <IcApplications />, badge: pendingCount,  section: null     },
+    { key: 'rejected',        label: 'Rejected',     icon: <IcRejected />,     badge: rejectedCount, section: null     },
+    { key: 'schools',         label: 'Schools',      icon: <IcSchools />,      badge: 0,             section: null     },
+    { key: 'grade-report',    label: 'Grade Integrity', icon: <IcGrade />,      badge: 0,             section: 'Grade Integrity'  },
+    { key: 'grade-requests',  label: 'Mod. Requests',  icon: <IcRequests />,   badge: 0,             section: 'Grade Integrity'  },
+    { key: 'analytics',       label: 'School Directory', icon: <IcAnalytics />,  badge: 0,             section: 'Reports & Analytics' },
+    { key: 'benchmarks',      label: 'Benchmarks',   icon: <IcBenchmarks />,   badge: 0,             section: 'Reports & Analytics' },
+    { key: 'onboarding',      label: 'Onboarding',   icon: <IcOnboarding />,   badge: 0,             section: 'Reports & Analytics' },
+    { key: 'governance',      label: 'RBAC / Roles', icon: <IcGovernance />,   badge: 0,             section: 'Governance'       },
+    { key: 'security-logs',   label: 'Audit Logs',   icon: <IcSecLogs />,      badge: 0,             section: 'Security & Audit' },
+    { key: 'forensics',       label: 'Forensics',    icon: <IcForensics />,    badge: 0,             section: 'Security & Audit' },
+    { key: 'alert-broadcast', label: 'Broadcast',    icon: <IcBroadcast />,    badge: 0,             section: 'Security & Audit' },
+    { key: 'system-health',   label: 'System Health',icon: <IcHealth />,       badge: 0,             section: 'Security & Audit' },
+    { key: 'notifications',   label: 'Notifications',icon: <IcBell />,         badge: 0,             section: null     },
+    { key: 'settings',        label: 'Settings',     icon: <IcSettings />,     badge: 0,             section: null     },
   ];
-
-  const isAppRelated = activePage === 'applications' || activePage === 'review';
 
   return (
     <div className={`sa-wrap${sidebarOpen ? ' sidebar-open' : ''}`}>
@@ -184,17 +361,38 @@ export default function Dashboard({ onNavigate }) {
         </div>
 
         <nav className="sa-nav">
-          {navItems.map(item => (
-            <button
-              key={item.key}
-              className={`sa-nav-btn${activePage === item.key || (item.key === 'applications' && isAppRelated) ? ' active' : ''}`}
-              onClick={() => goTo(item.key)}
-            >
-              <span className="sa-nav-icon">{item.icon}</span>
-              <span className="sa-nav-label">{item.label}</span>
-              {item.badge > 0 && <span className="sa-nav-badge">{item.badge}</span>}
-            </button>
-          ))}
+          {navItems.map((item, idx) => {
+            const isActive =
+              activePage === item.key ||
+              (item.key === 'applications'  && isAppRelated) ||
+              (item.key === 'rejected'      && isRejRelated) ||
+              (item.key === 'security-logs' && isSecRelated && activePage === 'security-logs') ||
+              (item.key === 'forensics'     && activePage === 'forensics') ||
+              (item.key === 'alert-broadcast' && activePage === 'alert-broadcast') ||
+              (item.key === 'system-health' && activePage === 'system-health') ||
+              (item.key === 'grade-report'   && activePage === 'grade-report') ||
+              (item.key === 'grade-requests' && (activePage === 'grade-requests' || activePage === 'grade-audit')) ||
+              (item.key === 'governance'     && activePage === 'governance');
+            const prevItem = navItems[idx - 1];
+            const showHeader = item.section && (!prevItem || prevItem.section !== item.section);
+            return (
+              <React.Fragment key={item.key}>
+                {showHeader && (
+                  <p style={{ fontSize: '0.5625rem', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--sa-text-3)', padding: '14px 16px 6px', margin: 0 }}>
+                    {item.section}
+                  </p>
+                )}
+                <button
+                  className={`sa-nav-btn${isActive ? ' active' : ''}`}
+                  onClick={() => goTo(item.key)}
+                >
+                  <span className="sa-nav-icon">{item.icon}</span>
+                  <span className="sa-nav-label">{item.label}</span>
+                  {item.badge > 0 && <span className="sa-nav-badge">{item.badge}</span>}
+                </button>
+              </React.Fragment>
+            );
+          })}
         </nav>
 
         <div className="sa-sidebar-foot">
@@ -242,6 +440,7 @@ export default function Dashboard({ onNavigate }) {
 
         {/* Page content */}
         <main className="sa-content">
+
           {activePage === 'overview' && (
             <SAOverview
               schools={schools}
@@ -265,12 +464,96 @@ export default function Dashboard({ onNavigate }) {
               onApprove={() => handleAction(selectedSchool.id, 'approve')}
               onReject={(note) => handleAction(selectedSchool.id, 'reject', note)}
               onRequestChanges={(note) => handleAction(selectedSchool.id, 'request_changes', note)}
+              onHistory={handleHistory}
               isLoading={isActionLoading}
             />
           )}
 
+          {activePage === 'app-history' && selectedSchool && (
+            <SAAppHistory
+              school={selectedSchool}
+              onBack={() => setActivePage('review')}
+              onCompare={() => handleCompare(selectedSchool)}
+            />
+          )}
+
+          {activePage === 'version-compare' && selectedSchool && (
+            <SAVersionCompare
+              school={selectedSchool}
+              onBack={() => setActivePage('app-history')}
+              onApprove={() => handleAction(selectedSchool.id, 'approve')}
+              isLoading={isActionLoading}
+            />
+          )}
+
+          {activePage === 'rejected' && (
+            <SARejected
+              schools={schools}
+              onAudit={handleRejectionAudit}
+              onReconsider={handleReconsider}
+            />
+          )}
+
+          {activePage === 'rejection-audit' && selectedSchool && (
+            <SARejectionAudit
+              school={selectedSchool}
+              onBack={() => { setActivePage('rejected'); setSelectedSchool(null); }}
+              onReconsider={handleReconsider}
+            />
+          )}
+
+          {activePage === 'grade-report' && (
+            <SAGradeReport
+              onViewRequests={handleGradeRequests}
+              onViewDetail={handleGradeDetail}
+            />
+          )}
+
+          {activePage === 'grade-requests' && (
+            <SAGradeIntegrity onDetail={handleGradeDetail} />
+          )}
+
+          {activePage === 'grade-audit' && (
+            <SAGradeAuditDetail
+              request={selectedRequest}
+              onBack={handleGradeBack}
+            />
+          )}
+
+          {activePage === 'security-logs' && (
+            <SASecurityLogs onForensic={handleForensic} />
+          )}
+
+          {activePage === 'forensics' && (
+            <SAForensics initialEvent={forensicEvent} />
+          )}
+
+          {activePage === 'alert-broadcast' && (
+            <SAAlertBroadcast />
+          )}
+
+          {activePage === 'system-health' && (
+            <SASystemHealth />
+          )}
+
           {activePage === 'schools' && (
             <SASchools schools={schools} onReview={handleReview} />
+          )}
+
+          {activePage === 'analytics' && (
+            <SAAnalytics schools={schools} />
+          )}
+
+          {activePage === 'benchmarks' && (
+            <SABenchmarks />
+          )}
+
+          {activePage === 'onboarding' && (
+            <SAOnboarding />
+          )}
+
+          {activePage === 'governance' && (
+            <SAGovernance />
           )}
 
           {activePage === 'notifications' && (
@@ -283,29 +566,33 @@ export default function Dashboard({ onNavigate }) {
           )}
 
           {activePage === 'settings' && (
-            <div className="sa-page-head">
-              <div>
-                <h1 className="sa-page-title">Settings</h1>
-                <p className="sa-page-sub">System configuration — coming soon</p>
-              </div>
-            </div>
+            <SASettings />
           )}
+
         </main>
       </div>
 
-      {/* Mobile bottom nav */}
+      {/* Mobile bottom nav — Dashboard, Applications, Analytics, Grade Integrity, System Health */}
       <nav className="sa-mobile-nav">
-        {navItems.map(item => (
-          <button
-            key={item.key}
-            className={`sa-mob-btn${activePage === item.key || (item.key === 'applications' && isAppRelated) ? ' active' : ''}`}
-            onClick={() => goTo(item.key)}
-          >
-            {item.icon}
-            <span>{item.label}</span>
-            {item.badge > 0 && <span className="sa-mob-badge">{item.badge}</span>}
-          </button>
-        ))}
+        {['overview', 'applications', 'analytics', 'grade-report', 'system-health'].map(key => navItems.find(n => n.key === key)).filter(Boolean).map(item => {
+          const isAnalyticsRelated = ['analytics', 'benchmarks', 'onboarding'].includes(activePage);
+          const isActive =
+            activePage === item.key ||
+            (item.key === 'applications' && isAppRelated) ||
+            (item.key === 'grade-report' && isGradeRelated) ||
+            (item.key === 'analytics'    && isAnalyticsRelated);
+          return (
+            <button
+              key={item.key}
+              className={`sa-mob-btn${isActive ? ' active' : ''}`}
+              onClick={() => goTo(item.key)}
+            >
+              {item.icon}
+              <span>{item.label}</span>
+              {item.badge > 0 && <span className="sa-mob-badge">{item.badge}</span>}
+            </button>
+          );
+        })}
       </nav>
     </div>
   );

@@ -52,10 +52,10 @@ export default function SAApplications({ schools, onReview }) {
   const avgReview = '3h 20m';
 
   const stats = [
-    { label: 'Pending',  value: pending.length,  icon: <IcClock />,    cls: 'sa-stat-icon--amber' },
-    { label: 'Approved', value: approved.length, icon: <IcCheck />,    cls: 'sa-stat-icon--green' },
-    { label: 'Rejected', value: 0,               icon: <IcX />,        cls: 'sa-stat-icon--red'   },
-    { label: 'Avg Review', value: avgReview,     icon: <IcCalendar />, cls: 'sa-stat-icon--blue'  },
+    { label: 'Pending',    value: pending.length,  icon: <IcClock />,    cls: 'sa-stat-icon--amber',  trend: { dir: pending.length > 0 ? 'up' : 'flat',    label: pending.length > 0 ? `${pending.length} awaiting` : 'All caught up' } },
+    { label: 'Approved',   value: approved.length, icon: <IcCheck />,    cls: 'sa-stat-icon--green',  trend: { dir: approved.length > 0 ? 'up' : 'flat',   label: approved.length > 0 ? `+${approved.length} total` : 'None yet' } },
+    { label: 'Rejected',   value: 0,               icon: <IcX />,        cls: 'sa-stat-icon--red',    trend: { dir: 'flat', label: 'No change' } },
+    { label: 'Avg Review', value: avgReview,        icon: <IcCalendar />, cls: 'sa-stat-icon--blue',   trend: { dir: 'down', label: '−10m faster' } },
   ];
 
   const filtered = useMemo(() => {
@@ -102,6 +102,11 @@ export default function SAApplications({ schools, onReview }) {
               <span className="sa-stat-value">{s.value}</span>
               <span className={`sa-stat-icon ${s.cls}`}>{s.icon}</span>
             </div>
+            {s.trend && (
+              <span className={`sa-stat-trend sa-stat-trend--${s.trend.dir}`}>
+                {s.trend.dir === 'up' ? '↑' : s.trend.dir === 'down' ? '↓' : '·'} {s.trend.label}
+              </span>
+            )}
           </div>
         ))}
       </div>
