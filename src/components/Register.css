@@ -1001,12 +1001,81 @@
 .time-label svg { width: 13px; height: 13px; }
 .time-input { width: 100%; color-scheme: dark; }
 
-/* ---- Brand Colour Picker — full palette grid ---- */
+/* ---- Brand Colour Picker ---- */
 .brand-color-picker {
   display: flex;
   flex-direction: column;
   gap: 0;
 }
+
+.color-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Choose button — sits right of the text input */
+.color-choose-btn {
+  flex-shrink: 0;
+  background: rgba(27, 63, 175, 0.15);
+  border: 1px solid rgba(27, 63, 175, 0.45);
+  border-radius: 8px;
+  color: #6B8CFF;
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 8px 16px;
+  white-space: nowrap;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.color-choose-btn:hover {
+  background: rgba(27, 63, 175, 0.35);
+  border-color: rgba(27, 63, 175, 0.8);
+  color: #fff;
+}
+.color-choose-btn.active {
+  background: rgba(27, 63, 175, 0.4);
+  border-color: #6B8CFF;
+  color: #fff;
+}
+
+/* Palette popup panel — inline, stays in card flow */
+.color-palette-popup {
+  margin-top: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 14px 16px 16px;
+  overflow: hidden;
+}
+
+.palette-popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.palette-popup-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #8892A8;
+}
+
+.palette-popup-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #8892A8;
+  font-size: 1.25rem;
+  line-height: 1;
+  padding: 0 2px;
+  transition: color 0.15s;
+}
+.palette-popup-close:hover { color: #EF4444; }
 
 .palette-section-label {
   font-size: 0.6875rem;
@@ -1023,20 +1092,25 @@
   gap: 2px;
 }
 
+/* Each row is a CSS grid — swatches fill available width, never overflow */
 .palette-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
   gap: 2px;
 }
+.palette-row--std {
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+}
 
-/* Base swatch — theme grid */
+/* Base swatch — fills its grid cell, square via aspect-ratio */
 .palette-swatch {
-  width: 22px;
-  height: 22px;
+  width: 100%;
+  aspect-ratio: 1;
+  min-width: 0;
   border-radius: 2px;
   border: 1px solid rgba(255, 255, 255, 0.07);
   cursor: pointer;
   padding: 0;
-  flex-shrink: 0;
   position: relative;
   transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
@@ -1067,10 +1141,8 @@
   line-height: 1;
 }
 
-/* Standard colours row — slightly larger swatches */
+/* Standard colours row — slightly more rounded */
 .palette-swatch--std {
-  width: 26px;
-  height: 26px;
   border-radius: 3px;
 }
 .palette-swatch--std.selected::after {
@@ -1613,6 +1685,21 @@
   background: rgba(2, 132, 199, 0.18);
   color: #0369A1;
 }
+[data-theme="light"] .color-choose-btn {
+  background: rgba(27, 63, 175, 0.08);
+  border-color: rgba(27, 63, 175, 0.25);
+  color: #1B3FAF;
+}
+[data-theme="light"] .color-choose-btn:hover,
+[data-theme="light"] .color-choose-btn.active {
+  background: rgba(27, 63, 175, 0.18);
+  color: #1B3FAF;
+}
+[data-theme="light"] .color-palette-popup {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+[data-theme="light"] .palette-popup-title { color: #64748B; }
 [data-theme="light"] .color-tag {
   background: rgba(0, 0, 0, 0.04);
   border-color: rgba(0, 0, 0, 0.1);

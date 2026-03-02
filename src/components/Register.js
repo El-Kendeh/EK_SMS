@@ -310,10 +310,23 @@ function PasswordStrength({ password }) {
 }
 
 /* ================================================================
-   Brand Color Picker — full palette grid (multi-select)
+   Brand Color Picker — input + Choose button reveals palette popup
    ================================================================ */
 function BrandColorPicker({ value, onChange }) {
   const [colorInput, setColorInput] = useState('');
+  const [showPalette, setShowPalette] = useState(false);
+  const wrapperRef = useRef(null);
+
+  useEffect(() => {
+    if (!showPalette) return;
+    const handleClick = (e) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
+        setShowPalette(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showPalette]);
 
   const toggleColor = (hex) => {
     if (value.includes(hex)) {
@@ -335,60 +348,76 @@ function BrandColorPicker({ value, onChange }) {
   return (
     <div className="brand-color-picker">
 
-      {/* ── Theme Colours — 6 × 10 grid ── */}
-      <p className="palette-section-label">Theme Colours</p>
-      <div className="palette-grid">
-        {PALETTE_ROWS.map((row, ri) => (
-          <div key={ri} className="palette-row">
-            {row.map((hex, ci) => (
-              <button
-                key={`${ri}-${ci}`}
-                type="button"
-                className={`palette-swatch${value.includes(hex) ? ' selected' : ''}`}
-                style={{ background: hex }}
-                onClick={() => toggleColor(hex)}
-                title={hex}
-                aria-label={`${value.includes(hex) ? 'Remove' : 'Select'} ${hex}`}
-              />
-            ))}
-          </div>
-        ))}
-      </div>
-
-      {/* ── Standard Colours — named row ── */}
-      <p className="palette-section-label" style={{ marginTop: '10px' }}>Standard Colours</p>
-      <div className="palette-row">
-        {STANDARD_COLORS.map(({ hex, name }) => (
-          <button
-            key={hex}
-            type="button"
-            className={`palette-swatch palette-swatch--std${value.includes(hex) ? ' selected' : ''}`}
-            style={{ background: hex }}
-            onClick={() => toggleColor(hex)}
-            title={name}
-            aria-label={`${value.includes(hex) ? 'Remove' : 'Select'} ${name}`}
+      {/* ── Input row: text field + Add + Choose ── */}
+      <div className="color-input-wrapper" ref={wrapperRef}>
+        <div className="color-input-row">
+          <input
+            className="reg-input"
+            type="text"
+            placeholder="Type a colour name and press Enter…"
+            value={colorInput}
+            onChange={(e) => setColorInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCustom(); } }}
           />
-        ))}
-      </div>
+          <button
+            type="button"
+            className={`color-choose-btn${showPalette ? ' active' : ''}`}
+            onClick={() => setShowPalette((v) => !v)}
+          >
+            Choose
+          </button>
+        </div>
 
-      {/* ── Custom colour name input ── */}
-      <div className="color-input-row" style={{ marginTop: '12px' }}>
-        <input
-          className="reg-input"
-          type="text"
-          placeholder="Type a colour name (e.g. Navy Blue) then click Add"
-          value={colorInput}
-          onChange={(e) => setColorInput(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCustom(); } }}
-        />
-        <button
-          type="button"
-          className="color-add-btn"
-          onClick={addCustom}
-          disabled={!colorInput.trim()}
-        >
-          Add
-        </button>
+        {/* ── Palette popup ── */}
+        {showPalette && (
+          <div className="color-palette-popup">
+            <div className="palette-popup-header">
+              <span className="palette-popup-title">Pick Colours</span>
+              <button
+                type="button"
+                className="palette-popup-close"
+                onClick={() => setShowPalette(false)}
+                aria-label="Close colour picker"
+              >
+                &times;
+              </button>
+            </div>
+
+            <p className="palette-section-label">Theme Colours</p>
+            <div className="palette-grid">
+              {PALETTE_ROWS.map((row, ri) => (
+                <div key={ri} className="palette-row">
+                  {row.map((hex, ci) => (
+                    <button
+                      key={`${ri}-${ci}`}
+                      type="button"
+                      className={`palette-swatch${value.includes(hex) ? ' selected' : ''}`}
+                      style={{ background: hex }}
+                      onClick={() => toggleColor(hex)}
+                      title={hex}
+                      aria-label={`${value.includes(hex) ? 'Remove' : 'Select'} ${hex}`}
+                    />
+                  ))}
+                </div>
+              ))}
+            </div>
+
+            <p className="palette-section-label" style={{ marginTop: '10px' }}>Standard Colours</p>
+            <div className="palette-row palette-row--std">
+              {STANDARD_COLORS.map(({ hex, name }) => (
+                <button
+                  key={hex}
+                  type="button"
+                  className={`palette-swatch palette-swatch--std${value.includes(hex) ? ' selected' : ''}`}
+                  style={{ background: hex }}
+                  onClick={() => toggleColor(hex)}
+                  title={name}
+                  aria-label={`${value.includes(hex) ? 'Remove' : 'Select'} ${name}`}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Selected colours as tags ── */}
@@ -1001,7 +1030,7 @@ function Register({ onNavigate }) {
                 <span className="field-tag">Used in portal, dashboards &amp; report cards</span>
               </label>
               <p className="input-hint" style={{ marginBottom: 8 }}>
-                Select one or more colours from the presets, or type a colour name and press Enter.
+                Type a colour name and press Enter, or click <strong>Choose</strong> to pick from the palette.
               </p>
               <BrandColorPicker
                 value={form.brandColors}
@@ -1389,7 +1418,7 @@ function Register({ onNavigate }) {
         Already have an account?{' '}
         <button type="button" onClick={() => onNavigate && onNavigate('login')}>Sign in here</button>
       </p>
-      <p className="reg-footer">© 2026 EK-SMS · EL-KENDEH School Management System.</p>
+      <p className="reg-footer">© 2026  ·  EL-KENDEH School Management System (EK-SMS).</p>
 
       {/* Legal modals */}
       {legalModal && (
