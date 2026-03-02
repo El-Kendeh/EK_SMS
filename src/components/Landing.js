@@ -112,6 +112,7 @@ function Navbar({ onNavigate, menuOpen, setMenuOpen }) {
     ['Security', 'security'],
     ['Pricing', 'pricing'],
     ['About', 'about'],
+    ['Contact', 'contact'],
   ];
 
   return (
@@ -757,6 +758,10 @@ const FAQ_ITEMS = [
 
 function FAQSection() {
   const [open, setOpen] = useState(0);
+  const scrollToContact = () => {
+    const el = document.getElementById('contact');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
   return (
     <section className="lp-section lp-section--alt" id="faq">
       <div className="lp-container lp-faq__inner">
@@ -779,7 +784,7 @@ function FAQSection() {
         <div className="lp-faq__cta-box">
           <h3 className="lp-faq__cta-title">Still have questions?</h3>
           <p className="lp-faq__cta-sub">Can't find the answer? Chat with our friendly team.</p>
-          <button className="lp-btn lp-btn--primary">Get in Touch <SvgIcon name="send" size={14} /></button>
+          <button className="lp-btn lp-btn--primary" onClick={scrollToContact}>Get in Touch <SvgIcon name="send" size={14} /></button>
         </div>
       </div>
     </section>
@@ -830,9 +835,179 @@ function AboutSection() {
 }
 
 // ============================================================
+// CONTACT SECTION
+// ============================================================
+const CONTACT_INFO = [
+  { icon: 'mail',     label: 'Email Support',  value: 'support@ek-sms.africa',     color: '#0dccf2' },
+  { icon: 'phone',    label: 'Call Us',         value: '+254 700 123 456',           color: '#A78BFA' },
+  { icon: 'location', label: 'Headquarters',    value: 'Westlands, Nairobi, Kenya', color: '#34D399' },
+];
+
+const SUPPORT_CATS = [
+  { icon: 'emergency', color: '#F472B6', title: 'Technical Support',  desc: 'System issues, errors, or outages. We aim for under 2-hour response.' },
+  { icon: 'analytics', color: '#0dccf2', title: 'Sales & Onboarding', desc: 'Questions about plans, demos, and getting your school started.' },
+  { icon: 'payments',  color: '#34D399', title: 'Billing & Finance',  desc: 'Invoice queries, payment issues, or subscription changes.' },
+  { icon: 'code',      color: '#A78BFA', title: 'Developer & API',    desc: 'API access, webhooks, and integration documentation.' },
+];
+
+function ContactSection() {
+  const [form, setForm] = useState({ name: '', email: '', subject: 'General Inquiry', message: '' });
+  const [sent, setSent] = useState(false);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setSent(true);
+    setTimeout(() => {
+      setSent(false);
+      setForm({ name: '', email: '', subject: 'General Inquiry', message: '' });
+    }, 3000);
+  };
+
+  return (
+    <section className="lp-section" id="contact">
+      <div className="lp-container">
+        <div className="lp-section-header">
+          <div className="lp-badge lp-badge--primary">
+            <SvgIcon name="mail" size={13} />
+            Customer Support
+          </div>
+          <h2 className="lp-section-title">Get in Touch</h2>
+          <p className="lp-section-sub">We're here to help your institution succeed. Reach out for support, sales, or general inquiries.</p>
+        </div>
+
+        {/* Info cards */}
+        <div className="lp-contact__info">
+          {CONTACT_INFO.map(({ icon, label, value, color }) => (
+            <div key={label} className="lp-contact__info-card">
+              <div className="lp-contact__info-icon" style={{ color, background: `${color}18` }}>
+                <SvgIcon name={icon} size={20} />
+              </div>
+              <div className="lp-contact__info-body">
+                <p className="lp-contact__info-label">{label}</p>
+                <p className="lp-contact__info-value">{value}</p>
+              </div>
+              <span className="lp-contact__info-arrow">
+                <svg width={16} height={16} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z" />
+                </svg>
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {/* Form + support categories */}
+        <div className="lp-contact__body">
+          {/* Contact Form */}
+          <div className="lp-contact__form-wrap">
+            <div className="lp-contact__form-header">
+              <SvgIcon name="send" size={18} style={{ color: 'var(--lp-primary)' }} />
+              <h3 className="lp-contact__form-title">Send a Message</h3>
+            </div>
+            <form className="lp-contact__form" onSubmit={handleSubmit}>
+              <div className="lp-contact__field">
+                <label className="lp-contact__label">Full Name</label>
+                <div className="lp-contact__input-wrap">
+                  <SvgIcon name="people" size={16} className="lp-contact__input-icon" />
+                  <input
+                    className="lp-contact__input"
+                    type="text"
+                    placeholder="John Doe"
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="lp-contact__field">
+                <label className="lp-contact__label">School Email</label>
+                <div className="lp-contact__input-wrap">
+                  <SvgIcon name="mail" size={16} className="lp-contact__input-icon" />
+                  <input
+                    className="lp-contact__input"
+                    type="email"
+                    placeholder="admin@school.edu"
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="lp-contact__field">
+                <label className="lp-contact__label">Subject</label>
+                <div className="lp-contact__input-wrap">
+                  <SvgIcon name="report" size={16} className="lp-contact__input-icon" />
+                  <select
+                    className="lp-contact__input lp-contact__select"
+                    value={form.subject}
+                    onChange={(e) => setForm({ ...form, subject: e.target.value })}
+                  >
+                    <option>General Inquiry</option>
+                    <option>Technical Support</option>
+                    <option>Billing Question</option>
+                    <option>Feature Request</option>
+                    <option>Partnership Inquiry</option>
+                  </select>
+                </div>
+              </div>
+              <div className="lp-contact__field">
+                <label className="lp-contact__label">Message</label>
+                <textarea
+                  className="lp-contact__input lp-contact__textarea"
+                  placeholder="How can we help you today?"
+                  rows={4}
+                  value={form.message}
+                  onChange={(e) => setForm({ ...form, message: e.target.value })}
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                className={`lp-btn lp-btn--primary lp-btn--full${sent ? ' lp-contact__btn--sent' : ''}`}
+              >
+                {sent
+                  ? <><SvgIcon name="check" size={16} /> Message Sent!</>
+                  : <><SvgIcon name="send" size={16} /> Send Message</>
+                }
+              </button>
+            </form>
+          </div>
+
+          {/* Support categories */}
+          <div className="lp-contact__support">
+            <h3 className="lp-contact__support-title">How Can We Help?</h3>
+            <p className="lp-contact__support-sub">Browse our support categories to find the right team for your question.</p>
+            <div className="lp-contact__categories">
+              {SUPPORT_CATS.map(({ icon, color, title, desc }) => (
+                <div key={title} className="lp-contact__category">
+                  <div className="lp-contact__cat-icon" style={{ color, background: `${color}18` }}>
+                    <SvgIcon name={icon} size={18} />
+                  </div>
+                  <div>
+                    <p className="lp-contact__cat-title">{title}</p>
+                    <p className="lp-contact__cat-desc">{desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="lp-contact__response-info">
+              <span className="lp-security__pulse-dot" />
+              <span>Average response time: <strong>under 4 hours</strong></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ============================================================
 // CTA BANNER
 // ============================================================
 function CTABanner({ onNavigate }) {
+  const scrollToContact = () => {
+    const el = document.getElementById('contact');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
   return (
     <section className="lp-cta-banner">
       <div className="lp-cta-banner__glow" aria-hidden="true" />
@@ -841,7 +1016,7 @@ function CTABanner({ onNavigate }) {
         <p className="lp-cta-banner__sub">Join hundreds of African institutions modernizing their education management with EK-SMS today.</p>
         <div className="lp-cta-banner__actions">
           <button className="lp-btn lp-btn--white lp-btn--lg" onClick={() => onNavigate('register')}>Book a Demo</button>
-          <button className="lp-btn lp-btn--ghost-white lp-btn--lg" onClick={() => onNavigate('login')}>
+          <button className="lp-btn lp-btn--ghost-white lp-btn--lg" onClick={scrollToContact}>
             Contact Support <SvgIcon name="arrowRight" size={16} />
           </button>
         </div>
@@ -894,7 +1069,7 @@ function Footer({ onNavigate }) {
           <div className="lp-footer__col">
             <h4 className="lp-footer__col-title">Company</h4>
             <ul className="lp-footer__links">
-              {[['About Us','about'],['Team','team'],['FAQ','faq']].map(([l,id]) => (
+              {[['About Us','about'],['Team','team'],['FAQ','faq'],['Contact','contact']].map(([l,id]) => (
                 <li key={l}><button className="lp-footer__link" onClick={() => scrollTo(id)}>{l}</button></li>
               ))}
               {['Careers','Partners'].map((l) => <li key={l}><span className="lp-footer__link">{l}</span></li>)}
@@ -942,6 +1117,7 @@ export default function Landing({ onNavigate }) {
         <TeamSection />
         <FAQSection />
         <AboutSection />
+        <ContactSection />
         <CTABanner onNavigate={onNavigate} />
       </main>
       <Footer onNavigate={onNavigate} />
