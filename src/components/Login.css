@@ -220,16 +220,19 @@
 /* ---- Password Toggle ---- */
 .input-toggle {
   position: absolute;
-  right: 12px;
+  right: 8px;
   background: none;
   border: none;
   cursor: pointer;
-  padding: 4px;
+  padding: 8px;
   color: var(--text-muted);
   display: flex;
   align-items: center;
   transition: color 0.2s;
   flex-shrink: 0;
+  min-width: 36px;
+  min-height: 36px;
+  justify-content: center;
 }
 
 .input-toggle:hover {
@@ -589,7 +592,7 @@
   align-items: center;
 }
 
-@media (min-width: 769px) {
+@media (min-width: 768px) {
   /* Page becomes a horizontal row */
   .login-page {
     flex-direction: row;
@@ -734,6 +737,19 @@
   }
 }
 
+/* Tablet portrait — narrower panel padding */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .login-panel {
+    padding: 2.5rem 2.75rem;
+  }
+  .login-panel__inner { max-width: 360px; }
+  .login-right {
+    flex: 0 0 420px;
+    padding: 2rem 2.25rem;
+  }
+  .login-panel__headline { font-size: 1.55rem; }
+}
+
 @media (min-width: 1280px) {
   .login-panel {
     padding: 4rem 5rem;
@@ -743,4 +759,11 @@
     flex: 0 0 520px;
     padding: 3rem 4rem;
   }
+}
+
+/* Wide desktop (1440px+) */
+@media (min-width: 1440px) {
+  .login-panel__headline { font-size: 2.1rem; }
+  .login-panel__inner    { max-width: 480px; }
+  .login-right           { flex: 0 0 560px; }
 }
