@@ -1088,16 +1088,6 @@
    ROLES — SCROLL-DRIVEN LAYOUT & ANIMATIONS
    ============================================================ */
 
-/* Legacy scroll-wrap classes — no longer used in markup but kept so
-   any cached render doesn't break. Height is now driven by lp-section. */
-.lp-roles-scroll-wrap {
-  position: relative;
-}
-
-.lp-roles-sticky {
-  padding: 5rem 0 4rem;
-}
-
 /* ── Content animation keyframe ── */
 @keyframes lp-role-in {
   from {
@@ -1137,67 +1127,6 @@
   animation: lp-role-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-/* ── Scroll-progress pill dots ── */
-.lp-roles-progress {
-  position: absolute;
-  bottom: 1.5rem;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  z-index: 10;
-}
-
-.lp-roles-progress__dot {
-  height: 7px;
-  width: 7px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.18);
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  transition: width 0.35s cubic-bezier(0.22, 1, 0.36, 1),
-              background 0.3s ease,
-              transform 0.3s ease;
-}
-
-.lp-roles-progress__dot--active {
-  width: 22px;
-}
-
-.lp-roles-progress__dot:hover:not(.lp-roles-progress__dot--active) {
-  background: rgba(255, 255, 255, 0.35);
-  transform: scale(1.2);
-}
-
-/* ── "scroll to explore" hint ── */
-.lp-roles-scroll-hint {
-  position: absolute;
-  bottom: 1.4rem;
-  right: 2rem;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.22);
-  pointer-events: none;
-  animation: lp-role-in 1s ease 0.6s both;
-}
-
-/* ── Mobile: collapse to natural height, disable sticky ── */
-@media (max-width: 768px) {
-  .lp-roles-scroll-wrap { height: auto; }
-  .lp-roles-sticky {
-    position: relative;
-    top: auto;
-    padding: 3.5rem 0 3rem;
-  }
-  .lp-roles-scroll-hint { display: none; }
-}
 
 /* ============================================================
    SECURITY SECTION
@@ -2466,11 +2395,7 @@
     padding: 1.5rem 1.4rem;
   }
 
-  /* Reduce bottom gap inside the sticky roles panel and tighten
-     the security section top padding so sections feel connected */
-  .lp-roles-sticky {
-    padding-bottom: 2rem;
-  }
+
 
   #security {
     padding-top: 3rem;
@@ -2523,9 +2448,6 @@
   .lp-roles-card__left    { padding: 1.75rem; }
   .lp-roles-tabs          { flex-wrap: wrap; gap: 6px; }
   .lp-roles-tab           { padding: 7px 14px; font-size: 0.82rem; flex: 1; min-width: calc(50% - 6px); text-align: center; justify-content: center; }
-  .lp-roles-progress      { display: none; }
-  .lp-roles-scroll-hint   { display: none; }
-
   /* Security */
   .lp-security__inner  { gap: 2rem; }
 

@@ -167,7 +167,7 @@ function HeroSection({ onNavigate }) {
           <div className="lp-hero__badge">
             <PruhLogo size={18} showText={false} variant="white" />
             <span className="lp-hero__badge-sep" />
-            v1.0 now live · built for Africa
+            ✔ built for Africa
           </div>
 
           <h1 className="lp-hero__headline">
@@ -914,125 +914,84 @@ const ROLES_DATA = [
 
 function RolesSection() {
   const [active, setActive] = useState('superadmin');
-  const wrapRef = useRef(null);
   const role = ROLES_DATA.find((r) => r.key === active);
 
-  /* ── Scroll-driven tab switching (desktop only) ── */
-  useEffect(() => {
-    const handleScroll = () => {
-      if (window.innerWidth <= 768) return;
-      const el = wrapRef.current;
-      if (!el) return;
-      const rect       = el.getBoundingClientRect();
-      const scrolled   = -rect.top;
-      const scrollable = el.offsetHeight - window.innerHeight;
-      if (scrolled < 0 || scrolled > scrollable) return;
-      const progress = scrolled / scrollable;
-      const idx = Math.min(Math.floor(progress * ROLES_DATA.length), ROLES_DATA.length - 1);
-      const key = ROLES_DATA[idx].key;
-      setActive(prev => (prev !== key ? key : prev));
-    };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
   return (
-    <div ref={wrapRef} className="lp-roles-scroll-wrap" id="roles">
-      <div className="lp-roles-sticky">
-        <div className="lp-container">
+    <section className="lp-section" id="roles">
+      <div className="lp-container">
 
-          <div className="lp-section-header">
-            <div className="lp-badge lp-badge--primary">Access Control</div>
-            <h2 className="lp-section-title">Tailored for Every Role</h2>
-            <p className="lp-section-sub">Tailored dashboards that empower each user without compromising system security.</p>
-          </div>
-
-          <div className="lp-roles-tabs">
-            {ROLES_DATA.map(({ key, label, color }) => (
-              <button
-                key={key}
-                className={`lp-roles-tab${active === key ? ' lp-roles-tab--active' : ''}`}
-                style={active === key ? { borderColor: color, color } : {}}
-                onClick={() => setActive(key)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-
-          <div className="lp-roles-card" style={{ '--role-color': role.color }}>
-            {/* Left panel — re-keyed so perks stagger in on every switch */}
-            <div key={`left-${active}`} className="lp-roles-card__left lp-roles-anim">
-              <div className="lp-roles-card__icon-wrap" style={{ color: role.color, background: `${role.color}18` }}>
-                <SvgIcon name={role.icon} size={32} />
-              </div>
-              <h3 className="lp-roles-card__title">{role.label}</h3>
-              <p className="lp-roles-card__sub">{role.subtitle}</p>
-              <ul className="lp-roles-card__perks">
-                {role.perks.map((p, i) => (
-                  <li
-                    key={p}
-                    className="lp-roles-card__perk lp-roles-perk-anim"
-                    style={{ animationDelay: `${0.08 + i * 0.07}s` }}
-                  >
-                    <span className="lp-roles-card__perk-dot" style={{ background: role.color }} />
-                    {p}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Right panel — re-keyed to trigger mockup slide-in */}
-            <div className="lp-roles-card__right">
-              <div key={active} className="lp-roles-right-anim" style={{ width: '100%' }}>
-                {active === 'superadmin' ? (
-                  <SuperAdminDashboardMockup />
-                ) : active === 'schooladmin' ? (
-                  <SchoolAdminDashboardMockup />
-                ) : active === 'teacher' ? (
-                  <TeacherDashboardMockup />
-                ) : (
-                  <div className="lp-roles-preview">
-                    <div className="lp-roles-preview__header">
-                      <span className="lp-roles-preview__label" style={{ color: role.color }}>{role.label} Dashboard</span>
-                    </div>
-                    <div className="lp-roles-preview__grid">
-                      {[1,2,3,4,5,6].map((i) => (
-                        <div key={i} className="lp-roles-preview__block" style={i === 1 ? { borderColor: role.color, background: `${role.color}12` } : {}} />
-                      ))}
-                    </div>
-                    <div className="lp-roles-preview__bars">
-                      {[60, 80, 45, 90, 70, 55].map((h, i) => (
-                        <div key={i} className="lp-roles-preview__bar" style={{ height: `${h}%`, background: i % 2 === 0 ? role.color : `${role.color}50` }} />
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+        <div className="lp-section-header">
+          <div className="lp-badge lp-badge--primary">Access Control</div>
+          <h2 className="lp-section-title">Tailored for Every Role</h2>
+          <p className="lp-section-sub">Tailored dashboards that empower each user without compromising system security.</p>
         </div>
 
-        {/* Scroll-progress pill dots */}
-        <div className="lp-roles-progress">
-          {ROLES_DATA.map(({ key, color }) => (
+        <div className="lp-roles-tabs">
+          {ROLES_DATA.map(({ key, label, color }) => (
             <button
               key={key}
-              className={`lp-roles-progress__dot${active === key ? ' lp-roles-progress__dot--active' : ''}`}
-              style={active === key ? { background: color } : {}}
+              className={`lp-roles-tab${active === key ? ' lp-roles-tab--active' : ''}`}
+              style={active === key ? { borderColor: color, color } : {}}
               onClick={() => setActive(key)}
-              aria-label={key}
-            />
+            >
+              {label}
+            </button>
           ))}
         </div>
 
-        {/* Scroll hint — visible only at top of section */}
-        <div className="lp-roles-scroll-hint">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
-          scroll to explore
+        <div className="lp-roles-card" style={{ '--role-color': role.color }}>
+          {/* Left panel — re-keyed so perks stagger in on every switch */}
+          <div key={`left-${active}`} className="lp-roles-card__left lp-roles-anim">
+            <div className="lp-roles-card__icon-wrap" style={{ color: role.color, background: `${role.color}18` }}>
+              <SvgIcon name={role.icon} size={32} />
+            </div>
+            <h3 className="lp-roles-card__title">{role.label}</h3>
+            <p className="lp-roles-card__sub">{role.subtitle}</p>
+            <ul className="lp-roles-card__perks">
+              {role.perks.map((p, i) => (
+                <li
+                  key={p}
+                  className="lp-roles-card__perk lp-roles-perk-anim"
+                  style={{ animationDelay: `${0.08 + i * 0.07}s` }}
+                >
+                  <span className="lp-roles-card__perk-dot" style={{ background: role.color }} />
+                  {p}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Right panel — re-keyed to trigger mockup slide-in */}
+          <div className="lp-roles-card__right">
+            <div key={active} className="lp-roles-right-anim" style={{ width: '100%' }}>
+              {active === 'superadmin' ? (
+                <SuperAdminDashboardMockup />
+              ) : active === 'schooladmin' ? (
+                <SchoolAdminDashboardMockup />
+              ) : active === 'teacher' ? (
+                <TeacherDashboardMockup />
+              ) : (
+                <div className="lp-roles-preview">
+                  <div className="lp-roles-preview__header">
+                    <span className="lp-roles-preview__label" style={{ color: role.color }}>{role.label} Dashboard</span>
+                  </div>
+                  <div className="lp-roles-preview__grid">
+                    {[1,2,3,4,5,6].map((i) => (
+                      <div key={i} className="lp-roles-preview__block" style={i === 1 ? { borderColor: role.color, background: `${role.color}12` } : {}} />
+                    ))}
+                  </div>
+                  <div className="lp-roles-preview__bars">
+                    {[60, 80, 45, 90, 70, 55].map((h, i) => (
+                      <div key={i} className="lp-roles-preview__bar" style={{ height: `${h}%`, background: i % 2 === 0 ? role.color : `${role.color}50` }} />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </section>
   );
 }
 
