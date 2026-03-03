@@ -25,6 +25,7 @@ DEVELOPER_CREDENTIALS.md
 
 #Ignore this folder  don't push
 public/stich-refrence/
+public/stich-refrence/constitch (5)
 
 # Python
 venv/

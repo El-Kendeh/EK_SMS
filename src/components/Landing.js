@@ -110,7 +110,6 @@ function Navbar({ onNavigate, menuOpen, setMenuOpen }) {
     ['Features', 'features'],
     ['Roles', 'roles'],
     ['Security', 'security'],
-    ['Pricing', 'pricing'],
     ['About', 'about'],
     ['Contact', 'contact'],
   ];
@@ -119,10 +118,10 @@ function Navbar({ onNavigate, menuOpen, setMenuOpen }) {
     <nav className={`lp-nav${scrolled ? ' lp-nav--scrolled' : ''}`}>
       <div className="lp-nav__inner">
         <div className="lp-nav__brand">
-          <div className="lp-nav__logo-mark">
-            <SvgIcon name="school" size={20} />
+          <PruhLogo size={32} showText={false} variant="white" />
+          <div className="lp-nav__brand-text">
+            <span className="lp-nav__brand-name">PRUH</span>
           </div>
-          <span className="lp-nav__brand-name">EK-SMS</span>
         </div>
 
         <div className="lp-nav__links">
@@ -169,30 +168,26 @@ function HeroSection({ onNavigate }) {
       <div className="lp-container lp-hero__inner">
         <div className="lp-hero__text">
           <div className="lp-hero__badge">
-            <span className="lp-hero__badge-dot" />
-            v2.0 now live — built for Africa
+            <PruhLogo size={18} showText={false} variant="white" />
+            <span className="lp-hero__badge-sep" />
+            v1.0 now live · built for Africa
           </div>
 
           <h1 className="lp-hero__headline">
-            Modern School
+            Protect Academic Integrity.
             <br />
-            <span className="lp-hero__headline-gradient">Management</span>
-            <br />
-            for Africa
+            Run Your School{' '}
+            <span className="lp-hero__headline-gradient">Smarter.</span>
           </h1>
 
           <p className="lp-hero__sub lp-hero__sub--animated">
             Simplify <AnimatedWord /> all from one secure dashboard.
           </p>
           <p className="lp-hero__sub">
-            The all-in-one SaaS platform built for forward-thinking African institutions.
+            EK-SMS is the all-in-one platform that unifies student management, staff operations, grading, attendance, and security into one seamless experience.
           </p>
 
           <div className="lp-hero__ctas">
-            <button className="lp-btn lp-btn--primary lp-btn--lg" onClick={() => onNavigate('register')}>
-              Start Free Trial
-              <SvgIcon name="arrowRight" size={18} />
-            </button>
             <button className="lp-btn lp-btn--ghost lp-btn--lg" onClick={() => onNavigate('login')}>
               <SvgIcon name="play" size={18} />
               View Demo
@@ -200,7 +195,7 @@ function HeroSection({ onNavigate }) {
           </div>
 
           <div className="lp-hero__trust">
-            {['Free 14-day trial', 'No credit card required', 'Built for African schools'].map((t) => (
+            {['Early Access Program', 'Academic Integrity Focused', 'Secure & Role-Based Access'].map((t) => (
               <span key={t} className="lp-hero__trust-item">
                 <SvgIcon name="check" size={13} />
                 {t}
@@ -258,7 +253,7 @@ function HeroSection({ onNavigate }) {
         <div className="lp-hero__partners">
           <p className="lp-hero__partners-label">Trusted by 500+ Institutions Across Africa</p>
           <div className="lp-hero__partners-list">
-            {['Greenwood Academy', 'Lagos High School', 'Accra International', 'Nairobi Tech', 'Kampala College', 'Dakar Institute'].map((n) => (
+            {['Greenwood Academy', 'Albert Academy', 'Methodist Boys HS', 'Academy Tech', 'Christ the Kings College'].map((n) => (
               <span key={n} className="lp-hero__partner">{n}</span>
             ))}
           </div>
@@ -309,6 +304,522 @@ function FeaturesSection() {
 }
 
 // ============================================================
+// SUPER ADMIN DASHBOARD MOCKUP
+// ============================================================
+function SuperAdminDashboardMockup() {
+  const primary = '#0db9f2';
+  const glass = {
+    background: 'rgba(30, 41, 59, 0.7)',
+    backdropFilter: 'blur(12px)',
+    WebkitBackdropFilter: 'blur(12px)',
+    border: '1px solid rgba(255,255,255,0.05)',
+  };
+  const stats = [
+    { label: 'Total Schools',   value: '142',   color: primary,   icon: 'school',    badge: '+12%', badgeColor: '#34d399' },
+    { label: 'Active Students', value: '24.5k', color: '#818cf8', icon: 'people',    badge: '+5%',  badgeColor: '#34d399' },
+    { label: 'Total Revenue',   value: '$128k', color: '#34d399', icon: 'payments',  badge: '+8%',  badgeColor: '#34d399' },
+    { label: 'Security Alerts', value: '3',     color: '#fb923c', icon: 'emergency', badge: 'Alert',badgeColor: '#fb923c' },
+  ];
+  const registrations = [
+    { name: 'Albert Academy',      loc: 'Freetown, SL', status: 'VERIFIED', statusColor: '#34d399', statusBg: 'rgba(52,211,153,0.1)'  },
+    { name: "Methodist Boys' HS",  loc: 'Freetown, SL', status: 'PENDING',  statusColor: '#fbbf24', statusBg: 'rgba(251,191,36,0.1)'  },
+    { name: 'Vent Int. School',    loc: 'Monrovia, LR', status: 'VERIFIED', statusColor: '#34d399', statusBg: 'rgba(52,211,153,0.1)'  },
+  ];
+  return (
+    <div style={{ background: '#0f172a', borderRadius: '16px', overflow: 'hidden', width: '100%', position: 'relative', fontFamily: 'Inter, sans-serif' }}>
+      {/* ambient glow */}
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(ellipse 70% 35% at 50% 0%, rgba(13,185,242,0.09) 0%, transparent 70%)' }} />
+
+      {/* Header */}
+      <div style={{ ...glass, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid rgba(30,41,59,0.5)', position: 'relative', zIndex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <PruhLogo size={22} showText={false} variant="white" />
+          <div>
+            <div style={{ fontSize: '8px', color: primary, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '1px' }}>Super Admin</div>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>EK-SMS Dashboard</div>
+          </div>
+        </div>
+        <div style={{ position: 'relative' }}>
+          <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(30,41,59,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="#94a3b8"><path d="M12 22a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2m6-6V11a6 6 0 0 0-5-5.92V4a1 1 0 0 0-2 0v1.08A6 6 0 0 0 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+          </div>
+          <div style={{ position: 'absolute', top: '4px', right: '4px', width: '6px', height: '6px', background: '#ef4444', borderRadius: '50%' }} />
+        </div>
+      </div>
+
+      {/* Stats 2×2 grid */}
+      <div style={{ padding: '10px 12px 0', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', position: 'relative', zIndex: 1 }}>
+        {stats.map(({ label, value, color, icon, badge, badgeColor }) => (
+          <div key={label} style={{ ...glass, borderRadius: '10px', padding: '10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ width: '22px', height: '22px', borderRadius: '6px', background: `${color}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', color }}>
+                <SvgIcon name={icon} size={12} />
+              </div>
+              <span style={{ fontSize: '7px', fontWeight: 700, color: badgeColor, background: `${badgeColor}18`, padding: '1px 5px', borderRadius: '999px' }}>{badge}</span>
+            </div>
+            <div>
+              <div style={{ fontSize: '7px', color: '#94a3b8', fontWeight: 500, marginBottom: '2px' }}>{label}</div>
+              <div style={{ fontSize: '16px', fontWeight: 800, color: '#fff' }}>{value}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Growth chart */}
+      <div style={{ padding: '10px 12px 0', position: 'relative', zIndex: 1 }}>
+        <div style={{ ...glass, borderRadius: '10px', padding: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+            <div>
+              <div style={{ fontSize: '10px', fontWeight: 700, color: '#fff' }}>School Growth</div>
+              <div style={{ fontSize: '7px', color: '#64748b' }}>Monthly acquisitions</div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: '12px', fontWeight: 800, color: primary }}>+15%</div>
+              <div style={{ fontSize: '7px', color: '#64748b' }}>vs last month</div>
+            </div>
+          </div>
+          <svg width="100%" height="50" viewBox="0 0 100 50" preserveAspectRatio="none" style={{ display: 'block' }}>
+            <defs>
+              <linearGradient id="sa-chart-grad" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stopColor={primary} stopOpacity="0.35" />
+                <stop offset="100%" stopColor={primary} stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            <path d="M0,50 L0,35 Q10,32 20,40 T40,25 T60,30 T80,15 T100,5 L100,50 Z" fill="url(#sa-chart-grad)" />
+            <path d="M0,35 Q10,32 20,40 T40,25 T60,30 T80,15 T100,5" fill="none" stroke={primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <circle cx="80" cy="15" r="2.5" fill={primary} />
+          </svg>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '3px' }}>
+            {['Jan','Feb','Mar','Apr','May','Jun'].map(m => (
+              <span key={m} style={{ fontSize: '6px', color: '#64748b', fontWeight: 500 }}>{m}</span>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Registrations */}
+      <div style={{ padding: '10px 12px 0', position: 'relative', zIndex: 1 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+          <div style={{ fontSize: '10px', fontWeight: 700, color: '#fff' }}>Recent Registrations</div>
+          <div style={{ fontSize: '7px', color: primary, fontWeight: 600 }}>View All</div>
+        </div>
+        <div style={{ ...glass, borderRadius: '10px', overflow: 'hidden' }}>
+          {registrations.map(({ name, loc, status, statusColor, statusBg }, i) => (
+            <div key={name} style={{ padding: '8px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: i < registrations.length - 1 ? '1px solid rgba(30,41,59,0.6)' : 'none' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'rgba(51,65,85,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
+                  <SvgIcon name="school" size={11} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '8px', fontWeight: 600, color: '#fff' }}>{name}</div>
+                  <div style={{ fontSize: '6.5px', color: '#64748b' }}>{loc}</div>
+                </div>
+              </div>
+              <span style={{ fontSize: '6px', fontWeight: 800, color: statusColor, background: statusBg, padding: '2px 6px', borderRadius: '999px', border: `1px solid ${statusColor}40` }}>{status}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Bottom Nav */}
+      <div style={{ ...glass, borderTop: '1px solid rgba(30,41,59,0.5)', display: 'flex', justifyContent: 'space-around', alignItems: 'center', padding: '8px 6px', marginTop: '10px', position: 'relative', zIndex: 1 }}>
+        {[
+          { icon: 'analytics', label: 'Dashboard', isActive: true  },
+          { icon: 'school',    label: 'Schools',   isActive: false },
+          { icon: 'people',    label: 'Users',     isActive: false },
+          { icon: 'verified',  label: 'Security',  isActive: false },
+        ].map(({ icon, label, isActive }) => (
+          <div key={label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', color: isActive ? primary : '#64748b' }}>
+            <SvgIcon name={icon} size={14} />
+            <span style={{ fontSize: '6px', fontWeight: 500 }}>{label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// SCHOOL ADMIN DASHBOARD MOCKUP  (dark glassmorphism)
+// ============================================================
+function SchoolAdminDashboardMockup() {
+  const primary = '#13a4ec';
+  const bg      = '#101c22';
+  const glass   = {
+    background:           'rgba(255,255,255,0.03)',
+    backdropFilter:       'blur(10px)',
+    WebkitBackdropFilter: 'blur(10px)',
+    border:               '1px solid rgba(255,255,255,0.05)',
+  };
+  const cyanGlow = { boxShadow: '0 0 15px rgba(19,164,236,0.15)' };
+  const metrics = [
+    { label: 'Total Students',  value: '1,240', badge: '+12% vs last term', badgeColor: '#34d399', icon: 'people',    highlight: true },
+    { label: 'Total Teachers',  value: '86',    badge: 'Full Capacity',      badgeColor: '#64748b', icon: 'teacher'  },
+    { label: 'Attendance Rate', value: '94%',   badge: 'Top 5% Regionally', badgeColor: '#34d399', icon: 'calendar' },
+    { label: 'Avg Performance', value: '82%',   badge: 'Slightly improved',  badgeColor: primary,   icon: 'analytics'},
+  ];
+  const barH = [0.75, 1.0, 0.67, 0.75, 1.0, 0.83];
+  const barF = [0.80, 0.83, 0.75, 0.50, 1.0, 0.60];
+  const days = ['Mon','Tue','Wed','Thu','Fri','Sat'];
+  const gradeRows = [
+    { student: 'Kofi Mensah',   subject: 'Mathematics',     status: 'Approved', statusColor: '#34d399', statusBg: 'rgba(52,211,153,0.1)' },
+    { student: 'Amara Okafor',  subject: 'Advanced Physics', status: 'Pending',  statusColor: '#fbbf24', statusBg: 'rgba(251,191,36,0.1)' },
+    { student: 'Kwame Nkrumah', subject: 'World History',   status: 'Approved', statusColor: '#34d399', statusBg: 'rgba(52,211,153,0.1)' },
+  ];
+  const quickActions = [
+    { icon: 'people',   label: 'Add Student'    },
+    { icon: 'teacher',  label: 'Add Teacher'    },
+    { icon: 'verified', label: 'Approve Grades' },
+  ];
+  const bottomNav = [
+    { icon: 'analytics', label: 'Home',     active: true  },
+    { icon: 'report',    label: 'Academics', active: false },
+    { icon: 'payments',  label: 'Finance',   active: false },
+    { icon: 'lock',      label: 'Settings',  active: false },
+  ];
+  return (
+    <div style={{ background: bg, borderRadius: '16px', overflow: 'hidden', width: '100%', fontFamily: 'Inter, sans-serif', color: '#fff', position: 'relative' }}>
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(ellipse 70% 35% at 50% 0%, rgba(19,164,236,0.08) 0%, transparent 70%)' }} />
+      {/* Header */}
+      <div style={{ ...glass, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid rgba(30,41,59,0.5)', position: 'relative', zIndex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <PruhLogo size={22} showText={false} variant="white" />
+          <div>
+            <div style={{ fontSize: '8px', color: primary, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '1px' }}>School Admin</div>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>EK-SMS Dashboard</div>
+          </div>
+        </div>
+        <div style={{ position: 'relative' }}>
+          <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(30,41,59,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="#94a3b8"><path d="M12 22a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2m6-6V11a6 6 0 0 0-5-5.92V4a1 1 0 0 0-2 0v1.08A6 6 0 0 0 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+          </div>
+          <div style={{ position: 'absolute', top: '4px', right: '4px', width: '6px', height: '6px', background: '#ef4444', borderRadius: '50%' }} />
+        </div>
+      </div>
+      {/* Stats 2×2 */}
+      <div style={{ padding: '10px 12px 0', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', position: 'relative', zIndex: 1 }}>
+        {metrics.map(({ label, value, icon, badge, badgeColor, highlight }) => (
+          <div key={label} style={{ ...glass, ...(highlight ? cyanGlow : {}), borderRadius: '10px', padding: '10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ width: '22px', height: '22px', borderRadius: '6px', background: `rgba(19,164,236,0.15)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: primary }}>
+                <SvgIcon name={icon} size={12} />
+              </div>
+              <span style={{ fontSize: '7px', fontWeight: 700, color: badgeColor, background: `${badgeColor}18`, padding: '1px 5px', borderRadius: '999px' }}>{badge}</span>
+            </div>
+            <div>
+              <div style={{ fontSize: '7px', color: '#94a3b8', fontWeight: 500, marginBottom: '2px' }}>{label}</div>
+              <div style={{ fontSize: '16px', fontWeight: 800, color: '#fff' }}>{value}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+      {/* Growth chart */}
+      <div style={{ padding: '10px 12px 0', position: 'relative', zIndex: 1 }}>
+        <div style={{ ...glass, borderRadius: '10px', padding: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+            <div>
+              <div style={{ fontSize: '10px', fontWeight: 700, color: '#fff' }}>Attendance Trend</div>
+              <div style={{ fontSize: '7px', color: '#64748b' }}>Weekly breakdown</div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: '12px', fontWeight: 800, color: primary }}>94%</div>
+              <div style={{ fontSize: '7px', color: '#64748b' }}>this week</div>
+            </div>
+          </div>
+          <div style={{ height: '44px', display: 'flex', alignItems: 'flex-end', gap: '4px' }}>
+            {barH.map((h, i) => (
+              <div key={i} style={{ flex: 1, background: 'rgba(19,164,236,0.1)', borderRadius: '2px 2px 0 0', height: `${h * 100}%`, position: 'relative' }}>
+                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: primary, borderRadius: '2px 2px 0 0', height: `${barF[i] * 100}%` }} />
+              </div>
+            ))}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '3px' }}>
+            {days.map(d => <span key={d} style={{ fontSize: '6px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>{d}</span>)}
+          </div>
+        </div>
+      </div>
+      {/* Recent Grade Modifications */}
+      <div style={{ padding: '10px 12px 0', position: 'relative', zIndex: 1 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+          <div style={{ fontSize: '10px', fontWeight: 700, color: '#fff' }}>Recent Grade Modifications</div>
+          <div style={{ fontSize: '7px', color: primary, fontWeight: 600 }}>View All</div>
+        </div>
+        <div style={{ ...glass, borderRadius: '10px', overflow: 'hidden' }}>
+          {gradeRows.map(({ student, subject, status, statusColor, statusBg }, i) => (
+            <div key={student} style={{ padding: '8px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: i < gradeRows.length - 1 ? '1px solid rgba(30,41,59,0.6)' : 'none' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'rgba(51,65,85,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
+                  <SvgIcon name="school" size={11} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '8px', fontWeight: 600, color: '#fff' }}>{student}</div>
+                  <div style={{ fontSize: '6.5px', color: '#64748b' }}>{subject}</div>
+                </div>
+              </div>
+              <span style={{ fontSize: '6px', fontWeight: 800, color: statusColor, background: statusBg, padding: '2px 6px', borderRadius: '999px', border: `1px solid ${statusColor}40` }}>{status}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      {/* Quick Actions */}
+      <div style={{ padding: '10px 12px 0', position: 'relative', zIndex: 1 }}>
+        <div style={{ fontSize: '10px', fontWeight: 700, color: '#fff', marginBottom: '6px' }}>Quick Actions</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '6px' }}>
+          {quickActions.map(({ icon, label }) => (
+            <div key={label} style={{ ...glass, padding: '8px 4px', borderRadius: '10px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+              <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'rgba(19,164,236,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: primary }}>
+                <SvgIcon name={icon} size={12} />
+              </div>
+              <span style={{ fontSize: '5.5px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#cbd5e1', textAlign: 'center' }}>{label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      {/* Bottom Nav */}
+      <div style={{ ...glass, borderTop: '1px solid rgba(30,41,59,0.5)', display: 'flex', justifyContent: 'space-around', alignItems: 'center', padding: '8px 6px', marginTop: '10px', position: 'relative', zIndex: 1 }}>
+        {bottomNav.map(({ icon, label, active: isActive }) => (
+          <div key={label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', color: isActive ? primary : '#64748b' }}>
+            <SvgIcon name={icon} size={14} />
+            <span style={{ fontSize: '6px', fontWeight: 500 }}>{label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// TEACHER DASHBOARD MOCKUP  (sidebar + student-view layout)
+// ============================================================
+function TeacherDashboardMockup() {
+  const primary = '#3c83f6';
+  const bg      = '#101722';
+  const cardBg  = '#0f172a';
+  const border  = '1px solid rgba(30,41,59,0.9)';
+  const muted   = '#64748b';
+
+  const navItems = [
+    { icon: 'analytics', label: 'Dashboard',   active: true  },
+    { icon: 'star',      label: 'My Grades',   active: false },
+    { icon: 'calendar',  label: 'Attendance',  active: false },
+    { icon: 'report',    label: 'Assignments', active: false },
+    { icon: 'audit',     label: 'Schedule',    active: false },
+    { icon: 'mail',      label: 'Messages',    active: false },
+  ];
+
+  const stats = [
+    { label: 'GPA',        value: '3.8', sub: '+0.2 from last term',       subColor: '#22c55e', iconBg: 'rgba(59,130,246,0.1)',  iconColor: '#3b82f6', icon: 'star'     },
+    { label: 'Attendance', value: '94%', progress: 94,                                          iconBg: 'rgba(16,185,129,0.1)',  iconColor: '#10b981', icon: 'calendar' },
+    { label: 'Subjects',   value: '6',   sub: 'Enrolled this semester',     subColor: muted,     iconBg: `rgba(60,131,246,0.1)`, iconColor: primary,   icon: 'report'   },
+    { label: 'Exams',      value: '2',   sub: 'Coming up this week',        subColor: '#f97316', iconBg: 'rgba(249,115,22,0.1)', iconColor: '#f97316', icon: 'calendar' },
+  ];
+
+  const grades = [
+    { subject: 'Math',    teacher: 'Mr. Smith', score: 92, grade: 'A'  },
+    { subject: 'Physics', teacher: 'Dr. Brown', score: 85, grade: 'B+' },
+    { subject: 'English', teacher: 'Ms. Davis', score: 88, grade: 'A-' },
+  ];
+
+  const assignments = [
+    { label: 'History Essay', sub: 'Due in 2 days', iconBg: 'rgba(239,68,68,0.1)',  iconColor: '#ef4444', icon: 'report' },
+    { label: 'Calc Homework', sub: 'Due tomorrow',  iconBg: 'rgba(59,130,246,0.1)', iconColor: '#3b82f6', icon: 'code'   },
+  ];
+
+  const announcements = [
+    { title: 'Spring Break Dates', sub: 'Starting from March 24th…', active: true  },
+    { title: 'New Library Hours',  sub: 'Open until 10 PM weekdays.',  active: false },
+  ];
+
+  const perfBars = [85, 95, 60, 90, 100];
+
+  return (
+    <div style={{ background: bg, borderRadius: '14px', overflow: 'hidden', width: '100%', fontFamily: 'Inter, sans-serif', color: '#fff', display: 'flex' }}>
+
+      {/* ══ Sidebar ══ */}
+      <div style={{ width: '108px', flexShrink: 0, background: 'rgba(15,23,42,0.85)', borderRight: border, display: 'flex', flexDirection: 'column', padding: '10px 6px' }}>
+        {/* Logo */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '4px 8px', marginBottom: '14px' }}>
+          <div style={{ background: primary, borderRadius: '6px', padding: '3px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <PruhLogo size={14} showText={false} variant="white" />
+          </div>
+          <span style={{ fontSize: '11px', fontWeight: 700, color: primary, letterSpacing: '-0.02em' }}>EK-SMS</span>
+        </div>
+
+        {/* Nav links */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1 }}>
+          {navItems.map(({ icon, label, active }) => (
+            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 8px', borderRadius: '8px', background: active ? primary : 'transparent', color: active ? '#fff' : muted, fontSize: '7.5px', fontWeight: active ? 600 : 400 }}>
+              <SvgIcon name={icon} size={10} />
+              {label}
+            </div>
+          ))}
+        </div>
+
+        {/* Profile */}
+        <div style={{ borderTop: border, paddingTop: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 8px', borderRadius: '8px', color: muted, fontSize: '7.5px' }}>
+            <SvgIcon name="people" size={10} />
+            Profile
+          </div>
+        </div>
+      </div>
+
+      {/* ══ Main content ══ */}
+      <div style={{ flex: 1, overflow: 'auto', scrollbarWidth: 'none', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+
+        {/* ── Sticky header ── */}
+        <div style={{ position: 'sticky', top: 0, zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: 'rgba(16,23,34,0.9)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', borderBottom: border }}>
+          <div>
+            <div style={{ fontSize: '11px', fontWeight: 700 }}>Hello, John 👋</div>
+            <div style={{ fontSize: '7px', color: muted }}>Welcome back to your dashboard.</div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ position: 'relative', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="#94a3b8"><path d="M12 22a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2m6-6V11a6 6 0 0 0-5-5.92V4a1 1 0 0 0-2 0v1.08A6 6 0 0 0 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+              <div style={{ position: 'absolute', top: '2px', right: '2px', width: '4px', height: '4px', background: '#ef4444', borderRadius: '50%' }} />
+            </div>
+            <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: `rgba(60,131,246,0.2)`, border: `2px solid rgba(60,131,246,0.3)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: primary }}>
+              <SvgIcon name="people" size={11} />
+            </div>
+          </div>
+        </div>
+
+        {/* ── Page body ── */}
+        <div style={{ padding: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+
+          {/* Stats 4-col grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '5px' }}>
+            {stats.map(({ label, value, sub, subColor, iconBg, iconColor, icon, progress }) => (
+              <div key={label} style={{ background: cardBg, border, padding: '7px 8px', borderRadius: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px' }}>
+                  <span style={{ fontSize: '6px', color: '#94a3b8', fontWeight: 500 }}>{label}</span>
+                  <div style={{ width: '16px', height: '16px', borderRadius: '4px', background: iconBg, color: iconColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <SvgIcon name={icon} size={9} />
+                  </div>
+                </div>
+                <div style={{ fontSize: '14px', fontWeight: 700, lineHeight: 1 }}>{value}</div>
+                {progress !== undefined ? (
+                  <div style={{ height: '2px', background: '#1e293b', borderRadius: '999px', overflow: 'hidden', marginTop: '5px' }}>
+                    <div style={{ width: `${progress}%`, height: '100%', background: '#10b981' }} />
+                  </div>
+                ) : (
+                  <div style={{ fontSize: '5.5px', color: subColor, fontWeight: 500, marginTop: '3px' }}>{sub}</div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Charts row */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+            {/* Academic Performance — SVG line chart */}
+            <div style={{ background: cardBg, border, padding: '8px 10px', borderRadius: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <span style={{ fontSize: '7.5px', fontWeight: 700 }}>Academic Performance</span>
+                <span style={{ fontSize: '5.5px', color: muted, background: '#1e293b', padding: '1px 5px', borderRadius: '4px' }}>Term</span>
+              </div>
+              <svg width="100%" height="48" viewBox="0 0 400 150" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="sa-perf-grad" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stopColor={primary} stopOpacity="0.3"/>
+                    <stop offset="100%" stopColor={primary} stopOpacity="0"/>
+                  </linearGradient>
+                </defs>
+                <path d="M0,120 Q50,110 80,60 T160,80 T240,40 T320,50 T400,20 V150 H0 Z" fill="url(#sa-perf-grad)"/>
+                <path d="M0,120 Q50,110 80,60 T160,80 T240,40 T320,50 T400,20" fill="none" stroke={primary} strokeWidth="3" strokeLinecap="round"/>
+                <circle cx="80" cy="60" r="4" fill={primary}/>
+                <circle cx="240" cy="40" r="4" fill={primary}/>
+                <circle cx="400" cy="20" r="4" fill={primary}/>
+              </svg>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2px' }}>
+                {['Jan','Feb','Mar','Apr','May'].map(m => <span key={m} style={{ fontSize: '5.5px', color: muted, fontWeight: 500 }}>{m}</span>)}
+              </div>
+            </div>
+
+            {/* Attendance Trend — bar chart */}
+            <div style={{ background: cardBg, border, padding: '8px 10px', borderRadius: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <span style={{ fontSize: '7.5px', fontWeight: 700 }}>Attendance Trend</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                  <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: primary }}/>
+                  <span style={{ fontSize: '5.5px', color: muted }}>Present</span>
+                </div>
+              </div>
+              <div style={{ height: '48px', display: 'flex', alignItems: 'flex-end', gap: '3px', padding: '0 2px' }}>
+                {perfBars.map((h, i) => (
+                  <div key={i} style={{ flex: 1, background: '#1e293b', borderRadius: '2px 2px 0 0', height: `${h}%`, position: 'relative' }}>
+                    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: `rgba(60,131,246,0.45)`, borderRadius: '2px 2px 0 0', height: '100%' }}/>
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2px' }}>
+                {['Mon','Tue','Wed','Thu','Fri'].map(d => <span key={d} style={{ fontSize: '5.5px', color: muted, fontWeight: 500 }}>{d}</span>)}
+              </div>
+            </div>
+          </div>
+
+          {/* Grades table + side panels */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1.55fr 1fr', gap: '6px' }}>
+            {/* Subject Grades table */}
+            <div style={{ background: cardBg, border, borderRadius: '10px', overflow: 'hidden' }}>
+              <div style={{ padding: '7px 10px', borderBottom: border }}>
+                <span style={{ fontSize: '7.5px', fontWeight: 700 }}>Subject Grades</span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto auto', padding: '4px 10px', background: 'rgba(30,41,59,0.5)' }}>
+                {['Subject','Teacher','Score','Grade'].map(h => (
+                  <span key={h} style={{ fontSize: '5.5px', fontWeight: 700, color: muted, letterSpacing: '0.05em', textTransform: 'uppercase' }}>{h}</span>
+                ))}
+              </div>
+              {grades.map(({ subject, teacher, score, grade }, i) => (
+                <div key={subject} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto auto', padding: '5px 10px', borderBottom: i < grades.length - 1 ? border : 'none', alignItems: 'center' }}>
+                  <span style={{ fontSize: '7px', fontWeight: 600 }}>{subject}</span>
+                  <span style={{ fontSize: '6.5px', color: muted }}>{teacher}</span>
+                  <span style={{ fontSize: '7.5px', fontWeight: 700 }}>{score}</span>
+                  <span style={{ fontSize: '6.5px', fontWeight: 700, color: primary, background: `rgba(60,131,246,0.12)`, padding: '1px 5px', borderRadius: '5px' }}>{grade}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Right column — Assignments + Announcements */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {/* Assignments */}
+              <div style={{ background: cardBg, border, borderRadius: '10px', padding: '7px 10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '7.5px', fontWeight: 700 }}>Assignments</span>
+                  <span style={{ fontSize: '6px', color: primary, fontWeight: 600 }}>View All</span>
+                </div>
+                {assignments.map(({ label, sub, iconBg, iconColor, icon }) => (
+                  <div key={label} style={{ display: 'flex', alignItems: 'flex-start', gap: '5px', padding: '5px 6px', borderRadius: '7px', background: '#1e293b', marginBottom: '4px' }}>
+                    <div style={{ padding: '3px', borderRadius: '5px', background: iconBg, color: iconColor, flexShrink: 0 }}>
+                      <SvgIcon name={icon} size={9}/>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '7px', fontWeight: 700 }}>{label}</div>
+                      <div style={{ fontSize: '5.5px', color: muted }}>{sub}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Announcements */}
+              <div style={{ background: cardBg, border, borderRadius: '10px', padding: '7px 10px' }}>
+                <span style={{ fontSize: '7.5px', fontWeight: 700, display: 'block', marginBottom: '6px' }}>Announcements</span>
+                {announcements.map(({ title, sub, active }) => (
+                  <div key={title} style={{ borderLeft: `3px solid ${active ? primary : '#334155'}`, paddingLeft: '6px', paddingTop: '2px', paddingBottom: '2px', marginBottom: '5px' }}>
+                    <div style={{ fontSize: '7px', fontWeight: 700 }}>{title}</div>
+                    <div style={{ fontSize: '5.5px', color: muted, marginTop: '1px' }}>{sub}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
 // ROLES SECTION
 // ============================================================
 const ROLES_DATA = [
@@ -336,66 +847,125 @@ const ROLES_DATA = [
 
 function RolesSection() {
   const [active, setActive] = useState('superadmin');
+  const wrapRef = useRef(null);
   const role = ROLES_DATA.find((r) => r.key === active);
 
+  /* ── Scroll-driven tab switching (desktop only) ── */
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.innerWidth <= 768) return;
+      const el = wrapRef.current;
+      if (!el) return;
+      const rect       = el.getBoundingClientRect();
+      const scrolled   = -rect.top;
+      const scrollable = el.offsetHeight - window.innerHeight;
+      if (scrolled < 0 || scrolled > scrollable) return;
+      const progress = scrolled / scrollable;
+      const idx = Math.min(Math.floor(progress * ROLES_DATA.length), ROLES_DATA.length - 1);
+      const key = ROLES_DATA[idx].key;
+      setActive(prev => (prev !== key ? key : prev));
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
-    <section className="lp-section" id="roles">
-      <div className="lp-container">
-        <div className="lp-section-header">
-          <div className="lp-badge lp-badge--primary">Access Control</div>
-          <h2 className="lp-section-title">Tailored for Every Role</h2>
-          <p className="lp-section-sub">Tailored dashboards that empower each user without compromising system security.</p>
+    <div ref={wrapRef} className="lp-roles-scroll-wrap" id="roles">
+      <div className="lp-roles-sticky">
+        <div className="lp-container">
+
+          <div className="lp-section-header">
+            <div className="lp-badge lp-badge--primary">Access Control</div>
+            <h2 className="lp-section-title">Tailored for Every Role</h2>
+            <p className="lp-section-sub">Tailored dashboards that empower each user without compromising system security.</p>
+          </div>
+
+          <div className="lp-roles-tabs">
+            {ROLES_DATA.map(({ key, label, color }) => (
+              <button
+                key={key}
+                className={`lp-roles-tab${active === key ? ' lp-roles-tab--active' : ''}`}
+                style={active === key ? { borderColor: color, color } : {}}
+                onClick={() => setActive(key)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <div className="lp-roles-card" style={{ '--role-color': role.color }}>
+            {/* Left panel — re-keyed so perks stagger in on every switch */}
+            <div key={`left-${active}`} className="lp-roles-card__left lp-roles-anim">
+              <div className="lp-roles-card__icon-wrap" style={{ color: role.color, background: `${role.color}18` }}>
+                <SvgIcon name={role.icon} size={32} />
+              </div>
+              <h3 className="lp-roles-card__title">{role.label}</h3>
+              <p className="lp-roles-card__sub">{role.subtitle}</p>
+              <ul className="lp-roles-card__perks">
+                {role.perks.map((p, i) => (
+                  <li
+                    key={p}
+                    className="lp-roles-card__perk lp-roles-perk-anim"
+                    style={{ animationDelay: `${0.08 + i * 0.07}s` }}
+                  >
+                    <span className="lp-roles-card__perk-dot" style={{ background: role.color }} />
+                    {p}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Right panel — re-keyed to trigger mockup slide-in */}
+            <div className="lp-roles-card__right">
+              <div key={active} className="lp-roles-right-anim" style={{ width: '100%' }}>
+                {active === 'superadmin' ? (
+                  <SuperAdminDashboardMockup />
+                ) : active === 'schooladmin' ? (
+                  <SchoolAdminDashboardMockup />
+                ) : active === 'teacher' ? (
+                  <TeacherDashboardMockup />
+                ) : (
+                  <div className="lp-roles-preview">
+                    <div className="lp-roles-preview__header">
+                      <span className="lp-roles-preview__label" style={{ color: role.color }}>{role.label} Dashboard</span>
+                    </div>
+                    <div className="lp-roles-preview__grid">
+                      {[1,2,3,4,5,6].map((i) => (
+                        <div key={i} className="lp-roles-preview__block" style={i === 1 ? { borderColor: role.color, background: `${role.color}12` } : {}} />
+                      ))}
+                    </div>
+                    <div className="lp-roles-preview__bars">
+                      {[60, 80, 45, 90, 70, 55].map((h, i) => (
+                        <div key={i} className="lp-roles-preview__bar" style={{ height: `${h}%`, background: i % 2 === 0 ? role.color : `${role.color}50` }} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div className="lp-roles-tabs">
-          {ROLES_DATA.map(({ key, label, color }) => (
+        {/* Scroll-progress pill dots */}
+        <div className="lp-roles-progress">
+          {ROLES_DATA.map(({ key, color }) => (
             <button
               key={key}
-              className={`lp-roles-tab${active === key ? ' lp-roles-tab--active' : ''}`}
-              style={active === key ? { borderColor: color, color } : {}}
+              className={`lp-roles-progress__dot${active === key ? ' lp-roles-progress__dot--active' : ''}`}
+              style={active === key ? { background: color } : {}}
               onClick={() => setActive(key)}
-            >
-              {label}
-            </button>
+              aria-label={key}
+            />
           ))}
         </div>
 
-        <div className="lp-roles-card" style={{ '--role-color': role.color }}>
-          <div className="lp-roles-card__left">
-            <div className="lp-roles-card__icon-wrap" style={{ color: role.color, background: `${role.color}18` }}>
-              <SvgIcon name={role.icon} size={32} />
-            </div>
-            <h3 className="lp-roles-card__title">{role.label}</h3>
-            <p className="lp-roles-card__sub">{role.subtitle}</p>
-            <ul className="lp-roles-card__perks">
-              {role.perks.map((p) => (
-                <li key={p} className="lp-roles-card__perk">
-                  <span className="lp-roles-card__perk-dot" style={{ background: role.color }} />
-                  {p}
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div className="lp-roles-card__right">
-            <div className="lp-roles-preview">
-              <div className="lp-roles-preview__header">
-                <span className="lp-roles-preview__label" style={{ color: role.color }}>{role.label} Dashboard</span>
-              </div>
-              <div className="lp-roles-preview__grid">
-                {[1,2,3,4,5,6].map((i) => (
-                  <div key={i} className="lp-roles-preview__block" style={i === 1 ? { borderColor: role.color, background: `${role.color}12` } : {}} />
-                ))}
-              </div>
-              <div className="lp-roles-preview__bars">
-                {[60, 80, 45, 90, 70, 55].map((h, i) => (
-                  <div key={i} className="lp-roles-preview__bar" style={{ height: `${h}%`, background: i % 2 === 0 ? role.color : `${role.color}50` }} />
-                ))}
-              </div>
-            </div>
-          </div>
+        {/* Scroll hint — visible only at top of section */}
+        <div className="lp-roles-scroll-hint">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
+          scroll to explore
         </div>
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -548,79 +1118,6 @@ function TestimonialsSection() {
                 <span className="lp-testi-card__quote-mark">&ldquo;</span>
                 {quote}
               </blockquote>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ============================================================
-// PRICING SECTION
-// ============================================================
-const PRICING_PLANS = [
-  {
-    name: 'Basic', price: { monthly: 29, annual: 23 }, desc: 'Essential tools for small schools.',
-    perks: ['Up to 200 Students', 'Student Management', 'Attendance Tracking', 'Basic Grade Tracking', 'SMS Notifications'],
-    missing: ['Parent Portal', 'Fee Management Module'],
-    cta: 'Start Free Trial', popular: false,
-  },
-  {
-    name: 'Professional', price: { monthly: 79, annual: 63 }, desc: 'Advanced features for growing institutions.',
-    perks: ['Up to 1,000 Students', 'Everything in Basic', 'Parent Portal Access', 'Fee & Finance Module', 'Report Card Generation', 'Grade Audit Logs', 'SMS Alert System'],
-    missing: [],
-    cta: 'Register Your School', popular: true,
-  },
-  {
-    name: 'Enterprise', price: { monthly: null, annual: null }, desc: 'Full customization for large networks.',
-    perks: ['Unlimited Students', 'Everything in Pro', 'Custom Branding & Domain', 'Dedicated Server', 'API Access & Integrations', '24/7 Priority Support'],
-    missing: [],
-    cta: 'Contact Sales', popular: false,
-  },
-];
-
-function PricingSection({ onNavigate }) {
-  const [annual, setAnnual] = useState(false);
-
-  return (
-    <section className="lp-section lp-section--dark" id="pricing">
-      <div className="lp-container">
-        <div className="lp-section-header">
-          <h2 className="lp-section-title">Simple, Transparent Pricing</h2>
-          <p className="lp-section-sub">Choose the plan that fits your institution's size. No hidden fees ever.</p>
-        </div>
-
-        <div className="lp-pricing-toggle">
-          <button className={`lp-pricing-toggle__btn${!annual ? ' lp-pricing-toggle__btn--active' : ''}`} onClick={() => setAnnual(false)}>Monthly</button>
-          <button className={`lp-pricing-toggle__btn${annual ? ' lp-pricing-toggle__btn--active' : ''}`} onClick={() => setAnnual(true)}>
-            Annual <span className="lp-pricing-toggle__save">Save 20%</span>
-          </button>
-        </div>
-
-        <div className="lp-pricing-grid">
-          {PRICING_PLANS.map(({ name, price, desc, perks, missing, cta, popular }) => (
-            <div key={name} className={`lp-pricing-card${popular ? ' lp-pricing-card--popular' : ''}`}>
-              {popular && <div className="lp-pricing-card__badge">Most Popular</div>}
-              <h3 className="lp-pricing-card__name">{name}</h3>
-              <p className="lp-pricing-card__desc">{desc}</p>
-              <div className="lp-pricing-card__price">
-                {price.monthly
-                  ? <><span className="lp-pricing-card__amount">${annual ? price.annual : price.monthly}</span><span className="lp-pricing-card__period">/month</span></>
-                  : <span className="lp-pricing-card__amount">Custom</span>
-                }
-              </div>
-              <button
-                className={`lp-btn lp-btn--full${popular ? ' lp-btn--primary' : ' lp-btn--outline'}`}
-                onClick={() => onNavigate(name === 'Enterprise' ? 'login' : 'register')}
-              >
-                {cta}
-              </button>
-              <div className="lp-pricing-card__divider" />
-              <ul className="lp-pricing-card__perks">
-                {perks.map((p) => <li key={p} className="lp-pricing-card__perk lp-pricing-card__perk--yes"><SvgIcon name="check" size={15} />{p}</li>)}
-                {missing.map((p) => <li key={p} className="lp-pricing-card__perk lp-pricing-card__perk--no"><span>—</span>{p}</li>)}
-              </ul>
             </div>
           ))}
         </div>
@@ -875,7 +1372,6 @@ function ContactSection() {
           <p className="lp-section-sub">We're here to help your institution succeed. Reach out for support, sales, or general inquiries.</p>
         </div>
 
-        {/* Info cards */}
         <div className="lp-contact__info">
           {CONTACT_INFO.map(({ icon, label, value, color }) => (
             <div key={label} className="lp-contact__info-card">
@@ -895,9 +1391,7 @@ function ContactSection() {
           ))}
         </div>
 
-        {/* Form + support categories */}
         <div className="lp-contact__body">
-          {/* Contact Form */}
           <div className="lp-contact__form-wrap">
             <div className="lp-contact__form-header">
               <SvgIcon name="send" size={18} style={{ color: 'var(--lp-primary)' }} />
@@ -972,7 +1466,6 @@ function ContactSection() {
             </form>
           </div>
 
-          {/* Support categories */}
           <div className="lp-contact__support">
             <h3 className="lp-contact__support-title">How Can We Help?</h3>
             <p className="lp-contact__support-sub">Browse our support categories to find the right team for your question.</p>
@@ -1037,9 +1530,9 @@ function Footer({ onNavigate }) {
         <div className="lp-footer__grid">
           <div className="lp-footer__brand">
             <div className="lp-footer__brand-row">
-              <div className="lp-footer__brand-icon"><SvgIcon name="school" size={18} /></div>
-              <span className="lp-footer__brand-name">EK-SMS</span>
+              <PruhLogo size={36} showText={true} variant="white" textColor="rgba(255,255,255,0.92)" />
             </div>
+            <p className="lp-footer__brand-product">2026 EL-KENDEH School Management System (EK-SMS)</p>
             <p className="lp-footer__brand-tagline">Empowering education through technology across Africa.</p>
             <div className="lp-footer__socials">
               {['facebook', 'twitter', 'linkedin'].map((s) => (
@@ -1051,7 +1544,7 @@ function Footer({ onNavigate }) {
           <div className="lp-footer__col">
             <h4 className="lp-footer__col-title">Product</h4>
             <ul className="lp-footer__links">
-              {[['Features','features'],['Pricing','pricing'],['Security','security'],['Workflow','workflow']].map(([l,id]) => (
+              {[['Features','features'],['Security','security'],['Workflow','workflow']].map(([l,id]) => (
                 <li key={l}><button className="lp-footer__link" onClick={() => scrollTo(id)}>{l}</button></li>
               ))}
             </ul>
@@ -1078,7 +1571,7 @@ function Footer({ onNavigate }) {
         </div>
 
         <div className="lp-footer__bottom">
-          <p className="lp-footer__copy">© 2026 EK-SMS · EL-KENDEH School Management System. All rights reserved.</p>
+          <p className="lp-footer__copy">© 2026 EL-KENDEH School Management System (EK-SMS). All rights reserved.</p>
           <div className="lp-footer__legal">
             {['Privacy Policy', 'Terms of Service', 'Cookie Settings'].map((l) => (
               <span key={l} className="lp-footer__legal-link">{l}</span>
@@ -1112,7 +1605,6 @@ export default function Landing({ onNavigate }) {
         <SecuritySection />
         <WorkflowSection />
         <TestimonialsSection />
-        <PricingSection onNavigate={onNavigate} />
         <ResourcesSection />
         <TeamSection />
         <FAQSection />

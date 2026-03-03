@@ -257,11 +257,26 @@
   border: 1px solid rgba(13,204,242,0.2);
 }
 
+.lp-nav__brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+  gap: 2px;
+}
+
 .lp-nav__brand-name {
   font-size: 1.2rem;
   font-weight: 800;
   color: #fff;
   letter-spacing: -0.02em;
+}
+
+.lp-nav__brand-sub {
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.45);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .lp-nav__links {
@@ -462,6 +477,14 @@
   border-radius: 50%;
   background: var(--lp-primary);
   animation: lpPulse 2s infinite;
+}
+
+.lp-hero__badge-sep {
+  width: 1px;
+  height: 14px;
+  background: rgba(13,204,242,0.35);
+  border-radius: 1px;
+  flex-shrink: 0;
 }
 
 @keyframes lpPulse {
@@ -926,6 +949,127 @@
   border-radius: 3px;
   min-height: 8px;
   transition: height 0.3s ease;
+}
+
+/* ============================================================
+   ROLES — SCROLL-DRIVEN LAYOUT & ANIMATIONS
+   ============================================================ */
+
+/* Tall wrapper gives scroll budget: ~80 vh per role × 4 roles = 320 vh */
+.lp-roles-scroll-wrap {
+  height: 320vh;
+  position: relative;
+}
+
+/* Sticky inner stays in view while user scrolls through the wrapper */
+.lp-roles-sticky {
+  position: sticky;
+  top: 0;
+  padding: 5rem 0 4rem;
+  overflow: hidden;
+  /* Subtle top gradient so it blends with whatever section is above */
+  background: var(--lp-bg);
+}
+
+/* ── Content animation keyframe ── */
+@keyframes lp-role-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes lp-role-right-in {
+  from {
+    opacity: 0;
+    transform: translateY(32px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Left panel — icon + title + sub enter together */
+.lp-roles-anim {
+  animation: lp-role-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Right panel mockup — slides up + fades in */
+.lp-roles-right-anim {
+  animation: lp-role-right-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Perk list items — staggered (delay applied inline) */
+.lp-roles-perk-anim {
+  opacity: 0;
+  animation: lp-role-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ── Scroll-progress pill dots ── */
+.lp-roles-progress {
+  position: absolute;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  z-index: 10;
+}
+
+.lp-roles-progress__dot {
+  height: 7px;
+  width: 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: width 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+              background 0.3s ease,
+              transform 0.3s ease;
+}
+
+.lp-roles-progress__dot--active {
+  width: 22px;
+}
+
+.lp-roles-progress__dot:hover:not(.lp-roles-progress__dot--active) {
+  background: rgba(255, 255, 255, 0.35);
+  transform: scale(1.2);
+}
+
+/* ── "scroll to explore" hint ── */
+.lp-roles-scroll-hint {
+  position: absolute;
+  bottom: 1.4rem;
+  right: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.22);
+  pointer-events: none;
+  animation: lp-role-in 1s ease 0.6s both;
+}
+
+/* ── Mobile: collapse to natural height, disable sticky ── */
+@media (max-width: 768px) {
+  .lp-roles-scroll-wrap { height: auto; }
+  .lp-roles-sticky {
+    position: relative;
+    top: auto;
+    padding: 3.5rem 0 3rem;
+  }
+  .lp-roles-scroll-hint { display: none; }
 }
 
 /* ============================================================
@@ -2055,6 +2199,15 @@
   font-weight: 800;
   color: #fff;
   letter-spacing: -0.02em;
+}
+
+.lp-footer__brand-product {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.45);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin: 0;
 }
 
 .lp-footer__brand-tagline {

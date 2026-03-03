@@ -230,7 +230,7 @@ function Login({ onNavigate }) {
 
       {/* Page footer */}
       <p className="login-footer">
-        © 2026 EK-SMS · EL-KENDEH School Management System. All rights reserved.
+        © 2026 · EL-KENDEH School Management System (EK-SMS ). All rights reserved.
       </p>
     </div>
   );
