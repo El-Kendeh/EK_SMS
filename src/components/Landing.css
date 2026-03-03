@@ -2297,24 +2297,122 @@
 .lp-footer__legal-link:hover { opacity: 1; color: var(--lp-primary); }
 
 /* ============================================================
-   RESPONSIVE OVERRIDES
+   RESPONSIVE OVERRIDES — mobile-first, multi-device
+   Breakpoints: 768px (tablet), 640px (large phone), 480px (phone), 360px (small phone)
    ============================================================ */
-@media (max-width: 480px) {
-  .lp-section { padding: 3.5rem 0; }
-  .lp-hero { padding: 5.5rem 0 3rem; }
-  .lp-hero__ctas { flex-direction: column; }
-  .lp-hero__ctas .lp-btn { width: 100%; justify-content: center; }
-  .lp-features-grid { grid-template-columns: 1fr; }
-  .lp-workflow { padding-left: 0.75rem; }
-  .lp-security__visual { max-width: 100%; }
-  .lp-faq__inner { grid-template-columns: 1fr; }
+
+/* ── 768px and below (tablets + phones) ── */
+@media (max-width: 768px) {
+  /* Tighter section breathing room */
+  .lp-section          { padding: 3.5rem 0; }
+  .lp-section-header   { margin-bottom: 2rem; }
+  .lp-section-sub      { font-size: 0.95rem; }
+
+  /* Hero */
+  .lp-hero             { padding: 5.5rem 0 2.5rem; }
+  .lp-hero__headline   { font-size: clamp(1.85rem, 7.5vw, 2.8rem); }
+  .lp-hero__sub        { font-size: 0.95rem; }
+  .lp-hero__sub--animated { font-size: 1rem; }
+  .lp-hero__trust      { gap: 0.75rem; }
+  .lp-hero__trust-item { font-size: 0.78rem; }
+  .lp-hero__partners   { padding-top: 2.5rem; }
+
+  /* Features: 1-column on tablet/phone */
+  .lp-features-grid    { grid-template-columns: 1fr; }
+
+  /* Roles section — hide the complex dashboard mockup panel entirely on mobile.
+     The left panel (icon + title + subtitle + perks) gives a complete picture. */
+  .lp-roles-card__right   { display: none; }
+  .lp-roles-card          { gap: 0; border-radius: var(--lp-radius-lg); }
+  .lp-roles-card__left    { padding: 1.75rem; }
+  .lp-roles-tabs          { flex-wrap: wrap; gap: 6px; }
+  .lp-roles-tab           { padding: 7px 14px; font-size: 0.82rem; flex: 1; min-width: calc(50% - 6px); text-align: center; justify-content: center; }
+  .lp-roles-progress      { display: none; }
+  .lp-roles-scroll-hint   { display: none; }
+
+  /* Security */
+  .lp-security__inner  { gap: 2rem; }
+
+  /* CTA banner */
   .lp-cta-banner__actions { flex-direction: column; align-items: center; width: 100%; }
   .lp-cta-banner__actions .lp-btn { width: 100%; max-width: 320px; justify-content: center; }
-  .lp-roles-tabs { gap: 6px; }
-  .lp-roles-tab { padding: 8px 14px; font-size: 0.82rem; }
-  .lp-pricing-toggle { width: 100%; }
-  .lp-pricing-toggle__btn { flex: 1; justify-content: center; padding: 10px 12px; }
-  .lp-contact__info-value { font-size: 0.82rem; }
+
+  /* Contact */
+  .lp-contact__info-value { font-size: 0.85rem; }
+
+  /* Footer */
+  .lp-footer { padding: 2.5rem 0 1.5rem; }
+}
+
+/* ── 640px and below (phones) ── */
+@media (max-width: 640px) {
+  /* Tighter container gutters */
+  .lp-container        { padding: 0 1rem; }
+
+  /* Hero */
+  .lp-hero             { padding: 5rem 0 2rem; }
+  .lp-hero__ctas       { flex-direction: column; gap: 0.75rem; margin: 1.25rem 0 1rem; }
+  .lp-hero__ctas .lp-btn { width: 100%; justify-content: center; }
+  .lp-hero__mockup-wrap { max-width: 100%; }
+
+  /* Workflow */
+  .lp-workflow         { padding-left: 0.75rem; }
+
+  /* Security visual */
+  .lp-security__visual { max-width: 100%; }
+
+  /* FAQ */
+  .lp-faq__inner       { grid-template-columns: 1fr; }
+
+  /* Testimonials */
+  .lp-testimonials-grid { grid-template-columns: 1fr; }
+}
+
+/* ── 480px and below (small phones) ── */
+@media (max-width: 480px) {
+  /* Even tighter container */
+  .lp-container        { padding: 0 0.875rem; }
+
+  /* Sections */
+  .lp-section          { padding: 3rem 0; }
+  .lp-section-header   { margin-bottom: 1.5rem; }
+
+  /* Hero */
+  .lp-hero             { padding: 4.75rem 0 2rem; }
+  .lp-hero__headline   { font-size: clamp(1.65rem, 8.5vw, 2.2rem); letter-spacing: -0.02em; }
+  .lp-hero__badge      { font-size: 0.7rem; padding: 4px 10px; }
+  .lp-hero__ctas       { margin: 1rem 0 0.875rem; }
+  .lp-hero__trust      { gap: 0.5rem; }
+
+  /* Roles tabs wrap into 2×2 grid */
+  .lp-roles-tab        { min-width: calc(50% - 4px); padding: 7px 8px; font-size: 0.78rem; }
+  .lp-roles-card__left { padding: 1.25rem; }
+  .lp-roles-card__icon-wrap { width: 48px; height: 48px; }
+  .lp-roles-card__title     { font-size: 1.2rem; }
+  .lp-roles-card__perk      { font-size: 0.83rem; }
+
+  /* Feature cards */
+  .lp-feature-card     { padding: 1.1rem; }
+  .lp-feature-card__title { font-size: 0.9rem; }
+
+  /* Buttons */
+  .lp-pricing-toggle       { width: 100%; }
+  .lp-pricing-toggle__btn  { flex: 1; justify-content: center; padding: 10px 12px; }
+
+  /* Contact */
+  .lp-contact__info-value  { font-size: 0.82rem; }
+
+  /* Footer bottom row */
+  .lp-footer__bottom   { flex-direction: column; gap: 1rem; text-align: center; }
+  .lp-footer__legal    { justify-content: center; flex-wrap: wrap; gap: 1rem; }
+}
+
+/* ── 360px and below (extra-small phones like Galaxy A series) ── */
+@media (max-width: 360px) {
+  .lp-container        { padding: 0 0.75rem; }
+  .lp-hero__headline   { font-size: 1.55rem; }
+  .lp-nav__brand-name  { font-size: 1rem; }
+  .lp-roles-tab        { font-size: 0.72rem; padding: 6px 6px; }
 }
 
 /* ============================================================
