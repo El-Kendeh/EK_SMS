@@ -277,24 +277,15 @@ const FEATURES_DATA = [
   { icon: 'mail',      color: '#FBBF24', title: 'SMS & Alerts',        desc: 'Instant notifications for attendance, results, fees and announcements — parents always stay informed.' },
 ];
 
-function FlipCard({ icon, color, title, desc, backPoints }) {
+function FlipCard({ icon, color, title, desc, backPoints, autoFlipped }) {
   const [flipped, setFlipped] = useState(false);
-  const ref = useRef(null);
 
   useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) { setFlipped(true); observer.disconnect(); } },
-      { threshold: 0.45 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
+    if (autoFlipped) setFlipped(true);
+  }, [autoFlipped]);
 
   return (
     <div
-      ref={ref}
       className={`lp-flip-card${flipped ? ' lp-flip-card--flipped' : ''}`}
       style={{ '--card-accent': color }}
       onClick={() => setFlipped(v => !v)}
@@ -341,8 +332,22 @@ function FlipCard({ icon, color, title, desc, backPoints }) {
 }
 
 function FeaturesSection() {
+  const [sectionSeen, setSectionSeen] = useState(false);
+  const sectionRef = useRef(null);
+
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setSectionSeen(true); observer.disconnect(); } },
+      { threshold: 0.15 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <section className="lp-section lp-section--alt" id="features">
+    <section ref={sectionRef} className="lp-section lp-section--alt" id="features">
       <div className="lp-container">
         <div className="lp-section-header">
           <div className="lp-badge lp-badge--primary">Everything You Need</div>
@@ -353,7 +358,7 @@ function FeaturesSection() {
         <div className="lp-features-grid">
           {FEATURES_DATA.map(({ icon, color, title, desc, flip, backPoints }) =>
             flip
-              ? <FlipCard key={title} icon={icon} color={color} title={title} desc={desc} backPoints={backPoints} />
+              ? <FlipCard key={title} icon={icon} color={color} title={title} desc={desc} backPoints={backPoints} autoFlipped={sectionSeen} />
               : (
                 <div key={title} className="lp-feature-card" style={{ '--card-accent': color }}>
                   <div className="lp-feature-card__icon" style={{ color, background: `${color}18` }}>
