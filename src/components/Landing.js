@@ -118,10 +118,7 @@ function Navbar({ onNavigate, menuOpen, setMenuOpen }) {
     <nav className={`lp-nav${scrolled ? ' lp-nav--scrolled' : ''}`}>
       <div className="lp-nav__inner">
         <div className="lp-nav__brand">
-          <PruhLogo size={32} showText={false} variant="white" />
-          <div className="lp-nav__brand-text">
-            <span className="lp-nav__brand-name">PRUH</span>
-          </div>
+          <PruhLogo size={44} showText={false} variant="white" />
         </div>
 
         <div className="lp-nav__links">
@@ -267,15 +264,81 @@ function HeroSection({ onNavigate }) {
 // FEATURES SECTION
 // ============================================================
 const FEATURES_DATA = [
-  { icon: 'people',    color: '#60A5FA', title: 'Student Management',  desc: 'Centralized database for student profiles, academic history, disciplinary records and bulk enrollment.' },
+  { icon: 'people',    color: '#60A5FA', title: 'Student Management',  desc: 'Centralized database for student profiles, academic history, disciplinary records and bulk enrollment.',
+    flip: true, backPoints: ['Bulk CSV / Excel student import', 'Photo, docs & disciplinary log', 'Full academic history per term', 'Search, filter & export records'] },
   { icon: 'teacher',   color: '#A78BFA', title: 'Teacher Portal',      desc: 'Digital gradebooks, lesson planning, attendance marking, and direct parent communication channels.' },
   { icon: 'calendar',  color: '#34D399', title: 'Smart Attendance',    desc: 'Real-time attendance tracking with automated SMS notifications sent directly to guardians.' },
-  { icon: 'payments',  color: '#FB923C', title: 'Fee Collection',      desc: 'Automated invoicing, payment tracking, reminders, and financial reporting dashboards.' },
+  { icon: 'payments',  color: '#FB923C', title: 'Fee Collection',      desc: 'Automated invoicing, payment tracking, reminders, and financial reporting dashboards.',
+    flip: true, backPoints: ['Multi-payment method support', 'Auto-SMS receipts to parents', 'Real-time balance & arrears view', 'Overdue fee alerts & reports'] },
   { icon: 'analytics', color: '#F472B6', title: 'Grade Analytics',     desc: 'CA, MidTerm, and Final score tracking with auto-computed totals, letters and report card generation.' },
-  { icon: 'report',    color: '#0dccf2', title: 'Report Cards',        desc: 'One-click PDF report cards with QR-code verification, class rankings and parent-ready exports.' },
+  { icon: 'report',    color: '#0dccf2', title: 'Report Cards',        desc: 'One-click PDF report cards with QR-code verification, class rankings and parent-ready exports.',
+    flip: true, backPoints: ['Branded PDF with school logo', 'QR code for parent verification', 'Class rank & position included', 'Bulk-generate in one click'] },
   { icon: 'verified',  color: '#4ADE80', title: 'Grade Integrity',     desc: 'SHA-256 hashing + Merkle-tree audit chains make grade tampering impossible and instantly detectable.' },
   { icon: 'mail',      color: '#FBBF24', title: 'SMS & Alerts',        desc: 'Instant notifications for attendance, results, fees and announcements — parents always stay informed.' },
 ];
+
+function FlipCard({ icon, color, title, desc, backPoints }) {
+  const [flipped, setFlipped] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setFlipped(true); observer.disconnect(); } },
+      { threshold: 0.45 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      className={`lp-flip-card${flipped ? ' lp-flip-card--flipped' : ''}`}
+      style={{ '--card-accent': color }}
+      onClick={() => setFlipped(v => !v)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && setFlipped(v => !v)}
+      aria-label={`${title} — click to flip`}
+    >
+      <div className="lp-flip-card__inner">
+        <div className="lp-flip-card__front">
+          <div className="lp-feature-card__icon" style={{ color, background: `${color}18` }}>
+            <SvgIcon name={icon} size={22} />
+          </div>
+          <h3 className="lp-feature-card__title">{title}</h3>
+          <p className="lp-feature-card__desc">{desc}</p>
+          <div className="lp-flip-card__hint" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15">
+              <path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46A7.93 7.93 0 0020 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74A7.93 7.93 0 004 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/>
+            </svg>
+          </div>
+        </div>
+        <div className="lp-flip-card__back">
+          <div className="lp-flip-card__back-icon" style={{ color, background: `${color}18` }}>
+            <SvgIcon name={icon} size={18} />
+          </div>
+          <h3 className="lp-flip-card__back-title" style={{ color }}>{title}</h3>
+          <ul className="lp-flip-card__back-points">
+            {backPoints.map(pt => (
+              <li key={pt} className="lp-flip-card__back-point">
+                <span className="lp-flip-card__back-dot" style={{ background: color }} />
+                {pt}
+              </li>
+            ))}
+          </ul>
+          <div className="lp-flip-card__hint" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15">
+              <path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46A7.93 7.93 0 0020 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74A7.93 7.93 0 004 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function FeaturesSection() {
   return (
@@ -288,15 +351,19 @@ function FeaturesSection() {
         </div>
 
         <div className="lp-features-grid">
-          {FEATURES_DATA.map(({ icon, color, title, desc }) => (
-            <div key={title} className="lp-feature-card" style={{ '--card-accent': color }}>
-              <div className="lp-feature-card__icon" style={{ color, background: `${color}18` }}>
-                <SvgIcon name={icon} size={22} />
-              </div>
-              <h3 className="lp-feature-card__title">{title}</h3>
-              <p className="lp-feature-card__desc">{desc}</p>
-            </div>
-          ))}
+          {FEATURES_DATA.map(({ icon, color, title, desc, flip, backPoints }) =>
+            flip
+              ? <FlipCard key={title} icon={icon} color={color} title={title} desc={desc} backPoints={backPoints} />
+              : (
+                <div key={title} className="lp-feature-card" style={{ '--card-accent': color }}>
+                  <div className="lp-feature-card__icon" style={{ color, background: `${color}18` }}>
+                    <SvgIcon name={icon} size={22} />
+                  </div>
+                  <h3 className="lp-feature-card__title">{title}</h3>
+                  <p className="lp-feature-card__desc">{desc}</p>
+                </div>
+              )
+          )}
         </div>
       </div>
     </section>
@@ -1081,167 +1148,6 @@ function WorkflowSection() {
 }
 
 // ============================================================
-// TESTIMONIALS SECTION
-// ============================================================
-const TESTIMONIALS = [
-  { name: 'Mr. Adebayo O.', school: 'Greenwood Academy, Nigeria',    initials: 'AO', color: '#0dccf2', rating: 5, quote: 'EK-SMS revolutionized how we handle student records. The interface is intuitive and the support is fantastic. Our admin workload dropped by 60%.' },
-  { name: 'Mrs. Chinelo N.', school: 'Lagos High School, Nigeria',   initials: 'CN', color: '#A78BFA', rating: 5, quote: 'Managing fees used to be a nightmare. Now it\'s completely seamless. Parents get instant notifications and we get real-time dashboards.' },
-  { name: 'Principal Kojo M.', school: 'Accra International, Ghana', initials: 'KM', color: '#34D399', rating: 5, quote: 'The best investment for our institution. Attendance tracking and report card generation are now completely effortless. Highly recommended.' },
-];
-
-function TestimonialsSection() {
-  return (
-    <section className="lp-section" id="testimonials">
-      <div className="lp-container">
-        <div className="lp-section-header">
-          <div className="lp-badge lp-badge--primary">
-            <SvgIcon name="verified" size={13} />
-            Trusted by 500+ Schools
-          </div>
-          <h2 className="lp-section-title">What Educators Say</h2>
-          <p className="lp-section-sub">Hear from principals and teachers transforming their schools with EK-SMS.</p>
-        </div>
-        <div className="lp-testimonials-grid">
-          {TESTIMONIALS.map(({ name, school, rating, quote, initials, color }) => (
-            <div key={name} className="lp-testi-card">
-              <div className="lp-testi-card__header">
-                <div className="lp-testi-card__avatar" style={{ background: `${color}20`, color, borderColor: color }}>{initials}</div>
-                <div className="lp-testi-card__info">
-                  <div className="lp-testi-card__name">{name}</div>
-                  <div className="lp-testi-card__school" style={{ color }}>{school}</div>
-                </div>
-                <div className="lp-testi-card__stars">
-                  {Array.from({ length: rating }).map((_, i) => <SvgIcon key={i} name="star" size={14} style={{ color: '#FBBF24' }} />)}
-                </div>
-              </div>
-              <blockquote className="lp-testi-card__quote">
-                <span className="lp-testi-card__quote-mark">&ldquo;</span>
-                {quote}
-              </blockquote>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ============================================================
-// RESOURCES SECTION
-// ============================================================
-const RESOURCES = [
-  { category: 'Academic Integrity', title: 'Modernizing Academic Integrity in Africa',     desc: 'How digital tools and audit logs are reshaping honesty in exams across leading institutions.', featured: true },
-  { category: 'School Management',  title: 'Streamlining Admin Tasks for Better Efficiency', desc: 'Reduce paperwork and automate attendance to give teachers more time for what matters most.' },
-  { category: 'EdTech Trends',      title: 'The Future of Hybrid Learning Systems',         desc: 'Top 5 emerging trends defining the next generation of hybrid classrooms in 2025.' },
-  { category: 'Student Life',       title: 'Building Community in Digital Spaces',          desc: 'Strategies for fostering belonging among students using integrated community features.' },
-];
-
-function ResourcesSection() {
-  const CATS = ['All', 'Academic Integrity', 'School Management', 'EdTech Trends'];
-  const [cat, setCat] = useState('All');
-  const featured = RESOURCES.find((r) => r.featured);
-  const rest = RESOURCES.filter((r) => !r.featured);
-
-  return (
-    <section className="lp-section lp-section--alt" id="resources">
-      <div className="lp-container">
-        <div className="lp-section-header">
-          <div className="lp-badge lp-badge--primary">Knowledge Hub</div>
-          <h2 className="lp-section-title">Latest Resources</h2>
-          <p className="lp-section-sub">Insights, trends, and tools to modernize your institution's management.</p>
-        </div>
-
-        <div className="lp-resources__filters">
-          {CATS.map((c) => (
-            <button key={c} className={`lp-resources__filter${cat === c ? ' lp-resources__filter--active' : ''}`} onClick={() => setCat(c)}>{c}</button>
-          ))}
-        </div>
-
-        {featured && (
-          <div className="lp-resources__featured">
-            <div className="lp-resources__featured-img">
-              <span className="lp-resources__featured-badge">Featured</span>
-            </div>
-            <div className="lp-resources__featured-body">
-              <div className="lp-resources__cat">{featured.category}</div>
-              <h3 className="lp-resources__featured-title">{featured.title}</h3>
-              <p className="lp-resources__featured-desc">{featured.desc}</p>
-              <button className="lp-resources__read-link">Read Full Article <SvgIcon name="arrowRight" size={15} /></button>
-            </div>
-          </div>
-        )}
-
-        <div className="lp-resources__grid">
-          {rest.map(({ category, title, desc }) => (
-            <div key={title} className="lp-resources__card">
-              <div className="lp-resources__card-img" />
-              <div className="lp-resources__card-body">
-                <div className="lp-resources__cat">{category}</div>
-                <h4 className="lp-resources__card-title">{title}</h4>
-                <p className="lp-resources__card-desc">{desc}</p>
-                <button className="lp-resources__read-link lp-resources__read-link--sm">Read More <SvgIcon name="arrowRight" size={13} /></button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ============================================================
-// TEAM SECTION
-// ============================================================
-const TEAM = [
-  { name: 'Dr. Samuel Okafor', role: 'CEO & Founder',      initials: 'SO', color: '#0dccf2', bio: 'Visionary with 15+ years in EdTech, focused on bridging the digital divide in African schools.' },
-  { name: 'Aisha Bello',       role: 'Lead Developer',     initials: 'AB', color: '#A78BFA', bio: 'Full-stack architect crafting secure, scalable infrastructure for seamless school management.' },
-  { name: 'David Nkosi',       role: 'Academic Consultant',initials: 'DN', color: '#34D399', bio: 'Former principal ensuring EK-SMS aligns perfectly with modern curriculum standards.' },
-  { name: 'Fatima Hassan',     role: 'UX Designer',        initials: 'FH', color: '#FB923C', bio: 'Human-centred design champion, making complex admin tasks accessible for every user.' },
-  { name: 'Emmanuel Kofi',     role: 'Security Engineer',  initials: 'EK', color: '#F472B6', bio: 'Cryptographic grade integrity and RBAC architecture specialist for sensitive academic data.' },
-];
-
-function TeamSection() {
-  const scrollRef = useRef(null);
-  const scroll = (dir) => { if (scrollRef.current) scrollRef.current.scrollBy({ left: dir * 300, behavior: 'smooth' }); };
-
-  return (
-    <section className="lp-section" id="team">
-      <div className="lp-container">
-        <div className="lp-section-header">
-          <h2 className="lp-section-title">The Minds Behind EK-SMS</h2>
-          <p className="lp-section-sub">Meet the innovators transforming African education through technology.</p>
-        </div>
-      </div>
-      <div className="lp-team__outer">
-        <button className="lp-team__nav lp-team__nav--left" onClick={() => scroll(-1)} aria-label="Scroll left">
-          <svg width={18} height={18} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6z"/></svg>
-        </button>
-        <div className="lp-team__scroll" ref={scrollRef}>
-          {TEAM.map(({ name, role, initials, color, bio }) => (
-            <div key={name} className="lp-team-card">
-              <div className="lp-team-card__avatar-wrap">
-                <div className="lp-team-card__avatar" style={{ background: `${color}20`, color, borderColor: color }}>{initials}</div>
-                <div className="lp-team-card__badge" style={{ background: color }}><SvgIcon name="verified" size={11} /></div>
-              </div>
-              <h3 className="lp-team-card__name">{name}</h3>
-              <p className="lp-team-card__role" style={{ color }}>{role}</p>
-              <p className="lp-team-card__bio">{bio}</p>
-              <div className="lp-team-card__links">
-                <button className="lp-team-card__link" aria-label="Email"><SvgIcon name="mail" size={15} /></button>
-                <button className="lp-team-card__link" aria-label="Profile"><SvgIcon name="code" size={15} /></button>
-              </div>
-            </div>
-          ))}
-        </div>
-        <button className="lp-team__nav lp-team__nav--right" onClick={() => scroll(1)} aria-label="Scroll right">
-          <svg width={18} height={18} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
-        </button>
-      </div>
-    </section>
-  );
-}
-
-// ============================================================
 // FAQ SECTION
 // ============================================================
 const FAQ_ITEMS = [
@@ -1335,9 +1241,9 @@ function AboutSection() {
 // CONTACT SECTION
 // ============================================================
 const CONTACT_INFO = [
-  { icon: 'mail',     label: 'Email Support',  value: 'support@ek-sms.africa',     color: '#0dccf2' },
-  { icon: 'phone',    label: 'Call Us',         value: '+254 700 123 456',           color: '#A78BFA' },
-  { icon: 'location', label: 'Headquarters',    value: 'Westlands, Nairobi, Kenya', color: '#34D399' },
+  { icon: 'mail',     label: 'Email Support',  value: 'support@elkendeh.com',                color: '#0dccf2' },
+  { icon: 'phone',    label: 'Call Us',         value: '+231555292225 / +23278005141',         color: '#A78BFA' },
+  { icon: 'location', label: 'Headquarters',    value: 'Sinkor, 21st Street Coleman Avenue',  color: '#34D399' },
 ];
 
 const SUPPORT_CATS = [
@@ -1604,9 +1510,6 @@ export default function Landing({ onNavigate }) {
         <RolesSection />
         <SecuritySection />
         <WorkflowSection />
-        <TestimonialsSection />
-        <ResourcesSection />
-        <TeamSection />
         <FAQSection />
         <AboutSection />
         <ContactSection />

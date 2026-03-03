@@ -796,6 +796,139 @@
 }
 
 /* ============================================================
+   FLIP CARDS
+   ============================================================ */
+.lp-flip-card {
+  perspective: 900px;
+  cursor: pointer;
+  min-height: 255px;
+  position: relative;
+  outline: none;
+}
+
+.lp-flip-card__inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 255px;
+  transform-style: preserve-3d;
+  transition: transform 0.65s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.lp-flip-card--flipped .lp-flip-card__inner {
+  transform: rotateY(180deg);
+}
+
+.lp-flip-card__front,
+.lp-flip-card__back {
+  position: absolute;
+  inset: 0;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  background: var(--lp-surface);
+  border: 1px solid var(--lp-border);
+  border-radius: var(--lp-radius-lg);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Accent border glow on hover — mirrors regular feature card */
+.lp-flip-card__front::before,
+.lp-flip-card__back::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 1px solid var(--card-accent, var(--lp-primary));
+  opacity: 0;
+  transition: opacity 0.25s;
+  pointer-events: none;
+}
+.lp-flip-card:hover .lp-flip-card__front::before,
+.lp-flip-card:hover .lp-flip-card__back::before {
+  opacity: 0.35;
+}
+
+.lp-flip-card__back {
+  transform: rotateY(180deg);
+}
+
+/* Lift on hover — same as regular cards */
+.lp-flip-card:hover {
+  box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+}
+
+/* Flip hint icon (bottom-right) */
+.lp-flip-card__hint {
+  position: absolute;
+  bottom: 0.85rem;
+  right: 0.9rem;
+  color: var(--lp-muted);
+  opacity: 0.3;
+  line-height: 0;
+  transition: opacity 0.2s, transform 0.4s;
+}
+.lp-flip-card:hover .lp-flip-card__hint {
+  opacity: 0.65;
+  transform: rotate(180deg);
+}
+
+/* Back face content */
+.lp-flip-card__back-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--lp-radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-bottom: 0.8rem;
+}
+
+.lp-flip-card__back-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin: 0 0 1rem;
+  letter-spacing: -0.01em;
+}
+
+.lp-flip-card__back-points {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  flex: 1;
+}
+
+.lp-flip-card__back-point {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.78);
+  line-height: 1.5;
+}
+
+.lp-flip-card__back-dot {
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-top: 0.46em;
+}
+
+@media (max-width: 640px) {
+  .lp-flip-card,
+  .lp-flip-card__inner { min-height: 230px; }
+  .lp-flip-card__front,
+  .lp-flip-card__back   { padding: 1.1rem; }
+}
+
+/* ============================================================
    ROLES SECTION
    ============================================================ */
 .lp-roles-tabs {
@@ -955,20 +1088,14 @@
    ROLES — SCROLL-DRIVEN LAYOUT & ANIMATIONS
    ============================================================ */
 
-/* Tall wrapper gives scroll budget: ~80 vh per role × 4 roles = 320 vh */
+/* Legacy scroll-wrap classes — no longer used in markup but kept so
+   any cached render doesn't break. Height is now driven by lp-section. */
 .lp-roles-scroll-wrap {
-  height: 320vh;
   position: relative;
 }
 
-/* Sticky inner stays in view while user scrolls through the wrapper */
 .lp-roles-sticky {
-  position: sticky;
-  top: 0;
   padding: 5rem 0 4rem;
-  overflow: hidden;
-  /* Subtle top gradient so it blends with whatever section is above */
-  background: var(--lp-bg);
 }
 
 /* ── Content animation keyframe ── */
@@ -2300,6 +2427,75 @@
    RESPONSIVE OVERRIDES — mobile-first, multi-device
    Breakpoints: 768px (tablet), 640px (large phone), 480px (phone), 360px (small phone)
    ============================================================ */
+
+/* ============================================================
+   DESKTOP REFINEMENTS — min-width breakpoints
+   Tighten hero mockup, section proportions, and nav spacing
+   so the PC view feels polished rather than stretched.
+   ============================================================ */
+
+/* ── 1024px+ (laptops & desktops) ── */
+@media (min-width: 1024px) {
+  /* Hero: fix the mockup column to a controlled width so
+     it never balloons to fill the full flex-1 budget */
+  .lp-hero__mockup-wrap {
+    flex: 0 0 440px;
+    max-width: 440px;
+  }
+
+  /* Give text the remaining space with a comfortable cap */
+  .lp-hero__text {
+    flex: 1;
+    max-width: 580px;
+  }
+
+  /* Tighten roles card right panel so mockup preview
+     doesn't stretch across the full half of the screen */
+  .lp-roles-card__right {
+    flex: 0 0 42%;
+    max-width: 42%;
+  }
+
+  /* Section subtitles: slightly wider on desktop */
+  .lp-section-sub {
+    max-width: 640px;
+  }
+
+  /* Feature cards: consistent padding on all sides */
+  .lp-feature-card {
+    padding: 1.5rem 1.4rem;
+  }
+
+  /* Reduce bottom gap inside the sticky roles panel and tighten
+     the security section top padding so sections feel connected */
+  .lp-roles-sticky {
+    padding-bottom: 2rem;
+  }
+
+  #security {
+    padding-top: 3rem;
+  }
+}
+
+/* ── 1280px+ (wide desktops) ── */
+@media (min-width: 1280px) {
+  /* Prevent container stretching on ultrawide monitors */
+  .lp-container {
+    max-width: 1200px;
+  }
+
+  /* Hero headline stays readable — don't let it grow huge */
+  .lp-hero__headline {
+    font-size: clamp(2.4rem, 3.5vw, 3.6rem);
+  }
+
+  /* Slightly smaller mockup on very wide screens so hero
+     maintains a balanced text-to-visual ratio */
+  .lp-hero__mockup-wrap {
+    flex: 0 0 420px;
+    max-width: 420px;
+  }
+}
 
 /* ── 768px and below (tablets + phones) ── */
 @media (max-width: 768px) {

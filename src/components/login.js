@@ -96,6 +96,56 @@ function Login({ onNavigate }) {
 
   return (
     <div className="login-page">
+
+      {/* ── Desktop brand panel (hidden on mobile via CSS) ── */}
+      <div className="login-panel" aria-hidden="true">
+        <div className="login-panel__inner">
+          <div className="login-panel__logo">
+            <PruhLogo size={36} showText={true} textColor="#ffffff" variant="blue" />
+          </div>
+          <h2 className="login-panel__headline">
+            School management,<br />reimagined for Africa.
+          </h2>
+          <p className="login-panel__sub">
+            Trusted by institutions across the continent for secure,
+            data-driven academic administration.
+          </p>
+          <ul className="login-panel__features">
+            {[
+              'Automated grading & report cards',
+              'Real-time attendance tracking',
+              'Multi-tenant school isolation',
+              '256-bit encrypted audit logs',
+            ].map((f) => (
+              <li key={f}>
+                <span className="login-panel__check">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </span>
+                {f}
+              </li>
+            ))}
+          </ul>
+          <div className="login-panel__stats">
+            <div>
+              <span className="login-panel__stat-num">20+</span>
+              <span className="login-panel__stat-lbl">Data Models</span>
+            </div>
+            <div>
+              <span className="login-panel__stat-num">2FA</span>
+              <span className="login-panel__stat-lbl">Secured</span>
+            </div>
+            <div>
+              <span className="login-panel__stat-num">99.9%</span>
+              <span className="login-panel__stat-lbl">Uptime SLA</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Right: form card + footer ── */}
+      <div className="login-right">
       <div className="login-card">
 
         {/* ── PRUH brand ── */}
@@ -232,6 +282,8 @@ function Login({ onNavigate }) {
       <p className="login-footer">
         © 2026 · EL-KENDEH School Management System (EK-SMS ). All rights reserved.
       </p>
+      </div>{/* end .login-right */}
+
     </div>
   );
 }

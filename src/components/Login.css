@@ -571,3 +571,176 @@
 [data-theme="light"] .login-divider::after {
   background: rgba(0, 0, 0, 0.08);
 }
+
+/* ============================================================
+   Desktop: Two-panel split layout (≥ 769px)
+   Left = brand panel  |  Right = form card
+   Mobile: panel hidden, login-right is a transparent wrapper
+   ============================================================ */
+
+/* Hidden by default (mobile) */
+.login-panel { display: none; }
+
+/* Transparent wrapper on mobile — card centers just like before */
+.login-right {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+@media (min-width: 769px) {
+  /* Page becomes a horizontal row */
+  .login-page {
+    flex-direction: row;
+    padding: 0;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 0;
+    min-height: 100vh;
+  }
+
+  /* ── Left brand panel ── */
+  .login-panel {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    justify-content: center;
+    padding: 3.5rem 4rem;
+    background:
+      radial-gradient(ellipse 90% 60% at 15% 25%, rgba(0, 180, 216, 0.13) 0%, transparent 60%),
+      radial-gradient(ellipse 70% 55% at 80% 75%, rgba(30, 111, 217, 0.09) 0%, transparent 60%),
+      linear-gradient(160deg, #070e1c 0%, #0a1828 50%, #060c18 100%);
+    border-right: 1px solid rgba(0, 180, 216, 0.1);
+    position: relative;
+    overflow: hidden;
+    min-height: 100vh;
+  }
+
+  /* Decorative top-right glow */
+  .login-panel::after {
+    content: '';
+    position: absolute;
+    top: -160px;
+    right: -160px;
+    width: 480px;
+    height: 480px;
+    background: radial-gradient(circle, rgba(0, 180, 216, 0.08) 0%, transparent 65%);
+    pointer-events: none;
+  }
+
+  .login-panel__inner {
+    position: relative;
+    z-index: 1;
+    max-width: 400px;
+    display: flex;
+    flex-direction: column;
+    gap: 1.75rem;
+  }
+
+  .login-panel__logo { margin-bottom: 0.25rem; }
+
+  .login-panel__headline {
+    font-size: 1.85rem;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1.2;
+    letter-spacing: -0.025em;
+    margin: 0;
+  }
+
+  .login-panel__sub {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.48);
+    line-height: 1.75;
+    margin: 0;
+  }
+
+  .login-panel__features {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .login-panel__features li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .login-panel__check {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: rgba(0, 180, 216, 0.12);
+    border: 1px solid rgba(0, 180, 216, 0.32);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #00B4D8;
+  }
+
+  .login-panel__stats {
+    display: flex;
+    gap: 2rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+  }
+
+  .login-panel__stat-num {
+    display: block;
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #00B4D8;
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+
+  .login-panel__stat-lbl {
+    display: block;
+    font-size: 0.68rem;
+    color: rgba(255, 255, 255, 0.35);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-top: 4px;
+  }
+
+  /* ── Right panel (card + footer) ── */
+  .login-right {
+    flex: 0 0 480px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 3.5rem;
+    min-height: 100vh;
+    overflow-y: auto;
+    background: #080D1A;
+  }
+
+  /* Slightly tighter card on desktop — breathing room */
+  .login-card {
+    max-width: 400px;
+  }
+
+  .login-footer {
+    max-width: 400px;
+    text-align: center;
+  }
+}
+
+@media (min-width: 1280px) {
+  .login-panel {
+    padding: 4rem 5rem;
+  }
+  .login-panel__inner { max-width: 440px; }
+  .login-right {
+    flex: 0 0 520px;
+    padding: 3rem 4rem;
+  }
+}

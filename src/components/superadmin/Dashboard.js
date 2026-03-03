@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import './SA.css';
 import './Dashboard.css';
 import { SECURITY_CONFIG } from '../../config/security';
+import PruhLogo from '../PruhLogo';
 import SAOverview       from './SAOverview';
 import SAApplications   from './SAApplications';
 import SAReview         from './SAReview';
@@ -352,7 +353,7 @@ export default function Dashboard({ onNavigate }) {
       <aside className="sa-sidebar">
         <div className="sa-sidebar-head">
           <div className="sa-brand">
-            <span className="sa-brand-mark">EK</span>
+            <PruhLogo size={38} variant="white" />
             <div>
               <p className="sa-brand-name">EK-SMS</p>
               <p className="sa-brand-role">Super Admin</p>

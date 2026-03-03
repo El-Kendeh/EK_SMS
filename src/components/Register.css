@@ -1748,3 +1748,50 @@
   border-color: rgba(0, 0, 0, 0.08);
   color: #475569;
 }
+
+/* ============================================================
+   Desktop: Wider, more polished layout (≥ 769px)
+   Card gets more breathing room; modal is tighter
+   ============================================================ */
+@media (min-width: 769px) {
+  .reg-page {
+    padding: 48px 32px 64px;
+  }
+
+  .reg-card {
+    max-width: 620px;
+    padding: 48px 52px 44px;
+  }
+
+  /* Stepper steps show their labels on desktop */
+  .step-name {
+    display: block;
+  }
+
+  /* Nav buttons side-by-side with more room */
+  .reg-nav {
+    gap: 12px;
+  }
+
+  /* Tighter legal modal on desktop — 600px is too close to full-width
+     on a 1024px layout; pull it in */
+  .modal-box {
+    max-width: 540px;
+  }
+
+  /* Review rows get more comfortable spacing */
+  .review-row {
+    padding: 10px 20px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .reg-card {
+    max-width: 640px;
+    padding: 52px 60px 48px;
+  }
+
+  .stepper {
+    margin-bottom: 32px;
+  }
+}
