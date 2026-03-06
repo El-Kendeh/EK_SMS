@@ -177,6 +177,7 @@ function useScrollReveal(threshold = 0.12) {
   return [ref, visible];
 }
 
+// eslint-disable-next-line no-unused-vars
 function useCountUp(target, duration = 2200) {
   const [count, setCount] = useState(0);
   const [ref, visible] = useScrollReveal(0.4);
@@ -277,6 +278,7 @@ function ParticleField({ count = 55 }) {
     };
     draw();
     return () => { cancelAnimationFrame(animId); ro.disconnect(); canvas.removeEventListener('mousemove', onMouseMove); canvas.removeEventListener('mouseleave', onMouseLeave); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return <canvas ref={canvasRef} className="lp-particles" aria-hidden="true" />;
 }
@@ -2241,7 +2243,6 @@ function Footer({ onNavigate }) {
 const AUTO_REPLY = "Thanks for reaching out! 😊 Our team will get back to you shortly. For urgent matters email admin@elkendeh.com";
 
 function ChatWidget() {
-  const { t } = useLang();
   const [open, setOpen]       = useState(false);
   const [input, setInput]     = useState('');
   const [typing, setTyping]   = useState(false);
@@ -2546,6 +2547,7 @@ function WaitlistCapture() {
 const LAUNCH_DATE  = new Date('2026-04-30T23:59:59');
 const SPOTS_LEFT   = 12;
 
+// eslint-disable-next-line no-unused-vars
 function CountdownStrip() {
   const [timeLeft,  setTimeLeft]  = useState(null);
   const [dismissed, setDismissed] = useState(

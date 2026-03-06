@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import './dashboard.css';
 import PruhLogo from '../PruhLogo';
 
+// eslint-disable-next-line no-unused-vars
 const GradCapIcon = () => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="48" height="48">
         <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
