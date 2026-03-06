@@ -931,6 +931,16 @@
 [data-theme="light"] .reg-footer-signin        { color: #94A3B8; }
 [data-theme="light"] .reg-footer-signin button { color: #0284C7; }
 
+/* Drag dropzone */
+[data-theme="light"] .logo-dropzone--drag {
+  border-color: #0284C7;
+  background: rgba(2, 132, 199, 0.08);
+}
+
+/* Password match indicator */
+[data-theme="light"] .pwd-match--ok  { color: #059669; }
+[data-theme="light"] .pwd-match--err { color: #DC2626; }
+
 /* ============================================================
    NEW FIELD STYLES — Badge Upload, Color Picker, Time, 2FA, Legal
    ============================================================ */
@@ -979,13 +989,18 @@
   border: 2px dashed rgba(0, 180, 216, 0.25);
   border-radius: 10px;
   cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
+  transition: border-color 0.2s, background 0.2s, transform 0.15s;
   color: inherit;
   font-family: inherit;
 }
 .logo-dropzone:hover {
   border-color: rgba(0, 180, 216, 0.55);
   background: rgba(0, 180, 216, 0.07);
+}
+.logo-dropzone--drag {
+  border-color: #00B4D8;
+  background: rgba(0, 180, 216, 0.12);
+  transform: scale(1.015);
 }
 .logo-dropzone-icon { color: #00B4D8; }
 .logo-dropzone-icon svg { width: 24px; height: 24px; }
@@ -1033,6 +1048,25 @@
   transition: background 0.18s;
 }
 .logo-remove-btn:hover { background: rgba(239, 68, 68, 0.2); }
+
+/* ---- Password match indicator ---- */
+.pwd-match {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-top: 4px;
+  animation: pwdMatchFade 0.18s ease;
+}
+.pwd-match svg { width: 13px; height: 13px; flex-shrink: 0; }
+.pwd-match--ok  { color: #22D3A3; }
+.pwd-match--err { color: #FC8181; }
+
+@keyframes pwdMatchFade {
+  from { opacity: 0; transform: translateY(-3px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 
 /* ---- School hours time grid ---- */
 .time-grid {
@@ -1806,6 +1840,108 @@
   border-color: rgba(0, 0, 0, 0.08);
   color: #475569;
 }
+
+/* ---- Country auto-detect note ---- */
+.country-auto-note {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #22D3A3;
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ---- Leave-page warning modal ---- */
+.leave-modal {
+  width: 100%;
+  max-width: 380px;
+  background: #111827;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.7);
+  padding: 36px 32px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  animation: leaveModalIn 0.18s ease;
+}
+
+@keyframes leaveModalIn {
+  from { opacity: 0; transform: scale(0.95) translateY(10px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0); }
+}
+
+.leave-modal-icon {
+  font-size: 2.25rem;
+  line-height: 1;
+  margin-bottom: 14px;
+}
+
+.leave-modal-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #FFFFFF;
+  margin: 0 0 8px;
+}
+
+.leave-modal-desc {
+  font-size: 0.875rem;
+  color: #8892A8;
+  line-height: 1.55;
+  margin: 0 0 24px;
+}
+
+.leave-modal-actions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.leave-stay-btn {
+  flex: 1;
+  padding: 12px;
+  background: #00B4D8;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.2s;
+}
+.leave-stay-btn:hover { background: #009DC4; }
+
+.leave-leave-btn {
+  flex: 1;
+  padding: 12px;
+  background: transparent;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  color: #FC8181;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.2s, border-color 0.2s;
+}
+.leave-leave-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+/* Light theme */
+[data-theme="light"] .country-auto-note { color: #059669; }
+[data-theme="light"] .leave-modal {
+  background: #FFFFFF;
+  border-color: rgba(0, 0, 0, 0.08);
+}
+[data-theme="light"] .leave-modal-title { color: #0F172A; }
+[data-theme="light"] .leave-modal-desc  { color: #475569; }
+[data-theme="light"] .leave-stay-btn    { background: #0284C7; }
+[data-theme="light"] .leave-stay-btn:hover { background: #0369A1; }
 
 /* ============================================================
    Desktop: Wider, more polished layout (≥ 769px)

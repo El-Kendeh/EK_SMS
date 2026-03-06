@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
+import { register as registerSW } from './serviceWorkerRegistration';
 
 // Initialize security features
 import initializeSecurityFeatures from './security/init';
@@ -17,3 +18,6 @@ root.render(
 );
 
 reportWebVitals();
+
+// Register service worker for PWA / offline support
+registerSW();

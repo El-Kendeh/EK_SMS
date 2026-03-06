@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import './Login.css';
 import { SECURITY_CONFIG } from '../config/security';
 import PruhLogo from './PruhLogo';
@@ -51,6 +51,14 @@ function Login({ onNavigate }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [forgotMsg, setForgotMsg] = useState(false);
+  const [goingHome, setGoingHome] = useState(false);
+
+  const handleBackHome = useCallback(() => {
+    setGoingHome(true);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => onNavigate && onNavigate('home'));
+    });
+  }, [onNavigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -104,7 +112,8 @@ function Login({ onNavigate }) {
             <PruhLogo size={36} showText={true} textColor="#ffffff" variant="blue" />
           </div>
           <h2 className="login-panel__headline">
-            School management,<br />reimagined for Africa.
+            School management,<br />
+            <span className="login-panel__headline-accent">reimagined for Africa.</span>
           </h2>
           <p className="login-panel__sub">
             Trusted by institutions across the continent for secure,
@@ -160,10 +169,11 @@ function Login({ onNavigate }) {
         <button
           className="login-back-btn"
           type="button"
-          onClick={() => onNavigate && onNavigate('home')}
+          onClick={handleBackHome}
+          disabled={goingHome}
         >
           <SparkleIcon />
-          Back to Home
+          {goingHome ? 'Going home…' : 'Back to Home'}
         </button>
 
         {/* ── Error banner ── */}

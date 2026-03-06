@@ -192,6 +192,87 @@ const COUNTRIES = [
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: CURRENT_YEAR - 1799 }, (_, i) => CURRENT_YEAR - i);
 
+/* Timezone → Country — used for auto-detecting the user's country */
+const TIMEZONE_TO_COUNTRY = {
+  'Africa/Abidjan':       "Côte d'Ivoire",
+  'Africa/Accra':         'Ghana',
+  'Africa/Addis_Ababa':   'Ethiopia',
+  'Africa/Algiers':       'Algeria',
+  'Africa/Asmara':        'Eritrea',
+  'Africa/Bamako':        'Mali',
+  'Africa/Bangui':        'Central African Republic',
+  'Africa/Banjul':        'Gambia',
+  'Africa/Bissau':        'Guinea-Bissau',
+  'Africa/Blantyre':      'Malawi',
+  'Africa/Brazzaville':   'Congo (Brazzaville)',
+  'Africa/Bujumbura':     'Burundi',
+  'Africa/Cairo':         'Egypt',
+  'Africa/Casablanca':    'Morocco',
+  'Africa/Conakry':       'Guinea',
+  'Africa/Dakar':         'Senegal',
+  'Africa/Dar_es_Salaam': 'Tanzania',
+  'Africa/Djibouti':      'Djibouti',
+  'Africa/Douala':        'Cameroon',
+  'Africa/Freetown':      'Sierra Leone',
+  'Africa/Gaborone':      'Botswana',
+  'Africa/Harare':        'Zimbabwe',
+  'Africa/Johannesburg':  'South Africa',
+  'Africa/Juba':          'South Sudan',
+  'Africa/Kampala':       'Uganda',
+  'Africa/Khartoum':      'Sudan',
+  'Africa/Kigali':        'Rwanda',
+  'Africa/Kinshasa':      'Congo (DRC)',
+  'Africa/Lagos':         'Nigeria',
+  'Africa/Libreville':    'Gabon',
+  'Africa/Lome':          'Togo',
+  'Africa/Luanda':        'Angola',
+  'Africa/Lubumbashi':    'Congo (DRC)',
+  'Africa/Lusaka':        'Zambia',
+  'Africa/Malabo':        'Equatorial Guinea',
+  'Africa/Maputo':        'Mozambique',
+  'Africa/Maseru':        'Lesotho',
+  'Africa/Mbabane':       'Eswatini',
+  'Africa/Mogadishu':     'Somalia',
+  'Africa/Monrovia':      'Liberia',
+  'Africa/Nairobi':       'Kenya',
+  'Africa/Ndjamena':      'Chad',
+  'Africa/Niamey':        'Niger',
+  'Africa/Nouakchott':    'Mauritania',
+  'Africa/Ouagadougou':   'Burkina Faso',
+  'Africa/Porto-Novo':    'Benin',
+  'Africa/Sao_Tome':      'São Tomé & Príncipe',
+  'Africa/Tripoli':       'Libya',
+  'Africa/Tunis':         'Tunisia',
+  'Africa/Windhoek':      'Namibia',
+  'Atlantic/Cape_Verde':  'Cape Verde',
+  'Indian/Antananarivo':  'Madagascar',
+  'Indian/Mauritius':     'Mauritius',
+  'Europe/London':        'United Kingdom',
+  'America/New_York':     'United States',
+  'America/Chicago':      'United States',
+  'America/Denver':       'United States',
+  'America/Los_Angeles':  'United States',
+  'America/Toronto':      'Canada',
+  'America/Vancouver':    'Canada',
+  'Australia/Sydney':     'Australia',
+  'Australia/Melbourne':  'Australia',
+  'Asia/Kolkata':         'India',
+  'Asia/Calcutta':        'India',
+  'Asia/Shanghai':        'China',
+  'Asia/Hong_Kong':       'China',
+  'Europe/Paris':         'France',
+  'Europe/Berlin':        'Germany',
+  'Europe/Rome':          'Italy',
+  'Europe/Madrid':        'Spain',
+  'Europe/Lisbon':        'Portugal',
+  'Asia/Dubai':           'UAE',
+  'Asia/Riyadh':          'Saudi Arabia',
+  'Asia/Karachi':         'Pakistan',
+  'Asia/Dhaka':           'Bangladesh',
+  'America/Sao_Paulo':    'Brazil',
+  'America/Mexico_City':  'Mexico',
+};
+
 /* Brand colour palette — 6 rows × 10 cols (Office-style grid)
    Each column is a colour family; rows go from lightest → darkest */
 const PALETTE_ROWS = [
@@ -445,6 +526,28 @@ function BrandColorPicker({ value, onChange }) {
    Logo / Badge Upload
    ================================================================ */
 function LogoUpload({ preview, inputRef, onChange, onRemove }) {
+  const [isDragActive, setIsDragActive] = useState(false);
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragActive(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragActive(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragActive(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) onChange({ target: { files: [file] } });
+  };
+
   return (
     <div className="logo-upload">
       <input
@@ -468,13 +571,20 @@ function LogoUpload({ preview, inputRef, onChange, onRemove }) {
       ) : (
         <button
           type="button"
-          className="logo-dropzone"
+          className={`logo-dropzone${isDragActive ? ' logo-dropzone--drag' : ''}`}
           onClick={() => inputRef.current?.click()}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
         >
           <span className="logo-dropzone-icon"><UploadIcon /></span>
-          <span className="logo-dropzone-label">Upload School Badge</span>
-          <span className="logo-dropzone-sub">PNG or JPG · Max 5 MB</span>
-          <span className="logo-dropzone-btn">Choose File</span>
+          <span className="logo-dropzone-label">
+            {isDragActive ? 'Drop to upload' : 'Upload School Badge'}
+          </span>
+          <span className="logo-dropzone-sub">PNG or JPG · Max 5 MB · Drag &amp; drop or click</span>
+          <span className="logo-dropzone-btn">
+            {isDragActive ? '⬇ Release to upload' : 'Choose File'}
+          </span>
         </button>
       )}
       <p className="input-hint">
@@ -567,6 +677,29 @@ function PhoneInput({ codeValue, numberValue, onCodeChange, onNumberChange, id, 
         value={numberValue}
         onChange={(e) => onNumberChange(e.target.value.replace(/\D/g, ''))}
       />
+    </div>
+  );
+}
+
+/* ================================================================
+   Leave Warning Modal
+   ================================================================ */
+function LeaveModal({ onStay, onLeave }) {
+  return (
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="leave-title" onClick={onStay}>
+      <div className="leave-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="leave-modal-icon">⚠</div>
+        <h2 className="leave-modal-title" id="leave-title">Leave this page?</h2>
+        <p className="leave-modal-desc">Your registration progress will be lost.</p>
+        <div className="leave-modal-actions">
+          <button type="button" className="leave-stay-btn" onClick={onStay} autoFocus>
+            Stay on page
+          </button>
+          <button type="button" className="leave-leave-btn" onClick={onLeave}>
+            Leave anyway
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -684,7 +817,9 @@ function Register({ onNavigate }) {
   const [badgePreview, setBadgePreview] = useState('');
   const badgeInputRef = useRef(null);
 
-  const [legalModal, setLegalModal] = useState(null); /* 'terms' | 'privacy' | null */
+  const [legalModal, setLegalModal]           = useState(null); /* 'terms' | 'privacy' | null */
+  const [showLeaveWarning, setShowLeaveWarning] = useState(false);
+  const [autoDetectedCountry, setAutoDetectedCountry] = useState(null);
 
   const [form, setForm] = useState({
     /* Step 1 — Info */
@@ -749,6 +884,36 @@ function Register({ onNavigate }) {
     setBadgeFile(null);
     setBadgePreview('');
     if (badgeInputRef.current) badgeInputRef.current.value = '';
+  };
+
+  /* ---- Country auto-detect (runs once on mount) ---- */
+  useEffect(() => {
+    try {
+      const tz       = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const detected = TIMEZONE_TO_COUNTRY[tz];
+      if (detected && COUNTRIES.includes(detected)) {
+        setAutoDetectedCountry(detected);
+        setForm((p) => p.country ? p : { ...p, country: detected });
+      }
+    } catch { /* Intl not available */ }
+  }, []);
+
+  /* ---- Leave-page: warn browser on refresh / close when form is dirty ---- */
+  const isDirty = !!(
+    form.institutionName || form.address || form.email ||
+    form.firstName || form.adminEmail || form.password || step > 1
+  );
+
+  useEffect(() => {
+    if (!isDirty) return;
+    const handler = (e) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [isDirty]);
+
+  const handleBackToHome = () => {
+    if (isDirty) setShowLeaveWarning(true);
+    else onNavigate && onNavigate('home');
   };
 
   /* ---- Public email domain check (non-blocking warning) ---- */
@@ -908,7 +1073,7 @@ function Register({ onNavigate }) {
      ================================================================ */
   return (
     <div className="reg-page">
-      <button className="reg-back-link" type="button" onClick={() => onNavigate && onNavigate('home')}>
+      <button className="reg-back-link" type="button" onClick={handleBackToHome}>
         <SparkleIcon /> Back to home
       </button>
 
@@ -1069,6 +1234,9 @@ function Register({ onNavigate }) {
                 <option value="">Select country</option>
                 {COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
+              {autoDetectedCountry && form.country === autoDetectedCountry && (
+                <p className="country-auto-note">📍 Auto-detected from your timezone — change if incorrect</p>
+              )}
             </Field>
           </div>
         )}
@@ -1202,6 +1370,14 @@ function Register({ onNavigate }) {
                   {showConfirm ? <EyeOffIcon /> : <EyeIcon />}
                 </button>
               </div>
+              {form.confirmPassword && (
+                <div className={`pwd-match${form.password === form.confirmPassword ? ' pwd-match--ok' : ' pwd-match--err'}`}>
+                  {form.password === form.confirmPassword
+                    ? <><CheckIcon /> Passwords match</>
+                    : <>✕ Passwords do not match</>
+                  }
+                </div>
+              )}
             </Field>
 
             {/* 2FA Option */}
@@ -1423,6 +1599,14 @@ function Register({ onNavigate }) {
       {/* Legal modals */}
       {legalModal && (
         <LegalModal tab={legalModal} onClose={() => setLegalModal(null)} />
+      )}
+
+      {/* Leave warning */}
+      {showLeaveWarning && (
+        <LeaveModal
+          onStay={() => setShowLeaveWarning(false)}
+          onLeave={() => { setShowLeaveWarning(false); onNavigate && onNavigate('home'); }}
+        />
       )}
     </div>
   );

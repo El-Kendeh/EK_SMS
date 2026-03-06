@@ -1,6 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './Landing.css';
 import PruhLogo from './PruhLogo';
+import Ballpit from './Ballpit';
+import ScrollVelocity from './ScrollVelocity';
+import Hyperspeed from './Hyperspeed';
+import ClickSpark from './ClickSpark';
+import { LanguageProvider, useLang } from '../i18n/LanguageContext';
+import InstallPrompt from './InstallPrompt';
 
 // ============================================================
 // SVG ICON SYSTEM
@@ -48,26 +54,27 @@ function SvgIcon({ name, size = 20, className = '', style }) {
 // ============================================================
 // ANIMATED WORD (retained and enhanced from original)
 // ============================================================
-const CYCLING_WORDS = [
-  { text: 'enrollment',       color: '#0dccf2' },
-  { text: 'academics',        color: '#22D3A3' },
-  { text: 'attendance',       color: '#A78BFA' },
-  { text: 'staff management', color: '#FB923C' },
-  { text: 'grade reporting',  color: '#F472B6' },
-  { text: 'scheduling',       color: '#60A5FA' },
-  { text: 'student progress', color: '#34D399' },
-  { text: 'communication',    color: '#FBBF24' },
+const CYCLING_KEYS = [
+  { key: 'word_enrollment',      color: '#0dccf2' },
+  { key: 'word_academics',       color: '#22D3A3' },
+  { key: 'word_attendance',      color: '#A78BFA' },
+  { key: 'word_staff_mgmt',      color: '#FB923C' },
+  { key: 'word_grade_reporting', color: '#F472B6' },
+  { key: 'word_scheduling',      color: '#60A5FA' },
+  { key: 'word_student_prog',    color: '#34D399' },
+  { key: 'word_communication',   color: '#FBBF24' },
 ];
 
 function AnimatedWord() {
   const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState('visible');
+  const { t } = useLang();
 
   useEffect(() => {
     const id = setInterval(() => {
       setPhase('exit');
       setTimeout(() => {
-        setIndex((i) => (i + 1) % CYCLING_WORDS.length);
+        setIndex((i) => (i + 1) % CYCLING_KEYS.length);
         setPhase('enter');
         setTimeout(() => setPhase('visible'), 30);
       }, 300);
@@ -75,7 +82,7 @@ function AnimatedWord() {
     return () => clearInterval(id);
   }, []);
 
-  const { text, color } = CYCLING_WORDS[index];
+  const { key, color } = CYCLING_KEYS[index];
   return (
     <span
       className={`lp-cycling-word lp-cycling-word--${phase}`}
@@ -83,8 +90,284 @@ function AnimatedWord() {
       aria-live="polite"
       aria-atomic="true"
     >
-      {text}
+      {t(key)}
     </span>
+  );
+}
+
+// ============================================================
+// ANIMATED HEADLINE (cycling between two hero headlines)
+// ============================================================
+function AnimatedHeadline() {
+  const [index, setIndex] = useState(0);
+  const [phase, setPhase] = useState('visible');
+  const { t } = useLang();
+
+  const headlines = [
+    <>{t('hero_h1a')}<br />{t('hero_h1b')}{' '}<span className="lp-hero__headline-gradient">{t('hero_h1c')}</span></>,
+    <>{t('hero_h2a')}<br />{t('hero_h2b')} <span className="lp-hero__headline-gradient">{t('hero_h2c')}</span></>,
+  ];
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setPhase('exit');
+      setTimeout(() => {
+        setIndex(i => (i + 1) % headlines.length);
+        setPhase('enter');
+        setTimeout(() => setPhase('visible'), 50);
+      }, 380);
+    }, 4500);
+    return () => clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <h1 className={`lp-hero__headline lp-cycling-headline lp-cycling-headline--${phase}`}>
+      {headlines[index]}
+    </h1>
+  );
+}
+
+// ============================================================
+// ANIMATED SUBHEADLINE (cycling between two hero subs)
+// ============================================================
+function AnimatedSubHeadline() {
+  const [index, setIndex] = useState(0);
+  const [phase, setPhase] = useState('visible');
+  const { t } = useLang();
+
+  const subs = [t('hero_sub1'), t('hero_sub2')];
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setPhase('exit');
+      setTimeout(() => {
+        setIndex(i => (i + 1) % subs.length);
+        setPhase('enter');
+        setTimeout(() => setPhase('visible'), 50);
+      }, 380);
+    }, 5000);
+    return () => clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <p className={`lp-hero__sub lp-cycling-sub lp-cycling-sub--${phase}`}>
+      {t('hero_sub_prefix')}{subs[index]}
+    </p>
+  );
+}
+
+// ============================================================
+// HOOKS — scroll reveal, count-up
+// ============================================================
+function useScrollReveal(threshold = 0.12) {
+  const ref = useRef(null);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect(); } },
+      { threshold }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [threshold]);
+  return [ref, visible];
+}
+
+function useCountUp(target, duration = 2200) {
+  const [count, setCount] = useState(0);
+  const [ref, visible] = useScrollReveal(0.4);
+  useEffect(() => {
+    if (!visible) return;
+    const start = performance.now();
+    const tick = (now) => {
+      const p = Math.min((now - start) / duration, 1);
+      const ease = 1 - Math.pow(1 - p, 3);
+      setCount(Math.round(ease * target));
+      if (p < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }, [visible, target, duration]);
+  return [ref, count];
+}
+
+/* Staggered count-up — driven by external `started` flag + a per-item delay.
+   Returns [count, progress 0-1, done boolean] */
+function useCountUpStaggered(target, duration, delay, started) {
+  const [count, setCount]       = useState(0);
+  const [progress, setProgress] = useState(0);
+  const [done, setDone]         = useState(false);
+  useEffect(() => {
+    if (!started) return;
+    let raf;
+    const timer = setTimeout(() => {
+      const t0 = performance.now();
+      const tick = (now) => {
+        const p = Math.min((now - t0) / duration, 1);
+        const eased = 1 - Math.pow(1 - p, 3);
+        setCount(Math.round(eased * target));
+        setProgress(eased);
+        if (p < 1) { raf = requestAnimationFrame(tick); }
+        else { setDone(true); }
+      };
+      raf = requestAnimationFrame(tick);
+    }, delay);
+    return () => { clearTimeout(timer); cancelAnimationFrame(raf); };
+  }, [started, target, duration, delay]);
+  return [count, progress, done];
+}
+
+// ============================================================
+// PARTICLE FIELD  (canvas — draws nodes + lines, reacts to mouse)
+// ============================================================
+function ParticleField({ count = 55 }) {
+  const canvasRef = useRef(null);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let animId;
+    const mouse = { x: -2000, y: -2000 };
+
+    const resize = () => { canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight; };
+    resize();
+    const ro = new ResizeObserver(resize);
+    ro.observe(canvas);
+
+    const onMouseMove = (e) => { const r = canvas.getBoundingClientRect(); mouse.x = e.clientX - r.left; mouse.y = e.clientY - r.top; };
+    const onMouseLeave = () => { mouse.x = -2000; mouse.y = -2000; };
+    canvas.addEventListener('mousemove', onMouseMove, { passive: true });
+    canvas.addEventListener('mouseleave', onMouseLeave);
+
+    const pts = Array.from({ length: count }, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      r: Math.random() * 1.3 + 0.4,
+      vx: (Math.random() - 0.5) * 0.22,
+      vy: (Math.random() - 0.5) * 0.22,
+      a: Math.random() * 0.4 + 0.15,
+    }));
+
+    const CONN = 130, MCONN = 160;
+    const draw = () => {
+      const W = canvas.width, H = canvas.height;
+      ctx.clearRect(0, 0, W, H);
+      for (let i = 0; i < pts.length; i++) {
+        const p = pts[i];
+        for (let j = i + 1; j < pts.length; j++) {
+          const q = pts[j];
+          const d = Math.hypot(p.x - q.x, p.y - q.y);
+          if (d < CONN) { ctx.beginPath(); ctx.strokeStyle = `rgba(13,204,242,${0.07 * (1 - d / CONN)})`; ctx.lineWidth = 0.6; ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke(); }
+        }
+        const md = Math.hypot(p.x - mouse.x, p.y - mouse.y);
+        if (md < MCONN) {
+          ctx.beginPath(); ctx.strokeStyle = `rgba(13,204,242,${0.2 * (1 - md / MCONN)})`; ctx.lineWidth = 0.9; ctx.moveTo(p.x, p.y); ctx.lineTo(mouse.x, mouse.y); ctx.stroke();
+          p.vx += ((p.x - mouse.x) / md) * 0.011;
+          p.vy += ((p.y - mouse.y) / md) * 0.011;
+        }
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = `rgba(13,204,242,${p.a})`; ctx.fill();
+        p.x += p.vx; p.y += p.vy; p.vx *= 0.999; p.vy *= 0.999;
+        if (p.x < 0) p.x = W; if (p.x > W) p.x = 0;
+        if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
+      }
+      animId = requestAnimationFrame(draw);
+    };
+    draw();
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); canvas.removeEventListener('mousemove', onMouseMove); canvas.removeEventListener('mouseleave', onMouseLeave); };
+  }, []);
+  return <canvas ref={canvasRef} className="lp-particles" aria-hidden="true" />;
+}
+
+// ============================================================
+// CURSOR GLOW
+// ============================================================
+function CursorGlow() {
+  const [pos, setPos] = useState({ x: -400, y: -400 });
+  useEffect(() => {
+    const move = (e) => setPos({ x: e.clientX, y: e.clientY });
+    window.addEventListener('mousemove', move, { passive: true });
+    return () => window.removeEventListener('mousemove', move);
+  }, []);
+  return <div className="lp-cursor-glow" style={{ left: pos.x, top: pos.y }} aria-hidden="true" />;
+}
+
+// ============================================================
+// ANIMATED STATS STRIP
+// ============================================================
+const STATS_DATA = [
+  { target: 500,   suffix: '+',    prefix: '',  tKey: 'stat_institutions' },
+  { target: 50000, suffix: '+',    prefix: '',  tKey: 'stat_students'     },
+  { target: 99,    suffix: '.9%',  prefix: '',  tKey: 'stat_uptime'       },
+  { target: 30,    suffix: ' min', prefix: '<', tKey: 'stat_setup'        },
+];
+
+function StatItem({ target, suffix, prefix, tKey, delay, started }) {
+  const DURATION = 1800;
+  const [count, progress, done] = useCountUpStaggered(target, DURATION, delay, started);
+  const { t } = useLang();
+  return (
+    <div className={`lp-stat-item${done ? ' lp-stat-item--done' : started ? ' lp-stat-item--counting' : ''}`}>
+      {/* fill bar that tracks count progress */}
+      <div
+        className="lp-stat-bar"
+        style={{ transform: `scaleX(${progress})` }}
+        aria-hidden="true"
+      />
+      <div className="lp-stat-number">
+        <span className="lp-stat-affix lp-stat-affix--pre">{prefix}</span>
+        {count.toLocaleString()}
+        {/* suffix fades in only at completion for a satisfying reveal */}
+        <span className={`lp-stat-affix lp-stat-affix--post${done ? ' lp-stat-affix--visible' : ''}`}>
+          {suffix}
+        </span>
+      </div>
+      <p className="lp-stat-label">{t(tKey)}</p>
+    </div>
+  );
+}
+
+function StatsSection() {
+  const [started, setStarted] = useState(false);
+  const sectionRef = useRef(null);
+
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setStarted(true); obs.disconnect(); } },
+      { threshold: 0.25 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  return (
+    <div ref={sectionRef} className="lp-stats">
+      <div className="lp-container lp-stats__inner">
+        {STATS_DATA.map((s, i) => (
+          <StatItem key={s.tKey} {...s} delay={i * 160} started={started} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// LANGUAGE TOGGLE
+// ============================================================
+function LangToggle() {
+  const { lang, toggleLang } = useLang();
+  return (
+    <button
+      className="lp-nav__lang-toggle"
+      onClick={toggleLang}
+      aria-label={lang === 'en' ? 'Switch to French' : 'Passer en anglais'}
+    >
+      <span className="lp-nav__lang-flag">{lang === 'en' ? 'FR' : 'EN'}</span>
+    </button>
   );
 }
 
@@ -93,6 +376,7 @@ function AnimatedWord() {
 // ============================================================
 function Navbar({ onNavigate, menuOpen, setMenuOpen }) {
   const [scrolled, setScrolled] = useState(false);
+  const { t } = useLang();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -107,11 +391,11 @@ function Navbar({ onNavigate, menuOpen, setMenuOpen }) {
   };
 
   const NAV_LINKS = [
-    ['Features', 'features'],
-    ['Roles', 'roles'],
-    ['Security', 'security'],
-    ['About', 'about'],
-    ['Contact', 'contact'],
+    [t('nav_features'), 'features'],
+    [t('nav_roles'),    'roles'],
+    [t('nav_security'), 'security'],
+    [t('nav_about'),    'about'],
+    [t('nav_contact'),  'contact'],
   ];
 
   return (
@@ -128,8 +412,9 @@ function Navbar({ onNavigate, menuOpen, setMenuOpen }) {
         </div>
 
         <div className="lp-nav__actions">
-          <button className="lp-nav__btn-ghost" onClick={() => onNavigate('login')}>Sign In</button>
-          <button className="lp-nav__btn-primary" onClick={() => onNavigate('register')}>Get Started</button>
+          <LangToggle />
+          <button className="lp-nav__btn-ghost" onClick={() => onNavigate('login')}>{t('nav_signin')}</button>
+          <button className="lp-nav__btn-primary" onClick={() => onNavigate('register')}>{t('nav_getstarted')}</button>
         </div>
 
         <button className="lp-nav__hamburger" onClick={() => setMenuOpen((v) => !v)} aria-label="Toggle menu">
@@ -143,8 +428,9 @@ function Navbar({ onNavigate, menuOpen, setMenuOpen }) {
             <button key={id} className="lp-nav__mobile-link" onClick={() => scrollTo(id)}>{label}</button>
           ))}
           <div className="lp-nav__mobile-actions">
-            <button className="lp-btn lp-btn--outline lp-btn--full" onClick={() => { setMenuOpen(false); onNavigate('login'); }}>Sign In</button>
-            <button className="lp-btn lp-btn--primary lp-btn--full" onClick={() => { setMenuOpen(false); onNavigate('register'); }}>Register Your School</button>
+            <div className="lp-nav__mobile-lang"><LangToggle /></div>
+            <button className="lp-btn lp-btn--outline lp-btn--full" onClick={() => { setMenuOpen(false); onNavigate('login'); }}>{t('nav_signin')}</button>
+            <button className="lp-btn lp-btn--primary lp-btn--full" onClick={() => { setMenuOpen(false); onNavigate('register'); }}>{t('nav_register')}</button>
           </div>
         </div>
       )}
@@ -156,60 +442,128 @@ function Navbar({ onNavigate, menuOpen, setMenuOpen }) {
 // HERO SECTION
 // ============================================================
 function HeroSection({ onNavigate }) {
+  const heroRef = useRef(null);
+  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  const { t } = useLang();
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', check, { passive: true });
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
+  useEffect(() => {
+    const el = heroRef.current;
+    if (!el) return;
+    const onMove = (e) => {
+      const r = el.getBoundingClientRect();
+      const nx = (e.clientX - (r.left + r.width  / 2)) / (r.width  / 2);
+      const ny = (e.clientY - (r.top  + r.height / 2)) / (r.height / 2);
+      setTilt({ x: ny * -5, y: nx * 5 });
+    };
+    const onLeave = () => setTilt({ x: 0, y: 0 });
+    el.addEventListener('mousemove', onMove, { passive: true });
+    el.addEventListener('mouseleave', onLeave);
+    return () => { el.removeEventListener('mousemove', onMove); el.removeEventListener('mouseleave', onLeave); };
+  }, []);
+
+  const isResting = tilt.x === 0 && tilt.y === 0;
+
   return (
-    <section className="lp-hero" id="hero">
+    <section ref={heroRef} className="lp-hero" id="hero">
+      {/* Ballpit 3D physics background — desktop only (too heavy for mid-range Android) */}
+      {!isMobile && (
+        <div className="lp-hero__ballpit" style={{
+          position: 'absolute',
+          inset: 0,
+          zIndex: 0,
+          pointerEvents: 'none',
+          overflow: 'hidden',
+          opacity: 0.35,
+        }}>
+          <Ballpit
+            count={80}
+            gravity={0.01}
+            friction={0.9975}
+            wallBounce={0.95}
+            followCursor={false}
+            colors={[0x0dccf2, 0x22D3A3, 0xA78BFA, 0x1B3FAF, 0x0dccf2]}
+          />
+        </div>
+      )}
+
+      {/* Particle network — reduced count on mobile */}
+      <ParticleField count={isMobile ? 22 : 55} />
+
+      {/* Grid overlay */}
       <div className="lp-hero__grid" aria-hidden="true" />
+
+      {/* Original glows */}
       <div className="lp-hero__glow lp-hero__glow--1" aria-hidden="true" />
       <div className="lp-hero__glow lp-hero__glow--2" aria-hidden="true" />
 
+      {/* Extra animated orbs */}
+      <div className="lp-hero__orb lp-hero__orb--a" aria-hidden="true" />
+      <div className="lp-hero__orb lp-hero__orb--b" aria-hidden="true" />
+      <div className="lp-hero__orb lp-hero__orb--c" aria-hidden="true" />
+
       <div className="lp-container lp-hero__inner">
+        {/* ── Text column ── */}
         <div className="lp-hero__text">
           <div className="lp-hero__badge">
             <PruhLogo size={18} showText={false} variant="white" />
             <span className="lp-hero__badge-sep" />
-            ✔ built for Africa
+            <span className="lp-hero__badge-check">✔</span>
+            <span className="lp-hero__badge-text">{t('hero_badge')}</span>
           </div>
 
-          <h1 className="lp-hero__headline">
-            Protect Academic Integrity.
-            <br />
-            Run Your School{' '}
-            <span className="lp-hero__headline-gradient">Smarter.</span>
-          </h1>
+          <AnimatedHeadline />
 
           <p className="lp-hero__sub lp-hero__sub--animated">
-            Simplify <AnimatedWord /> all from one secure dashboard.
+            {t('hero_simplify_prefix')} <AnimatedWord /> {t('hero_simplify_suffix')}
           </p>
-          <p className="lp-hero__sub">
-            EK-SMS is the all-in-one platform that unifies student management, staff operations, grading, attendance, and security into one seamless experience.
-          </p>
+          <AnimatedSubHeadline />
 
           <div className="lp-hero__ctas">
-            <button className="lp-btn lp-btn--ghost lp-btn--lg" onClick={() => onNavigate('login')}>
+            <button className="lp-btn lp-btn--cta-primary lp-btn--lg" onClick={() => onNavigate('register')}>
+              <SvgIcon name="rocket" size={18} />
+              {t('hero_cta_register')}
+            </button>
+            <button className="lp-btn lp-btn--cta-outline lp-btn--lg" onClick={() => onNavigate('login')}>
               <SvgIcon name="play" size={18} />
-              View Demo
+              {t('hero_cta_demo')}
             </button>
           </div>
 
           <div className="lp-hero__trust">
-            {['Early Access Program', 'Academic Integrity Focused', 'Secure & Role-Based Access'].map((t) => (
-              <span key={t} className="lp-hero__trust-item">
+            {[t('hero_trust_0'), t('hero_trust_1'), t('hero_trust_2')].map((item) => (
+              <span key={item} className="lp-hero__trust-item">
                 <SvgIcon name="check" size={13} />
-                {t}
+                {item}
               </span>
             ))}
           </div>
         </div>
 
-        {/* Dashboard Mockup */}
-        <div className="lp-hero__mockup-wrap">
-          <div className="lp-hero__mockup">
+        {/* ── 3D Floating Dashboard ── */}
+        <div className="lp-hero__mockup-wrap lp-hero__mockup-float">
+          <div
+            className="lp-hero__mockup"
+            style={{
+              transform: `perspective(900px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
+              transition: isResting ? 'transform 0.9s ease' : 'transform 0.12s ease',
+            }}
+          >
             <div className="lp-mockup__chrome">
               <span className="lp-mockup__dot" style={{ background: '#EF4444' }} />
               <span className="lp-mockup__dot" style={{ background: '#F59E0B' }} />
               <span className="lp-mockup__dot" style={{ background: '#10B981' }} />
               <div className="lp-mockup__url" />
+              {/* blinking notification */}
+              <div className="lp-mockup__notif" aria-hidden="true" />
             </div>
+
             <div className="lp-mockup__body">
               <div className="lp-mockup__stats">
                 {[
@@ -235,26 +589,33 @@ function HeroSection({ onNavigate }) {
                 <div className="lp-mockup__bars">
                   {[40, 60, 30, 80, 50, 70, 65, 90, 55, 75].map((h, i) => (
                     <div key={i} className="lp-mockup__bar-wrap">
-                      <div className="lp-mockup__bar" style={{ height: `${h}%` }} />
+                      <div
+                        className="lp-mockup__bar lp-mockup__bar--anim"
+                        style={{ height: `${h}%`, animationDelay: `${0.5 + i * 0.07}s` }}
+                      />
                     </div>
                   ))}
                 </div>
               </div>
             </div>
           </div>
+
+          {/* Reflection glow beneath dashboard */}
+          <div className="lp-hero__mockup-glow" aria-hidden="true" />
         </div>
       </div>
 
       {/* Partners trust bar */}
-      <div className="lp-container">
-        <div className="lp-hero__partners">
-          <p className="lp-hero__partners-label">Trusted by 500+ Institutions Across Africa</p>
-          <div className="lp-hero__partners-list">
-            {['Greenwood Academy', 'Albert Academy', 'Methodist Boys HS', 'Academy Tech', 'Christ the Kings College'].map((n) => (
-              <span key={n} className="lp-hero__partner">{n}</span>
-            ))}
-          </div>
-        </div>
+      <div className="lp-hero__partners">
+        <p className="lp-hero__partners-label">{t('hero_partners_label')}</p>
+        <ScrollVelocity
+          texts={[
+            'Greenwood Academy  ·  Albert Academy  ·  Methodist Boys HS  ·  Academy Tech  ·  Christ the Kings College  ·',
+          ]}
+          velocity={60}
+          numCopies={4}
+          className="lp-hero__partner"
+        />
       </div>
     </section>
   );
@@ -263,18 +624,46 @@ function HeroSection({ onNavigate }) {
 // ============================================================
 // FEATURES SECTION
 // ============================================================
-const FEATURES_DATA = [
-  { icon: 'people',    color: '#60A5FA', title: 'Student Management',  desc: 'Centralized database for student profiles, academic history, disciplinary records and bulk enrollment.',
-    flip: true, backPoints: ['Bulk CSV / Excel student import', 'Photo, docs & disciplinary log', 'Full academic history per term', 'Search, filter & export records'] },
-  { icon: 'teacher',   color: '#A78BFA', title: 'Teacher Portal',      desc: 'Digital gradebooks, lesson planning, attendance marking, and direct parent communication channels.' },
-  { icon: 'calendar',  color: '#34D399', title: 'Smart Attendance',    desc: 'Real-time attendance tracking with automated SMS notifications sent directly to guardians.' },
-  { icon: 'payments',  color: '#FB923C', title: 'Fee Collection',      desc: 'Automated invoicing, payment tracking, reminders, and financial reporting dashboards.',
-    flip: true, backPoints: ['Multi-payment method support', 'Auto-SMS receipts to parents', 'Real-time balance & arrears view', 'Overdue fee alerts & reports'] },
-  { icon: 'analytics', color: '#F472B6', title: 'Grade Analytics',     desc: 'CA, MidTerm, and Final score tracking with auto-computed totals, letters and report card generation.' },
-  { icon: 'report',    color: '#0dccf2', title: 'Report Cards',        desc: 'One-click PDF report cards with QR-code verification, class rankings and parent-ready exports.',
-    flip: true, backPoints: ['Branded PDF with school logo', 'QR code for parent verification', 'Class rank & position included', 'Bulk-generate in one click'] },
-  { icon: 'verified',  color: '#4ADE80', title: 'Grade Integrity',     desc: 'SHA-256 hashing + Merkle-tree audit chains make grade tampering impossible and instantly detectable.' },
-  { icon: 'mail',      color: '#FBBF24', title: 'SMS & Alerts',        desc: 'Instant notifications for attendance, results, fees and announcements — parents always stay informed.' },
+const FEATURES_CATEGORIES = [
+  {
+    id: 'academics',
+    label: 'Academics',
+    icon: 'teacher',
+    color: '#34D399',
+    features: [
+      { icon: 'analytics', color: '#F472B6', title: 'Results & Grading',   desc: 'CA, MidTerm, and Final score tracking with auto-computed totals, letter grades and class rankings.',
+        flip: true, backPoints: ['CA + MidTerm + Final scoring', 'Auto-computed grade letters', 'Class rank & position', 'Bulk grade entry & locking'] },
+      { icon: 'calendar',  color: '#34D399', title: 'Attendance',           desc: 'Real-time attendance tracking with automated SMS notifications sent directly to guardians.' },
+      { icon: 'audit',     color: '#60A5FA', title: 'Timetable',            desc: 'Build weekly class schedules, assign teachers to subjects, and avoid scheduling conflicts automatically.',
+        flip: true, backPoints: ['Drag-and-drop timetable builder', 'Teacher conflict detection', 'Subject hour tracking', 'Printable weekly schedule'] },
+    ],
+  },
+  {
+    id: 'administration',
+    label: 'Administration',
+    icon: 'school',
+    color: '#A78BFA',
+    features: [
+      { icon: 'school',   color: '#0dccf2', title: 'Admissions',          desc: 'Streamlined student intake: application forms, document upload, screening, and enrollment confirmation.',
+        flip: true, backPoints: ['Online application portal', 'Document upload & verification', 'Bulk approval workflow', 'Automated acceptance letters'] },
+      { icon: 'people',   color: '#60A5FA', title: 'Student Records',     desc: 'Centralized database for student profiles, academic history, disciplinary records and bulk enrollment.',
+        flip: true, backPoints: ['Bulk CSV / Excel student import', 'Photo, docs & disciplinary log', 'Full academic history per term', 'Search, filter & export records'] },
+      { icon: 'teacher',  color: '#A78BFA', title: 'Teacher Management',  desc: 'Staff profiles, subject assignments, lesson planning, attendance marking, and parent communication.' },
+    ],
+  },
+  {
+    id: 'finance',
+    label: 'Finance',
+    icon: 'payments',
+    color: '#FB923C',
+    features: [
+      { icon: 'payments',  color: '#FB923C', title: 'Fees',               desc: 'Automated invoicing with flexible fee structures, term-based billing, and scholarship tracking.',
+        flip: true, backPoints: ['Flexible fee structure setup', 'Term-based auto-invoicing', 'Scholarship & bursary tracking', 'Multi-currency support'] },
+      { icon: 'verified',  color: '#4ADE80', title: 'Payment Tracking',   desc: 'Monitor all incoming payments, flag arrears, send automated reminders, and reconcile deposits.' },
+      { icon: 'report',    color: '#FBBF24', title: 'Reports',            desc: 'One-click financial reports: collection summaries, outstanding balances, and per-student fee statements.',
+        flip: true, backPoints: ['Collection summary by term', 'Outstanding balance reports', 'Per-student fee statements', 'Export to Excel or PDF'] },
+    ],
+  },
 ];
 
 function FlipCard({ icon, color, title, desc, backPoints, autoFlipped }) {
@@ -332,8 +721,10 @@ function FlipCard({ icon, color, title, desc, backPoints, autoFlipped }) {
 }
 
 function FeaturesSection() {
+  const [activeCategory, setActiveCategory] = useState('academics');
   const [sectionSeen, setSectionSeen] = useState(false);
   const sectionRef = useRef(null);
+  const { t } = useLang();
 
   useEffect(() => {
     const el = sectionRef.current;
@@ -346,17 +737,33 @@ function FeaturesSection() {
     return () => observer.disconnect();
   }, []);
 
+  const category = FEATURES_CATEGORIES.find(c => c.id === activeCategory);
+
   return (
     <section ref={sectionRef} className="lp-section lp-section--alt" id="features">
       <div className="lp-container">
         <div className="lp-section-header">
-          <div className="lp-badge lp-badge--primary">Everything You Need</div>
-          <h2 className="lp-section-title">Powerful Features for Modern Schools</h2>
-          <p className="lp-section-sub">Comprehensive tools designed to bridge the gap between students, teachers, and administration.</p>
+          <div className="lp-badge lp-badge--primary">{t('feat_badge')}</div>
+          <h2 className="lp-section-title">{t('feat_title')}</h2>
+          <p className="lp-section-sub">{t('feat_sub')}</p>
         </div>
 
-        <div className="lp-features-grid">
-          {FEATURES_DATA.map(({ icon, color, title, desc, flip, backPoints }) =>
+        <div className="lp-features-tabs">
+          {FEATURES_CATEGORIES.map(({ id, color, icon }) => (
+            <button
+              key={id}
+              className={`lp-features-tab${activeCategory === id ? ' lp-features-tab--active' : ''}`}
+              style={activeCategory === id ? { borderColor: color, color } : {}}
+              onClick={() => setActiveCategory(id)}
+            >
+              <SvgIcon name={icon} size={16} />
+              {t(`feat_cat_${id}`)}
+            </button>
+          ))}
+        </div>
+
+        <div className={`lp-features-grid lp-features-grid--3col${sectionSeen ? ' lp-features-grid--seen' : ''}`}>
+          {category.features.map(({ icon, color, title, desc, flip, backPoints }) =>
             flip
               ? <FlipCard key={title} icon={icon} color={color} title={title} desc={desc} backPoints={backPoints} autoFlipped={sectionSeen} />
               : (
@@ -891,6 +1298,184 @@ function TeacherDashboardMockup() {
   );
 }
 
+function ParentDashboardMockup() {
+  const primary  = '#3b82f6';
+  const cyan     = '#06b6d4';
+  const bg       = '#0f172a';
+  const card     = '#1e293b';
+  const bdr      = '1px solid #334155';
+  const muted    = '#94a3b8';
+  const txt      = '#e2e8f0';
+
+  /* Inline SVG paths for icons not in the global ICON_PATHS */
+  const bellPath    = 'M12 22a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2m6-6V11a6 6 0 0 0-5-5.92V4a1 1 0 0 0-2 0v1.08A6 6 0 0 0 6 11v5l-2 2v1h16v-1l-2-2z';
+  const trendUp     = 'M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6h-6z';
+  const homePath    = 'M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z';
+  const walletPath  = 'M21 7.28V5c0-1.1-.9-2-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2v-2.28c.59-.35 1-.98 1-1.72V9c0-.74-.41-1.37-1-1.72zM21 9v6h-7V9h7zM5 19V5h14v2h-6c-1.1 0-2 .9-2 2v6c0 1.1.9 2 2 2h6v2H5z';
+  const headsetPath = 'M12 3C7.03 3 3 7.03 3 12v1h2v-1c0-3.87 3.13-7 7-7s7 3.13 7 7v1h2v-1c0-4.97-4.03-9-9-9zM5 12H3c-.55 0-1 .45-1 1v2c0 .55.45 1 1 1h2V12zm14 0h-2v4h2c.55 0 1-.45 1-1v-2c0-.55-.45-1-1-1z';
+  const receiptPath = 'M19.5 3.5L18 2l-1.5 1.5L15 2l-1.5 1.5L12 2l-1.5 1.5L9 2 7.5 3.5 6 2 4.5 3.5 3 2v20l1.5-1.5L6 22l1.5-1.5L9 22l1.5-1.5L12 22l1.5-1.5L15 22l1.5-1.5L18 22l1.5-1.5L21 22V2l-1.5 1.5zM19 19.09H5V4.91h14v14.18zM6 15h12v2H6zm0-4h12v2H6zm0-4h12v2H6z';
+
+  const metrics = [
+    { label: 'GPA Score',  value: '3.8',  icon: ICON_PATHS.school,   color: primary,   iBg: 'rgba(59,130,246,0.12)',  iBdr: 'rgba(59,130,246,0.25)' },
+    { label: 'Attendance', value: '95%',  icon: ICON_PATHS.calendar, color: '#4ade80', iBg: 'rgba(74,222,128,0.12)',  iBdr: 'rgba(74,222,128,0.25)' },
+    { label: 'Due Fees',   value: '$150', icon: ICON_PATHS.payments,  color: '#fb923c', iBg: 'rgba(251,146,60,0.12)', iBdr: 'rgba(251,146,60,0.25)', accent: '#f97316' },
+    { label: 'Exams',      value: '2',    icon: ICON_PATHS.report,   color: '#c084fc', iBg: 'rgba(192,132,252,0.12)', iBdr: 'rgba(192,132,252,0.25)' },
+  ];
+
+  const bars = [
+    { month: 'JAN', cls: 80, ind: 60 },
+    { month: 'FEB', cls: 90, ind: 75 },
+    { month: 'MAR', cls: 85, ind: 65 },
+    { month: 'APR', cls: 95, ind: 85, hi: true },
+    { month: 'MAY', cls: 75, ind: 70 },
+  ];
+
+  const Icon = ({ path, size = 12, color = txt }) => (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill={color} style={{ flexShrink: 0 }}>
+      <path d={path} />
+    </svg>
+  );
+
+  return (
+    <div style={{ background: bg, borderRadius: '14px', overflow: 'hidden', width: '100%', fontFamily: 'Inter, system-ui, sans-serif', color: txt, display: 'flex', flexDirection: 'column', maxHeight: '460px', overflowY: 'auto', scrollbarWidth: 'none' }}>
+
+      {/* ── Header ── */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 12px', background: 'rgba(15,23,42,0.92)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', borderBottom: bdr, position: 'sticky', top: 0, zIndex: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <PruhLogo size={30} showText={false} variant="white" />
+          <div>
+            <div style={{ fontSize: '10.5px', fontWeight: 700, color: txt, lineHeight: 1.2 }}>EK-SMS Portal</div>
+            <div style={{ fontSize: '7px', color: muted }}>Parent / Guardian Access</div>
+          </div>
+        </div>
+        <div style={{ position: 'relative', width: '26px', height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: card, borderRadius: '50%', border: bdr }}>
+          <Icon path={bellPath} size={13} color={muted} />
+          <div style={{ position: 'absolute', top: '3px', right: '3px', width: '5px', height: '5px', background: '#ef4444', borderRadius: '50%' }} />
+        </div>
+      </div>
+
+      {/* ── Scrollable body ── */}
+      <div style={{ padding: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+
+        {/* Progress summary card */}
+        <div style={{ background: card, borderRadius: '12px', border: bdr, overflow: 'hidden' }}>
+          {/* Gradient banner */}
+          <div style={{ background: 'linear-gradient(135deg, #0f3460 0%, #1a4a7a 50%, #0ea5e9 100%)', padding: '14px 14px 20px', position: 'relative' }}>
+            <span style={{ background: primary, color: '#fff', fontSize: '7px', fontWeight: 700, padding: '3px 10px', borderRadius: '999px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Academic Term 2</span>
+            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '14px', background: `linear-gradient(to top, ${card}, transparent)` }} />
+          </div>
+          {/* Card body */}
+          <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '7px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <span style={{ fontSize: '11px', fontWeight: 700 }}>Progress Summary</span>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '16px', fontWeight: 700, color: cyan }}>A-</div>
+                <div style={{ fontSize: '6px', color: muted, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Avg Grade</div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '6px 0', borderTop: bdr, borderBottom: bdr }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Icon path={ICON_PATHS.audit} size={11} color="#4ade80" />
+                <span style={{ fontSize: '7.5px', fontWeight: 500 }}>98% Attendance</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Icon path={trendUp} size={11} color={cyan} />
+                <span style={{ fontSize: '7.5px', fontWeight: 500 }}>Top 5% of Class</span>
+              </div>
+            </div>
+            <div style={{ background: 'rgba(15,23,42,0.55)', padding: '7px 10px', borderRadius: '8px', borderLeft: `3px solid ${primary}` }}>
+              <div style={{ fontSize: '6px', color: muted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '3px' }}>Teacher Remark</div>
+              <p style={{ fontSize: '7px', color: '#cbd5e1', fontStyle: 'italic', lineHeight: 1.45, margin: 0 }}>
+                "Aidan is excelling in Mathematics and showing great leadership in class projects."
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Performance Metrics */}
+        <div>
+          <div style={{ fontSize: '6px', color: muted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '6px' }}>Performance Metrics</div>
+          <div style={{ display: 'flex', gap: '5px', overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: '2px' }}>
+            {metrics.map(({ label, value, icon, color, iBg, iBdr, accent }) => (
+              <div key={label} style={{ minWidth: '68px', background: card, borderRadius: '10px', border: bdr, borderTop: accent ? `2px solid ${accent}` : bdr, padding: '8px 6px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '4px', flexShrink: 0 }}>
+                <div style={{ width: '26px', height: '26px', borderRadius: '50%', background: iBg, border: `1px solid ${iBdr}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Icon path={icon} size={13} color={color} />
+                </div>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: txt }}>{value}</div>
+                <div style={{ fontSize: '5.5px', fontWeight: 700, color: muted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Performance Trend */}
+        <div style={{ background: card, borderRadius: '12px', border: bdr, padding: '10px 12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <span style={{ fontSize: '9px', fontWeight: 700 }}>Performance Trend</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '6px', fontWeight: 700, color: primary, background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: '999px', padding: '2px 8px' }}>
+              DETAILS <Icon path={ICON_PATHS.arrowRight} size={8} color={primary} />
+            </div>
+          </div>
+          <div style={{ height: '58px', display: 'flex', alignItems: 'flex-end', gap: '4px', marginBottom: '6px' }}>
+            {bars.map(({ month, cls, ind, hi }) => (
+              <div key={month} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%' }}>
+                <div style={{ width: '100%', flex: 1, background: bg, borderRadius: '3px 3px 0 0', position: 'relative' }}>
+                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(59,130,246,0.2)', borderRadius: '3px 3px 0 0', height: `${cls}%` }} />
+                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: hi ? cyan : 'rgba(6,182,212,0.4)', borderRadius: '3px 3px 0 0', height: `${ind}%`, boxShadow: hi ? '0 0 8px rgba(6,182,212,0.4)' : 'none' }} />
+                </div>
+                <span style={{ fontSize: '5.5px', fontWeight: 700, color: hi ? cyan : muted, marginTop: '3px' }}>{month}</span>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '14px', paddingTop: '6px', borderTop: bdr }}>
+            {[{ dot: cyan, label: 'Individual' }, { dot: 'rgba(59,130,246,0.4)', label: 'Class Avg' }].map(({ dot, label }) => (
+              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: dot }} />
+                <span style={{ fontSize: '5.5px', color: muted, fontWeight: 700, textTransform: 'uppercase' }}>{label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div>
+          <div style={{ fontSize: '6px', color: muted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '6px' }}>Quick Actions</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+            {[
+              { label: 'Message Teacher', path: headsetPath, color: primary, bg: 'rgba(59,130,246,0.1)', bdr: 'rgba(59,130,246,0.2)' },
+              { label: 'Pay Fees',        path: receiptPath, color: '#4ade80', bg: 'rgba(74,222,128,0.1)', bdr: 'rgba(74,222,128,0.2)' },
+            ].map(({ label, path, color, bg: aBg, bdr: aBdr }) => (
+              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '8px 10px', background: card, borderRadius: '10px', border: bdr }}>
+                <div style={{ width: '26px', height: '26px', background: aBg, borderRadius: '7px', border: `1px solid ${aBdr}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Icon path={path} size={14} color={color} />
+                </div>
+                <span style={{ fontSize: '7.5px', fontWeight: 700, color: txt }}>{label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+      </div>
+
+      {/* ── Bottom nav ── */}
+      <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', padding: '8px 12px 10px', background: 'rgba(15,23,42,0.85)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderTop: bdr, marginTop: 'auto' }}>
+        {[
+          { label: 'Home',     path: homePath,          color: primary },
+          { label: 'Academic', path: ICON_PATHS.school,  color: muted   },
+          { label: 'Finance',  path: walletPath,         color: muted   },
+          { label: 'Profile',  path: ICON_PATHS.people,  color: muted   },
+        ].map(({ label, path, color }) => (
+          <div key={label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+            <Icon path={path} size={16} color={color} />
+            <span style={{ fontSize: '6px', fontWeight: 700, color, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</span>
+          </div>
+        ))}
+      </div>
+
+    </div>
+  );
+}
+
 // ============================================================
 // ROLES SECTION
 // ============================================================
@@ -919,6 +1504,7 @@ const ROLES_DATA = [
 
 function RolesSection() {
   const [active, setActive] = useState('superadmin');
+  const { t } = useLang();
   const role = ROLES_DATA.find((r) => r.key === active);
 
   return (
@@ -926,20 +1512,20 @@ function RolesSection() {
       <div className="lp-container">
 
         <div className="lp-section-header">
-          <div className="lp-badge lp-badge--primary">Access Control</div>
-          <h2 className="lp-section-title">Tailored for Every Role</h2>
-          <p className="lp-section-sub">Tailored dashboards that empower each user without compromising system security.</p>
+          <div className="lp-badge lp-badge--primary">{t('roles_badge')}</div>
+          <h2 className="lp-section-title">{t('roles_title')}</h2>
+          <p className="lp-section-sub">{t('roles_sub')}</p>
         </div>
 
         <div className="lp-roles-tabs">
-          {ROLES_DATA.map(({ key, label, color }) => (
+          {ROLES_DATA.map(({ key, color }) => (
             <button
               key={key}
               className={`lp-roles-tab${active === key ? ' lp-roles-tab--active' : ''}`}
               style={active === key ? { borderColor: color, color } : {}}
               onClick={() => setActive(key)}
             >
-              {label}
+              {t(`role_${key}`)}
             </button>
           ))}
         </div>
@@ -950,7 +1536,7 @@ function RolesSection() {
             <div className="lp-roles-card__icon-wrap" style={{ color: role.color, background: `${role.color}18` }}>
               <SvgIcon name={role.icon} size={32} />
             </div>
-            <h3 className="lp-roles-card__title">{role.label}</h3>
+            <h3 className="lp-roles-card__title">{t(`role_${active}`)}</h3>
             <p className="lp-roles-card__sub">{role.subtitle}</p>
             <ul className="lp-roles-card__perks">
               {role.perks.map((p, i) => (
@@ -967,7 +1553,7 @@ function RolesSection() {
           </div>
 
           {/* Right panel — re-keyed to trigger mockup slide-in */}
-          <div className="lp-roles-card__right">
+          <div className="lp-roles-card__right lp-roles-card__right--float">
             <div key={active} className="lp-roles-right-anim" style={{ width: '100%' }}>
               {active === 'superadmin' ? (
                 <SuperAdminDashboardMockup />
@@ -975,23 +1561,9 @@ function RolesSection() {
                 <SchoolAdminDashboardMockup />
               ) : active === 'teacher' ? (
                 <TeacherDashboardMockup />
-              ) : (
-                <div className="lp-roles-preview">
-                  <div className="lp-roles-preview__header">
-                    <span className="lp-roles-preview__label" style={{ color: role.color }}>{role.label} Dashboard</span>
-                  </div>
-                  <div className="lp-roles-preview__grid">
-                    {[1,2,3,4,5,6].map((i) => (
-                      <div key={i} className="lp-roles-preview__block" style={i === 1 ? { borderColor: role.color, background: `${role.color}12` } : {}} />
-                    ))}
-                  </div>
-                  <div className="lp-roles-preview__bars">
-                    {[60, 80, 45, 90, 70, 55].map((h, i) => (
-                      <div key={i} className="lp-roles-preview__bar" style={{ height: `${h}%`, background: i % 2 === 0 ? role.color : `${role.color}50` }} />
-                    ))}
-                  </div>
-                </div>
-              )}
+              ) : active === 'parent' ? (
+                <ParentDashboardMockup />
+              ) : null}
             </div>
           </div>
         </div>
@@ -1011,20 +1583,21 @@ const SECURITY_FEATURES = [
 ];
 
 function SecuritySection() {
+  const { t } = useLang();
   return (
     <section className="lp-section lp-section--dark" id="security">
       <div className="lp-container lp-security__inner">
         <div className="lp-security__text">
           <div className="lp-badge lp-badge--red">
             <SvgIcon name="verified" size={14} />
-            Uncompromised Security
+            {t('sec_badge')}
           </div>
           <h2 className="lp-section-title lp-security__title">
-            Tamper-Proof Data &amp;<br />
-            <span className="lp-gradient-text">System Lockdown</span>
+            {t('sec_title_a')}<br />
+            <span className="lp-gradient-text">{t('sec_title_b')}</span>
           </h2>
           <p className="lp-section-sub">
-            Enterprise-grade encryption, immutable audit logs, and role-based access control protect every piece of sensitive data.
+            {t('sec_sub')}
           </p>
           <div className="lp-security__cards">
             {SECURITY_FEATURES.map(({ icon, color, title, desc }) => (
@@ -1082,13 +1655,15 @@ const WORKFLOW_STEPS = [
 ];
 
 function WorkflowSection() {
+  const [ref, visible] = useScrollReveal(0.08);
+  const { t } = useLang();
   return (
-    <section className="lp-section lp-section--alt" id="workflow">
+    <section ref={ref} className={`lp-section lp-section--alt lp-reveal${visible ? ' lp-reveal--visible' : ''}`} id="workflow">
       <div className="lp-container">
         <div className="lp-section-header">
-          <div className="lp-badge lp-badge--primary">How It Works</div>
-          <h2 className="lp-section-title">Get Up and Running in Minutes</h2>
-          <p className="lp-section-sub">Our streamlined onboarding means you can digitize your entire school administration without the headache.</p>
+          <div className="lp-badge lp-badge--primary">{t('workflow_badge')}</div>
+          <h2 className="lp-section-title">{t('workflow_title')}</h2>
+          <p className="lp-section-sub">{t('workflow_sub')}</p>
         </div>
 
         <div className="lp-workflow">
@@ -1112,6 +1687,157 @@ function WorkflowSection() {
 }
 
 // ============================================================
+// COMPARISON TABLE SECTION
+// ============================================================
+const COMPARE_ROWS = [
+  {
+    feature: 'Grade Integrity & Anti-tampering',
+    eksms:  { label: 'SHA-256 + Merkle audit chain', status: 'full'    },
+    excel:  { label: 'None',                          status: 'none'    },
+    basic:  { label: 'Basic password lock',           status: 'partial' },
+  },
+  {
+    feature: 'Attendance + Parent SMS Alerts',
+    eksms:  { label: 'Real-time auto-SMS to guardians', status: 'full'    },
+    excel:  { label: 'Manual register',                 status: 'none'    },
+    basic:  { label: 'Digital only, no SMS',            status: 'partial' },
+  },
+  {
+    feature: 'Parent Communication',
+    eksms:  { label: 'SMS + App + Parent Portal',   status: 'full'    },
+    excel:  { label: 'Phone calls only',             status: 'none'    },
+    basic:  { label: 'Email only',                   status: 'partial' },
+  },
+  {
+    feature: 'Fee Management & Invoicing',
+    eksms:  { label: 'Auto-invoicing + reminders',  status: 'full'    },
+    excel:  { label: 'Manual tallying',              status: 'none'    },
+    basic:  { label: 'Invoice templates only',       status: 'partial' },
+  },
+  {
+    feature: 'Report Card Generation',
+    eksms:  { label: 'One-click PDF + QR verify',   status: 'full'    },
+    excel:  { label: 'Manual typing & printing',     status: 'none'    },
+    basic:  { label: 'Basic templates',              status: 'partial' },
+  },
+  {
+    feature: 'Multi-campus Support',
+    eksms:  { label: 'Unified multi-branch dashboard', status: 'full'    },
+    excel:  { label: 'Separate file per campus',        status: 'none'    },
+    basic:  { label: 'Limited or paid add-on',          status: 'partial' },
+  },
+  {
+    feature: 'Immutable Audit Trails',
+    eksms:  { label: 'Every action logged & signed', status: 'full'    },
+    excel:  { label: 'None',                          status: 'none'    },
+    basic:  { label: 'Basic activity log',            status: 'partial' },
+  },
+  {
+    feature: 'Setup & Onboarding Time',
+    eksms:  { label: '< 30 min guided wizard',        status: 'full'    },
+    excel:  { label: 'Ongoing manual effort',          status: 'none'    },
+    basic:  { label: 'Days to weeks',                  status: 'partial' },
+  },
+  {
+    feature: 'Data Security',
+    eksms:  { label: 'AES-256 + MFA + CSP headers', status: 'full'    },
+    excel:  { label: 'File password at best',         status: 'none'    },
+    basic:  { label: 'Basic password auth',           status: 'partial' },
+  },
+  {
+    feature: 'Built for African Schools',
+    eksms:  { label: 'SL, LR & West Africa ready',  status: 'full'    },
+    excel:  { label: 'Generic, not localised',        status: 'none'    },
+    basic:  { label: 'Generic global tool',           status: 'partial' },
+  },
+];
+
+const STATUS_CONFIG = {
+  full:    { color: '#34D399', bg: 'rgba(52,211,153,0.12)',  icon: 'M5 13l4 4L19 7' },
+  partial: { color: '#FBBF24', bg: 'rgba(251,191,36,0.12)',  icon: 'M20 12H4'        },
+  none:    { color: '#F87171', bg: 'rgba(248,113,113,0.12)', icon: 'M6 18L18 6M6 6l12 12' },
+};
+
+function StatusCell({ status, label }) {
+  const cfg = STATUS_CONFIG[status];
+  return (
+    <div className="lp-compare__cell" style={{ background: cfg.bg }}>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={cfg.color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+        <path d={cfg.icon} />
+      </svg>
+      <span style={{ color: status === 'full' ? '#e2e8f0' : '#94a3b8', fontSize: '0.82rem' }}>{label}</span>
+    </div>
+  );
+}
+
+function ComparisonSection() {
+  const [ref, visible] = useScrollReveal(0.06);
+  const { t } = useLang();
+  return (
+    <section ref={ref} className={`lp-section lp-reveal${visible ? ' lp-reveal--visible' : ''}`} id="compare">
+      <div className="lp-container">
+        <div className="lp-section-header">
+          <div className="lp-badge lp-badge--primary">{t('compare_badge')}</div>
+          <h2 className="lp-section-title">{t('compare_title')}</h2>
+          <p className="lp-section-sub">{t('compare_sub')}</p>
+        </div>
+
+        <div className="lp-compare">
+          {/* Column headers */}
+          <div className="lp-compare__head">
+            <div className="lp-compare__head-feature">Feature</div>
+            <div className="lp-compare__head-col lp-compare__head-col--eksms">
+              <div className="lp-compare__head-badge">
+                <SvgIcon name="verified" size={14} />
+                EK-SMS
+              </div>
+            </div>
+            <div className="lp-compare__head-col">Excel / Manual</div>
+            <div className="lp-compare__head-col">Basic Software</div>
+          </div>
+
+          {/* Data rows */}
+          {COMPARE_ROWS.map(({ feature, eksms, excel, basic }, i) => (
+            <div key={feature} className={`lp-compare__row${i % 2 === 0 ? ' lp-compare__row--alt' : ''}`}>
+              <div className="lp-compare__feature">
+                <span className="lp-compare__feature-dot" />
+                {feature}
+              </div>
+              <div className="lp-compare__col lp-compare__col--eksms">
+                <StatusCell status={eksms.status} label={eksms.label} />
+              </div>
+              <div className="lp-compare__col">
+                <StatusCell status={excel.status} label={excel.label} />
+              </div>
+              <div className="lp-compare__col">
+                <StatusCell status={basic.status} label={basic.label} />
+              </div>
+            </div>
+          ))}
+
+          {/* Footer summary */}
+          <div className="lp-compare__footer">
+            <div className="lp-compare__legend">
+              {[['full','All features included'],['partial','Partial / limited'],['none','Not available']].map(([s, t]) => (
+                <span key={s} className="lp-compare__legend-item">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={STATUS_CONFIG[s].color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d={STATUS_CONFIG[s].icon} />
+                  </svg>
+                  {t}
+                </span>
+              ))}
+            </div>
+            <div className="lp-compare__footer-note">
+              EK-SMS scores <strong style={{ color: '#34D399' }}>10/10</strong> across every critical school management need.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ============================================================
 // FAQ SECTION
 // ============================================================
 const FAQ_ITEMS = [
@@ -1119,23 +1845,27 @@ const FAQ_ITEMS = [
   { q: 'Can we migrate from our existing system?', a: 'Absolutely. Our onboarding team specializes in data migration. We support automated tools for Excel, CSV, and custom API integrations for legacy systems — with zero data loss guaranteed.' },
   { q: 'What kind of support do you provide?',     a: 'We offer 24/7 support for all school administrators via live chat, email, and a comprehensive knowledge base. Professional and Enterprise plans include a dedicated account manager.' },
   { q: 'Is there a mobile app for parents?',       a: 'Yes! The EK-SMS Parent Portal is available on iOS and Android. Parents can view grades, attendance, pay fees, and message teachers in real-time from any device.' },
-  { q: 'Can I change plans later?',                a: 'Yes, you can upgrade or downgrade at any time. Changes take effect from your next billing cycle with no hidden fees or penalties.' },
-  { q: 'Do you offer discounts for non-profits?',  a: 'We support African education. Contact our sales team with your institution\'s details to apply for our education discount programme — typically 30-50% off.' },
+  { q: 'How secure is student data?',              a: 'All student data is protected with AES-256 encryption, role-based access control, and TLS 1.3 in transit. Only authorised users can access records, and every action is logged in an immutable audit trail with cryptographic signing.' },
+  { q: 'Can we migrate from Excel?',               a: 'Yes — EK-SMS accepts Excel (.xlsx) and CSV uploads for students, teachers, grades, timetables, and fee records. Our import wizard validates data before committing, and our onboarding team guides you through every step.' },
+  { q: 'Can parents access results online?',       a: 'Yes. Parents receive a secure login to the EK-SMS Parent Portal where they can view their child\'s grades, attendance records, report cards, and outstanding fees from any browser or the mobile app — anytime, anywhere.' },
+  { q: 'Is it mobile friendly?',                   a: 'Absolutely. The EK-SMS web dashboard is fully responsive on phones, tablets, and desktops. Dedicated iOS and Android apps are also available for parents, teachers, and administrators on the go.' },
 ];
 
 function FAQSection() {
   const [open, setOpen] = useState(0);
+  const [faqRef, faqVisible] = useScrollReveal(0.06);
+  const { t } = useLang();
   const scrollToContact = () => {
     const el = document.getElementById('contact');
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
   return (
-    <section className="lp-section lp-section--alt" id="faq">
+    <section ref={faqRef} className={`lp-section lp-section--alt lp-reveal${faqVisible ? ' lp-reveal--visible' : ''}`} id="faq">
       <div className="lp-container lp-faq__inner">
         <div className="lp-faq__header">
-          <div className="lp-badge lp-badge--primary">Support Center</div>
-          <h2 className="lp-section-title">Frequently Asked Questions</h2>
-          <p className="lp-section-sub">Find quick answers to common questions about EK-SMS.</p>
+          <div className="lp-badge lp-badge--primary">{t('faq_badge')}</div>
+          <h2 className="lp-section-title">{t('faq_title')}</h2>
+          <p className="lp-section-sub">{t('faq_sub')}</p>
         </div>
         <div className="lp-faq__list">
           {FAQ_ITEMS.map(({ q, a }, i) => (
@@ -1149,9 +1879,12 @@ function FAQSection() {
           ))}
         </div>
         <div className="lp-faq__cta-box">
-          <h3 className="lp-faq__cta-title">Still have questions?</h3>
-          <p className="lp-faq__cta-sub">Can't find the answer? Chat with our friendly team.</p>
-          <button className="lp-btn lp-btn--primary" onClick={scrollToContact}>Get in Touch <SvgIcon name="send" size={14} /></button>
+          <h3 className="lp-faq__cta-title">{t('faq_cta_title')}</h3>
+          <p className="lp-faq__cta-sub">{t('faq_cta_sub')}</p>
+          <button className="lp-btn lp-btn--cta-primary lp-btn--lg" onClick={scrollToContact}>
+            <SvgIcon name="send" size={16} />
+            {t('faq_cta_btn')}
+          </button>
         </div>
       </div>
     </section>
@@ -1162,30 +1895,32 @@ function FAQSection() {
 // ABOUT SECTION
 // ============================================================
 function AboutSection() {
+  const [ref, visible] = useScrollReveal(0.08);
+  const { t } = useLang();
   return (
-    <section className="lp-section" id="about">
+    <section ref={ref} className={`lp-section lp-reveal${visible ? ' lp-reveal--visible' : ''}`} id="about">
       <div className="lp-container">
         <div className="lp-section-header">
-          <h2 className="lp-section-title"><span className="lp-gradient-text">Empowering African Education</span></h2>
-          <p className="lp-section-sub">Bridging the digital divide for schools across the continent with next-generation management tools.</p>
+          <h2 className="lp-section-title"><span className="lp-gradient-text">{t('about_title')}</span></h2>
+          <p className="lp-section-sub">{t('about_sub')}</p>
         </div>
         <div className="lp-about__cards">
           <div className="lp-about__card">
             <div className="lp-about__card-icon"><SvgIcon name="rocket" size={24} /></div>
-            <h3 className="lp-about__card-title">Our Mission</h3>
+            <h3 className="lp-about__card-title">{t('about_mission')}</h3>
             <p className="lp-about__card-desc">To revolutionize school management across Africa through accessible, cloud-based technology that simplifies administration and enhances learning outcomes for every institution.</p>
           </div>
           <div className="lp-about__card">
             <div className="lp-about__card-icon"><SvgIcon name="analytics" size={24} /></div>
-            <h3 className="lp-about__card-title">Our Vision</h3>
+            <h3 className="lp-about__card-title">{t('about_vision')}</h3>
             <p className="lp-about__card-desc">Building a future where every African institution, regardless of location or resources, thrives with digital efficiency, data-driven insights, and tamper-proof academic integrity.</p>
           </div>
         </div>
         <div className="lp-about__pillars">
           {[
-            { icon: 'rocket',   title: 'Innovation', desc: 'Cutting-edge features tailored for modern African educational needs.' },
-            { icon: 'verified', title: 'Integrity',  desc: 'Transparent data handling, immutable audit logs, and secure systems.' },
-            { icon: 'people',   title: 'Impact',     desc: 'Real change in educational communities across the African continent.' },
+            { icon: 'rocket',   title: t('about_pillar_innov'), desc: 'Cutting-edge features tailored for modern African educational needs.' },
+            { icon: 'verified', title: t('about_pillar_integ'), desc: 'Transparent data handling, immutable audit logs, and secure systems.' },
+            { icon: 'people',   title: t('about_pillar_imp'),   desc: 'Real change in educational communities across the African continent.' },
           ].map(({ icon, title, desc }) => (
             <div key={title} className="lp-about__pillar">
               <div className="lp-about__pillar-icon"><SvgIcon name={icon} size={20} /></div>
@@ -1205,7 +1940,7 @@ function AboutSection() {
 // CONTACT SECTION
 // ============================================================
 const CONTACT_INFO = [
-  { icon: 'mail',     label: 'Email Support',  value: 'support@elkendeh.com',                color: '#0dccf2' },
+  { icon: 'mail',     label: 'Email Support',  value: 'admin@elkendeh.com',                  color: '#0dccf2' },
   { icon: 'phone',    label: 'Call Us',         value: '+231555292225 / +23278005141',         color: '#A78BFA' },
   { icon: 'location', label: 'Headquarters',    value: 'Sinkor, 21st Street Coleman Avenue',  color: '#34D399' },
 ];
@@ -1220,9 +1955,15 @@ const SUPPORT_CATS = [
 function ContactSection() {
   const [form, setForm] = useState({ name: '', email: '', subject: 'General Inquiry', message: '' });
   const [sent, setSent] = useState(false);
+  const { t } = useLang();
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const subject = encodeURIComponent(`[EK-SMS] ${form.subject} — from ${form.name}`);
+    const body = encodeURIComponent(
+      `Name: ${form.name}\nEmail: ${form.email}\nSubject: ${form.subject}\n\n${form.message}`
+    );
+    window.open(`mailto:admin@elkendeh.com?subject=${subject}&body=${body}`);
     setSent(true);
     setTimeout(() => {
       setSent(false);
@@ -1236,10 +1977,10 @@ function ContactSection() {
         <div className="lp-section-header">
           <div className="lp-badge lp-badge--primary">
             <SvgIcon name="mail" size={13} />
-            Customer Support
+            {t('contact_badge')}
           </div>
-          <h2 className="lp-section-title">Get in Touch</h2>
-          <p className="lp-section-sub">We're here to help your institution succeed. Reach out for support, sales, or general inquiries.</p>
+          <h2 className="lp-section-title">{t('contact_title')}</h2>
+          <p className="lp-section-sub">{t('contact_sub')}</p>
         </div>
 
         <div className="lp-contact__info">
@@ -1265,11 +2006,11 @@ function ContactSection() {
           <div className="lp-contact__form-wrap">
             <div className="lp-contact__form-header">
               <SvgIcon name="send" size={18} style={{ color: 'var(--lp-primary)' }} />
-              <h3 className="lp-contact__form-title">Send a Message</h3>
+              <h3 className="lp-contact__form-title">{t('contact_form_title')}</h3>
             </div>
             <form className="lp-contact__form" onSubmit={handleSubmit}>
               <div className="lp-contact__field">
-                <label className="lp-contact__label">Full Name</label>
+                <label className="lp-contact__label">{t('contact_name')}</label>
                 <div className="lp-contact__input-wrap">
                   <SvgIcon name="people" size={16} className="lp-contact__input-icon" />
                   <input
@@ -1283,7 +2024,7 @@ function ContactSection() {
                 </div>
               </div>
               <div className="lp-contact__field">
-                <label className="lp-contact__label">School Email</label>
+                <label className="lp-contact__label">{t('contact_email')}</label>
                 <div className="lp-contact__input-wrap">
                   <SvgIcon name="mail" size={16} className="lp-contact__input-icon" />
                   <input
@@ -1297,7 +2038,7 @@ function ContactSection() {
                 </div>
               </div>
               <div className="lp-contact__field">
-                <label className="lp-contact__label">Subject</label>
+                <label className="lp-contact__label">{t('contact_subject')}</label>
                 <div className="lp-contact__input-wrap">
                   <SvgIcon name="report" size={16} className="lp-contact__input-icon" />
                   <select
@@ -1314,7 +2055,7 @@ function ContactSection() {
                 </div>
               </div>
               <div className="lp-contact__field">
-                <label className="lp-contact__label">Message</label>
+                <label className="lp-contact__label">{t('contact_message')}</label>
                 <textarea
                   className="lp-contact__input lp-contact__textarea"
                   placeholder="How can we help you today?"
@@ -1329,16 +2070,16 @@ function ContactSection() {
                 className={`lp-btn lp-btn--primary lp-btn--full${sent ? ' lp-contact__btn--sent' : ''}`}
               >
                 {sent
-                  ? <><SvgIcon name="check" size={16} /> Message Sent!</>
-                  : <><SvgIcon name="send" size={16} /> Send Message</>
+                  ? <><SvgIcon name="check" size={16} /> {t('contact_sent')}</>
+                  : <><SvgIcon name="send" size={16} /> {t('contact_send')}</>
                 }
               </button>
             </form>
           </div>
 
           <div className="lp-contact__support">
-            <h3 className="lp-contact__support-title">How Can We Help?</h3>
-            <p className="lp-contact__support-sub">Browse our support categories to find the right team for your question.</p>
+            <h3 className="lp-contact__support-title">{t('contact_support_title')}</h3>
+            <p className="lp-contact__support-sub">{t('contact_support_sub')}</p>
             <div className="lp-contact__categories">
               {SUPPORT_CATS.map(({ icon, color, title, desc }) => (
                 <div key={title} className="lp-contact__category">
@@ -1367,20 +2108,59 @@ function ContactSection() {
 // CTA BANNER
 // ============================================================
 function CTABanner({ onNavigate }) {
+  const { t } = useLang();
   const scrollToContact = () => {
     const el = document.getElementById('contact');
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
   return (
     <section className="lp-cta-banner">
+      {/* Hyperspeed road animation background */}
+      <div className="lp-cta__hyperspeed">
+      <Hyperspeed effectOptions={{
+        distortion: 'turbulentDistortion',
+        length: 400,
+        roadWidth: 10,
+        islandWidth: 2,
+        lanesPerRoad: 3,
+        fov: 90,
+        fovSpeedUp: 150,
+        speedUp: 2,
+        carLightsFade: 0.4,
+        totalSideLightSticks: 20,
+        lightPairsPerRoadWay: 40,
+        shoulderLinesWidthPercentage: 0.05,
+        brokenLinesWidthPercentage: 0.1,
+        brokenLinesLengthPercentage: 0.5,
+        lightStickWidth: [0.12, 0.5],
+        lightStickHeight: [1.3, 1.7],
+        movingAwaySpeed: [60, 80],
+        movingCloserSpeed: [-120, -160],
+        carLightsLength: [12, 80],
+        carLightsRadius: [0.05, 0.14],
+        carWidthPercentage: [0.3, 0.5],
+        carShiftX: [-0.8, 0.8],
+        carFloorSeparation: [0, 5],
+        colors: {
+          roadColor: 0x080808,
+          islandColor: 0x0a0a0a,
+          background: 0x000000,
+          shoulderLines: 0x131318,
+          brokenLines: 0x131318,
+          leftCars:  [0x0dccf2, 0x22D3A3, 0xA78BFA],
+          rightCars: [0x03b3c3, 0x0e5ea5, 0x1B3FAF],
+          sticks: 0x0dccf2,
+        },
+      }} />
+      </div>
       <div className="lp-cta-banner__glow" aria-hidden="true" />
       <div className="lp-container lp-cta-banner__inner">
-        <h2 className="lp-cta-banner__title">Ready to transform your school?</h2>
-        <p className="lp-cta-banner__sub">Join hundreds of African institutions modernizing their education management with EK-SMS today.</p>
+        <h2 className="lp-cta-banner__title">{t('cta_title')}</h2>
+        <p className="lp-cta-banner__sub">{t('cta_sub')}</p>
         <div className="lp-cta-banner__actions">
-          <button className="lp-btn lp-btn--white lp-btn--lg" onClick={() => onNavigate('register')}>Book a Demo</button>
+          <button className="lp-btn lp-btn--white lp-btn--lg" onClick={() => onNavigate('register')}>{t('cta_primary')}</button>
           <button className="lp-btn lp-btn--ghost-white lp-btn--lg" onClick={scrollToContact}>
-            Contact Support <SvgIcon name="arrowRight" size={16} />
+            {t('cta_secondary')} <SvgIcon name="arrowRight" size={16} />
           </button>
         </div>
       </div>
@@ -1392,18 +2172,20 @@ function CTABanner({ onNavigate }) {
 // FOOTER
 // ============================================================
 function Footer({ onNavigate }) {
+  const { t } = useLang();
   const scrollTo = (id) => { const el = document.getElementById(id); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
 
   return (
     <footer className="lp-footer">
       <div className="lp-container">
+        <WaitlistCapture />
         <div className="lp-footer__grid">
           <div className="lp-footer__brand">
             <div className="lp-footer__brand-row">
               <PruhLogo size={36} showText={true} variant="white" textColor="rgba(255,255,255,0.92)" />
             </div>
             <p className="lp-footer__brand-product">2026 EL-KENDEH School Management System (EK-SMS)</p>
-            <p className="lp-footer__brand-tagline">Empowering education through technology across Africa.</p>
+            <p className="lp-footer__brand-tagline">{t('footer_tagline')}</p>
             <div className="lp-footer__socials">
               {['facebook', 'twitter', 'linkedin'].map((s) => (
                 <button key={s} className="lp-footer__social" aria-label={s}><SvgIcon name={s} size={16} /></button>
@@ -1412,7 +2194,7 @@ function Footer({ onNavigate }) {
           </div>
 
           <div className="lp-footer__col">
-            <h4 className="lp-footer__col-title">Product</h4>
+            <h4 className="lp-footer__col-title">{t('footer_product')}</h4>
             <ul className="lp-footer__links">
               {[['Features','features'],['Security','security'],['Workflow','workflow']].map(([l,id]) => (
                 <li key={l}><button className="lp-footer__link" onClick={() => scrollTo(id)}>{l}</button></li>
@@ -1421,7 +2203,7 @@ function Footer({ onNavigate }) {
           </div>
 
           <div className="lp-footer__col">
-            <h4 className="lp-footer__col-title">Resources</h4>
+            <h4 className="lp-footer__col-title">{t('footer_resources')}</h4>
             <ul className="lp-footer__links">
               {['Blog', 'Case Studies', 'Documentation', 'API Reference', 'Support Center'].map((l) => (
                 <li key={l}><span className="lp-footer__link">{l}</span></li>
@@ -1430,7 +2212,7 @@ function Footer({ onNavigate }) {
           </div>
 
           <div className="lp-footer__col">
-            <h4 className="lp-footer__col-title">Company</h4>
+            <h4 className="lp-footer__col-title">{t('footer_company')}</h4>
             <ul className="lp-footer__links">
               {[['About Us','about'],['Team','team'],['FAQ','faq'],['Contact','contact']].map(([l,id]) => (
                 <li key={l}><button className="lp-footer__link" onClick={() => scrollTo(id)}>{l}</button></li>
@@ -1441,15 +2223,462 @@ function Footer({ onNavigate }) {
         </div>
 
         <div className="lp-footer__bottom">
-          <p className="lp-footer__copy">© 2026 EL-KENDEH School Management System (EK-SMS). All rights reserved.</p>
+          <p className="lp-footer__copy">{t('footer_copy')}</p>
           <div className="lp-footer__legal">
-            {['Privacy Policy', 'Terms of Service', 'Cookie Settings'].map((l) => (
+            {[t('footer_privacy'), t('footer_terms'), t('footer_cookies')].map((l) => (
               <span key={l} className="lp-footer__legal-link">{l}</span>
             ))}
           </div>
         </div>
       </div>
     </footer>
+  );
+}
+
+// ============================================================
+// LIVE CHAT WIDGET — Tawk.to-style UI
+// ============================================================
+const AUTO_REPLY = "Thanks for reaching out! 😊 Our team will get back to you shortly. For urgent matters email admin@elkendeh.com";
+
+function ChatWidget() {
+  const { t } = useLang();
+  const [open, setOpen]       = useState(false);
+  const [input, setInput]     = useState('');
+  const [typing, setTyping]   = useState(false);
+  const [messages, setMessages] = useState([
+    { id: 1, from: 'agent', text: "Hi there! 👋 Welcome to EK-SMS Support. How can we help you today?", time: 'Just now' },
+  ]);
+  const bodyRef = useRef(null);
+
+  useEffect(() => {
+    if (bodyRef.current) {
+      bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
+    }
+  }, [messages, typing, open]);
+
+  const handleSend = () => {
+    const text = input.trim();
+    if (!text) return;
+    const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    setMessages(p => [...p, { id: Date.now(), from: 'user', text, time: now }]);
+    setInput('');
+    setTyping(true);
+    setTimeout(() => {
+      setTyping(false);
+      setMessages(p => [...p, { id: Date.now() + 1, from: 'agent', text: AUTO_REPLY, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]);
+    }, 1600);
+  };
+
+  return (
+    <>
+      {/* ── Chat panel ── */}
+      {open && (
+        <div className="lp-chat__panel" role="dialog" aria-label="Support chat">
+
+          {/* Header */}
+          <div className="lp-chat__header">
+            <div className="lp-chat__header-left">
+              <div className="lp-chat__header-avatar">
+                <PruhLogo size={30} variant="white" />
+              </div>
+              <div>
+                <p className="lp-chat__header-name">EK-SMS Support</p>
+                <p className="lp-chat__header-status">
+                  <span className="lp-chat__status-dot" />
+                  Online · replies immediately
+                </p>
+              </div>
+            </div>
+            <button className="lp-chat__header-close" onClick={() => setOpen(false)} aria-label="Close">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+
+          {/* Messages */}
+          <div className="lp-chat__body" ref={bodyRef}>
+            {messages.map(msg => (
+              <div key={msg.id} className={`lp-chat__row lp-chat__row--${msg.from}`}>
+                {msg.from === 'agent' && (
+                  <div className="lp-chat__agent-avatar">
+                    <PruhLogo size={22} variant="white" />
+                  </div>
+                )}
+                <div className="lp-chat__bubble-wrap">
+                  <div className={`lp-chat__bubble lp-chat__bubble--${msg.from}`}>
+                    {msg.text}
+                  </div>
+                  <span className="lp-chat__time">{msg.time}</span>
+                </div>
+              </div>
+            ))}
+            {typing && (
+              <div className="lp-chat__row lp-chat__row--agent">
+                <div className="lp-chat__agent-avatar">
+                  <PruhLogo size={22} variant="white" />
+                </div>
+                <div className="lp-chat__typing">
+                  <span /><span /><span />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Input */}
+          <div className="lp-chat__footer">
+            <input
+              className="lp-chat__input"
+              type="text"
+              placeholder="Type a message…"
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleSend()}
+              maxLength={500}
+            />
+            <button
+              className="lp-chat__send"
+              onClick={handleSend}
+              disabled={!input.trim()}
+              aria-label="Send message"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── FAB ── */}
+      <button
+        className={`lp-chat__fab${open ? ' lp-chat__fab--open' : ''}`}
+        onClick={() => setOpen(v => !v)}
+        aria-label={open ? 'Close chat' : 'Open support chat'}
+      >
+        {open ? (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+          </svg>
+        ) : (
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/>
+          </svg>
+        )}
+        {!open && <span className="lp-chat__fab-dot" />}
+      </button>
+    </>
+  );
+}
+
+// ============================================================
+// TESTIMONIALS SECTION
+// ============================================================
+const TESTIMONIALS = [
+  {
+    name: 'Ibrahim Sesay',
+    role: 'Principal',
+    school: 'Albert Academy, Freetown',
+    initials: 'IS',
+    color: '#0dccf2',
+    quote: 'EK-SMS transformed how we manage student records and fees. What used to take days now takes minutes. Our teachers spend more time teaching and less time on paperwork.',
+    stars: 5,
+  },
+  {
+    name: 'Aminata Koroma',
+    role: 'School Administrator',
+    school: 'Greenwood Academy, Bo',
+    initials: 'AK',
+    color: '#22D3A3',
+    quote: 'The attendance tracking and parent SMS notifications are a game-changer. Parents get real-time updates about their children, and our attendance improved noticeably within weeks.',
+    stars: 5,
+  },
+  {
+    name: 'Mohamed Jalloh',
+    role: 'Head of Academics',
+    school: "Methodist Boys' HS, Freetown",
+    initials: 'MJ',
+    color: '#A78BFA',
+    quote: 'The grade audit trail gives us full accountability. We finally have confidence that results are transparent and tamper-proof — something our school community has been asking for.',
+    stars: 5,
+  },
+];
+
+function TestimonialsSection() {
+  const { t } = useLang();
+
+  return (
+    <section className="lp-section lp-section--alt" id="testimonials">
+      <div className="lp-container">
+        <div className="lp-section-header">
+          <div className="lp-badge lp-badge--primary">{t('test_badge')}</div>
+          <h2 className="lp-section-title">{t('test_title')}</h2>
+          <p className="lp-section-sub">{t('test_sub')}</p>
+        </div>
+
+        <div className="lp-testimonials-grid">
+          {TESTIMONIALS.map(({ name, role, school, initials, color, quote, stars }) => (
+            <div key={name} className="lp-testimonial-card" style={{ '--card-accent': color }}>
+              <div className="lp-testimonial-stars">
+                {Array.from({ length: stars }, (_, i) => (
+                  <SvgIcon key={i} name="star" size={14} style={{ color: '#FBBF24' }} />
+                ))}
+              </div>
+              <blockquote className="lp-testimonial-quote">"{quote}"</blockquote>
+              <div className="lp-testimonial-author">
+                <div className="lp-testimonial-avatar" style={{ background: `${color}20`, color }}>
+                  {initials}
+                </div>
+                <div className="lp-testimonial-author-info">
+                  <div className="lp-testimonial-name">{name}</div>
+                  <div className="lp-testimonial-meta">{role} · {school}</div>
+                </div>
+                <span className="lp-testimonial-tag">Beta</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="lp-testimonials-cta">
+          <p className="lp-testimonials-cta__title">{t('test_be_first')}</p>
+          <p className="lp-testimonials-cta__sub">{t('test_be_first_sub')}</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ============================================================
+// SCROLL UI — progress bar + back-to-top
+// ============================================================
+function ScrollUI() {
+  const [progress, setProgress] = useState(0);
+  const [showTop, setShowTop]   = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => {
+      const scrollTop  = window.scrollY;
+      const docHeight  = document.documentElement.scrollHeight - window.innerHeight;
+      setProgress(docHeight > 0 ? (scrollTop / docHeight) * 100 : 0);
+      setShowTop(scrollTop > 400);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  return (
+    <>
+      <div className="lp-scroll-progress" style={{ width: `${progress}%` }} aria-hidden="true" />
+      {showTop && (
+        <button
+          className="lp-back-top"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          aria-label="Back to top"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6 1.41 1.41z"/>
+          </svg>
+        </button>
+      )}
+    </>
+  );
+}
+
+// ============================================================
+// WAITLIST EMAIL CAPTURE (footer)
+// ============================================================
+function WaitlistCapture() {
+  const [email,  setEmail]  = useState('');
+  const [status, setStatus] = useState(null); // null | 'loading' | 'success' | 'error'
+  const [msg,    setMsg]    = useState('');
+  const { t } = useLang();
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setStatus('loading');
+    try {
+      const res  = await fetch('/api/waitlist/', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      setStatus(data.success ? 'success' : 'error');
+      setMsg(data.message);
+    } catch {
+      setStatus('error');
+      setMsg('Something went wrong. Please try again.');
+    }
+  };
+
+  return (
+    <div className="lp-waitlist">
+      <p className="lp-waitlist__title">{t('waitlist_title')}</p>
+      <p className="lp-waitlist__sub">{t('waitlist_sub')}</p>
+      {status === 'success' ? (
+        <div className="lp-waitlist__success">
+          <SvgIcon name="check" size={15} />
+          {msg}
+        </div>
+      ) : (
+        <form className="lp-waitlist__form" onSubmit={submit}>
+          <input
+            className="lp-waitlist__input"
+            type="email"
+            placeholder={t('waitlist_placeholder')}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+          <button type="submit" className="lp-waitlist__btn" disabled={status === 'loading'}>
+            {status === 'loading' ? '…' : t('waitlist_btn')}
+          </button>
+        </form>
+      )}
+      {status === 'error' && <p className="lp-waitlist__error">{msg}</p>}
+    </div>
+  );
+}
+
+// ============================================================
+// COUNTDOWN URGENCY STRIP (below navbar)
+// ============================================================
+const LAUNCH_DATE  = new Date('2026-04-30T23:59:59');
+const SPOTS_LEFT   = 12;
+
+function CountdownStrip() {
+  const [timeLeft,  setTimeLeft]  = useState(null);
+  const [dismissed, setDismissed] = useState(
+    () => sessionStorage.getItem('ek_countdown_dismissed') === '1'
+  );
+
+  useEffect(() => {
+    if (dismissed) return;
+    const tick = () => {
+      const diff = LAUNCH_DATE - Date.now();
+      if (diff <= 0) { setTimeLeft(null); return; }
+      setTimeLeft({
+        d: Math.floor(diff / 86400000),
+        h: Math.floor((diff % 86400000) / 3600000),
+        m: Math.floor((diff % 3600000)  / 60000),
+        s: Math.floor((diff % 60000)    / 1000),
+      });
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [dismissed]);
+
+  if (dismissed || !timeLeft) return null;
+
+  const dismiss = () => {
+    sessionStorage.setItem('ek_countdown_dismissed', '1');
+    setDismissed(true);
+  };
+
+  return (
+    <div className="lp-countdown" role="banner">
+      <div className="lp-countdown__inner">
+        <span className="lp-countdown__pill">Early Access</span>
+        <span className="lp-countdown__text">
+          First <strong>50 schools</strong> get 3 months free —
+          <strong className="lp-countdown__spots"> {SPOTS_LEFT} spots left</strong>
+        </span>
+        <div className="lp-countdown__timer" aria-label="Time remaining">
+          {[['d','days'],['h','hrs'],['m','min'],['s','sec']].map(([k, label]) => (
+            <span key={k} className="lp-countdown__unit">
+              <span className="lp-countdown__num">{String(timeLeft[k]).padStart(2,'0')}</span>
+              <span className="lp-countdown__label">{label}</span>
+            </span>
+          ))}
+        </div>
+      </div>
+      <button className="lp-countdown__close" onClick={dismiss} aria-label="Dismiss banner">
+        <SvgIcon name="close" size={14} />
+      </button>
+    </div>
+  );
+}
+
+// ============================================================
+// TRUST BADGES STRIP (between hero and stats)
+// ============================================================
+const TRUST_BADGES = [
+  { icon: 'lock',     label: 'SSL Encrypted',                color: '#0dccf2' },
+  { icon: 'verified', label: 'GDPR Ready',                   color: '#22D3A3' },
+  { icon: 'audit',    label: '99.9% Uptime Target',          color: '#A78BFA' },
+  { icon: 'school',   label: 'African Data Laws Compliant',  color: '#FB923C' },
+];
+
+function TrustBadgesStrip() {
+  return (
+    <div className="lp-trust-strip" aria-label="Trust and compliance signals">
+      <div className="lp-container lp-trust-strip__inner">
+        {TRUST_BADGES.map(({ icon, label, color }) => (
+          <div key={label} className="lp-trust-badge" style={{ '--badge-color': color }}>
+            <div className="lp-trust-badge__icon">
+              <SvgIcon name={icon} size={16} />
+            </div>
+            <span className="lp-trust-badge__label">{label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// COOKIE CONSENT BANNER
+// ============================================================
+const COOKIE_KEY = 'ek_cookie_consent';
+
+function CookieConsent() {
+  const { t } = useLang();
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    /* Delay slightly so it doesn't compete with page load animation */
+    const timer = setTimeout(() => {
+      if (!localStorage.getItem(COOKIE_KEY)) setVisible(true);
+    }, 1800);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const accept = () => {
+    localStorage.setItem(COOKIE_KEY, 'accepted');
+    setVisible(false);
+  };
+
+  const decline = () => {
+    localStorage.setItem(COOKIE_KEY, 'declined');
+    setVisible(false);
+  };
+
+  if (!visible) return null;
+
+  return (
+    <div className="lp-cookie" role="dialog" aria-label="Cookie consent" aria-live="polite">
+      {/* Shield icon */}
+      <div className="lp-cookie__icon" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 4l6 2.67V11c0 3.72-2.56 7.18-6 8.19C8.56 18.18 6 14.72 6 11V7.67L12 5z"/>
+        </svg>
+      </div>
+
+      <div className="lp-cookie__body">
+        <p className="lp-cookie__title">{t('cookie_title')}</p>
+        <p className="lp-cookie__desc">{t('cookie_desc')}</p>
+      </div>
+
+      <div className="lp-cookie__actions">
+        <button className="lp-cookie__btn lp-cookie__btn--accept" onClick={accept}>
+          {t('cookie_accept')}
+        </button>
+        <button className="lp-cookie__btn lp-cookie__btn--decline" onClick={decline}>
+          {t('cookie_decline')}
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -1466,20 +2695,41 @@ export default function Landing({ onNavigate }) {
   }, []);
 
   return (
-    <div className="lp">
-      <Navbar onNavigate={onNavigate} menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
-      <main>
-        <HeroSection onNavigate={onNavigate} />
-        <FeaturesSection />
-        <RolesSection />
-        <SecuritySection />
-        <WorkflowSection />
-        <FAQSection />
-        <AboutSection />
-        <ContactSection />
-        <CTABanner onNavigate={onNavigate} />
-      </main>
-      <Footer onNavigate={onNavigate} />
-    </div>
+    <LanguageProvider>
+      <ClickSpark
+        sparkColor="#0dccf2"
+        sparkSize={12}
+        sparkRadius={22}
+        sparkCount={10}
+        duration={500}
+        easing="ease-out"
+        extraScale={1.2}
+      >
+        <div className="lp">
+          <Navbar onNavigate={onNavigate} menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
+          <main>
+            <HeroSection onNavigate={onNavigate} />
+            <TrustBadgesStrip />
+            <StatsSection />
+            <FeaturesSection />
+            <RolesSection />
+            <SecuritySection />
+            <WorkflowSection />
+            <TestimonialsSection />
+            <ComparisonSection />
+            <FAQSection />
+            <AboutSection />
+            <ContactSection />
+            <CTABanner onNavigate={onNavigate} />
+          </main>
+          <Footer onNavigate={onNavigate} />
+          <ChatWidget />
+          <CursorGlow />
+          <InstallPrompt />
+          <ScrollUI />
+          <CookieConsent />
+        </div>
+      </ClickSpark>
+    </LanguageProvider>
   );
 }

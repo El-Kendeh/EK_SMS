@@ -431,3 +431,28 @@ def api_approve_school(request):
         return JsonResponse({'success': False, 'message': 'School not found.'}, status=404)
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+# ---------------------------------------------------------------------------
+# Waitlist — email capture from landing page
+# ---------------------------------------------------------------------------
+@require_http_methods(["POST"])
+@csrf_exempt
+def api_waitlist(request):
+    try:
+        data    = json.loads(request.body)
+        email   = data.get('email', '').strip().lower()
+        country = data.get('country', '').strip()
+
+        if not email or not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', email):
+            return JsonResponse({'success': False, 'message': 'Please enter a valid email address.'}, status=400)
+
+        from eksms_core.models import WaitlistEmail
+        _, created = WaitlistEmail.objects.get_or_create(
+            email=email, defaults={'country': country}
+        )
+        msg = "You're on the list! We'll notify you at launch." if created else "You're already on our list — we'll be in touch!"
+        return JsonResponse({'success': True, 'message': msg})
+
+    except Exception:
+        return JsonResponse({'success': False, 'message': 'Something went wrong. Please try again.'}, status=500)

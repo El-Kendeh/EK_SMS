@@ -35,6 +35,12 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+.pending-brand {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
 .pending-icon-glow {
   width: 80px;
   height: 80px;

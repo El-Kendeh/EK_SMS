@@ -779,3 +779,20 @@ class StaffAccountAuditLog(models.Model):
     
     def __str__(self):
         return f"{self.staff_account} - {self.get_action_display()} - {self.created_at}"
+
+
+# ---------------------------------------------------------------------------
+# Waitlist — landing page email capture
+# ---------------------------------------------------------------------------
+class WaitlistEmail(models.Model):
+    email      = models.EmailField(unique=True)
+    country    = models.CharField(max_length=100, blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name        = 'Waitlist Email'
+        verbose_name_plural = 'Waitlist Emails'
+
+    def __str__(self):
+        return self.email

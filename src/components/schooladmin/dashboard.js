@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import './dashboard.css';
+import PruhLogo from '../PruhLogo';
 
 const GradCapIcon = () => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="48" height="48">
@@ -57,6 +58,9 @@ function SchoolAdminDashboard({ onNavigate }) {
             <div className="sa-dashboard pending">
                 <div className="pending-container">
                     <div className="pending-card">
+                        <div className="pending-brand">
+                            <PruhLogo size={48} variant="white" />
+                        </div>
                         <div className="pending-icon-glow">
                             <ClockIcon />
                         </div>
@@ -94,7 +98,7 @@ function SchoolAdminDashboard({ onNavigate }) {
         <div className="sa-dashboard approved">
             <header className="sa-header">
                 <div className="sa-logo-section">
-                    <div className="sa-logo-icon"><GradCapIcon /></div>
+                    <div className="sa-logo-icon"><PruhLogo size={40} variant="white" /></div>
                     <div className="sa-school-info">
                         <h1 className="sa-school-name">{user.school.name}</h1>
                         <span className="sa-role-badge">School Administrator</span>
