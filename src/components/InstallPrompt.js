@@ -14,7 +14,7 @@ import { useLang } from '../i18n/LanguageContext';
    don't nag repeat visitors.
    ============================================================ */
 
-const DISMISS_KEY    = 'ek_install_dismissed';
+const DISMISS_KEY    = 'ek_install_dismissed_v2'; // v2: reset after icon update
 const DISMISS_EXPIRY = 30 * 24 * 60 * 60 * 1000; // 30 days in ms
 
 function isDismissed() {
@@ -92,7 +92,7 @@ export default function InstallPrompt() {
     <div className="ip-banner" role="dialog" aria-label={t('install_title')}>
       {/* App icon */}
       <div className="ip-banner__icon" aria-hidden="true">
-        <img src="/icon.jpeg" alt="EK-SMS" width={40} height={40} />
+        <img src="/logo192.png" alt="EK-SMS" width={40} height={40} style={{ borderRadius: '8px' }} />
       </div>
 
       {/* Text */}

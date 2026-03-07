@@ -4523,6 +4523,13 @@ body { overflow-x: hidden; max-width: 100%; }
   .lp-footer {
     padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
   }
+  /* Keep install prompt and cookie banner above the home indicator */
+  .ip-banner {
+    bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+  }
+  .lp-cookie {
+    bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -4645,7 +4652,7 @@ body { overflow-x: hidden; max-width: 100%; }
    ───────────────────────────────────────────────────────────── */
 .ip-banner {
   position: fixed;
-  bottom: 84px;              /* sits above the chat FAB */
+  bottom: 90px;              /* sits above the chat FAB */
   left: 50%;
   transform: translateX(-50%);
   width: calc(100vw - 32px);
@@ -4958,7 +4965,7 @@ body { overflow-x: hidden; max-width: 100%; }
    ───────────────────────────────────────────────────────────── */
 .lp-cookie {
   position: fixed;
-  bottom: 24px;
+  bottom: 90px;             /* above chat FAB on all screen sizes */
   left: 50%;
   transform: translateX(-50%);
   width: min(92vw, 760px);
@@ -4972,7 +4979,7 @@ body { overflow-x: hidden; max-width: 100%; }
   -webkit-backdrop-filter: blur(18px);
   backdrop-filter: blur(18px);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255,255,255,0.04);
-  z-index: 1100;
+  z-index: 10002;           /* above chat FAB (9997) and install prompt (10000) */
   animation: cookieSlideUp 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
