@@ -494,6 +494,13 @@ function HeroSection({ onNavigate }) {
       <div className="lp-container lp-hero__inner">
         {/* ── Text column ── */}
         <div className="lp-hero__text">
+          {/* ── Ownership eyebrow ── */}
+          <div className="lp-hero__owner" aria-label="El-kendeh School Management System">
+            <span className="lp-hero__owner-brand">El-kendeh</span>
+            <span className="lp-hero__owner-sep" aria-hidden="true" />
+            <span className="lp-hero__owner-label">School Management System</span>
+          </div>
+
           <div className="lp-hero__badge">
             <PruhLogo size={18} showText={false} variant="white" />
             <span className="lp-hero__badge-sep" />
