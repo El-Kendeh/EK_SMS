@@ -135,6 +135,18 @@ const LegalIcon = () => (
 /* ================================================================
    Constants
    ================================================================ */
+const DEFAULT_FORM = {
+  institutionName: '', institutionType: '', established: '', motto: '',
+  registrationNumber: '', estimatedTeachers: '', brandColors: [],
+  address: '', city: '', region: '', country: '',
+  phoneCode: '+232', phoneNumber: '', email: '', website: '',
+  firstName: '', lastName: '', adminUsername: '', adminEmail: '',
+  adminPhoneCode: '+232', adminPhoneNumber: '', password: '', confirmPassword: '',
+  enable2FA: true, capacity: '1000', academicSystem: 'trimester',
+  gradingSystem: 'percentage', language: 'English',
+  agreementAccuracy: false, agreementDataProtection: false, agreementAuthorized: false,
+};
+
 const STEPS = [
   { key: 'info',     label: 'Info' },
   { key: 'location', label: 'Location' },
@@ -142,6 +154,7 @@ const STEPS = [
   { key: 'admin',    label: 'Admin' },
   { key: 'settings', label: 'Settings' },
   { key: 'legal',    label: 'Legal' },
+  { key: 'verify',   label: 'Verify' },
   { key: 'review',   label: 'Review' },
 ];
 
@@ -787,7 +800,7 @@ function LegalModal({ tab, onClose }) {
 /* ================================================================
    Helper: Field wrapper
    ================================================================ */
-function Field({ id, label, required, hint, children }) {
+function Field({ id, label, required, hint, error, children }) {
   return (
     <div className="form-field">
       <label htmlFor={id}>
@@ -795,7 +808,10 @@ function Field({ id, label, required, hint, children }) {
         {required && <span className="req"> *</span>}
       </label>
       {children}
-      {hint && <p className="input-hint">{hint}</p>}
+      {error
+        ? <p className="field-error" role="alert">{error}</p>
+        : hint && <p className="input-hint">{hint}</p>
+      }
     </div>
   );
 }
@@ -804,62 +820,46 @@ function Field({ id, label, required, hint, children }) {
    Main Register Component
    ================================================================ */
 function Register({ onNavigate }) {
-  const [step, setStep]               = useState(1);
-  const [submitted, setSubmitted]     = useState(false);
-  const [isLoading, setIsLoading]     = useState(false);
+  /* ── Restore step + form from sessionStorage on mount ── */
+  const [step, setStep] = useState(() => {
+    try { const s = sessionStorage.getItem('ek_reg_step'); return s ? parseInt(s, 10) : 1; }
+    catch { return 1; }
+  });
+  const [form, setForm] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('ek_reg_form');
+      return saved ? { ...DEFAULT_FORM, ...JSON.parse(saved) } : DEFAULT_FORM;
+    } catch { return DEFAULT_FORM; }
+  });
+
+  const [submitted, setSubmitted]       = useState(false);
+  const [isLoading, setIsLoading]       = useState(false);
   const [checkingName, setCheckingName] = useState(false);
-  const [error, setError]             = useState('');
-  const [showPwd, setShowPwd]         = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
+  const [error, setError]               = useState('');
+  const [showPwd, setShowPwd]           = useState(false);
+  const [showConfirm, setShowConfirm]   = useState(false);
+
+  /* Inline per-field validation */
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [touched, setTouched]         = useState({}); // eslint-disable-line no-unused-vars
+
+  /* OTP verification (step 7) */
+  const [otpSent, setOtpSent]             = useState(false);
+  const [otpInput, setOtpInput]           = useState('');
+  const [otpVerified, setOtpVerified]     = useState(false);
+  const [otpError, setOtpError]           = useState('');
+  const [otpLoading, setOtpLoading]       = useState(false);
+  const [otpResendTimer, setOtpResendTimer] = useState(0);
+  const [otpSkipped, setOtpSkipped]       = useState(false);
 
   /* Badge file state (separate — File objects can't be JSON-serialised) */
   const [badgeFile, setBadgeFile]       = useState(null);
   const [badgePreview, setBadgePreview] = useState('');
   const badgeInputRef = useRef(null);
 
-  const [legalModal, setLegalModal]           = useState(null); /* 'terms' | 'privacy' | null */
+  const [legalModal, setLegalModal]             = useState(null);
   const [showLeaveWarning, setShowLeaveWarning] = useState(false);
   const [autoDetectedCountry, setAutoDetectedCountry] = useState(null);
-
-  const [form, setForm] = useState({
-    /* Step 1 — Info */
-    institutionName:    '',
-    institutionType:    '',
-    established:        '',
-    motto:              '',
-    registrationNumber: '',
-    estimatedTeachers:  '',
-    brandColors:        [],
-    /* Step 2 — Location */
-    address: '',
-    city:    '',
-    region:  '',
-    country: '',
-    /* Step 3 — Contact */
-    phoneCode:   '+232',
-    phoneNumber: '',
-    email:       '',
-    website:     '',
-    /* Step 4 — Admin */
-    firstName:        '',
-    lastName:         '',
-    adminUsername:    '',
-    adminEmail:       '',
-    adminPhoneCode:   '+232',
-    adminPhoneNumber: '',
-    password:         '',
-    confirmPassword:  '',
-    enable2FA:        true,
-    /* Step 5 — Settings */
-    capacity:       '1000',
-    academicSystem: 'trimester',
-    gradingSystem:  'percentage',
-    language:       'English',
-    /* Step 6 — Legal */
-    agreementAccuracy:        false,
-    agreementDataProtection:  false,
-    agreementAuthorized:      false,
-  });
 
   const set    = (field) => (e) => setForm((p) => ({ ...p, [field]: e.target.value }));
   const setChk = (field) => (e) => setForm((p) => ({ ...p, [field]: e.target.checked }));
@@ -916,6 +916,125 @@ function Register({ onNavigate }) {
     else onNavigate && onNavigate('home');
   };
 
+  /* ---- sessionStorage auto-save (form + step) ---- */
+  useEffect(() => {
+    try { sessionStorage.setItem('ek_reg_form', JSON.stringify(form)); } catch {}
+  }, [form]);
+  useEffect(() => {
+    try { sessionStorage.setItem('ek_reg_step', String(step)); } catch {}
+  }, [step]);
+
+  /* ---- OTP resend countdown ---- */
+  useEffect(() => {
+    if (otpResendTimer <= 0) return;
+    const id = setTimeout(() => setOtpResendTimer((t) => t - 1), 1000);
+    return () => clearTimeout(id);
+  }, [otpResendTimer]);
+
+  /* ---- Auto-send OTP when user reaches Verify step ---- */
+  useEffect(() => {
+    if (step === 7 && !otpSent && !otpLoading && !otpVerified && !otpSkipped) {
+      sendOtp(); // eslint-disable-line react-hooks/exhaustive-deps
+    }
+  }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* ---- Inline field validation ---- */
+  const validateFieldInline = (field) => {
+    const v = form[field] ?? '';
+    switch (field) {
+      case 'institutionName': return !v.trim() ? 'Institution name is required.' : null;
+      case 'institutionType': return !v ? 'Please select an institution type.' : null;
+      case 'address':         return !v.trim() ? 'Street address is required.' : null;
+      case 'city':            return !v.trim() ? 'City is required.' : null;
+      case 'country':         return !v ? 'Please select a country.' : null;
+      case 'phoneNumber':
+        if (!v.trim()) return 'Phone number is required.';
+        if (v.length < 6) return 'Must be at least 6 digits.';
+        return null;
+      case 'email':
+        if (!v.trim()) return 'Email is required.';
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return 'Enter a valid email address.';
+        return null;
+      case 'firstName':     return !v.trim() ? 'First name is required.' : null;
+      case 'lastName':      return !v.trim() ? 'Last name is required.' : null;
+      case 'adminUsername':
+        if (!v.trim()) return 'Username is required.';
+        if (!/^[a-zA-Z0-9_-]{3,30}$/.test(v)) return '3–30 chars: letters, numbers, _ or -';
+        return null;
+      case 'adminEmail':
+        if (!v.trim()) return 'Admin email is required.';
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return 'Enter a valid email address.';
+        return null;
+      case 'adminPhoneNumber':
+        if (!v.trim()) return 'Phone number is required.';
+        if (v.length < 6) return 'Must be at least 6 digits.';
+        return null;
+      case 'password':
+        if (v.length < 8) return 'At least 8 characters required.';
+        if (!/[A-Z]/.test(v)) return 'Include an uppercase letter.';
+        if (!/[0-9]/.test(v)) return 'Include a number.';
+        if (!/[^A-Za-z0-9]/.test(v)) return 'Include a symbol (e.g. !@#).';
+        return null;
+      case 'confirmPassword':
+        return v !== form.password ? 'Passwords do not match.' : null;
+      default: return null;
+    }
+  };
+
+  const blur = (field) => () => {
+    setTouched((p) => ({ ...p, [field]: true }));
+    setFieldErrors((p) => ({ ...p, [field]: validateFieldInline(field) }));
+  };
+
+  /* ---- OTP: send code to adminEmail ---- */
+  const sendOtp = async () => {
+    setOtpLoading(true);
+    setOtpError('');
+    try {
+      const res = await fetch(`${SECURITY_CONFIG.API_URL}/api/send-otp/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: form.adminEmail }),
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!res.ok) throw new Error('Failed to send code. Please try again.');
+      setOtpSent(true);
+      setOtpResendTimer(60);
+    } catch (err) {
+      if (err.name === 'TimeoutError' || err.name === 'AbortError' || err.message.includes('fetch')) {
+        setOtpError('Email service unavailable. You can skip verification and continue.');
+      } else {
+        setOtpError(err.message || 'Could not send code. Try again or skip.');
+      }
+      setOtpSent(false);
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  /* ---- OTP: verify entered code ---- */
+  const verifyOtp = async () => {
+    if (otpInput.length !== 6) { setOtpError('Please enter the full 6-digit code.'); return; }
+    setOtpLoading(true);
+    setOtpError('');
+    try {
+      const res = await fetch(`${SECURITY_CONFIG.API_URL}/api/verify-otp/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: form.adminEmail, otp: otpInput }),
+        signal: AbortSignal.timeout(10000),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || 'Invalid or expired code.');
+      setOtpVerified(true);
+      setOtpError('');
+    } catch (err) {
+      setOtpError(err.message || 'Verification failed. Check the code and try again.');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
   /* ---- Public email domain check (non-blocking warning) ---- */
   const adminEmailDomainWarning = (() => {
     if (!form.adminEmail.includes('@')) return null;
@@ -956,6 +1075,7 @@ function Register({ onNavigate }) {
     }
     if (step === 3) {
       if (!form.phoneNumber.trim()) { setError('Phone number is required.'); return false; }
+      if (form.phoneNumber.length < 6) { setError('Phone number must be at least 6 digits.'); return false; }
       if (!form.email.trim())       { setError('Institutional email is required.'); return false; }
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
         setError('Please enter a valid email address.'); return false;
@@ -973,6 +1093,7 @@ function Register({ onNavigate }) {
         setError('Please enter a valid admin email address.'); return false;
       }
       if (!form.adminPhoneNumber.trim()) { setError('Admin phone number is required.'); return false; }
+      if (form.adminPhoneNumber.length < 6) { setError('Admin phone number must be at least 6 digits.'); return false; }
       if (form.password.length < 8)              { setError('Password must be at least 8 characters.'); return false; }
       if (!/[A-Z]/.test(form.password))          { setError('Password must contain at least one uppercase letter.'); return false; }
       if (!/[0-9]/.test(form.password))          { setError('Password must contain at least one number.'); return false; }
@@ -987,6 +1108,11 @@ function Register({ onNavigate }) {
       if (!form.agreementAccuracy)       { setError('Please confirm the school information is accurate.'); return false; }
       if (!form.agreementDataProtection) { setError('Please agree to the data protection policy.'); return false; }
       if (!form.agreementAuthorized)     { setError('Please confirm you are authorised to register this institution.'); return false; }
+    }
+    if (step === 7) {
+      if (!otpVerified && !otpSkipped) {
+        setError('Please verify your email address before continuing.'); return false;
+      }
     }
     return true;
   };
@@ -1031,6 +1157,7 @@ function Register({ onNavigate }) {
         throw new Error(data.message || 'Registration failed. Please try again.');
       }
       setSubmitted(true);
+      try { sessionStorage.removeItem('ek_reg_form'); sessionStorage.removeItem('ek_reg_step'); } catch {}
     } catch (err) {
       setError(err.message || 'An error occurred. Please try again.');
     } finally {
@@ -1136,18 +1263,18 @@ function Register({ onNavigate }) {
               />
             </div>
 
-            <Field id="institutionName" label="Institution Name" required>
+            <Field id="institutionName" label="Institution Name" required error={fieldErrors.institutionName}>
               <div className="input-wrap">
                 <span className="input-icon"><BuildingIcon /></span>
-                <input id="institutionName" className="reg-input with-icon" type="text"
+                <input id="institutionName" className={`reg-input with-icon${fieldErrors.institutionName ? ' has-error' : ''}`} type="text"
                   placeholder="e.g. Greenfield Academy"
-                  value={form.institutionName} onChange={set('institutionName')} autoFocus />
+                  value={form.institutionName} onChange={set('institutionName')} onBlur={blur('institutionName')} autoFocus />
               </div>
             </Field>
 
-            <Field id="institutionType" label="Institution Type" required>
-              <select id="institutionType" className="reg-select"
-                value={form.institutionType} onChange={set('institutionType')}>
+            <Field id="institutionType" label="Institution Type" required error={fieldErrors.institutionType}>
+              <select id="institutionType" className={`reg-select${fieldErrors.institutionType ? ' has-error' : ''}`}
+                value={form.institutionType} onChange={set('institutionType')} onBlur={blur('institutionType')}>
                 <option value="">Select type...</option>
                 {INSTITUTION_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
@@ -1172,12 +1299,12 @@ function Register({ onNavigate }) {
                 </select>
               </Field>
 
-              <Field id="estimatedTeachers" label="Est. Number of Teachers">
+              <Field id="estimatedTeachers" label="Est. Number of Teachers" error={fieldErrors.estimatedTeachers}>
                 <div className="input-wrap">
                   <span className="input-icon"><UsersIcon /></span>
                   <input id="estimatedTeachers" className="reg-input with-icon" type="number"
                     min="1" placeholder="e.g. 40"
-                    value={form.estimatedTeachers} onChange={set('estimatedTeachers')} />
+                    value={form.estimatedTeachers} onChange={set('estimatedTeachers')} onBlur={blur('estimatedTeachers')} />
                 </div>
               </Field>
             </div>
@@ -1211,26 +1338,26 @@ function Register({ onNavigate }) {
             <p className="step-intro">
               Where is your institution located? This helps with directory listings and reports.
             </p>
-            <Field id="address" label="Street Address" required>
+            <Field id="address" label="Street Address" required error={fieldErrors.address}>
               <div className="input-wrap">
                 <span className="input-icon"><LocationIcon /></span>
-                <input id="address" className="reg-input with-icon" type="text"
+                <input id="address" className={`reg-input with-icon${fieldErrors.address ? ' has-error' : ''}`} type="text"
                   placeholder="e.g. 61 New Castle Street, Kissy"
-                  value={form.address} onChange={set('address')} autoFocus />
+                  value={form.address} onChange={set('address')} onBlur={blur('address')} autoFocus />
               </div>
             </Field>
             <div className="reg-form-grid">
-              <Field id="city" label="City / Town" required>
-                <input id="city" className="reg-input" type="text" placeholder="Freetown"
-                  value={form.city} onChange={set('city')} />
+              <Field id="city" label="City / Town" required error={fieldErrors.city}>
+                <input id="city" className={`reg-input${fieldErrors.city ? ' has-error' : ''}`} type="text" placeholder="Freetown"
+                  value={form.city} onChange={set('city')} onBlur={blur('city')} />
               </Field>
               <Field id="region" label="Region / State">
                 <input id="region" className="reg-input" type="text" placeholder="Western Urban"
                   value={form.region} onChange={set('region')} />
               </Field>
             </div>
-            <Field id="country" label="Country" required>
-              <select id="country" className="reg-select" value={form.country} onChange={set('country')}>
+            <Field id="country" label="Country" required error={fieldErrors.country}>
+              <select id="country" className={`reg-select${fieldErrors.country ? ' has-error' : ''}`} value={form.country} onChange={set('country')} onBlur={blur('country')}>
                 <option value="">Select country</option>
                 {COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
@@ -1247,22 +1374,22 @@ function Register({ onNavigate }) {
             <p className="step-intro">
               Provide your institution's official contact details for communication and verification.
             </p>
-            <Field id="phoneNumber" label="Phone Number" required>
+            <Field id="phoneNumber" label="Phone Number" required error={fieldErrors.phoneNumber}>
               <PhoneInput
                 id="phoneNumber"
                 codeValue={form.phoneCode}
                 numberValue={form.phoneNumber}
                 onCodeChange={(v) => setForm((p) => ({ ...p, phoneCode: v }))}
-                onNumberChange={(v) => setForm((p) => ({ ...p, phoneNumber: v }))}
+                onNumberChange={(v) => { setForm((p) => ({ ...p, phoneNumber: v })); setFieldErrors((p) => ({ ...p, phoneNumber: v.length > 0 && v.length < 6 ? 'Must be at least 6 digits.' : null })); }}
                 placeholder="76 000 000"
               />
             </Field>
-            <Field id="email" label="Institutional Email" required>
+            <Field id="email" label="Institutional Email" required error={fieldErrors.email}>
               <div className="input-wrap">
                 <span className="input-icon"><MailIcon /></span>
-                <input id="email" className="reg-input with-icon" type="email"
+                <input id="email" className={`reg-input with-icon${fieldErrors.email ? ' has-error' : ''}`} type="email"
                   placeholder="info@iconhighschool.edu.sl"
-                  value={form.email} onChange={set('email')} />
+                  value={form.email} onChange={set('email')} onBlur={blur('email')} />
               </div>
             </Field>
             <Field id="website" label="Website" hint="Optional — include https://...">
@@ -1285,39 +1412,40 @@ function Register({ onNavigate }) {
             </p>
 
             <div className="reg-form-grid">
-              <Field id="firstName" label="First Name" required>
+              <Field id="firstName" label="First Name" required error={fieldErrors.firstName}>
                 <div className="input-wrap">
                   <span className="input-icon"><AdminIcon /></span>
-                  <input id="firstName" className="reg-input with-icon" type="text"
-                    placeholder="Ishma" value={form.firstName} onChange={set('firstName')} autoFocus />
+                  <input id="firstName" className={`reg-input with-icon${fieldErrors.firstName ? ' has-error' : ''}`} type="text"
+                    placeholder="Ishma" value={form.firstName} onChange={set('firstName')} onBlur={blur('firstName')} autoFocus />
                 </div>
               </Field>
-              <Field id="lastName" label="Last Name" required>
+              <Field id="lastName" label="Last Name" required error={fieldErrors.lastName}>
                 <div className="input-wrap">
                   <span className="input-icon"><AdminIcon /></span>
-                  <input id="lastName" className="reg-input with-icon" type="text"
-                    placeholder="Rogers" value={form.lastName} onChange={set('lastName')} />
+                  <input id="lastName" className={`reg-input with-icon${fieldErrors.lastName ? ' has-error' : ''}`} type="text"
+                    placeholder="Rogers" value={form.lastName} onChange={set('lastName')} onBlur={blur('lastName')} />
                 </div>
               </Field>
             </div>
 
             <Field id="adminUsername" label="Admin Username" required
-              hint="3–30 characters: letters, numbers, _ or -. Used to sign in.">
+              hint="3–30 characters: letters, numbers, _ or -. Used to sign in."
+              error={fieldErrors.adminUsername}>
               <div className="input-wrap">
                 <span className="input-icon"><AdminIcon /></span>
-                <input id="adminUsername" className="reg-input with-icon" type="text"
+                <input id="adminUsername" className={`reg-input with-icon${fieldErrors.adminUsername ? ' has-error' : ''}`} type="text"
                   placeholder="e.g. ishma_rogers"
-                  value={form.adminUsername} onChange={set('adminUsername')}
+                  value={form.adminUsername} onChange={set('adminUsername')} onBlur={blur('adminUsername')}
                   autoComplete="username" />
               </div>
             </Field>
 
-            <Field id="adminEmail" label="Admin Email" required>
+            <Field id="adminEmail" label="Admin Email" required error={fieldErrors.adminEmail}>
               <div className="input-wrap">
                 <span className="input-icon"><MailIcon /></span>
-                <input id="adminEmail" className="reg-input with-icon" type="email"
+                <input id="adminEmail" className={`reg-input with-icon${fieldErrors.adminEmail ? ' has-error' : ''}`} type="email"
                   placeholder="admin@iconhighschool.edu.sl"
-                  value={form.adminEmail} onChange={set('adminEmail')} autoComplete="email" />
+                  value={form.adminEmail} onChange={set('adminEmail')} onBlur={blur('adminEmail')} autoComplete="email" />
               </div>
               {adminEmailDomainWarning && (
                 <div className="field-warning" role="alert">
@@ -1329,24 +1457,25 @@ function Register({ onNavigate }) {
             </Field>
 
             <Field id="adminPhoneNumber" label="Admin Phone Number" required
-              hint="Used for two-factor authentication and account recovery.">
+              hint="Used for two-factor authentication and account recovery."
+              error={fieldErrors.adminPhoneNumber}>
               <PhoneInput
                 id="adminPhoneNumber"
                 codeValue={form.adminPhoneCode}
                 numberValue={form.adminPhoneNumber}
                 onCodeChange={(v) => setForm((p) => ({ ...p, adminPhoneCode: v }))}
-                onNumberChange={(v) => setForm((p) => ({ ...p, adminPhoneNumber: v }))}
+                onNumberChange={(v) => { setForm((p) => ({ ...p, adminPhoneNumber: v })); setFieldErrors((p) => ({ ...p, adminPhoneNumber: v.length > 0 && v.length < 6 ? 'Must be at least 6 digits.' : null })); }}
                 placeholder="76 000 000"
               />
             </Field>
 
-            <Field id="password" label="Password" required>
+            <Field id="password" label="Password" required error={fieldErrors.password}>
               <div className="input-wrap">
                 <span className="input-icon"><LockIcon /></span>
                 <input id="password" type={showPwd ? 'text' : 'password'}
-                  className="reg-input with-icon with-toggle"
+                  className={`reg-input with-icon with-toggle${fieldErrors.password ? ' has-error' : ''}`}
                   placeholder="Min. 8 characters"
-                  value={form.password} onChange={set('password')} autoComplete="new-password" />
+                  value={form.password} onChange={set('password')} onBlur={blur('password')} autoComplete="new-password" />
                 <button type="button" className="input-toggle"
                   onClick={() => setShowPwd((v) => !v)}
                   aria-label={showPwd ? 'Hide password' : 'Show password'}>
@@ -1357,13 +1486,14 @@ function Register({ onNavigate }) {
             </Field>
 
             <Field id="confirmPassword" label="Confirm Password" required
-              hint="Use uppercase, lowercase, numbers and a symbol.">
+              hint="Use uppercase, lowercase, numbers and a symbol."
+              error={fieldErrors.confirmPassword}>
               <div className="input-wrap">
                 <span className="input-icon"><LockIcon /></span>
                 <input id="confirmPassword" type={showConfirm ? 'text' : 'password'}
-                  className="reg-input with-icon with-toggle"
+                  className={`reg-input with-icon with-toggle${fieldErrors.confirmPassword ? ' has-error' : ''}`}
                   placeholder="Re-enter password"
-                  value={form.confirmPassword} onChange={set('confirmPassword')} autoComplete="new-password" />
+                  value={form.confirmPassword} onChange={set('confirmPassword')} onBlur={blur('confirmPassword')} autoComplete="new-password" />
                 <button type="button" className="input-toggle"
                   onClick={() => setShowConfirm((v) => !v)}
                   aria-label={showConfirm ? 'Hide password' : 'Show password'}>
@@ -1491,8 +1621,95 @@ function Register({ onNavigate }) {
           </div>
         )}
 
-        {/* ── STEP 7: Review ── */}
+        {/* ── STEP 7: Verify Email ── */}
         {step === 7 && (
+          <div className="reg-form">
+            <p className="step-intro">
+              We sent a 6-digit verification code to{' '}
+              <strong style={{ color: '#0dccf2' }}>{form.adminEmail}</strong>.
+              Enter it below to confirm your email address.
+            </p>
+
+            {/* Sending state */}
+            {otpLoading && !otpSent && (
+              <div className="otp-send-wrap">
+                <span className="spin" style={{ width: 22, height: 22 }} />
+                <p style={{ color: 'rgba(255,255,255,0.6)', marginTop: 12 }}>Sending code…</p>
+              </div>
+            )}
+
+            {/* Send failed / service unavailable */}
+            {!otpLoading && !otpSent && otpError && (
+              <div className="otp-unavailable">
+                <p className="otp-unavailable-msg">{otpError}</p>
+                <button type="button" className="btn-send-otp" onClick={sendOtp} disabled={otpLoading}>
+                  Try Again
+                </button>
+                <div className="otp-skip-wrap">
+                  <button type="button" className="btn-otp-skip"
+                    onClick={() => { setOtpSkipped(true); setOtpError(''); }}>
+                    Skip verification and continue →
+                  </button>
+                  <p className="otp-skip-warning">⚠ Your email will remain unverified</p>
+                </div>
+              </div>
+            )}
+
+            {/* OTP sent — show input */}
+            {otpSent && !otpVerified && (
+              <>
+                <div className="otp-input-wrap">
+                  <label className="otp-label" htmlFor="otpInput">Verification Code</label>
+                  <input
+                    id="otpInput"
+                    className="reg-input otp-input"
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    placeholder="••••••"
+                    value={otpInput}
+                    onChange={(e) => { setOtpInput(e.target.value.replace(/\D/g, '').slice(0, 6)); setOtpError(''); }}
+                  />
+                  {otpError && <p className="field-error" role="alert">{otpError}</p>}
+                </div>
+                <div className="otp-actions">
+                  <button type="button" className="btn-verify-otp"
+                    onClick={verifyOtp} disabled={otpLoading || otpInput.length !== 6}>
+                    {otpLoading ? <><span className="spin" /> Verifying…</> : 'Verify Code'}
+                  </button>
+                  <button type="button" className="btn-resend-otp"
+                    onClick={sendOtp} disabled={otpResendTimer > 0 || otpLoading}>
+                    {otpResendTimer > 0 ? `Resend in ${otpResendTimer}s` : 'Resend Code'}
+                  </button>
+                </div>
+                <div className="otp-skip-wrap">
+                  <button type="button" className="btn-otp-skip"
+                    onClick={() => { setOtpSkipped(true); setOtpError(''); }}>
+                    Skip verification →
+                  </button>
+                  <p className="otp-skip-warning">⚠ Your email will remain unverified</p>
+                </div>
+              </>
+            )}
+
+            {/* Verified */}
+            {otpVerified && (
+              <div className="otp-verified-badge">
+                <CheckIcon /> Email verified — you can continue to review your registration.
+              </div>
+            )}
+
+            {/* Skipped */}
+            {otpSkipped && !otpVerified && (
+              <div className="otp-skipped-badge">
+                ⚠ Verification skipped. You can continue, but your email is unverified.
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── STEP 8: Review ── */}
+        {step === 8 && (
           <div>
             <p className="step-intro" style={{ marginBottom: '18px' }}>
               Review your information carefully before submitting. Go back to any step to make changes.
@@ -1572,7 +1789,7 @@ function Register({ onNavigate }) {
 
           {step < STEPS.length ? (
             <button type="button" className="btn-next" onClick={next}
-              disabled={checkingName}>
+              disabled={checkingName || (step === 7 && !otpVerified && !otpSkipped)}>
               {checkingName
                 ? <><span className="spin" /> Checking…</>
                 : <>Continue <ArrowRightIcon /></>

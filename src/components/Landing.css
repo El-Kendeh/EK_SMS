@@ -1353,7 +1353,40 @@
   min-width: 0;
 }
 
-.lp-security__title { margin-top: 0.75rem; text-align: left; }
+.lp-security__title {
+  margin-top: 0.75rem;
+  text-align: left;
+  /* fit "Tamper-Proof Data & System Lockdown" on one line at desktop widths */
+  font-size: clamp(1.4rem, 2.6vw, 1.8rem);
+}
+
+/* ── Shimmer gradient — same motion as login "reimagined for Africa." ── */
+.lp-security__title-shimmer {
+  display: block;
+  white-space: nowrap;                          /* one line on desktop */
+  background: linear-gradient(110deg, #00B4D8 0%, #60A5FA 45%, #a78bfa 80%, #00B4D8 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: secTitleShimmer 4s linear infinite;
+}
+
+@keyframes secTitleShimmer {
+  0%   { background-position: 0% center; }
+  100% { background-position: 200% center; }
+}
+
+/* Mobile: allow the text to wrap onto two lines */
+@media (max-width: 768px) {
+  .lp-security__title { font-size: clamp(1.4rem, 5vw, 1.9rem); }
+  .lp-security__title-shimmer { white-space: normal; }
+}
+
+/* Respect reduced-motion: keep gradient but stop the scroll */
+@media (prefers-reduced-motion: reduce) {
+  .lp-security__title-shimmer { animation: none; }
+}
 
 .lp-security__cards {
   display: flex;
@@ -2328,23 +2361,28 @@
   color: var(--lp-muted);
 }
 
-/* Responsive — collapse to 2-col (feature + EK-SMS only) on mobile */
+/* Responsive — horizontal scroll on mobile so all 4 columns are visible */
 @media (max-width: 768px) {
-  .lp-compare__head {
-    grid-template-columns: 1fr 1fr;
+  /* Wrap the table in a scrollable container */
+  .lp-compare {
+    overflow-x: auto;
+    border-radius: var(--lp-radius-lg);
   }
-  .lp-compare__head-col:not(.lp-compare__head-col--eksms) {
-    display: none;
-  }
+  .lp-compare__head,
   .lp-compare__row {
-    grid-template-columns: 1fr 1fr;
+    /* Fixed min-width so columns don't collapse — user scrolls horizontally */
+    min-width: 560px;
+    grid-template-columns: 2fr 1.4fr 1fr 1fr;
   }
+  /* Restore hidden columns on mobile */
+  .lp-compare__head-col:not(.lp-compare__head-col--eksms),
   .lp-compare__col:not(.lp-compare__col--eksms) {
-    display: none;
+    display: flex;
   }
   .lp-compare__footer {
     flex-direction: column;
     align-items: flex-start;
+    min-width: 560px;
   }
 }
 
@@ -2354,9 +2392,10 @@
     padding: 0.625rem 0.875rem;
     gap: 0.5rem;
   }
-  .lp-compare__feature { font-size: 0.82rem; }
+  .lp-compare__feature { font-size: 0.8rem; }
   .lp-compare__cell    { padding: 4px 8px; }
-  .lp-compare__cell span { font-size: 0.78rem; }
+  .lp-compare__cell span { font-size: 0.75rem; }
+  .lp-compare__head-col { font-size: 0.72rem; }
 }
 
 /* ============================================================
@@ -3872,12 +3911,25 @@
 html { overflow-x: hidden; }
 body { overflow-x: hidden; max-width: 100%; }
 
+/* ── Language toggle — always visible on mobile beside hamburger ── */
+.lp-nav__mobile-lang-pill {
+  display: flex;
+  align-items: center;
+}
+@media (min-width: 768px) {
+  .lp-nav__mobile-lang-pill { display: none; } /* desktop has it in lp-nav__actions */
+}
+
 /* ── 2. CTA Banner (Hyperspeed background) ── */
 .lp-cta__hyperspeed {
   position: absolute;
   inset: 0;
   overflow: hidden;
   pointer-events: none; /* allow button clicks through */
+}
+/* Disable Hyperspeed canvas on mobile — too heavy for GPU */
+@media (max-width: 768px) {
+  .lp-cta__hyperspeed { display: none; }
 }
 .lp-cta-banner {
   min-height: 260px;
@@ -3902,6 +3954,22 @@ body { overflow-x: hidden; max-width: 100%; }
 /* ── 3. Hero Ballpit — hide on small phones for performance ── */
 @media (max-width: 480px) {
   .lp-hero__ballpit { display: none; }
+}
+
+/* ── Performance: disable particle canvas on mobile ── */
+@media (max-width: 768px) {
+  .lp-particles { display: none; }
+}
+
+/* ── Performance: reduce will-change on mobile to free GPU memory ── */
+@media (max-width: 768px) {
+  .lp-hero__mockup-float,
+  .lp-hero__orb,
+  .lp-stat-card,
+  .lp-feature-card,
+  .lp-role-card {
+    will-change: auto;
+  }
 }
 
 /* ── 4. Hero orbs — scale down on mobile ── */
@@ -4415,13 +4483,7 @@ body { overflow-x: hidden; max-width: 100%; }
   }
 }
 
-/* ─────────────────────────────────────────────────────────────
-   PERFORMANCE: reduce GPU load on low-end mobile
-   ───────────────────────────────────────────────────────────── */
-/* Hide particle field on very small phones — Ballpit alone is enough */
-@media (max-width: 480px) and (hover: none) {
-  .lp-particles { display: none; }
-}
+/* .lp-particles on mobile: already handled by the performance block above */
 
 /* ─────────────────────────────────────────────────────────────
    ACCESSIBILITY: respect reduced-motion preference

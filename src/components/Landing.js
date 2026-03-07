@@ -96,34 +96,14 @@ function AnimatedWord() {
 }
 
 // ============================================================
-// ANIMATED HEADLINE (cycling between two hero headlines)
+// STATIC HEADLINE — "The Operating System for Modern Schools."
 // ============================================================
 function AnimatedHeadline() {
-  const [index, setIndex] = useState(0);
-  const [phase, setPhase] = useState('visible');
   const { t } = useLang();
-
-  const headlines = [
-    <>{t('hero_h1a')}<br />{t('hero_h1b')}{' '}<span className="lp-hero__headline-gradient">{t('hero_h1c')}</span></>,
-    <>{t('hero_h2a')}<br />{t('hero_h2b')} <span className="lp-hero__headline-gradient">{t('hero_h2c')}</span></>,
-  ];
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      setPhase('exit');
-      setTimeout(() => {
-        setIndex(i => (i + 1) % headlines.length);
-        setPhase('enter');
-        setTimeout(() => setPhase('visible'), 50);
-      }, 380);
-    }, 4500);
-    return () => clearInterval(id);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   return (
-    <h1 className={`lp-hero__headline lp-cycling-headline lp-cycling-headline--${phase}`}>
-      {headlines[index]}
+    <h1 className="lp-hero__headline">
+      {t('hero_h2a')}<br />
+      {t('hero_h2b')} <span className="lp-hero__headline-gradient">{t('hero_h2c')}</span>
     </h1>
   );
 }
@@ -419,6 +399,7 @@ function Navbar({ onNavigate, menuOpen, setMenuOpen }) {
           <button className="lp-nav__btn-primary" onClick={() => onNavigate('register')}>{t('nav_getstarted')}</button>
         </div>
 
+        <div className="lp-nav__mobile-lang-pill"><LangToggle /></div>
         <button className="lp-nav__hamburger" onClick={() => setMenuOpen((v) => !v)} aria-label="Toggle menu">
           <SvgIcon name={menuOpen ? 'close' : 'menu'} size={24} />
         </button>
@@ -1595,8 +1576,9 @@ function SecuritySection() {
             {t('sec_badge')}
           </div>
           <h2 className="lp-section-title lp-security__title">
-            {t('sec_title_a')}<br />
-            <span className="lp-gradient-text">{t('sec_title_b')}</span>
+            <span className="lp-security__title-shimmer">
+              {t('sec_title_a')} {t('sec_title_b')}
+            </span>
           </h2>
           <p className="lp-section-sub">
             {t('sec_sub')}
@@ -2405,6 +2387,7 @@ const TESTIMONIALS = [
   },
 ];
 
+// eslint-disable-next-line no-unused-vars
 function TestimonialsSection() {
   const { t } = useLang();
 
@@ -2717,7 +2700,7 @@ export default function Landing({ onNavigate }) {
             <RolesSection />
             <SecuritySection />
             <WorkflowSection />
-            <TestimonialsSection />
+            {/* <TestimonialsSection /> */}
             <ComparisonSection />
             <FAQSection />
             <AboutSection />

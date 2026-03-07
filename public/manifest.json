@@ -4,9 +4,9 @@
   "description": "All-in-one school management platform for African educational institutions.",
   "icons": [
     {
-      "src": "favicon.ico",
+      "src": "favicon64.png",
       "sizes": "64x64",
-      "type": "image/x-icon"
+      "type": "image/png"
     },
     {
       "src": "logo192.png",
