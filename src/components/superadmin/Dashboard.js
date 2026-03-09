@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useTheme } from '../../context/ThemeContext';
 import './SA.css';
 import './Dashboard.css';
 import { SECURITY_CONFIG } from '../../config/security';
@@ -23,6 +24,9 @@ import SASettings        from './SASettings';
 import SAAnalytics       from './SAAnalytics';
 import SABenchmarks      from './SABenchmarks';
 import SAOnboarding      from './SAOnboarding';
+import SAUsers           from './SAUsers';
+import SANotifications, { INITIAL_UNREAD_COUNT } from './SANotifications';
+import { MOCK_REQUESTS } from './SAGradeIntegrity';
 
 const API = SECURITY_CONFIG.API_URL;
 
@@ -137,6 +141,121 @@ const IcOnboarding = () => (
     <polyline points="16 11 18 13 22 9"/>
   </svg>
 );
+const IcUsers = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+    <circle cx="9" cy="7" r="4"/>
+    <path d="M23 21v-2a4 4 0 00-3-3.87"/>
+    <path d="M16 3.13a4 4 0 010 7.75"/>
+  </svg>
+);
+
+/* ================================================================
+   Global Search Modal (⌘K / Ctrl+K)
+   ================================================================ */
+function GlobalSearch({ pages, schools, onSelect, onClose }) {
+  const [q,         setQ]         = useState('');
+  const [activeIdx, setActiveIdx] = useState(0);
+  const inputRef = useRef(null);
+
+  useEffect(() => { inputRef.current?.focus(); }, []);
+
+  const qLower = q.toLowerCase().trim();
+  const pageResults   = qLower
+    ? pages.filter(p => p.label.toLowerCase().includes(qLower) || (p.section || '').toLowerCase().includes(qLower))
+    : pages.slice(0, 10);
+  const schoolResults = qLower
+    ? schools.filter(s => (s.name || '').toLowerCase().includes(qLower) || (s.email || '').toLowerCase().includes(qLower)).slice(0, 5)
+    : [];
+
+  const allResults = [
+    ...pageResults.map(p => ({ type: 'page',   key: p.key, label: p.label, sub: p.section || '', icon: p.icon })),
+    ...schoolResults.map(s => ({ type: 'school', key: 'schools', label: s.name, sub: s.email, icon: null })),
+  ];
+
+  const clamp = v => Math.max(0, Math.min(v, allResults.length - 1));
+  const handleKeyDown = (e) => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIdx(i => clamp(i + 1)); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIdx(i => clamp(i - 1)); }
+    else if (e.key === 'Enter' && allResults[activeIdx]) { onSelect(allResults[activeIdx].key); }
+    else if (e.key === 'Escape') { onClose(); }
+  };
+
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 2000, display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 80, backdropFilter: 'blur(4px)' }}
+      onClick={onClose}
+    >
+      <div
+        style={{ width: '100%', maxWidth: 540, background: 'var(--sa-card-bg)', border: '1px solid var(--sa-border)', borderRadius: 14, boxShadow: '0 24px 64px rgba(0,0,0,0.5)', overflow: 'hidden' }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Input row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderBottom: '1px solid var(--sa-border)' }}>
+          <span style={{ color: 'var(--sa-text-2)', flexShrink: 0, display: 'flex' }}>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </span>
+          <input
+            ref={inputRef}
+            type="text"
+            placeholder="Search pages or schools…"
+            value={q}
+            onChange={e => { setQ(e.target.value); setActiveIdx(0); }}
+            onKeyDown={handleKeyDown}
+            style={{ flex: 1, background: 'none', border: 'none', outline: 'none', fontSize: '0.9375rem', color: 'var(--sa-text)', fontFamily: 'var(--sa-font)' }}
+          />
+          <kbd style={{ fontSize: '0.7rem', color: 'var(--sa-text-3)', background: 'var(--sa-card-bg2)', padding: '2px 7px', borderRadius: 4, border: '1px solid var(--sa-border)', flexShrink: 0 }}>ESC</kbd>
+        </div>
+
+        {/* Results */}
+        <div style={{ maxHeight: 360, overflowY: 'auto' }}>
+          {allResults.length === 0 && q.trim() ? (
+            <p style={{ textAlign: 'center', color: 'var(--sa-text-3)', fontSize: '0.875rem', padding: '28px 0', margin: 0 }}>No results for "{q}"</p>
+          ) : (
+            <>
+              {pageResults.length > 0 && (
+                <p style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', color: 'var(--sa-text-3)', padding: '10px 16px 4px', margin: 0 }}>
+                  {q.trim() ? 'Pages' : 'All Pages'}
+                </p>
+              )}
+              {allResults.map((item, i) => (
+                <React.Fragment key={i}>
+                  {item.type === 'school' && i === pageResults.length && (
+                    <p style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', color: 'var(--sa-text-3)', padding: '8px 16px 4px', margin: 0, borderTop: pageResults.length > 0 ? '1px solid var(--sa-border)' : 'none' }}>
+                      Schools
+                    </p>
+                  )}
+                  <button
+                    onClick={() => onSelect(item.key)}
+                    onMouseEnter={() => setActiveIdx(i)}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '9px 16px', background: i === activeIdx ? 'var(--sa-accent-dim)' : 'none', border: 'none', cursor: 'pointer', textAlign: 'left', color: 'var(--sa-text)', fontFamily: 'var(--sa-font)', transition: 'background 0.1s' }}
+                  >
+                    {item.type === 'page'
+                      ? <span style={{ width: 20, height: 20, color: 'var(--sa-accent)', flexShrink: 0, display: 'flex' }}>{item.icon}</span>
+                      : <span style={{ width: 28, height: 28, borderRadius: 6, background: 'var(--sa-card-bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 800, color: 'var(--sa-accent)', flexShrink: 0 }}>{(item.label || 'S')[0].toUpperCase()}</span>
+                    }
+                    <span style={{ fontSize: '0.875rem', fontWeight: 600, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
+                    {item.sub && <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-3)', flexShrink: 0 }}>{item.sub}</span>}
+                  </button>
+                </React.Fragment>
+              ))}
+            </>
+          )}
+        </div>
+
+        {/* Footer hints */}
+        <div style={{ padding: '8px 16px', borderTop: '1px solid var(--sa-border)', display: 'flex', gap: 16 }}>
+          {[['↵', 'Select'], ['↑↓', 'Navigate'], ['ESC', 'Close']].map(([key, label]) => (
+            <span key={key} style={{ fontSize: '0.72rem', color: 'var(--sa-text-3)', display: 'flex', alignItems: 'center', gap: 5 }}>
+              <kbd style={{ background: 'var(--sa-card-bg2)', padding: '1px 6px', borderRadius: 4, border: '1px solid var(--sa-border)', fontFamily: 'monospace' }}>{key}</kbd>
+              {label}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /* ================================================================
    Page title helper
@@ -162,6 +281,7 @@ function getTitle(page, school) {
     'grade-requests':  'Mod. Requests',
     'grade-audit':     'Audit Detail',
     'governance':      'Role-Based Access',
+    'users':           'Users',
     'analytics':       'School Directory & Analytics',
     'benchmarks':      'Academic Benchmarks',
     'onboarding':      'Onboarding Analytics',
@@ -173,6 +293,7 @@ function getTitle(page, school) {
    Main Dashboard Component
    ================================================================ */
 export default function Dashboard({ onNavigate }) {
+  const { theme, toggleTheme } = useTheme();
   const [user,            setUser]            = useState(null);
   const [activePage,      setActivePage]      = useState('overview');
   const [selectedSchool,  setSelectedSchool]  = useState(null);
@@ -183,6 +304,9 @@ export default function Dashboard({ onNavigate }) {
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [sidebarOpen,     setSidebarOpen]     = useState(false);
   const [toast,           setToast]           = useState(null);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(INITIAL_UNREAD_COUNT);
+  const [searchOpen,       setSearchOpen]       = useState(false);
+  const [secLogFilter,     setSecLogFilter]     = useState('');
 
   /* ---- Data ---- */
   const fetchSchools = useCallback(async (tok) => {
@@ -207,6 +331,16 @@ export default function Dashboard({ onNavigate }) {
       fetchSchools(token);
     } catch { onNavigate && onNavigate('home'); }
   }, [onNavigate, fetchSchools]);
+
+  /* ---- Global search keyboard shortcut ---- */
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); setSearchOpen(s => !s); }
+      if (e.key === 'Escape') setSearchOpen(false);
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
   /* ---- Actions ---- */
   const handleAction = useCallback(async (schoolId, action, note = '') => {
@@ -274,6 +408,24 @@ export default function Dashboard({ onNavigate }) {
     setActivePage('grade-audit');
   };
 
+  const handleBatchAction = useCallback(async (ids, action) => {
+    if (!ids.length) return;
+    setIsActionLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      for (const id of ids) {
+        await fetch(`${API}/api/schools/approve/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ school_id: id, action }),
+        }).catch(() => {});
+      }
+      showToast(`${ids.length} school${ids.length !== 1 ? 's' : ''} ${action === 'approve' ? 'approved' : 'rejected'}`, 'success');
+      await fetchSchools();
+    } catch { showToast('Batch action partially failed', 'error'); }
+    finally { setIsActionLoading(false); }
+  }, [fetchSchools]);
+
   const handleGradeRequests = () => {
     setActivePage('grade-requests');
   };
@@ -316,8 +468,9 @@ export default function Dashboard({ onNavigate }) {
     );
   }
 
-  const pendingCount  = schools.filter(s => !s.is_approved && s.is_active !== false).length;
-  const rejectedCount = schools.filter(s => !s.is_approved && !s.is_active).length;
+  const pendingCount      = schools.filter(s => !s.is_approved && !s.changes_requested).length;
+  const rejectedCount     = schools.filter(s => !s.is_approved && !s.is_active).length;
+  const pendingGradeCount = MOCK_REQUESTS.filter(r => r.status === 'Pending').length;
 
   const isAppRelated   = ['applications', 'review', 'app-history', 'version-compare'].includes(activePage);
   const isRejRelated   = ['rejected', 'rejection-audit'].includes(activePage);
@@ -330,11 +483,12 @@ export default function Dashboard({ onNavigate }) {
     { key: 'rejected',        label: 'Rejected',     icon: <IcRejected />,     badge: rejectedCount, section: null     },
     { key: 'schools',         label: 'Schools',      icon: <IcSchools />,      badge: 0,             section: null     },
     { key: 'grade-report',    label: 'Grade Integrity', icon: <IcGrade />,      badge: 0,             section: 'Grade Integrity'  },
-    { key: 'grade-requests',  label: 'Mod. Requests',  icon: <IcRequests />,   badge: 0,             section: 'Grade Integrity'  },
+    { key: 'grade-requests',  label: 'Mod. Requests',  icon: <IcRequests />,   badge: pendingGradeCount, section: 'Grade Integrity'  },
     { key: 'analytics',       label: 'School Directory', icon: <IcAnalytics />,  badge: 0,             section: 'Reports & Analytics' },
     { key: 'benchmarks',      label: 'Benchmarks',   icon: <IcBenchmarks />,   badge: 0,             section: 'Reports & Analytics' },
     { key: 'onboarding',      label: 'Onboarding',   icon: <IcOnboarding />,   badge: 0,             section: 'Reports & Analytics' },
     { key: 'governance',      label: 'RBAC / Roles', icon: <IcGovernance />,   badge: 0,             section: 'Governance'       },
+    { key: 'users',           label: 'Users',        icon: <IcUsers />,        badge: 0,             section: 'Governance'       },
     { key: 'security-logs',   label: 'Audit Logs',   icon: <IcSecLogs />,      badge: 0,             section: 'Security & Audit' },
     { key: 'forensics',       label: 'Forensics',    icon: <IcForensics />,    badge: 0,             section: 'Security & Audit' },
     { key: 'alert-broadcast', label: 'Broadcast',    icon: <IcBroadcast />,    badge: 0,             section: 'Security & Audit' },
@@ -426,9 +580,28 @@ export default function Dashboard({ onNavigate }) {
             <span className="sa-bc-current">{getTitle(activePage, selectedSchool)}</span>
           </div>
           <div className="sa-topbar-actions">
+            <button
+              className="sa-notif-btn"
+              onClick={() => setSearchOpen(true)}
+              title="Search (Ctrl+K)"
+              aria-label="Open global search"
+            >
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </button>
+            <button
+              className="sa-notif-btn"
+              onClick={toggleTheme}
+              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+            >
+              {theme === 'dark'
+                ? <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                : <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+              }
+            </button>
             <button className="sa-notif-btn" onClick={() => goTo('notifications')}>
               <IcBell />
-              {pendingCount > 0 && <span className="sa-notif-dot" />}
+              {(pendingCount > 0 || unreadNotifCount > 0) && <span className="sa-notif-dot" />}
             </button>
             <div className="sa-avatar-sm">
               {(user?.full_name || user?.email || 'A')[0].toUpperCase()}
@@ -455,6 +628,7 @@ export default function Dashboard({ onNavigate }) {
             <SAApplications
               schools={schools}
               onReview={handleReview}
+              onBatchAction={handleBatchAction}
             />
           )}
 
@@ -522,15 +696,22 @@ export default function Dashboard({ onNavigate }) {
           )}
 
           {activePage === 'security-logs' && (
-            <SASecurityLogs onForensic={handleForensic} />
+            <SASecurityLogs
+              onForensic={handleForensic}
+              initialSearch={secLogFilter}
+              onMount={() => setSecLogFilter('')}
+            />
           )}
 
           {activePage === 'forensics' && (
-            <SAForensics initialEvent={forensicEvent} />
+            <SAForensics
+              initialEvent={forensicEvent}
+              onNavigate={(page, filter) => { if (filter) setSecLogFilter(filter); goTo(page); }}
+            />
           )}
 
           {activePage === 'alert-broadcast' && (
-            <SAAlertBroadcast />
+            <SAAlertBroadcast onNavigate={goTo} />
           )}
 
           {activePage === 'system-health' && (
@@ -538,32 +719,31 @@ export default function Dashboard({ onNavigate }) {
           )}
 
           {activePage === 'schools' && (
-            <SASchools schools={schools} onReview={handleReview} />
+            <SASchools schools={schools} onReview={handleReview} onAction={handleAction} />
           )}
 
           {activePage === 'analytics' && (
-            <SAAnalytics schools={schools} />
+            <SAAnalytics schools={schools} onLoginAs={(school) => showToast(`Login as "${school.name}" admin — impersonation requires backend support.`, 'info')} />
           )}
 
           {activePage === 'benchmarks' && (
-            <SABenchmarks />
+            <SABenchmarks onNavigate={goTo} />
           )}
 
           {activePage === 'onboarding' && (
-            <SAOnboarding />
+            <SAOnboarding schools={schools} />
           )}
 
           {activePage === 'governance' && (
             <SAGovernance />
           )}
 
+          {activePage === 'users' && (
+            <SAUsers onNavigate={goTo} />
+          )}
+
           {activePage === 'notifications' && (
-            <div className="sa-page-head">
-              <div>
-                <h1 className="sa-page-title">Notifications</h1>
-                <p className="sa-page-sub">System alerts and activity notifications</p>
-              </div>
-            </div>
+            <SANotifications onNavigate={goTo} onUnreadChange={setUnreadNotifCount} />
           )}
 
           {activePage === 'settings' && (
@@ -595,6 +775,16 @@ export default function Dashboard({ onNavigate }) {
           );
         })}
       </nav>
+
+      {/* Global Search modal */}
+      {searchOpen && (
+        <GlobalSearch
+          pages={navItems.filter(n => !['review', 'app-history', 'version-compare', 'rejection-audit', 'grade-audit'].includes(n.key))}
+          schools={schools}
+          onSelect={(key) => { goTo(key); setSearchOpen(false); }}
+          onClose={() => setSearchOpen(false)}
+        />
+      )}
     </div>
   );
 }

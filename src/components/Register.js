@@ -374,6 +374,60 @@ const COUNTRY_CODES = [
   { code: 'MX', name: 'Mexico',         dial: '+52'  },
 ];
 
+/* Country-specific placeholder data — city, region, address sample, email TLD, dial code, phone format */
+const COUNTRY_META = {
+  'Sierra Leone':      { city: 'Freetown',        region: 'Western Urban',       address: '23 Wilkinson Road, Aberdeen',          emailDomain: 'edu.sl',  dial: '+232', phone: '76 000 000'   },
+  'Liberia':           { city: 'Monrovia',         region: 'Montserrado',         address: '14 Broad Street, Sinkor',             emailDomain: 'edu.lr',  dial: '+231', phone: '88 000 000'   },
+  'Ghana':             { city: 'Accra',            region: 'Greater Accra',       address: '12 Independence Avenue',              emailDomain: 'edu.gh',  dial: '+233', phone: '20 000 0000'  },
+  'Nigeria':           { city: 'Lagos',            region: 'Lagos State',         address: '15 Victoria Island Road',             emailDomain: 'edu.ng',  dial: '+234', phone: '80 000 0000'  },
+  'Kenya':             { city: 'Nairobi',          region: 'Nairobi County',      address: '45 Kenyatta Avenue',                  emailDomain: 'ac.ke',   dial: '+254', phone: '70 000 0000'  },
+  'Gambia':            { city: 'Banjul',           region: 'Banjul Division',     address: '10 Independence Drive',               emailDomain: 'edu.gm',  dial: '+220', phone: '300 0000'     },
+  'Guinea':            { city: 'Conakry',          region: 'Conakry',             address: '24 Rue du Commerce',                  emailDomain: 'edu.gn',  dial: '+224', phone: '62 000 000'   },
+  'Guinea-Bissau':     { city: 'Bissau',           region: 'Bissau',              address: 'Rua Justino Lopes',                   emailDomain: 'edu.gw',  dial: '+245', phone: '96 000 000'   },
+  'Senegal':           { city: 'Dakar',            region: 'Dakar',               address: '30 Rue Vincens',                      emailDomain: 'edu.sn',  dial: '+221', phone: '77 000 0000'  },
+  "Côte d'Ivoire":     { city: 'Abidjan',          region: 'Abidjan',             address: '18 Boulevard de la République',       emailDomain: 'edu.ci',  dial: '+225', phone: '07 000 0000'  },
+  'Mali':              { city: 'Bamako',           region: 'District de Bamako',  address: 'Rue 12, Quartier du Fleuve',          emailDomain: 'edu.ml',  dial: '+223', phone: '66 000 000'   },
+  'Burkina Faso':      { city: 'Ouagadougou',      region: 'Kadiogo',             address: 'Avenue Kwame Nkrumah',                emailDomain: 'edu.bf',  dial: '+226', phone: '70 000 000'   },
+  'Togo':              { city: 'Lomé',             region: 'Maritime',            address: 'Boulevard du 13 Janvier',             emailDomain: 'edu.tg',  dial: '+228', phone: '90 000 000'   },
+  'Benin':             { city: 'Cotonou',          region: 'Littoral',            address: 'Boulevard Saint-Michel',              emailDomain: 'edu.bj',  dial: '+229', phone: '96 000 000'   },
+  'Niger':             { city: 'Niamey',           region: 'Niamey',              address: "Avenue du Président Luebke",          emailDomain: 'edu.ne',  dial: '+227', phone: '96 000 000'   },
+  'South Africa':      { city: 'Cape Town',        region: 'Western Cape',        address: '1 Adderley Street',                   emailDomain: 'edu.za',  dial: '+27',  phone: '71 000 0000'  },
+  'Tanzania':          { city: 'Dar es Salaam',    region: 'Dar es Salaam',       address: '5 Ohio Street',                       emailDomain: 'ac.tz',   dial: '+255', phone: '71 000 0000'  },
+  'Uganda':            { city: 'Kampala',          region: 'Kampala',             address: '12 Kampala Road',                     emailDomain: 'ac.ug',   dial: '+256', phone: '77 000 0000'  },
+  'Rwanda':            { city: 'Kigali',           region: 'Kigali City',         address: '50 KG 7 Avenue',                      emailDomain: 'ac.rw',   dial: '+250', phone: '78 000 0000'  },
+  'Cameroon':          { city: 'Yaoundé',          region: 'Centre',              address: '24 Rue Joseph Essono',                emailDomain: 'edu.cm',  dial: '+237', phone: '67 000 000'   },
+  'Ethiopia':          { city: 'Addis Ababa',      region: 'Addis Ababa',         address: 'Bole Road, Kirkos',                   emailDomain: 'edu.et',  dial: '+251', phone: '91 000 0000'  },
+  'Egypt':             { city: 'Cairo',            region: 'Cairo Governorate',   address: '5 Tahrir Square, Downtown',           emailDomain: 'edu.eg',  dial: '+20',  phone: '10 000 0000'  },
+  'Morocco':           { city: 'Casablanca',       region: 'Grand Casablanca',    address: '35 Boulevard Mohammed V',             emailDomain: 'ac.ma',   dial: '+212', phone: '60 000 0000'  },
+  'Zambia':            { city: 'Lusaka',           region: 'Lusaka Province',     address: '10 Cairo Road',                       emailDomain: 'edu.zm',  dial: '+260', phone: '97 000 0000'  },
+  'Zimbabwe':          { city: 'Harare',           region: 'Harare Province',     address: '20 Samora Machel Avenue',             emailDomain: 'ac.zw',   dial: '+263', phone: '77 000 0000'  },
+  'Angola':            { city: 'Luanda',           region: 'Luanda Province',     address: '18 Avenida 4 de Fevereiro',           emailDomain: 'edu.ao',  dial: '+244', phone: '92 000 0000'  },
+  'Mozambique':        { city: 'Maputo',           region: 'Maputo Province',     address: '10 Avenida 25 de Setembro',           emailDomain: 'edu.mz',  dial: '+258', phone: '82 000 0000'  },
+  'Madagascar':        { city: 'Antananarivo',     region: 'Analamanga',          address: '5 Avenue de l\'Indépendance',         emailDomain: 'edu.mg',  dial: '+261', phone: '32 000 0000'  },
+  'Malawi':            { city: 'Lilongwe',         region: 'Central Region',      address: '1 Kamuzu Procession Road',            emailDomain: 'ac.mw',   dial: '+265', phone: '88 000 0000'  },
+  'Congo (DRC)':       { city: 'Kinshasa',         region: 'Kinshasa',            address: 'Boulevard du 30 Juin',                emailDomain: 'edu.cd',  dial: '+243', phone: '81 000 0000'  },
+  'Congo (Brazzaville)': { city: 'Brazzaville',   region: 'Brazzaville',         address: 'Avenue Amilcar Cabral',               emailDomain: 'edu.cg',  dial: '+242', phone: '06 000 0000'  },
+  'Gabon':             { city: 'Libreville',       region: 'Estuaire',            address: "Boulevard de l'Indépendance",         emailDomain: 'edu.ga',  dial: '+241', phone: '07 000 000'   },
+  'Namibia':           { city: 'Windhoek',         region: 'Khomas',              address: '10 Independence Avenue',              emailDomain: 'edu.na',  dial: '+264', phone: '81 000 0000'  },
+  'Botswana':          { city: 'Gaborone',         region: 'South-East District', address: '8 Khama Crescent',                    emailDomain: 'ac.bw',   dial: '+267', phone: '71 000 000'   },
+  'Eswatini':          { city: 'Mbabane',          region: 'Hhohho',              address: 'Allister Miller Street',              emailDomain: 'ac.sz',   dial: '+268', phone: '76 000 000'   },
+  'Lesotho':           { city: 'Maseru',           region: 'Maseru District',     address: '1 Kingsway Road',                     emailDomain: 'ac.ls',   dial: '+266', phone: '58 000 000'   },
+  'Somalia':           { city: 'Mogadishu',        region: 'Banaadir',            address: 'Via Roma, Hamar-Weyne',               emailDomain: 'edu.so',  dial: '+252', phone: '61 000 000'   },
+  'Sudan':             { city: 'Khartoum',         region: 'Khartoum State',      address: 'El Nile Street',                      emailDomain: 'edu.sd',  dial: '+249', phone: '91 000 0000'  },
+  'South Sudan':       { city: 'Juba',             region: 'Central Equatoria',   address: 'Juba Town Road',                      emailDomain: 'edu.ss',  dial: '+211', phone: '92 000 0000'  },
+  'United Kingdom':    { city: 'London',           region: 'Greater London',      address: '10 Downing Street',                   emailDomain: 'ac.uk',   dial: '+44',  phone: '7700 000000'  },
+  'United States':     { city: 'Washington D.C.',  region: 'District of Columbia','address': '1600 Pennsylvania Avenue',          emailDomain: 'edu',     dial: '+1',   phone: '202 000 0000' },
+  'Canada':            { city: 'Toronto',          region: 'Ontario',             address: '100 Queen Street West',               emailDomain: 'edu',     dial: '+1',   phone: '416 000 0000' },
+  'France':            { city: 'Paris',            region: 'Île-de-France',       address: '1 Rue de Rivoli',                     emailDomain: 'edu.fr',  dial: '+33',  phone: '6 00 00 0000' },
+  'India':             { city: 'New Delhi',        region: 'Delhi',               address: '5 Rajpath, Chanakyapuri',             emailDomain: 'edu.in',  dial: '+91',  phone: '98 000 00000' },
+};
+
+function getCountryMeta(country) {
+  return COUNTRY_META[country] || {
+    city: '', region: '', address: '', emailDomain: 'edu', dial: null, phone: '',
+  };
+}
+
 /* ================================================================
    Password Strength Indicator
    ================================================================ */
@@ -893,7 +947,16 @@ function Register({ onNavigate }) {
       const detected = TIMEZONE_TO_COUNTRY[tz];
       if (detected && COUNTRIES.includes(detected)) {
         setAutoDetectedCountry(detected);
-        setForm((p) => p.country ? p : { ...p, country: detected });
+        setForm((p) => {
+          if (p.country) return p; // user already selected — don't overwrite
+          const meta = getCountryMeta(detected);
+          return {
+            ...p,
+            country:        detected,
+            phoneCode:      meta.dial || p.phoneCode,
+            adminPhoneCode: meta.dial || p.adminPhoneCode,
+          };
+        });
       }
     } catch { /* Intl not available */ }
   }, []);
@@ -1342,22 +1405,35 @@ function Register({ onNavigate }) {
               <div className="input-wrap">
                 <span className="input-icon"><LocationIcon /></span>
                 <input id="address" className={`reg-input with-icon${fieldErrors.address ? ' has-error' : ''}`} type="text"
-                  placeholder="e.g. 61 New Castle Street, Kissy"
+                  placeholder={getCountryMeta(form.country).address ? `e.g. ${getCountryMeta(form.country).address}` : 'e.g. 123 Main Street'}
                   value={form.address} onChange={set('address')} onBlur={blur('address')} autoFocus />
               </div>
             </Field>
             <div className="reg-form-grid">
               <Field id="city" label="City / Town" required error={fieldErrors.city}>
-                <input id="city" className={`reg-input${fieldErrors.city ? ' has-error' : ''}`} type="text" placeholder="Freetown"
+                <input id="city" className={`reg-input${fieldErrors.city ? ' has-error' : ''}`} type="text"
+                  placeholder={getCountryMeta(form.country).city || 'e.g. Capital City'}
                   value={form.city} onChange={set('city')} onBlur={blur('city')} />
               </Field>
               <Field id="region" label="Region / State">
-                <input id="region" className="reg-input" type="text" placeholder="Western Urban"
+                <input id="region" className="reg-input" type="text"
+                  placeholder={getCountryMeta(form.country).region || 'e.g. Central Region'}
                   value={form.region} onChange={set('region')} />
               </Field>
             </div>
             <Field id="country" label="Country" required error={fieldErrors.country}>
-              <select id="country" className={`reg-select${fieldErrors.country ? ' has-error' : ''}`} value={form.country} onChange={set('country')} onBlur={blur('country')}>
+              <select id="country" className={`reg-select${fieldErrors.country ? ' has-error' : ''}`} value={form.country}
+                onChange={(e) => {
+                  const c = e.target.value;
+                  const meta = getCountryMeta(c);
+                  setForm((p) => ({
+                    ...p,
+                    country:        c,
+                    phoneCode:      meta.dial || p.phoneCode,
+                    adminPhoneCode: meta.dial || p.adminPhoneCode,
+                  }));
+                }}
+                onBlur={blur('country')}>
                 <option value="">Select country</option>
                 {COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
@@ -1381,14 +1457,14 @@ function Register({ onNavigate }) {
                 numberValue={form.phoneNumber}
                 onCodeChange={(v) => setForm((p) => ({ ...p, phoneCode: v }))}
                 onNumberChange={(v) => { setForm((p) => ({ ...p, phoneNumber: v })); setFieldErrors((p) => ({ ...p, phoneNumber: v.length > 0 && v.length < 6 ? 'Must be at least 6 digits.' : null })); }}
-                placeholder="76 000 000"
+                placeholder={getCountryMeta(form.country).phone || '00 000 0000'}
               />
             </Field>
             <Field id="email" label="Institutional Email" required error={fieldErrors.email}>
               <div className="input-wrap">
                 <span className="input-icon"><MailIcon /></span>
                 <input id="email" className={`reg-input with-icon${fieldErrors.email ? ' has-error' : ''}`} type="email"
-                  placeholder="info@iconhighschool.edu.sl"
+                  placeholder={`info@sunriseschool.${getCountryMeta(form.country).emailDomain || 'edu'}`}
                   value={form.email} onChange={set('email')} onBlur={blur('email')} />
               </div>
             </Field>
@@ -1396,7 +1472,7 @@ function Register({ onNavigate }) {
               <div className="input-wrap">
                 <span className="input-icon"><GlobeIcon /></span>
                 <input id="website" className="reg-input with-icon" type="url"
-                  placeholder="https://www.iconhighschool.edu.sl"
+                  placeholder={`https://www.sunriseschool.${getCountryMeta(form.country).emailDomain || 'edu'}`}
                   value={form.website} onChange={set('website')} />
               </div>
             </Field>
@@ -1416,14 +1492,14 @@ function Register({ onNavigate }) {
                 <div className="input-wrap">
                   <span className="input-icon"><AdminIcon /></span>
                   <input id="firstName" className={`reg-input with-icon${fieldErrors.firstName ? ' has-error' : ''}`} type="text"
-                    placeholder="Ishma" value={form.firstName} onChange={set('firstName')} onBlur={blur('firstName')} autoFocus />
+                    placeholder="Amara" value={form.firstName} onChange={set('firstName')} onBlur={blur('firstName')} autoFocus />
                 </div>
               </Field>
               <Field id="lastName" label="Last Name" required error={fieldErrors.lastName}>
                 <div className="input-wrap">
                   <span className="input-icon"><AdminIcon /></span>
                   <input id="lastName" className={`reg-input with-icon${fieldErrors.lastName ? ' has-error' : ''}`} type="text"
-                    placeholder="Rogers" value={form.lastName} onChange={set('lastName')} onBlur={blur('lastName')} />
+                    placeholder="Kamara" value={form.lastName} onChange={set('lastName')} onBlur={blur('lastName')} />
                 </div>
               </Field>
             </div>
@@ -1434,7 +1510,7 @@ function Register({ onNavigate }) {
               <div className="input-wrap">
                 <span className="input-icon"><AdminIcon /></span>
                 <input id="adminUsername" className={`reg-input with-icon${fieldErrors.adminUsername ? ' has-error' : ''}`} type="text"
-                  placeholder="e.g. ishma_rogers"
+                  placeholder="e.g. amara_kamara"
                   value={form.adminUsername} onChange={set('adminUsername')} onBlur={blur('adminUsername')}
                   autoComplete="username" />
               </div>
@@ -1444,7 +1520,7 @@ function Register({ onNavigate }) {
               <div className="input-wrap">
                 <span className="input-icon"><MailIcon /></span>
                 <input id="adminEmail" className={`reg-input with-icon${fieldErrors.adminEmail ? ' has-error' : ''}`} type="email"
-                  placeholder="admin@iconhighschool.edu.sl"
+                  placeholder={`admin@sunriseschool.${getCountryMeta(form.country).emailDomain || 'edu'}`}
                   value={form.adminEmail} onChange={set('adminEmail')} onBlur={blur('adminEmail')} autoComplete="email" />
               </div>
               {adminEmailDomainWarning && (
@@ -1465,7 +1541,7 @@ function Register({ onNavigate }) {
                 numberValue={form.adminPhoneNumber}
                 onCodeChange={(v) => setForm((p) => ({ ...p, adminPhoneCode: v }))}
                 onNumberChange={(v) => { setForm((p) => ({ ...p, adminPhoneNumber: v })); setFieldErrors((p) => ({ ...p, adminPhoneNumber: v.length > 0 && v.length < 6 ? 'Must be at least 6 digits.' : null })); }}
-                placeholder="76 000 000"
+                placeholder={getCountryMeta(form.country).phone || '00 000 0000'}
               />
             </Field>
 
