@@ -163,7 +163,6 @@ const ROLE_COLORS = {
 };
 
 const ACTIVITY_ICONS = { grade: <IcGrade />, login: <IcLogin />, admin: <IcAdmin /> };
-const DEVICE_ICONS   = { desktop: <IcDesktop />, phone: <IcPhone />, laptop: <IcLaptop /> };
 
 /* ============================================================
    Create User Modal
