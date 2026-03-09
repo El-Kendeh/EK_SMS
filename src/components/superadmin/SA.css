@@ -35,6 +35,25 @@
   --sa-radius:       12px;
   --sa-radius-sm:    8px;
   --sa-font:         -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+/* ---- Light theme overrides ---- */
+[data-theme="light"] {
+  --sa-bg:           #F0F4F8;
+  --sa-sidebar-bg:   #FFFFFF;
+  --sa-card-bg:      #FFFFFF;
+  --sa-card-bg2:     #F8FAFC;
+  --sa-border:       rgba(0,0,0,0.09);
+  --sa-border-hover: rgba(0,0,0,0.18);
+
+  --sa-text:         #0F172A;
+  --sa-text-2:       #475569;
+  --sa-text-3:       #94A3B8;
+
+  --sa-accent-dim:   rgba(14,165,233,0.12);
+  --sa-green-dim:    rgba(16,185,129,0.12);
+  --sa-amber-dim:    rgba(245,158,11,0.12);
+  --sa-red-dim:      rgba(239,68,68,0.12);
+  --sa-purple-dim:   rgba(139,92,246,0.12);
 }
 
 /* ============================================================
