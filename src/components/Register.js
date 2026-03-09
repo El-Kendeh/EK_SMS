@@ -892,6 +892,7 @@ function Register({ onNavigate }) {
   const [error, setError]               = useState('');
   const [showPwd, setShowPwd]           = useState(false);
   const [showConfirm, setShowConfirm]   = useState(false);
+  const [cityOther, setCityOther]       = useState(false);
 
   /* Inline per-field validation */
   const [fieldErrors, setFieldErrors] = useState({});
@@ -1420,24 +1421,28 @@ function Register({ onNavigate }) {
                         value={form.city} onChange={set('city')} onBlur={blur('city')} />
                     );
                   }
-                  const inList = cities.includes(form.city);
-                  const selectVal = form.city === '' ? '' : inList ? form.city : 'other';
                   return (
                     <>
                       <select id="city" className={`reg-select${fieldErrors.city ? ' has-error' : ''}`}
-                        value={selectVal}
+                        value={cityOther ? 'other' : form.city}
                         onChange={(e) => {
                           const v = e.target.value;
-                          setForm(p => ({ ...p, city: v === 'other' ? '' : v }));
+                          if (v === 'other') {
+                            setCityOther(true);
+                            setForm(p => ({ ...p, city: '' }));
+                          } else {
+                            setCityOther(false);
+                            setForm(p => ({ ...p, city: v }));
+                          }
                         }}
                         onBlur={blur('city')}>
                         <option value="">Select city / town…</option>
                         {cities.map(c => <option key={c} value={c}>{c}</option>)}
                         <option value="other">Other (specify below)</option>
                       </select>
-                      {selectVal === 'other' && (
+                      {cityOther && (
                         <input className={`reg-input${fieldErrors.city ? ' has-error' : ''}`} type="text"
-                          placeholder="Enter your city / town"
+                          placeholder="Type your city / town"
                           value={form.city} onChange={set('city')} onBlur={blur('city')}
                           style={{ marginTop: '0.5rem' }} autoFocus />
                       )}
@@ -1456,6 +1461,7 @@ function Register({ onNavigate }) {
                 onChange={(e) => {
                   const c = e.target.value;
                   const meta = getCountryMeta(c);
+                  setCityOther(false);
                   setForm((p) => ({
                     ...p,
                     country:        c,

@@ -2198,3 +2198,121 @@
   background: rgba(217, 119, 6, 0.07);
   border-color: rgba(217, 119, 6, 0.2);
 }
+
+/* ============================================================
+   Mobile Responsiveness — comprehensive patch (≤ 600px)
+   ============================================================ */
+@media (max-width: 600px) {
+  /* Phone dial button: shrink padding so it doesn't crowd the number input */
+  .phone-dial-btn {
+    padding: 0 8px;
+  }
+  .phone-dial-code {
+    font-size: 0.8rem;
+  }
+  .phone-dial-flag {
+    display: none;
+  }
+
+  /* Phone dropdown: full-width on mobile */
+  .phone-dropdown {
+    width: calc(100vw - 2rem);
+    left: 0;
+    right: 0;
+  }
+
+  /* OTP section: stack the send button below the email line */
+  .otp-send-wrap {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .btn-send-otp {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* OTP digit input: slightly smaller on tiny screens */
+  .otp-input {
+    font-size: 1.4rem;
+    letter-spacing: 0.35em;
+  }
+
+  /* OTP action buttons: stack vertically */
+  .otp-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .btn-verify-otp,
+  .btn-resend-otp {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Review rows: smaller text and tighter padding on mobile */
+  .review-rows {
+    border-radius: 10px;
+  }
+  .review-row {
+    padding: 9px 14px;
+    font-size: 0.82rem;
+    flex-wrap: wrap;
+    gap: 2px;
+  }
+  .review-row span:first-child {
+    min-width: 100px;
+  }
+
+  /* Logo upload area: full width, smaller preview */
+  .logo-upload {
+    gap: 12px;
+  }
+
+  /* Terms checkboxes: ensure text wraps properly */
+  .terms-check {
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 0.82rem;
+  }
+
+  /* Color picker row: stack on mobile */
+  .color-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  /* Step header title and subtitle */
+  .reg-step-title {
+    font-size: 1rem;
+  }
+  .reg-step-sub {
+    font-size: 0.8rem;
+  }
+
+  /* Confirmation / success screen */
+  .reg-confirm-icon {
+    width: 56px;
+    height: 56px;
+  }
+  .reg-confirm-title {
+    font-size: 1.1rem;
+  }
+}
+
+/* Extra-small: 360px and below */
+@media (max-width: 360px) {
+  .phone-dial-btn {
+    padding: 0 6px;
+  }
+  .phone-dial-code {
+    font-size: 0.72rem;
+  }
+  .otp-input {
+    font-size: 1.2rem;
+    letter-spacing: 0.25em;
+  }
+  .review-row {
+    padding: 8px 10px;
+    font-size: 0.78rem;
+  }
+}
