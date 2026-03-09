@@ -80,6 +80,11 @@ const ReviewIcon = () => (
     <path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
   </svg>
 );
+const DownloadIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ width: 15, height: 15 }}>
+    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+  </svg>
+);
 /* Field-specific icons */
 const BuildingIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -1824,9 +1829,28 @@ function Register({ onNavigate }) {
         {/* ── STEP 8: Review ── */}
         {step === 8 && (
           <div>
-            <p className="step-intro" style={{ marginBottom: '18px' }}>
-              Review your information carefully before submitting. Go back to any step to make changes.
-            </p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px', flexWrap: 'wrap', gap: 10 }}>
+              <p className="step-intro" style={{ margin: 0 }}>
+                Review your information carefully before submitting. Go back to any step to make changes.
+              </p>
+              <button
+                type="button"
+                className="reg-pdf-btn"
+                onClick={() => window.print()}
+                title="Download review as PDF"
+              >
+                <DownloadIcon /> Download PDF
+              </button>
+            </div>
+
+            {/* Print-only header — hidden on screen */}
+            <div className="reg-print-header">
+              {badgePreview && <img src={badgePreview} alt="School badge" className="reg-print-logo" />}
+              <div>
+                <h1 className="reg-print-title">{form.institutionName || 'Institution Registration'}</h1>
+                <p className="reg-print-sub">EK-SMS Registration Review — {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+              </div>
+            </div>
 
             <ReviewSection title="Basic Information" icon={<InfoIcon />}>
               {badgePreview && (

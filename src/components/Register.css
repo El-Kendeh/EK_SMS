@@ -2200,6 +2200,105 @@
 }
 
 /* ============================================================
+   Review: Download PDF button
+   ============================================================ */
+.reg-pdf-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 180, 216, 0.45);
+  background: rgba(0, 180, 216, 0.08);
+  color: #00B4D8;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.reg-pdf-btn:hover {
+  background: rgba(0, 180, 216, 0.16);
+  border-color: rgba(0, 180, 216, 0.7);
+}
+[data-theme="light"] .reg-pdf-btn {
+  border-color: rgba(2, 132, 199, 0.4);
+  background: rgba(2, 132, 199, 0.07);
+  color: #0284C7;
+}
+[data-theme="light"] .reg-pdf-btn:hover {
+  background: rgba(2, 132, 199, 0.14);
+}
+
+/* Print-only header (hidden on screen, shown when printing) */
+.reg-print-header {
+  display: none;
+}
+
+/* ============================================================
+   @media print — Registration Review PDF layout
+   ============================================================ */
+@media print {
+  /* Hide everything on the page except the review content */
+  body > *:not(.reg-page) { display: none !important; }
+  .reg-page { background: #fff !important; padding: 0 !important; min-height: unset !important; }
+  .reg-card { box-shadow: none !important; border: none !important; padding: 0 !important; max-width: 100% !important; border-radius: 0 !important; }
+
+  /* Hide everything inside the card that is NOT the review step */
+  .stepper,
+  .reg-page-head,
+  .reg-footer-signin,
+  .reg-nav,
+  .reg-pdf-btn,
+  .step-intro { display: none !important; }
+
+  /* Show the print-only header */
+  .reg-print-header {
+    display: flex !important;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #1B3FAF;
+  }
+  .reg-print-logo {
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
+    border-radius: 8px;
+  }
+  .reg-print-title {
+    margin: 0 0 4px;
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #0F172A;
+  }
+  .reg-print-sub {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: #475569;
+  }
+
+  /* Review sections: clean print style */
+  .review-section { break-inside: avoid; margin-bottom: 16px !important; }
+  .review-section-title { color: #1B3FAF !important; font-size: 0.8rem !important; }
+  .review-rows { border: 1px solid #e2e8f0 !important; border-radius: 8px !important; }
+  .review-row { padding: 8px 14px !important; color: #0F172A !important; font-size: 0.8125rem !important; }
+  .review-row:not(:last-child) { border-bottom: 1px solid #e2e8f0 !important; }
+  .review-label { color: #475569 !important; }
+  .review-value { color: #0F172A !important; }
+  .review-badge { width: 48px; height: 48px; }
+
+  /* Page settings */
+  @page {
+    margin: 20mm 15mm;
+    size: A4;
+  }
+}
+
+/* ============================================================
    Mobile Responsiveness — comprehensive patch (≤ 600px)
    ============================================================ */
 @media (max-width: 600px) {
