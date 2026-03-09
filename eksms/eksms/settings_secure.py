@@ -256,3 +256,21 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Prevent MIME type sniffing
 SECURE_CONTENT_TYPE_NOSNIFF = True
+
+# ── Email / OTP ──────────────────────────────────────────────────────────────
+# In development (EMAIL_BACKEND not set) the console backend is used —
+# the OTP will be printed to the Django terminal instead of sent.
+# For production set these env vars on your hosting platform (Render, etc.):
+#   EMAIL_HOST, EMAIL_PORT, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD,
+#   DEFAULT_FROM_EMAIL
+EMAIL_BACKEND = os.environ.get(
+    'EMAIL_BACKEND',
+    'django.core.mail.backends.console.EmailBackend',   # dev default
+)
+EMAIL_HOST          = os.environ.get('EMAIL_HOST',     'smtp.gmail.com')
+EMAIL_PORT          = int(os.environ.get('EMAIL_PORT', 587))
+EMAIL_USE_TLS       = True
+EMAIL_HOST_USER     = os.environ.get('EMAIL_HOST_USER',     '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL  = os.environ.get('DEFAULT_FROM_EMAIL',  'EK-SMS <noreply@eksms.com>')
+

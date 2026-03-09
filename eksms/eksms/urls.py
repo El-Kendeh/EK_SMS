@@ -8,7 +8,7 @@ from django.contrib import admin
 from django.urls import path
 from django.views.generic import RedirectView
 from django.views.defaults import page_not_found, server_error
-from .views import favicon_view, api_login, api_register, api_get_schools, api_approve_school, api_waitlist
+from .views import favicon_view, api_login, api_register, api_get_schools, api_approve_school, api_waitlist, api_send_otp, api_verify_otp
 from django.conf import settings
 from django.conf.urls.static import static
 
@@ -22,6 +22,8 @@ urlpatterns = [
     path('api/schools/', api_get_schools, name='api_get_schools'),
     path('api/schools/approve/', api_approve_school, name='api_approve_school'),
     path('api/waitlist/',        api_waitlist,        name='api_waitlist'),
+    path('api/send-otp/',        api_send_otp,        name='api_send_otp'),
+    path('api/verify-otp/',      api_verify_otp,      name='api_verify_otp'),
     
     # Root URL redirects to admin
     path('', RedirectView.as_view(url='admin/', permanent=False)),

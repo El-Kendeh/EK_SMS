@@ -456,3 +456,102 @@ def api_waitlist(request):
 
     except Exception:
         return JsonResponse({'success': False, 'message': 'Something went wrong. Please try again.'}, status=500)
+
+
+# ── Registration email OTP ────────────────────────────────────────────────────
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_send_otp(request):
+    """
+    Generate a 6-digit OTP and email it to the prospective admin.
+    The code is stored in Django's cache for 10 minutes.
+    """
+    import random
+    from django.core.cache import cache
+    from django.core.mail import send_mail
+    from django.conf import settings as django_settings
+
+    try:
+        data = json.loads(request.body)
+        email = data.get('email', '').strip().lower()
+        if not email or '@' not in email:
+            return JsonResponse({'error': 'A valid email address is required.'}, status=400)
+
+        code = f"{random.randint(100000, 999999)}"
+        cache.set(f"reg_otp_{email}", code, timeout=600)   # 10 minutes
+
+        from_email = getattr(django_settings, 'DEFAULT_FROM_EMAIL', 'EK-SMS <noreply@eksms.com>')
+
+        html_body = f"""
+        <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;
+                    background:#0d1117;border-radius:12px;border:1px solid #1e293b;">
+          <h2 style="color:#00B4D8;margin:0 0 4px;font-size:1.3rem;">EK-SMS</h2>
+          <p style="color:#94a3b8;margin:0 0 24px;font-size:13px;">Institution Registration Verification</p>
+          <p style="color:#e2e8f0;font-size:14px;margin:0 0 16px;">
+            Please use the code below to verify your email address:
+          </p>
+          <div style="background:#1e293b;border:1px solid #334155;border-radius:8px;
+                      padding:20px;text-align:center;margin-bottom:20px;">
+            <span style="font-size:34px;font-weight:800;letter-spacing:0.18em;
+                         color:#00B4D8;font-family:Consolas,monospace;">{code}</span>
+          </div>
+          <p style="color:#64748b;font-size:12px;margin:0;">
+            This code expires in <strong style="color:#94a3b8;">10 minutes</strong>.
+            If you did not request this, you can safely ignore this message.
+          </p>
+        </div>
+        """
+
+        send_mail(
+            subject='EK-SMS — Your Email Verification Code',
+            message=f'Your EK-SMS verification code is: {code}\n\nExpires in 10 minutes.',
+            from_email=from_email,
+            recipient_list=[email],
+            fail_silently=False,
+            html_message=html_body,
+        )
+
+        return JsonResponse({'success': True, 'message': 'Verification code sent to your email.'})
+
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid request body.'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': 'Could not send code. Please try again later.', 'detail': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_verify_otp(request):
+    """
+    Verify the OTP submitted by the user against the cached value.
+    Clears the code after a successful match.
+    """
+    from django.core.cache import cache
+
+    try:
+        data = json.loads(request.body)
+        email = data.get('email', '').strip().lower()
+        otp   = data.get('otp', '').strip()
+
+        if not email or not otp:
+            return JsonResponse({'success': False, 'message': 'Email and code are required.'}, status=400)
+
+        stored = cache.get(f"reg_otp_{email}")
+
+        if stored is None:
+            return JsonResponse(
+                {'success': False, 'message': 'Code expired or not found. Please request a new one.'},
+                status=400,
+            )
+
+        if stored != otp:
+            return JsonResponse({'success': False, 'message': 'Invalid code. Please try again.'}, status=400)
+
+        cache.delete(f"reg_otp_{email}")
+        return JsonResponse({'success': True, 'message': 'Email verified successfully.'})
+
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid request body.'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': 'Verification failed.', 'detail': str(e)}, status=500)
