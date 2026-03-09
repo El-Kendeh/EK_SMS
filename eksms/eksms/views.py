@@ -555,3 +555,14 @@ def api_verify_otp(request):
         return JsonResponse({'success': False, 'message': 'Invalid request body.'}, status=400)
     except Exception as e:
         return JsonResponse({'success': False, 'message': 'Verification failed.', 'detail': str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
+def api_check_school_name(request):
+    """Check if a school name is already registered (case-insensitive)."""
+    from eksms_core.models import School
+    name = request.GET.get('name', '').strip()
+    if not name:
+        return JsonResponse({'exists': False})
+    exists = School.objects.filter(name__iexact=name).exists()
+    return JsonResponse({'exists': exists})
