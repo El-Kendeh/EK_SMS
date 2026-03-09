@@ -374,52 +374,52 @@ const COUNTRY_CODES = [
   { code: 'MX', name: 'Mexico',         dial: '+52'  },
 ];
 
-/* Country-specific placeholder data — city, region, address sample, email TLD, dial code, phone format */
+/* Country-specific placeholder data — city, region, address sample, email TLD, dial code, phone format, cities list */
 const COUNTRY_META = {
-  'Sierra Leone':      { city: 'Freetown',        region: 'Western Urban',       address: '23 Wilkinson Road, Aberdeen',          emailDomain: 'edu.sl',  dial: '+232', phone: '76 000 000'   },
-  'Liberia':           { city: 'Monrovia',         region: 'Montserrado',         address: '14 Broad Street, Sinkor',             emailDomain: 'edu.lr',  dial: '+231', phone: '88 000 000'   },
-  'Ghana':             { city: 'Accra',            region: 'Greater Accra',       address: '12 Independence Avenue',              emailDomain: 'edu.gh',  dial: '+233', phone: '20 000 0000'  },
-  'Nigeria':           { city: 'Lagos',            region: 'Lagos State',         address: '15 Victoria Island Road',             emailDomain: 'edu.ng',  dial: '+234', phone: '80 000 0000'  },
-  'Kenya':             { city: 'Nairobi',          region: 'Nairobi County',      address: '45 Kenyatta Avenue',                  emailDomain: 'ac.ke',   dial: '+254', phone: '70 000 0000'  },
-  'Gambia':            { city: 'Banjul',           region: 'Banjul Division',     address: '10 Independence Drive',               emailDomain: 'edu.gm',  dial: '+220', phone: '300 0000'     },
-  'Guinea':            { city: 'Conakry',          region: 'Conakry',             address: '24 Rue du Commerce',                  emailDomain: 'edu.gn',  dial: '+224', phone: '62 000 000'   },
-  'Guinea-Bissau':     { city: 'Bissau',           region: 'Bissau',              address: 'Rua Justino Lopes',                   emailDomain: 'edu.gw',  dial: '+245', phone: '96 000 000'   },
-  'Senegal':           { city: 'Dakar',            region: 'Dakar',               address: '30 Rue Vincens',                      emailDomain: 'edu.sn',  dial: '+221', phone: '77 000 0000'  },
-  "Côte d'Ivoire":     { city: 'Abidjan',          region: 'Abidjan',             address: '18 Boulevard de la République',       emailDomain: 'edu.ci',  dial: '+225', phone: '07 000 0000'  },
-  'Mali':              { city: 'Bamako',           region: 'District de Bamako',  address: 'Rue 12, Quartier du Fleuve',          emailDomain: 'edu.ml',  dial: '+223', phone: '66 000 000'   },
-  'Burkina Faso':      { city: 'Ouagadougou',      region: 'Kadiogo',             address: 'Avenue Kwame Nkrumah',                emailDomain: 'edu.bf',  dial: '+226', phone: '70 000 000'   },
-  'Togo':              { city: 'Lomé',             region: 'Maritime',            address: 'Boulevard du 13 Janvier',             emailDomain: 'edu.tg',  dial: '+228', phone: '90 000 000'   },
-  'Benin':             { city: 'Cotonou',          region: 'Littoral',            address: 'Boulevard Saint-Michel',              emailDomain: 'edu.bj',  dial: '+229', phone: '96 000 000'   },
-  'Niger':             { city: 'Niamey',           region: 'Niamey',              address: "Avenue du Président Luebke",          emailDomain: 'edu.ne',  dial: '+227', phone: '96 000 000'   },
-  'South Africa':      { city: 'Cape Town',        region: 'Western Cape',        address: '1 Adderley Street',                   emailDomain: 'edu.za',  dial: '+27',  phone: '71 000 0000'  },
-  'Tanzania':          { city: 'Dar es Salaam',    region: 'Dar es Salaam',       address: '5 Ohio Street',                       emailDomain: 'ac.tz',   dial: '+255', phone: '71 000 0000'  },
-  'Uganda':            { city: 'Kampala',          region: 'Kampala',             address: '12 Kampala Road',                     emailDomain: 'ac.ug',   dial: '+256', phone: '77 000 0000'  },
-  'Rwanda':            { city: 'Kigali',           region: 'Kigali City',         address: '50 KG 7 Avenue',                      emailDomain: 'ac.rw',   dial: '+250', phone: '78 000 0000'  },
-  'Cameroon':          { city: 'Yaoundé',          region: 'Centre',              address: '24 Rue Joseph Essono',                emailDomain: 'edu.cm',  dial: '+237', phone: '67 000 000'   },
-  'Ethiopia':          { city: 'Addis Ababa',      region: 'Addis Ababa',         address: 'Bole Road, Kirkos',                   emailDomain: 'edu.et',  dial: '+251', phone: '91 000 0000'  },
-  'Egypt':             { city: 'Cairo',            region: 'Cairo Governorate',   address: '5 Tahrir Square, Downtown',           emailDomain: 'edu.eg',  dial: '+20',  phone: '10 000 0000'  },
-  'Morocco':           { city: 'Casablanca',       region: 'Grand Casablanca',    address: '35 Boulevard Mohammed V',             emailDomain: 'ac.ma',   dial: '+212', phone: '60 000 0000'  },
-  'Zambia':            { city: 'Lusaka',           region: 'Lusaka Province',     address: '10 Cairo Road',                       emailDomain: 'edu.zm',  dial: '+260', phone: '97 000 0000'  },
-  'Zimbabwe':          { city: 'Harare',           region: 'Harare Province',     address: '20 Samora Machel Avenue',             emailDomain: 'ac.zw',   dial: '+263', phone: '77 000 0000'  },
-  'Angola':            { city: 'Luanda',           region: 'Luanda Province',     address: '18 Avenida 4 de Fevereiro',           emailDomain: 'edu.ao',  dial: '+244', phone: '92 000 0000'  },
-  'Mozambique':        { city: 'Maputo',           region: 'Maputo Province',     address: '10 Avenida 25 de Setembro',           emailDomain: 'edu.mz',  dial: '+258', phone: '82 000 0000'  },
-  'Madagascar':        { city: 'Antananarivo',     region: 'Analamanga',          address: '5 Avenue de l\'Indépendance',         emailDomain: 'edu.mg',  dial: '+261', phone: '32 000 0000'  },
-  'Malawi':            { city: 'Lilongwe',         region: 'Central Region',      address: '1 Kamuzu Procession Road',            emailDomain: 'ac.mw',   dial: '+265', phone: '88 000 0000'  },
-  'Congo (DRC)':       { city: 'Kinshasa',         region: 'Kinshasa',            address: 'Boulevard du 30 Juin',                emailDomain: 'edu.cd',  dial: '+243', phone: '81 000 0000'  },
-  'Congo (Brazzaville)': { city: 'Brazzaville',   region: 'Brazzaville',         address: 'Avenue Amilcar Cabral',               emailDomain: 'edu.cg',  dial: '+242', phone: '06 000 0000'  },
-  'Gabon':             { city: 'Libreville',       region: 'Estuaire',            address: "Boulevard de l'Indépendance",         emailDomain: 'edu.ga',  dial: '+241', phone: '07 000 000'   },
-  'Namibia':           { city: 'Windhoek',         region: 'Khomas',              address: '10 Independence Avenue',              emailDomain: 'edu.na',  dial: '+264', phone: '81 000 0000'  },
-  'Botswana':          { city: 'Gaborone',         region: 'South-East District', address: '8 Khama Crescent',                    emailDomain: 'ac.bw',   dial: '+267', phone: '71 000 000'   },
-  'Eswatini':          { city: 'Mbabane',          region: 'Hhohho',              address: 'Allister Miller Street',              emailDomain: 'ac.sz',   dial: '+268', phone: '76 000 000'   },
-  'Lesotho':           { city: 'Maseru',           region: 'Maseru District',     address: '1 Kingsway Road',                     emailDomain: 'ac.ls',   dial: '+266', phone: '58 000 000'   },
-  'Somalia':           { city: 'Mogadishu',        region: 'Banaadir',            address: 'Via Roma, Hamar-Weyne',               emailDomain: 'edu.so',  dial: '+252', phone: '61 000 000'   },
-  'Sudan':             { city: 'Khartoum',         region: 'Khartoum State',      address: 'El Nile Street',                      emailDomain: 'edu.sd',  dial: '+249', phone: '91 000 0000'  },
-  'South Sudan':       { city: 'Juba',             region: 'Central Equatoria',   address: 'Juba Town Road',                      emailDomain: 'edu.ss',  dial: '+211', phone: '92 000 0000'  },
-  'United Kingdom':    { city: 'London',           region: 'Greater London',      address: '10 Downing Street',                   emailDomain: 'ac.uk',   dial: '+44',  phone: '7700 000000'  },
-  'United States':     { city: 'Washington D.C.',  region: 'District of Columbia','address': '1600 Pennsylvania Avenue',          emailDomain: 'edu',     dial: '+1',   phone: '202 000 0000' },
-  'Canada':            { city: 'Toronto',          region: 'Ontario',             address: '100 Queen Street West',               emailDomain: 'edu',     dial: '+1',   phone: '416 000 0000' },
-  'France':            { city: 'Paris',            region: 'Île-de-France',       address: '1 Rue de Rivoli',                     emailDomain: 'edu.fr',  dial: '+33',  phone: '6 00 00 0000' },
-  'India':             { city: 'New Delhi',        region: 'Delhi',               address: '5 Rajpath, Chanakyapuri',             emailDomain: 'edu.in',  dial: '+91',  phone: '98 000 00000' },
+  'Sierra Leone':      { city: 'Freetown',        region: 'Western Urban',       address: '23 Wilkinson Road, Aberdeen',          emailDomain: 'edu.sl',  dial: '+232', phone: '76 000 000',   cities: ['Freetown', 'Bo', 'Kenema', 'Makeni', 'Koidu', 'Lunsar', 'Port Loko', 'Waterloo'] },
+  'Liberia':           { city: 'Monrovia',         region: 'Montserrado',         address: '14 Broad Street, Sinkor',             emailDomain: 'edu.lr',  dial: '+231', phone: '88 000 000',   cities: ['Monrovia', 'Gbarnga', 'Kakata', 'Buchanan', 'Voinjama', 'Zwedru', 'Harper', 'Robertsport'] },
+  'Ghana':             { city: 'Accra',            region: 'Greater Accra',       address: '12 Independence Avenue',              emailDomain: 'edu.gh',  dial: '+233', phone: '20 000 0000',  cities: ['Accra', 'Kumasi', 'Tamale', 'Sekondi-Takoradi', 'Cape Coast', 'Obuasi', 'Sunyani', 'Koforidua'] },
+  'Nigeria':           { city: 'Lagos',            region: 'Lagos State',         address: '15 Victoria Island Road',             emailDomain: 'edu.ng',  dial: '+234', phone: '80 000 0000',  cities: ['Lagos', 'Abuja', 'Kano', 'Ibadan', 'Port Harcourt', 'Benin City', 'Kaduna', 'Enugu', 'Onitsha'] },
+  'Kenya':             { city: 'Nairobi',          region: 'Nairobi County',      address: '45 Kenyatta Avenue',                  emailDomain: 'ac.ke',   dial: '+254', phone: '70 000 0000',  cities: ['Nairobi', 'Mombasa', 'Kisumu', 'Nakuru', 'Eldoret', 'Thika', 'Malindi', 'Nyeri'] },
+  'Gambia':            { city: 'Banjul',           region: 'Banjul Division',     address: '10 Independence Drive',               emailDomain: 'edu.gm',  dial: '+220', phone: '300 0000',     cities: ['Banjul', 'Serekunda', 'Brikama', 'Bakau', 'Farafenni', 'Lamin', 'Basse Santa Su'] },
+  'Guinea':            { city: 'Conakry',          region: 'Conakry',             address: '24 Rue du Commerce',                  emailDomain: 'edu.gn',  dial: '+224', phone: '62 000 000',   cities: ['Conakry', 'Nzérékoré', 'Kankan', 'Kindia', 'Labé', 'Siguiri', 'Mamou'] },
+  'Guinea-Bissau':     { city: 'Bissau',           region: 'Bissau',              address: 'Rua Justino Lopes',                   emailDomain: 'edu.gw',  dial: '+245', phone: '96 000 000',   cities: ['Bissau', 'Bafatá', 'Gabú', 'Bissorã', 'Bolama', 'Cacheu', 'Mansôa'] },
+  'Senegal':           { city: 'Dakar',            region: 'Dakar',               address: '30 Rue Vincens',                      emailDomain: 'edu.sn',  dial: '+221', phone: '77 000 0000',  cities: ['Dakar', 'Thiès', 'Kaolack', 'Ziguinchor', 'Saint-Louis', 'Touba', 'Diourbel'] },
+  "Côte d'Ivoire":     { city: 'Abidjan',          region: 'Abidjan',             address: '18 Boulevard de la République',       emailDomain: 'edu.ci',  dial: '+225', phone: '07 000 0000',  cities: ['Abidjan', 'Bouaké', 'Daloa', 'Yamoussoukro', 'San-Pédro', 'Korhogo', 'Man'] },
+  'Mali':              { city: 'Bamako',           region: 'District de Bamako',  address: 'Rue 12, Quartier du Fleuve',          emailDomain: 'edu.ml',  dial: '+223', phone: '66 000 000',   cities: ['Bamako', 'Sikasso', 'Mopti', 'Koutiala', 'Kayes', 'Ségou', 'Gao'] },
+  'Burkina Faso':      { city: 'Ouagadougou',      region: 'Kadiogo',             address: 'Avenue Kwame Nkrumah',                emailDomain: 'edu.bf',  dial: '+226', phone: '70 000 000',   cities: ['Ouagadougou', 'Bobo-Dioulasso', 'Koudougou', 'Ouahigouya', 'Banfora', 'Kaya'] },
+  'Togo':              { city: 'Lomé',             region: 'Maritime',            address: 'Boulevard du 13 Janvier',             emailDomain: 'edu.tg',  dial: '+228', phone: '90 000 000',   cities: ['Lomé', 'Sokodé', 'Kara', 'Atakpamé', 'Kpalimé', 'Tsévié', 'Aného'] },
+  'Benin':             { city: 'Cotonou',          region: 'Littoral',            address: 'Boulevard Saint-Michel',              emailDomain: 'edu.bj',  dial: '+229', phone: '96 000 000',   cities: ['Cotonou', 'Porto-Novo', 'Parakou', 'Abomey', 'Bohicon', 'Kandi', 'Natitingou'] },
+  'Niger':             { city: 'Niamey',           region: 'Niamey',              address: "Avenue du Président Luebke",          emailDomain: 'edu.ne',  dial: '+227', phone: '96 000 000',   cities: ['Niamey', 'Zinder', 'Maradi', 'Agadez', 'Tahoua', 'Dosso', 'Diffa'] },
+  'South Africa':      { city: 'Cape Town',        region: 'Western Cape',        address: '1 Adderley Street',                   emailDomain: 'edu.za',  dial: '+27',  phone: '71 000 0000',  cities: ['Cape Town', 'Johannesburg', 'Durban', 'Pretoria', 'Port Elizabeth', 'Bloemfontein', 'East London', 'Polokwane'] },
+  'Tanzania':          { city: 'Dar es Salaam',    region: 'Dar es Salaam',       address: '5 Ohio Street',                       emailDomain: 'ac.tz',   dial: '+255', phone: '71 000 0000',  cities: ['Dar es Salaam', 'Dodoma', 'Mwanza', 'Arusha', 'Mbeya', 'Morogoro', 'Tanga', 'Zanzibar City'] },
+  'Uganda':            { city: 'Kampala',          region: 'Kampala',             address: '12 Kampala Road',                     emailDomain: 'ac.ug',   dial: '+256', phone: '77 000 0000',  cities: ['Kampala', 'Gulu', 'Mbarara', 'Jinja', 'Entebbe', 'Mbale', 'Fort Portal', 'Lira'] },
+  'Rwanda':            { city: 'Kigali',           region: 'Kigali City',         address: '50 KG 7 Avenue',                      emailDomain: 'ac.rw',   dial: '+250', phone: '78 000 0000',  cities: ['Kigali', 'Butare', 'Gitarama', 'Musanze', 'Gisenyi', 'Byumba', 'Rwamagana'] },
+  'Cameroon':          { city: 'Yaoundé',          region: 'Centre',              address: '24 Rue Joseph Essono',                emailDomain: 'edu.cm',  dial: '+237', phone: '67 000 000',   cities: ['Yaoundé', 'Douala', 'Garoua', 'Bamenda', 'Bafoussam', 'Maroua', 'Ngaoundéré'] },
+  'Ethiopia':          { city: 'Addis Ababa',      region: 'Addis Ababa',         address: 'Bole Road, Kirkos',                   emailDomain: 'edu.et',  dial: '+251', phone: '91 000 0000',  cities: ['Addis Ababa', 'Dire Dawa', 'Mekelle', 'Bahir Dar', 'Gondar', 'Hawassa', 'Jimma'] },
+  'Egypt':             { city: 'Cairo',            region: 'Cairo Governorate',   address: '5 Tahrir Square, Downtown',           emailDomain: 'edu.eg',  dial: '+20',  phone: '10 000 0000',  cities: ['Cairo', 'Alexandria', 'Giza', 'Luxor', 'Aswan', 'Hurghada', 'Port Said', 'Suez'] },
+  'Morocco':           { city: 'Casablanca',       region: 'Grand Casablanca',    address: '35 Boulevard Mohammed V',             emailDomain: 'ac.ma',   dial: '+212', phone: '60 000 0000',  cities: ['Casablanca', 'Rabat', 'Fez', 'Marrakech', 'Agadir', 'Tangier', 'Meknès', 'Oujda'] },
+  'Zambia':            { city: 'Lusaka',           region: 'Lusaka Province',     address: '10 Cairo Road',                       emailDomain: 'edu.zm',  dial: '+260', phone: '97 000 0000',  cities: ['Lusaka', 'Kitwe', 'Ndola', 'Kabwe', 'Chingola', 'Livingstone', 'Mufulira', 'Luanshya'] },
+  'Zimbabwe':          { city: 'Harare',           region: 'Harare Province',     address: '20 Samora Machel Avenue',             emailDomain: 'ac.zw',   dial: '+263', phone: '77 000 0000',  cities: ['Harare', 'Bulawayo', 'Chitungwiza', 'Mutare', 'Gweru', 'Kwekwe', 'Kadoma', 'Masvingo'] },
+  'Angola':            { city: 'Luanda',           region: 'Luanda Province',     address: '18 Avenida 4 de Fevereiro',           emailDomain: 'edu.ao',  dial: '+244', phone: '92 000 0000',  cities: ['Luanda', 'Huambo', 'Lobito', 'Benguela', 'Namibe', 'Malanje', 'Lubango', 'Kuito'] },
+  'Mozambique':        { city: 'Maputo',           region: 'Maputo Province',     address: '10 Avenida 25 de Setembro',           emailDomain: 'edu.mz',  dial: '+258', phone: '82 000 0000',  cities: ['Maputo', 'Matola', 'Beira', 'Nampula', 'Quelimane', 'Tete', 'Nacala', 'Lichinga'] },
+  'Madagascar':        { city: 'Antananarivo',     region: 'Analamanga',          address: '5 Avenue de l\'Indépendance',         emailDomain: 'edu.mg',  dial: '+261', phone: '32 000 0000',  cities: ['Antananarivo', 'Toamasina', 'Antsirabe', 'Fianarantsoa', 'Mahajanga', 'Toliara', 'Antsiranana'] },
+  'Malawi':            { city: 'Lilongwe',         region: 'Central Region',      address: '1 Kamuzu Procession Road',            emailDomain: 'ac.mw',   dial: '+265', phone: '88 000 0000',  cities: ['Lilongwe', 'Blantyre', 'Mzuzu', 'Zomba', 'Kasungu', 'Mangochi', 'Karonga'] },
+  'Congo (DRC)':       { city: 'Kinshasa',         region: 'Kinshasa',            address: 'Boulevard du 30 Juin',                emailDomain: 'edu.cd',  dial: '+243', phone: '81 000 0000',  cities: ['Kinshasa', 'Lubumbashi', 'Mbuji-Mayi', 'Kananga', 'Kisangani', 'Bukavu', 'Goma', 'Matadi'] },
+  'Congo (Brazzaville)': { city: 'Brazzaville',   region: 'Brazzaville',         address: 'Avenue Amilcar Cabral',               emailDomain: 'edu.cg',  dial: '+242', phone: '06 000 0000',  cities: ['Brazzaville', 'Pointe-Noire', 'Dolisie', 'Nkayi', 'Impfondo', 'Owando', 'Ouésso'] },
+  'Gabon':             { city: 'Libreville',       region: 'Estuaire',            address: "Boulevard de l'Indépendance",         emailDomain: 'edu.ga',  dial: '+241', phone: '07 000 000',   cities: ['Libreville', 'Port-Gentil', 'Franceville', 'Oyem', 'Moanda', 'Mouila', 'Lambaréné'] },
+  'Namibia':           { city: 'Windhoek',         region: 'Khomas',              address: '10 Independence Avenue',              emailDomain: 'edu.na',  dial: '+264', phone: '81 000 0000',  cities: ['Windhoek', 'Swakopmund', 'Walvis Bay', 'Oshakati', 'Rundu', 'Katima Mulilo', 'Lüderitz'] },
+  'Botswana':          { city: 'Gaborone',         region: 'South-East District', address: '8 Khama Crescent',                    emailDomain: 'ac.bw',   dial: '+267', phone: '71 000 000',   cities: ['Gaborone', 'Francistown', 'Molepolole', 'Selebi-Phikwe', 'Kanye', 'Maun', 'Serowe'] },
+  'Eswatini':          { city: 'Mbabane',          region: 'Hhohho',              address: 'Allister Miller Street',              emailDomain: 'ac.sz',   dial: '+268', phone: '76 000 000',   cities: ['Mbabane', 'Manzini', 'Big Bend', 'Malkerns', 'Nhlangano', 'Siteki'] },
+  'Lesotho':           { city: 'Maseru',           region: 'Maseru District',     address: '1 Kingsway Road',                     emailDomain: 'ac.ls',   dial: '+266', phone: '58 000 000',   cities: ['Maseru', 'Teyateyaneng', 'Mafeteng', 'Hlotse', "Mohale's Hoek", 'Quthing'] },
+  'Somalia':           { city: 'Mogadishu',        region: 'Banaadir',            address: 'Via Roma, Hamar-Weyne',               emailDomain: 'edu.so',  dial: '+252', phone: '61 000 000',   cities: ['Mogadishu', 'Hargeisa', 'Bosaso', 'Kismayo', 'Berbera', 'Merca', 'Baidoa'] },
+  'Sudan':             { city: 'Khartoum',         region: 'Khartoum State',      address: 'El Nile Street',                      emailDomain: 'edu.sd',  dial: '+249', phone: '91 000 0000',  cities: ['Khartoum', 'Omdurman', 'Port Sudan', 'Kassala', 'Gedaref', 'El Obeid', 'Wad Madani'] },
+  'South Sudan':       { city: 'Juba',             region: 'Central Equatoria',   address: 'Juba Town Road',                      emailDomain: 'edu.ss',  dial: '+211', phone: '92 000 0000',  cities: ['Juba', 'Malakal', 'Wau', 'Yambio', 'Rumbek', 'Bentiu', 'Bor'] },
+  'United Kingdom':    { city: 'London',           region: 'Greater London',      address: '10 Downing Street',                   emailDomain: 'ac.uk',   dial: '+44',  phone: '7700 000000',  cities: ['London', 'Birmingham', 'Manchester', 'Leeds', 'Glasgow', 'Liverpool', 'Edinburgh', 'Bristol'] },
+  'United States':     { city: 'Washington D.C.',  region: 'District of Columbia','address': '1600 Pennsylvania Avenue',          emailDomain: 'edu',     dial: '+1',   phone: '202 000 0000', cities: ['New York', 'Los Angeles', 'Chicago', 'Houston', 'Phoenix', 'Philadelphia', 'Washington D.C.', 'Atlanta'] },
+  'Canada':            { city: 'Toronto',          region: 'Ontario',             address: '100 Queen Street West',               emailDomain: 'edu',     dial: '+1',   phone: '416 000 0000', cities: ['Toronto', 'Montreal', 'Vancouver', 'Calgary', 'Edmonton', 'Ottawa', 'Winnipeg', 'Quebec City'] },
+  'France':            { city: 'Paris',            region: 'Île-de-France',       address: '1 Rue de Rivoli',                     emailDomain: 'edu.fr',  dial: '+33',  phone: '6 00 00 0000', cities: ['Paris', 'Marseille', 'Lyon', 'Toulouse', 'Nice', 'Nantes', 'Strasbourg', 'Bordeaux'] },
+  'India':             { city: 'New Delhi',        region: 'Delhi',               address: '5 Rajpath, Chanakyapuri',             emailDomain: 'edu.in',  dial: '+91',  phone: '98 000 00000', cities: ['New Delhi', 'Mumbai', 'Bangalore', 'Hyderabad', 'Chennai', 'Kolkata', 'Pune', 'Ahmedabad'] },
 };
 
 function getCountryMeta(country) {
@@ -1411,9 +1411,39 @@ function Register({ onNavigate }) {
             </Field>
             <div className="reg-form-grid">
               <Field id="city" label="City / Town" required error={fieldErrors.city}>
-                <input id="city" className={`reg-input${fieldErrors.city ? ' has-error' : ''}`} type="text"
-                  placeholder={getCountryMeta(form.country).city || 'e.g. Capital City'}
-                  value={form.city} onChange={set('city')} onBlur={blur('city')} />
+                {(() => {
+                  const cities = getCountryMeta(form.country).cities || [];
+                  if (cities.length === 0) {
+                    return (
+                      <input id="city" className={`reg-input${fieldErrors.city ? ' has-error' : ''}`} type="text"
+                        placeholder="e.g. Capital City"
+                        value={form.city} onChange={set('city')} onBlur={blur('city')} />
+                    );
+                  }
+                  const inList = cities.includes(form.city);
+                  const selectVal = form.city === '' ? '' : inList ? form.city : 'other';
+                  return (
+                    <>
+                      <select id="city" className={`reg-select${fieldErrors.city ? ' has-error' : ''}`}
+                        value={selectVal}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setForm(p => ({ ...p, city: v === 'other' ? '' : v }));
+                        }}
+                        onBlur={blur('city')}>
+                        <option value="">Select city / town…</option>
+                        {cities.map(c => <option key={c} value={c}>{c}</option>)}
+                        <option value="other">Other (specify below)</option>
+                      </select>
+                      {selectVal === 'other' && (
+                        <input className={`reg-input${fieldErrors.city ? ' has-error' : ''}`} type="text"
+                          placeholder="Enter your city / town"
+                          value={form.city} onChange={set('city')} onBlur={blur('city')}
+                          style={{ marginTop: '0.5rem' }} autoFocus />
+                      )}
+                    </>
+                  );
+                })()}
               </Field>
               <Field id="region" label="Region / State">
                 <input id="region" className="reg-input" type="text"
@@ -1429,6 +1459,7 @@ function Register({ onNavigate }) {
                   setForm((p) => ({
                     ...p,
                     country:        c,
+                    city:           '',
                     phoneCode:      meta.dial || p.phoneCode,
                     adminPhoneCode: meta.dial || p.adminPhoneCode,
                   }));
