@@ -26,6 +26,7 @@ import SABenchmarks      from './SABenchmarks';
 import SAOnboarding      from './SAOnboarding';
 import SAUsers           from './SAUsers';
 import SANotifications, { INITIAL_UNREAD_COUNT } from './SANotifications';
+import SAProfile         from './SAProfile';
 import { MOCK_REQUESTS } from './SAGradeIntegrity';
 
 const API = SECURITY_CONFIG.API_URL;
@@ -285,6 +286,7 @@ function getTitle(page, school) {
     'analytics':       'School Directory & Analytics',
     'benchmarks':      'Academic Benchmarks',
     'onboarding':      'Onboarding Analytics',
+    'profile':         'My Profile',
   };
   return map[page] || 'Dashboard';
 }
@@ -551,7 +553,7 @@ export default function Dashboard({ onNavigate }) {
         </nav>
 
         <div className="sa-sidebar-foot">
-          <div className="sa-user-chip">
+          <div className="sa-user-chip" onClick={() => goTo('profile')} style={{ cursor: 'pointer' }} title="My profile">
             <div className="sa-user-avatar">
               {(user?.full_name || user?.email || 'A')[0].toUpperCase()}
             </div>
@@ -603,7 +605,7 @@ export default function Dashboard({ onNavigate }) {
               <IcBell />
               {(pendingCount > 0 || unreadNotifCount > 0) && <span className="sa-notif-dot" />}
             </button>
-            <div className="sa-avatar-sm">
+            <div className="sa-avatar-sm" onClick={() => goTo('profile')} title="My profile" style={{ cursor: 'pointer' }}>
               {(user?.full_name || user?.email || 'A')[0].toUpperCase()}
             </div>
           </div>
@@ -748,6 +750,10 @@ export default function Dashboard({ onNavigate }) {
 
           {activePage === 'settings' && (
             <SASettings />
+          )}
+
+          {activePage === 'profile' && (
+            <SAProfile user={user} onBack={() => goTo('overview')} />
           )}
 
         </main>

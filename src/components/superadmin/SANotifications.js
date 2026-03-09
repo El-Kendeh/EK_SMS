@@ -259,17 +259,16 @@ export default function SANotifications({ onNavigate, onUnreadChange }) {
       </div>
 
       {/* Filter tabs */}
-      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+      <div className="sa-filter-tabs">
         {FILTERS.map(f => (
           <button
             key={f.key}
             onClick={() => setFilter(f.key)}
+            className="sa-filter-tab"
             style={{
-              padding: '6px 14px', borderRadius: '20px', fontSize: '0.8125rem', fontWeight: 600,
-              cursor: 'pointer', transition: 'all 0.15s',
-              background: filter === f.key ? 'var(--sa-accent)' : 'var(--sa-card-bg)',
-              color:      filter === f.key ? '#fff'             : 'var(--sa-text-2)',
-              border:     filter === f.key ? '1px solid var(--sa-accent)' : '1px solid var(--sa-border)',
+              background:  filter === f.key ? 'var(--sa-accent)' : undefined,
+              color:       filter === f.key ? '#fff'             : undefined,
+              borderColor: filter === f.key ? 'var(--sa-accent)' : undefined,
             }}
           >
             {f.label}
@@ -297,8 +296,7 @@ export default function SANotifications({ onNavigate, onUnreadChange }) {
                 padding: '18px 20px',
                 display: 'flex', gap: '16px', alignItems: 'flex-start',
                 borderLeft: `3px solid ${notif.read ? 'transparent' : typeCfg.color}`,
-                opacity: notif.read ? 0.75 : 1,
-                transition: 'opacity 0.2s',
+                transition: 'border-color 0.2s',
               }}
             >
               {/* Type icon bubble */}
@@ -314,7 +312,7 @@ export default function SANotifications({ onNavigate, onUnreadChange }) {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', marginBottom: '4px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '0.9rem', fontWeight: notif.read ? 500 : 700, color: 'var(--sa-text)' }}>
+                    <span style={{ fontSize: '0.9rem', fontWeight: notif.read ? 500 : 700, color: notif.read ? 'var(--sa-text-2)' : 'var(--sa-text)' }}>
                       {notif.title}
                     </span>
                     {!notif.read && (
@@ -339,7 +337,7 @@ export default function SANotifications({ onNavigate, onUnreadChange }) {
                   </span>
                 </div>
 
-                <p style={{ fontSize: '0.8125rem', color: 'var(--sa-text-2)', margin: '0 0 10px', lineHeight: 1.55 }}>
+                <p style={{ fontSize: '0.8125rem', color: notif.read ? 'var(--sa-text-2)' : 'var(--sa-text)', margin: '0 0 10px', lineHeight: 1.55 }}>
                   {notif.body}
                 </p>
 
@@ -369,7 +367,7 @@ export default function SANotifications({ onNavigate, onUnreadChange }) {
                       style={{
                         padding: '5px 12px', borderRadius: '6px', fontSize: '0.78125rem', fontWeight: 600,
                         background: 'transparent', border: '1px solid var(--sa-border)',
-                        color: 'var(--sa-text-3)', cursor: 'pointer',
+                        color: 'var(--sa-text-2)', cursor: 'pointer',
                       }}
                     >
                       Mark read

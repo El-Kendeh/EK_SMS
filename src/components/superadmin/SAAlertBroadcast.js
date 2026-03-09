@@ -390,7 +390,7 @@ export default function SAAlertBroadcast() {
                       {typeIcon}
                     </div>
                     <div style={{ minWidth: 0 }}>
-                      <p style={{ margin: '0 0 2px', fontWeight: 700, fontSize: '0.9375rem', color: 'var(--sa-text)', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <p style={{ margin: '0 0 2px', fontWeight: 700, fontSize: '0.9375rem', color: 'var(--sa-text)', lineHeight: 1.3 }}>
                         {alert.title}
                       </p>
                       <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--sa-text-2)' }}>{alert.time}</p>

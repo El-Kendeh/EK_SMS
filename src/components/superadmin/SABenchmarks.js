@@ -178,13 +178,13 @@ function CompareView({ onBack }) {
       <p style={{ margin: '0 0 20px', fontSize: '0.875rem', color: 'var(--sa-text-2)' }}>Side-by-side performance analysis</p>
 
       {/* Selectors */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 40px 1fr', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+      <div className="san-compare-sel-row">
         <div className="san-sel-wrap">
           <select className="san-sel" value={schoolA} onChange={e => setSchoolA(e.target.value)}>
             {TOP_SCHOOLS.filter(s => s.name !== schoolB).map(s => <option key={s.name}>{s.name}</option>)}
           </select><ChevDown />
         </div>
-        <div style={{ textAlign: 'center', fontSize: '0.6875rem', fontWeight: 800, color: 'var(--sa-text-3)', letterSpacing: '0.05em' }}>VS</div>
+        <div className="san-vs-label" style={{ textAlign: 'center', fontSize: '0.6875rem', fontWeight: 800, color: 'var(--sa-text-3)', letterSpacing: '0.05em' }}>VS</div>
         <div className="san-sel-wrap">
           <select className="san-sel" value={schoolB} onChange={e => setSchoolB(e.target.value)}>
             {TOP_SCHOOLS.filter(s => s.name !== schoolA).map(s => <option key={s.name}>{s.name}</option>)}
@@ -218,13 +218,13 @@ function CompareView({ onBack }) {
             const bVal = b[m.key];
             const aWin = aVal >= bVal;
             return (
-              <div key={m.key} style={{ display: 'grid', gridTemplateColumns: '1fr 100px 1fr', alignItems: 'center', gap: 8, padding: '10px 0', borderBottom: '1px solid var(--sa-border)' }}>
-                <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
+              <div key={m.key} className="san-h2h-row">
+                <div className="san-h2h-a" style={{ textAlign: 'right', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
                   <span style={{ fontSize: '1rem', fontWeight: 700, color: aWin ? 'var(--sa-green)' : 'var(--sa-text)' }}>{m.fmt(aVal)}</span>
                   {aWin && <span style={{ fontSize: '0.5rem', color: 'var(--sa-green)' }}>▲</span>}
                 </div>
-                <div style={{ textAlign: 'center', fontSize: '0.625rem', color: 'var(--sa-text-3)', fontWeight: 600, lineHeight: 1.3 }}>{m.label}</div>
-                <div style={{ textAlign: 'left', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <div className="san-h2h-label" style={{ textAlign: 'center', fontSize: '0.625rem', color: 'var(--sa-text-3)', fontWeight: 600, lineHeight: 1.3 }}>{m.label}</div>
+                <div className="san-h2h-b" style={{ textAlign: 'left', display: 'flex', alignItems: 'center', gap: 4 }}>
                   {!aWin && <span style={{ fontSize: '0.5rem', color: 'var(--sa-green)' }}>▲</span>}
                   <span style={{ fontSize: '1rem', fontWeight: 700, color: !aWin ? 'var(--sa-green)' : 'var(--sa-text)' }}>{m.fmt(bVal)}</span>
                 </div>
