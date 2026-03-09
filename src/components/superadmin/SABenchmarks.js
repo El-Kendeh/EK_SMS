@@ -25,11 +25,11 @@ const GRADE_DIST = [
 ];
 
 const TOP_SCHOOLS = [
-  { rank: 1, name: 'St. Marks Academy',  integrity: 98.5, perf: 9.4, trend: 'up'     },
-  { rank: 2, name: 'Northwood High',     integrity: 97.2, perf: 9.1, trend: 'up'     },
-  { rank: 3, name: 'Riverdale Public',   integrity: 89.4, perf: 8.8, trend: 'stable' },
-  { rank: 4, name: 'Tech Institute',     integrity: 94.1, perf: 8.5, trend: 'up'     },
-  { rank: 5, name: 'Central Academy',    integrity: 91.8, perf: 8.2, trend: 'down'   },
+  { rank: 1, name: 'St. Marks Academy', integrity: 98.5, perf: 9.4, trend: 'up',     passRate: 91, attendance: 96, gpa: 3.4, students: 1240, type: 'Private' },
+  { rank: 2, name: 'Northwood High',    integrity: 97.2, perf: 9.1, trend: 'up',     passRate: 88, attendance: 94, gpa: 3.2, students: 980,  type: 'Public'  },
+  { rank: 3, name: 'Riverdale Public',  integrity: 89.4, perf: 8.8, trend: 'stable', passRate: 85, attendance: 92, gpa: 3.0, students: 1540, type: 'Public'  },
+  { rank: 4, name: 'Tech Institute',    integrity: 94.1, perf: 8.5, trend: 'up',     passRate: 83, attendance: 91, gpa: 2.9, students: 760,  type: 'Private' },
+  { rank: 5, name: 'Central Academy',   integrity: 91.8, perf: 8.2, trend: 'down',   passRate: 80, attendance: 89, gpa: 2.8, students: 1120, type: 'Public'  },
 ];
 
 /* ── Sparkline ──────────────────────────────────────────────── */
@@ -144,11 +144,123 @@ function KpiCard({ label, value, delta, deltaDir = 'up', spark, sparkColor }) {
   );
 }
 
+
+/* ── Compare View ───────────────────────────────────────────── */
+function CompareView({ onBack }) {
+  const [schoolA, setSchoolA] = React.useState(TOP_SCHOOLS[0].name);
+  const [schoolB, setSchoolB] = React.useState(TOP_SCHOOLS[1].name);
+  const a = TOP_SCHOOLS.find(s => s.name === schoolA) || TOP_SCHOOLS[0];
+  const b = TOP_SCHOOLS.find(s => s.name === schoolB) || TOP_SCHOOLS[1];
+
+  const metrics = [
+    { key: 'integrity',  label: 'Grade Integrity', fmt: v => v + '%'           },
+    { key: 'perf',       label: 'Perf. Index',     fmt: v => v                 },
+    { key: 'passRate',   label: 'Pass Rate',       fmt: v => v + '%'           },
+    { key: 'attendance', label: 'Attendance',      fmt: v => v + '%'           },
+    { key: 'gpa',        label: 'Avg GPA',         fmt: v => v                 },
+    { key: 'students',   label: 'Students',        fmt: v => v.toLocaleString() },
+  ];
+
+  const aWins = metrics.filter(m => a[m.key] >= b[m.key]).length;
+  const bWins = metrics.length - aWins;
+  const winner = aWins >= bWins ? a : b;
+
+  const ChevDown = () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, flexShrink: 0 }}><polyline points="6 9 12 15 18 9"/></svg>
+  );
+
+  return (
+    <div className="san-benchmarks">
+      <button className="san-view-all-btn" style={{ marginBottom: 20 }} onClick={onBack}>
+        ← Back to Benchmarks
+      </button>
+      <h2 style={{ margin: '0 0 4px', fontSize: '1.25rem', fontWeight: 800, color: 'var(--sa-text)' }}>School Comparison</h2>
+      <p style={{ margin: '0 0 20px', fontSize: '0.875rem', color: 'var(--sa-text-2)' }}>Side-by-side performance analysis</p>
+
+      {/* Selectors */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 40px 1fr', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+        <div className="san-sel-wrap">
+          <select className="san-sel" value={schoolA} onChange={e => setSchoolA(e.target.value)}>
+            {TOP_SCHOOLS.filter(s => s.name !== schoolB).map(s => <option key={s.name}>{s.name}</option>)}
+          </select><ChevDown />
+        </div>
+        <div style={{ textAlign: 'center', fontSize: '0.6875rem', fontWeight: 800, color: 'var(--sa-text-3)', letterSpacing: '0.05em' }}>VS</div>
+        <div className="san-sel-wrap">
+          <select className="san-sel" value={schoolB} onChange={e => setSchoolB(e.target.value)}>
+            {TOP_SCHOOLS.filter(s => s.name !== schoolA).map(s => <option key={s.name}>{s.name}</option>)}
+          </select><ChevDown />
+        </div>
+      </div>
+
+      {/* School header cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+        {[{s: a, side: 'a'}, {s: b, side: 'b'}].map(({ s, side }) => (
+          <div key={side} className="san-kpi-card san-kpi-card--b" style={{ textAlign: 'center', padding: '14px 12px' }}>
+            <p style={{ fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--sa-text-3)', marginBottom: 6 }}>#{s.rank} Ranked</p>
+            <p style={{ margin: '0 0 6px', fontWeight: 800, fontSize: '0.875rem', color: 'var(--sa-text)', lineHeight: 1.3 }}>{s.name}</p>
+            <span style={{
+              display: 'inline-block', borderRadius: 20, padding: '2px 8px', fontSize: '0.625rem', fontWeight: 600,
+              background: s.type === 'Private' ? 'var(--sa-accent-dim)' : 'var(--sa-green-dim)',
+              color: s.type === 'Private' ? 'var(--sa-accent)' : 'var(--sa-green)',
+            }}>{s.type}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Head-to-head metrics */}
+      <div className="san-card">
+        <div className="san-card-hdr">
+          <h3 className="san-card-title">Head-to-Head Metrics</h3>
+        </div>
+        <div style={{ padding: '0 16px 8px' }}>
+          {metrics.map(m => {
+            const aVal = a[m.key];
+            const bVal = b[m.key];
+            const aWin = aVal >= bVal;
+            return (
+              <div key={m.key} style={{ display: 'grid', gridTemplateColumns: '1fr 100px 1fr', alignItems: 'center', gap: 8, padding: '10px 0', borderBottom: '1px solid var(--sa-border)' }}>
+                <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
+                  <span style={{ fontSize: '1rem', fontWeight: 700, color: aWin ? 'var(--sa-green)' : 'var(--sa-text)' }}>{m.fmt(aVal)}</span>
+                  {aWin && <span style={{ fontSize: '0.5rem', color: 'var(--sa-green)' }}>▲</span>}
+                </div>
+                <div style={{ textAlign: 'center', fontSize: '0.625rem', color: 'var(--sa-text-3)', fontWeight: 600, lineHeight: 1.3 }}>{m.label}</div>
+                <div style={{ textAlign: 'left', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  {!aWin && <span style={{ fontSize: '0.5rem', color: 'var(--sa-green)' }}>▲</span>}
+                  <span style={{ fontSize: '1rem', fontWeight: 700, color: !aWin ? 'var(--sa-green)' : 'var(--sa-text)' }}>{m.fmt(bVal)}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Verdict */}
+      <div className="san-kpi-card san-kpi-card--b" style={{ marginTop: 12, padding: '16px', display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div style={{ flex: 1 }}>
+          <p style={{ fontSize: '0.6875rem', textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--sa-text-3)', marginBottom: 4 }}>Overall Leader</p>
+          <p style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--sa-green)', margin: '0 0 2px' }}>{winner.name}</p>
+          <p style={{ fontSize: '0.75rem', color: 'var(--sa-text-2)', margin: 0 }}>
+            Leads in {aWins >= bWins ? aWins : bWins}/{metrics.length} metrics
+          </p>
+        </div>
+        <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--sa-green-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--sa-green)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Main: SABenchmarks ─────────────────────────────────────── */
 export default function SABenchmarks() {
-  const [year,  setYear]  = useState('2024-25');
-  const [term,  setTerm]  = useState('All Terms');
-  const [grade, setGrade] = useState('K-12');
+  const [year,      setYear]      = useState('2024-25');
+  const [term,      setTerm]      = useState('All Terms');
+  const [grade,     setGrade]     = useState('K-12');
+  const [comparing, setComparing] = useState(false);
+
+  if (comparing) return <CompareView onBack={() => setComparing(false)} />;
 
   return (
     <div className="san-benchmarks">
@@ -216,6 +328,7 @@ export default function SABenchmarks() {
       <div className="san-card">
         <div className="san-card-hdr">
           <div><h3 className="san-card-title">Top Performing Schools</h3><p className="san-card-sub">Ranked by Integrity &amp; Performance Index</p></div>
+          <button className="san-card-action" onClick={() => setComparing(true)}>Compare</button>
         </div>
         <div className="san-bench-table">
           <div className="san-bench-head">

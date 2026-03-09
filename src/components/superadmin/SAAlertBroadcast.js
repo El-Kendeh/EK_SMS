@@ -170,10 +170,151 @@ function AlertDetail({ alert, onBack }) {
 }
 
 /* ==============================
+   Compose View
+   ============================== */
+function ComposeAlert({ onBack }) {
+  const [title,    setTitle]    = useState('');
+  const [type,     setType]     = useState('General');
+  const [severity, setSeverity] = useState('low');
+  const [target,   setTarget]   = useState('All Schools');
+  const [body,     setBody]     = useState('');
+  const [sending,  setSending]  = useState(false);
+  const [sent,     setSent]     = useState(false);
+
+  const canSend = title.trim().length > 0 && body.trim().length > 0;
+
+  const handleSend = () => {
+    setSending(true);
+    setTimeout(() => { setSent(true); setTimeout(onBack, 1200); }, 800);
+  };
+
+  if (sent) return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 280, gap: 16, textAlign: 'center' }}>
+      <div className="sa-stat-icon sa-stat-icon--green" style={{ width: 56, height: 56 }}><IcCheck /></div>
+      <p style={{ fontWeight: 700, fontSize: '1.125rem', color: 'var(--sa-text)', margin: 0 }}>Alert Sent!</p>
+      <p style={{ fontSize: '0.8125rem', color: 'var(--sa-text-2)', margin: 0 }}>Returning to Broadcast Center…</p>
+    </div>
+  );
+
+  const ChevDown = () => (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+  );
+
+  return (
+    <div style={{ maxWidth: 600, margin: '0 auto' }}>
+      <button className="sa-btn sa-btn--ghost sa-btn--sm" style={{ marginBottom: 20, gap: 6 }} onClick={onBack}>
+        <IcBack /> Back to Broadcast Center
+      </button>
+      <h1 style={{ margin: '0 0 4px', fontSize: '1.375rem', fontWeight: 800, color: 'var(--sa-text)' }}>Compose Alert</h1>
+      <p style={{ margin: '0 0 24px', fontSize: '0.875rem', color: 'var(--sa-text-2)' }}>Create a new broadcast for school administrators.</p>
+
+      {/* Title */}
+      <div style={{ marginBottom: 16 }}>
+        <label className="sa-field-label" htmlFor="cmp-title">
+          Title <span style={{ color: 'var(--sa-red)' }}>*</span>
+        </label>
+        <input id="cmp-title" className="sa-text-input" type="text"
+          placeholder="e.g. Emergency Grade Lock Protocol Update"
+          value={title} onChange={e => setTitle(e.target.value)} maxLength={120} />
+        <p style={{ fontSize: '0.6875rem', color: 'var(--sa-text-3)', marginTop: 4, textAlign: 'right' }}>{title.length}/120</p>
+      </div>
+
+      {/* Type + Severity */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+        <div>
+          <label className="sa-field-label" htmlFor="cmp-type">Alert Type</label>
+          <div className="sa-select-wrap">
+            <select id="cmp-type" className="sa-select" value={type} onChange={e => setType(e.target.value)}>
+              {['General', 'Security', 'System Ops'].map(o => <option key={o}>{o}</option>)}
+            </select>
+            <span className="sa-select-chevron"><ChevDown /></span>
+          </div>
+        </div>
+        <div>
+          <label className="sa-field-label" htmlFor="cmp-sev">Severity</label>
+          <div className="sa-select-wrap">
+            <select id="cmp-sev" className="sa-select" value={severity} onChange={e => setSeverity(e.target.value)}>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="critical">Critical</option>
+            </select>
+            <span className="sa-select-chevron"><ChevDown /></span>
+          </div>
+        </div>
+      </div>
+
+      {/* Target */}
+      <div style={{ marginBottom: 16 }}>
+        <label className="sa-field-label" htmlFor="cmp-target">Target Audience</label>
+        <div className="sa-select-wrap">
+          <select id="cmp-target" className="sa-select" value={target} onChange={e => setTarget(e.target.value)}>
+            {['All Schools', 'Region: Western', 'Region: Eastern', 'Region: Northern', 'Admin Staff'].map(o => <option key={o}>{o}</option>)}
+          </select>
+          <span className="sa-select-chevron"><ChevDown /></span>
+        </div>
+      </div>
+
+      {/* Message */}
+      <div style={{ marginBottom: 20 }}>
+        <label className="sa-field-label" htmlFor="cmp-body">
+          Message <span style={{ color: 'var(--sa-red)' }}>*</span>
+        </label>
+        <textarea id="cmp-body" className="sa-lcc-reason" rows={6}
+          placeholder="Write the full alert message. Be specific about required actions, deadlines, and contact points."
+          value={body} onChange={e => setBody(e.target.value)}
+          style={{ resize: 'vertical', minHeight: 120 }} />
+        <p style={{ fontSize: '0.6875rem', color: 'var(--sa-text-3)', marginTop: 4, textAlign: 'right' }}>{body.length} chars</p>
+      </div>
+
+      {/* Live preview */}
+      {title.trim() && body.trim() && (
+        <div className="sa-card" style={{ marginBottom: 20, padding: '14px 16px' }}>
+          <p style={{ fontSize: '0.6875rem', textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--sa-text-3)', marginBottom: 8 }}>Preview</p>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+            <span style={{ background: 'var(--sa-card-bg2)', color: 'var(--sa-text-2)', border: '1px solid var(--sa-border)', borderRadius: 20, padding: '3px 10px', fontSize: '0.6875rem', fontWeight: 600 }}>{type}</span>
+            <span style={{ background: SEV_STYLE[severity].bg, color: SEV_STYLE[severity].color, borderRadius: 20, padding: '3px 10px', fontSize: '0.6875rem', fontWeight: 700 }}>
+              {severity.charAt(0).toUpperCase() + severity.slice(1)}
+            </span>
+            <span style={{ background: 'var(--sa-accent-dim)', color: 'var(--sa-accent)', borderRadius: 20, padding: '3px 10px', fontSize: '0.6875rem', fontWeight: 600 }}>{target}</span>
+          </div>
+          <p style={{ margin: '0 0 4px', fontWeight: 700, fontSize: '0.9375rem', color: 'var(--sa-text)' }}>{title}</p>
+          <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--sa-text-2)', lineHeight: 1.6, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{body}</p>
+        </div>
+      )}
+
+      {/* Actions */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <button className="sa-btn sa-btn--primary sa-btn--full"
+          style={{ justifyContent: 'center', height: 44 }}
+          disabled={!canSend || sending}
+          onClick={handleSend}>
+          {sending ? 'Sending…' : <><IcCampaign /> Send Now — {target}</>}
+        </button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="sa-btn sa-btn--ghost sa-btn--full"
+            style={{ justifyContent: 'center', fontSize: '0.8125rem' }}
+            disabled={sending} onClick={onBack}>
+            Schedule
+          </button>
+          <button className="sa-btn sa-btn--ghost sa-btn--full"
+            style={{ justifyContent: 'center', fontSize: '0.8125rem' }}
+            disabled={sending} onClick={onBack}>
+            Save as Draft
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ==============================
    Main List View
    ============================== */
 export default function SAAlertBroadcast() {
-  const [selected, setSelected] = useState(null);
+  const [selected,  setSelected]  = useState(null);
+  const [composing, setComposing] = useState(false);
+
+  if (composing) return <ComposeAlert onBack={() => setComposing(false)} />;
 
   if (selected) {
     const alert = ALERTS.find(a => a.id === selected);
@@ -202,7 +343,7 @@ export default function SAAlertBroadcast() {
           }}>
             <span className="sa-live-dot" /> System: Optimal
           </span>
-          <button className="sa-btn sa-btn--primary sa-btn--sm">
+          <button className="sa-btn sa-btn--primary sa-btn--sm" onClick={() => setComposing(true)}>
             <IcCampaign /> New Alert
           </button>
         </div>
@@ -275,7 +416,7 @@ export default function SAAlertBroadcast() {
                   <button
                     className="sa-btn sa-btn--ghost sa-btn--sm"
                     style={{ flex: 1, justifyContent: 'center', fontSize: '0.75rem' }}
-                    onClick={e => e.stopPropagation()}
+                    onClick={e => { e.stopPropagation(); if (alert.status === 'Draft') setComposing(true); }}
                   >
                     {alert.status === 'Sent' ? <><IcAnalytics /> View Report</> : alert.status === 'Draft' ? '✏ Continue' : '✏ Edit'}
                   </button>

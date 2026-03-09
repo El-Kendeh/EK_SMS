@@ -395,6 +395,12 @@ export default function SASettings() {
   const [protocol,       setProtocol]       = useState('full-blackout');
   const [lockdownReason, setLockdownReason] = useState('');
 
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportFormat,    setExportFormat]    = useState('CSV');
+  const [exportSets,      setExportSets]      = useState({ schools: true, grades: false, audit: false, users: false });
+  const [exporting,       setExporting]       = useState(false);
+  const [exported,        setExported]        = useState(false);
+
   const [toast, setToast] = useState(null);
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
@@ -605,27 +611,82 @@ export default function SASettings() {
 
         {/* ===== COMPLIANCE ===== */}
         {activeTab === 'compliance' && (
-          <div className="sa-settings-section">
-            <h2 className="sa-settings-section-title">Audit Policy</h2>
-            <div style={{ padding: '16px', background: 'var(--sa-card-bg)', border: '1px solid var(--sa-border)', borderRadius: 'var(--sa-radius)' }}>
-              <label className="sa-field-label" htmlFor="audit-retention">Audit Log Retention Period</label>
-              <div className="sa-select-wrap">
-                <select id="audit-retention" className="sa-select" value={auditRetention} onChange={e => setAuditRetention(e.target.value)}>
-                  <option>30 Days</option>
-                  <option>90 Days</option>
-                  <option>1 Year</option>
-                  <option>Indefinite</option>
-                </select>
-                <span className="sa-select-chevron">
-                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="6 9 12 15 18 9"/></svg>
-                </span>
-              </div>
-              <div className="sa-info-callout" style={{ marginTop: 10 }}>
-                <IcInfo />
-                <p>Logs older than this period will be automatically archived to cold storage.</p>
+          <>
+            <div className="sa-settings-section">
+              <h2 className="sa-settings-section-title">Audit Policy</h2>
+              <div style={{ padding: '16px', background: 'var(--sa-card-bg)', border: '1px solid var(--sa-border)', borderRadius: 'var(--sa-radius)' }}>
+                <label className="sa-field-label" htmlFor="audit-retention">Audit Log Retention Period</label>
+                <div className="sa-select-wrap">
+                  <select id="audit-retention" className="sa-select" value={auditRetention} onChange={e => setAuditRetention(e.target.value)}>
+                    <option>30 Days</option>
+                    <option>90 Days</option>
+                    <option>1 Year</option>
+                    <option>Indefinite</option>
+                  </select>
+                  <span className="sa-select-chevron">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+                  </span>
+                </div>
+                <div className="sa-info-callout" style={{ marginTop: 10 }}>
+                  <IcInfo />
+                  <p>Logs older than this period will be automatically archived to cold storage.</p>
+                </div>
               </div>
             </div>
-          </div>
+
+            {/* Bulk Export */}
+            <div className="sa-settings-section">
+              <h2 className="sa-settings-section-title">Bulk Data Export</h2>
+              <div style={{ padding: '16px', background: 'var(--sa-card-bg)', border: '1px solid var(--sa-border)', borderRadius: 'var(--sa-radius)' }}>
+                <p style={{ fontSize: '0.8125rem', color: 'var(--sa-text-2)', marginBottom: 16, lineHeight: 1.55 }}>
+                  Export platform data for compliance reporting, audits, or off-platform analysis.
+                </p>
+                <p className="sa-field-label" style={{ marginBottom: 10 }}>Select Datasets</p>
+                {[
+                  { id: 'schools', label: 'Schools Master List', sub: '1,245 school records'     },
+                  { id: 'grades',  label: 'Grade Records',       sub: 'All terms — anonymisable' },
+                  { id: 'audit',   label: 'Audit Logs',          sub: 'Immutable event trail'    },
+                  { id: 'users',   label: 'User Accounts',       sub: 'Admins & staff only'      },
+                ].map(ds => (
+                  <label key={ds.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', marginBottom: 8, background: 'var(--sa-card-bg2)', border: `1px solid ${exportSets[ds.id] ? 'var(--sa-accent)' : 'var(--sa-border)'}`, borderRadius: 'var(--sa-radius-sm)', cursor: 'pointer', transition: 'border-color 0.15s' }}>
+                    <input type="checkbox" checked={exportSets[ds.id]}
+                      onChange={() => setExportSets(p => ({ ...p, [ds.id]: !p[ds.id] }))}
+                      style={{ width: 16, height: 16, accentColor: 'var(--sa-accent)', flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                      <p style={{ margin: 0, fontWeight: 600, fontSize: '0.875rem', color: 'var(--sa-text)' }}>{ds.label}</p>
+                      <p style={{ margin: 0, fontSize: '0.6875rem', color: 'var(--sa-text-3)' }}>{ds.sub}</p>
+                    </div>
+                  </label>
+                ))}
+                <p className="sa-field-label" style={{ marginTop: 16, marginBottom: 10 }}>Export Format</p>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {['CSV', 'JSON', 'PDF'].map(fmt => (
+                    <button key={fmt} onClick={() => setExportFormat(fmt)}
+                      style={{ padding: '8px 20px', borderRadius: 'var(--sa-radius-sm)', fontSize: '0.8125rem', fontWeight: 700, cursor: 'pointer',
+                        border: `1px solid ${exportFormat === fmt ? 'var(--sa-accent)' : 'var(--sa-border)'}`,
+                        background: exportFormat === fmt ? 'var(--sa-accent-dim)' : 'var(--sa-card-bg2)',
+                        color: exportFormat === fmt ? 'var(--sa-accent)' : 'var(--sa-text-2)',
+                        transition: 'all 0.15s' }}>
+                      {fmt}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  className="sa-btn sa-btn--primary sa-btn--full"
+                  style={{ marginTop: 20, justifyContent: 'center', height: 44 }}
+                  disabled={!Object.values(exportSets).some(Boolean)}
+                  onClick={() => setShowExportModal(true)}
+                >
+                  <IcDownload size={16} /> Export Selected Data
+                </button>
+                {!Object.values(exportSets).some(Boolean) && (
+                  <p style={{ textAlign: 'center', fontSize: '0.6875rem', color: 'var(--sa-text-3)', marginTop: 6 }}>
+                    Select at least one dataset to export.
+                  </p>
+                )}
+              </div>
+            </div>
+          </>
         )}
 
         {/* ===== GENERAL ===== */}
@@ -672,6 +733,64 @@ export default function SASettings() {
         )}
 
       </div>
+
+      {/* Export confirm modal */}
+      {showExportModal && (
+        <div className="sa-gov-modal-overlay" onClick={() => { if (!exporting) { setShowExportModal(false); setExported(false); } }}>
+          <div className="sa-gov-modal" onClick={e => e.stopPropagation()}>
+            {exported ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '8px 0', textAlign: 'center' }}>
+                <div className="sa-stat-icon sa-stat-icon--green" style={{ width: 52, height: 52 }}><IcCheck size={22} /></div>
+                <p style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--sa-text)', margin: 0 }}>Export Complete</p>
+                <p style={{ fontSize: '0.8125rem', color: 'var(--sa-text-2)', margin: 0 }}>Your {exportFormat} file is ready for download.</p>
+                <button className="sa-btn sa-btn--primary sa-btn--full" style={{ justifyContent: 'center', marginTop: 4 }}
+                  onClick={() => { setShowExportModal(false); setExported(false); showToast('Export downloaded'); }}>
+                  <IcDownload size={16} /> Download File
+                </button>
+              </div>
+            ) : (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--sa-accent-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sa-accent)', flexShrink: 0 }}>
+                    <IcDownload size={20} />
+                  </div>
+                  <div>
+                    <p style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--sa-text)', margin: 0 }}>Confirm Export</p>
+                    <p style={{ fontSize: '0.6875rem', color: 'var(--sa-text-2)', marginTop: 2 }}>This will generate a {exportFormat} file</p>
+                  </div>
+                </div>
+                <div style={{ background: 'var(--sa-card-bg2)', border: '1px solid var(--sa-border)', borderRadius: 'var(--sa-radius-sm)', padding: '12px 14px', marginBottom: 16 }}>
+                  <p style={{ fontSize: '0.6875rem', textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--sa-text-3)', marginBottom: 8 }}>Exporting</p>
+                  {Object.entries(exportSets).filter(([, v]) => v).map(([k]) => {
+                    const labels = { schools: 'Schools Master List', grades: 'Grade Records', audit: 'Audit Logs', users: 'User Accounts' };
+                    return (
+                      <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                        <IcCheck size={14} />
+                        <span style={{ fontSize: '0.8125rem', color: 'var(--sa-text)', fontWeight: 600 }}>{labels[k]}</span>
+                      </div>
+                    );
+                  })}
+                  <p style={{ margin: '10px 0 0', fontSize: '0.75rem', color: 'var(--sa-text-2)' }}>Format: <strong>{exportFormat}</strong></p>
+                </div>
+                <div className="sa-info-callout" style={{ marginBottom: 16 }}>
+                  <IcInfo />
+                  <p>Export is logged in the audit trail. Sensitive data is redacted per compliance policy.</p>
+                </div>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button className="sa-gov-cancel-btn" style={{ flex: 1 }} onClick={() => setShowExportModal(false)} disabled={exporting}>Cancel</button>
+                  <button
+                    style={{ flex: 1, padding: '12px', background: exporting ? 'var(--sa-card-bg2)' : 'var(--sa-accent)', color: exporting ? 'var(--sa-text-3)' : '#fff', border: 'none', borderRadius: 'var(--sa-radius-sm)', fontSize: '0.875rem', fontWeight: 700, cursor: exporting ? 'not-allowed' : 'pointer' }}
+                    disabled={exporting}
+                    onClick={() => { setExporting(true); setTimeout(() => { setExporting(false); setExported(true); }, 1200); }}
+                  >
+                    {exporting ? 'Generating…' : 'Confirm Export'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Lockdown confirm modal */}
       {showConfirm && (
