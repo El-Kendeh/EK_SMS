@@ -140,13 +140,13 @@ export default function SASystemHealth() {
             <div style={{ background: 'var(--sa-card-bg2)', borderRadius: 10, padding: '14px 16px', border: '1px solid var(--sa-border)' }}>
               <p style={{ margin: '0 0 6px', fontSize: '0.6875rem', color: 'var(--sa-text-2)', textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 700 }}>Data Integrity</p>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--sa-green)', fontWeight: 700 }}>
-                <IcCheck style={{ width: 16, height: 16 }} /> Verified
+                <span style={{ width: 16, height: 16, display: 'flex', flexShrink: 0 }}><IcCheck /></span> Verified
               </div>
             </div>
             <div style={{ background: 'var(--sa-card-bg2)', borderRadius: 10, padding: '14px 16px', border: '1px solid var(--sa-border)' }}>
               <p style={{ margin: '0 0 6px', fontSize: '0.6875rem', color: 'var(--sa-text-2)', textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 700 }}>Last Audit</p>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--sa-text)', fontWeight: 700 }}>
-                <IcHistory style={{ width: 16, height: 16 }} /> 4m ago
+                <span style={{ width: 16, height: 16, display: 'flex', flexShrink: 0 }}><IcHistory /></span> 4m ago
               </div>
             </div>
           </div>
