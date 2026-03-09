@@ -1464,7 +1464,7 @@ function Register({ onNavigate }) {
               <div className="input-wrap">
                 <span className="input-icon"><MailIcon /></span>
                 <input id="email" className={`reg-input with-icon${fieldErrors.email ? ' has-error' : ''}`} type="email"
-                  placeholder={`info@sunriseschool.${getCountryMeta(form.country).emailDomain || 'edu'}`}
+                  placeholder={`info@yourschool.${getCountryMeta(form.country).emailDomain || 'edu'}`}
                   value={form.email} onChange={set('email')} onBlur={blur('email')} />
               </div>
             </Field>
@@ -1472,7 +1472,7 @@ function Register({ onNavigate }) {
               <div className="input-wrap">
                 <span className="input-icon"><GlobeIcon /></span>
                 <input id="website" className="reg-input with-icon" type="url"
-                  placeholder={`https://www.sunriseschool.${getCountryMeta(form.country).emailDomain || 'edu'}`}
+                  placeholder={`https://yourschool.${getCountryMeta(form.country).emailDomain || 'edu'}`}
                   value={form.website} onChange={set('website')} />
               </div>
             </Field>
@@ -1520,7 +1520,7 @@ function Register({ onNavigate }) {
               <div className="input-wrap">
                 <span className="input-icon"><MailIcon /></span>
                 <input id="adminEmail" className={`reg-input with-icon${fieldErrors.adminEmail ? ' has-error' : ''}`} type="email"
-                  placeholder={`admin@sunriseschool.${getCountryMeta(form.country).emailDomain || 'edu'}`}
+                  placeholder={`admin@yourschool.${getCountryMeta(form.country).emailDomain || 'edu'}`}
                   value={form.adminEmail} onChange={set('adminEmail')} onBlur={blur('adminEmail')} autoComplete="email" />
               </div>
               {adminEmailDomainWarning && (

@@ -672,3 +672,51 @@ WARNING 2026-02-23 15:27:42,712 middleware 16312 14068 Sensitive endpoint access
 WARNING 2026-02-23 15:27:42,848 middleware 16312 14068 Sensitive endpoint accessed: GET /admin/jsi18n/ by 127.0.0.1 (ek_sms0000)
 WARNING 2026-02-23 15:27:45,425 middleware 16312 14068 Sensitive endpoint accessed: GET /admin/eksms_core/schooladmin/add/ by 127.0.0.1 (ek_sms0000)
 WARNING 2026-02-23 15:27:45,582 middleware 16312 14068 Sensitive endpoint accessed: GET /admin/jsi18n/ by 127.0.0.1 (ek_sms0000)
+WARNING 2026-02-28 14:46:37,373 middleware 21548 30640 Response 404: GET /api/check-school-name/ from 127.0.0.1
+WARNING 2026-02-28 14:46:37,377 log 21548 30640 Not Found: /api/check-school-name/
+WARNING 2026-02-28 14:46:37,378 log 21548 30640 "GET /api/check-school-name/?name=hihg HTTP/1.1" 404 3450
+WARNING 2026-02-28 15:01:05,454 middleware 21548 34024 Response 404: GET /api/check-school-name/ from 127.0.0.1
+WARNING 2026-02-28 15:01:05,454 log 21548 34024 Not Found: /api/check-school-name/
+WARNING 2026-02-28 15:01:05,456 log 21548 34024 "GET /api/check-school-name/?name=hihg HTTP/1.1" 404 3450
+WARNING 2026-02-28 15:05:17,232 middleware 21548 34024 Response 404: GET /api/check-school-name/ from 127.0.0.1
+WARNING 2026-02-28 15:05:17,233 log 21548 34024 Not Found: /api/check-school-name/
+WARNING 2026-02-28 15:05:17,234 log 21548 34024 "GET /api/check-school-name/?name=hihg HTTP/1.1" 404 3450
+WARNING 2026-02-28 15:12:54,333 middleware 21548 34076 Response 404: GET /api/check-school-name/ from 127.0.0.1
+WARNING 2026-02-28 15:12:54,334 log 21548 34076 Not Found: /api/check-school-name/
+WARNING 2026-02-28 15:12:54,335 log 21548 34076 "GET /api/check-school-name/?name=hihg HTTP/1.1" 404 3450
+WARNING 2026-02-28 15:45:36,393 middleware 21548 9364 Response 404: GET /api/check-school-name/ from 127.0.0.1
+WARNING 2026-02-28 15:45:36,404 log 21548 9364 Not Found: /api/check-school-name/
+WARNING 2026-02-28 15:45:36,409 log 21548 9364 "GET /api/check-school-name/?name=hi HTTP/1.1" 404 3448
+WARNING 2026-02-28 15:51:29,778 middleware 21548 17092 Response 404: GET /api/check-school-name/ from 127.0.0.1
+WARNING 2026-02-28 15:51:29,779 log 21548 17092 Not Found: /api/check-school-name/
+WARNING 2026-02-28 15:51:29,780 log 21548 17092 "GET /api/check-school-name/?name=hi HTTP/1.1" 404 3448
+WARNING 2026-02-28 16:11:52,592 middleware 21548 35892 Response 404: GET /api/check-school-name/ from 127.0.0.1
+WARNING 2026-02-28 16:11:52,592 log 21548 35892 Not Found: /api/check-school-name/
+WARNING 2026-02-28 16:11:52,594 log 21548 35892 "GET /api/check-school-name/?name=MBHS HTTP/1.1" 404 3450
+WARNING 2026-02-28 22:43:46,678 log 10928 40896 Unauthorized: /api/login/
+WARNING 2026-02-28 22:43:46,684 log 10928 40896 "POST /api/login/ HTTP/1.1" 401 59
+WARNING 2026-02-28 22:45:29,584 log 10928 6508 Unauthorized: /api/schools/
+WARNING 2026-02-28 22:45:29,585 log 10928 6508 "GET /api/schools/ HTTP/1.1" 401 45
+WARNING 2026-02-28 22:45:29,600 log 10928 6508 Unauthorized: /api/schools/
+WARNING 2026-02-28 22:45:29,601 log 10928 6508 "GET /api/schools/ HTTP/1.1" 401 45
+WARNING 2026-03-01 03:00:09,401 log 10928 46040 Method Not Allowed (GET): /api/login/
+WARNING 2026-03-01 03:00:09,411 log 10928 46040 "GET /api/login/ HTTP/1.1" 405 0
+WARNING 2026-03-04 16:55:51,633 middleware 17528 4456 Response 404: GET /api/ from 127.0.0.1
+WARNING 2026-03-04 16:55:51,647 log 17528 4456 Not Found: /api/
+WARNING 2026-03-04 16:55:51,651 log 17528 4456 "GET /api/ HTTP/1.1" 404 3386
+WARNING 2026-03-05 10:34:52,429 log 9488 36876 Unauthorized: /api/login/
+WARNING 2026-03-05 10:34:52,433 log 9488 36876 "POST /api/login/ HTTP/1.1" 401 59
+WARNING 2026-03-05 10:35:23,995 log 9488 36876 Unauthorized: /api/login/
+WARNING 2026-03-05 10:35:23,997 log 9488 36876 "POST /api/login/ HTTP/1.1" 401 59
+WARNING 2026-03-05 19:35:14,902 log 13828 4852 Unauthorized: /api/login/
+WARNING 2026-03-05 19:35:14,904 log 13828 4852 "POST /api/login/ HTTP/1.1" 401 59
+WARNING 2026-03-07 18:07:22,754 log 16156 28988 Unauthorized: /api/login/
+WARNING 2026-03-07 18:07:22,763 log 16156 28988 "POST /api/login/ HTTP/1.1" 401 59
+WARNING 2026-03-07 18:07:39,081 log 16156 28988 Unauthorized: /api/login/
+WARNING 2026-03-07 18:07:39,083 log 16156 28988 "POST /api/login/ HTTP/1.1" 401 59
+WARNING 2026-03-07 18:08:35,330 log 16156 28988 Unauthorized: /api/login/
+WARNING 2026-03-07 18:08:35,331 log 16156 28988 "POST /api/login/ HTTP/1.1" 401 59
+WARNING 2026-03-07 18:20:09,205 log 16156 29256 Unauthorized: /api/login/
+WARNING 2026-03-07 18:20:09,206 log 16156 29256 "POST /api/login/ HTTP/1.1" 401 59
+WARNING 2026-03-07 18:22:46,280 log 16156 29256 Unauthorized: /api/login/
+WARNING 2026-03-07 18:22:46,283 log 16156 29256 "POST /api/login/ HTTP/1.1" 401 59
