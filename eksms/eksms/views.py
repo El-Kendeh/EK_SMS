@@ -8,6 +8,7 @@ from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
+from django.db import transaction
 import json
 import os
 import re
@@ -245,53 +246,68 @@ def api_register(request):
         # ── Full address string ───────────────────────────────────────────────
         full_address = ', '.join(p for p in [address, city, region, country] if p)
 
-        # ── Create Django user ────────────────────────────────────────────────
-        base_username = re.sub(r'[^a-z0-9]', '', admin_email.split('@')[0].lower()) or 'admin'
-        username      = base_username
+        # ── Resolve username from adminUsername field or fall back to email prefix ──
+        requested_username = data.get('adminUsername', '').strip()
+        if requested_username and re.match(r'^[a-zA-Z0-9_-]{3,30}$', requested_username):
+            base_username = requested_username.lower()
+        else:
+            base_username = re.sub(r'[^a-z0-9]', '', admin_email.split('@')[0].lower()) or 'admin'
+        username = base_username
 
         if User.objects.filter(username=username).exists():
             username = base_username + uuid.uuid4().hex[:6]
 
-        user = User.objects.create_user(
-            username=username,
-            email=admin_email,
-            password=password,
-            first_name=first_name,
-            last_name=last_name,
-            is_staff=True,
-            is_active=True,
-        )
+        # ── Create User + School + SchoolAdmin atomically ─────────────────────
+        with transaction.atomic():
+            user = User.objects.create_user(
+                username=username,
+                email=admin_email,
+                password=password,
+                first_name=first_name,
+                last_name=last_name,
+                is_staff=True,
+                is_active=True,
+            )
 
-        # ── Create School record ──────────────────────────────────────────────
-        school = School.objects.create(
-            name=institution_name,
-            code=school_code,
-            email=email,
-            phone=phone,
-            address=full_address,
-            principal_name=f"{first_name} {last_name}",
-            is_active=True,
-            is_approved=False,
-            created_by=user,
-        )
+            # ── Create School record ──────────────────────────────────────────
+            school = School.objects.create(
+                name=institution_name,
+                code=school_code,
+                email=email,
+                phone=phone,
+                address=full_address,
+                city=city,
+                region=region,
+                country=country,
+                institution_type=institution_type,
+                website=website,
+                motto=motto,
+                capacity=int(capacity) if str(capacity).isdigit() else None,
+                academic_system=academic_system,
+                admin_email=admin_email,
+                principal_name=f"{first_name} {last_name}",
+                is_active=True,
+                is_approved=False,
+                created_by=user,
+            )
 
-        # ── Create SchoolAdmin profile ────────────────────────────────────────
-        SchoolAdminModel.objects.create(
-            user=user,
-            school=school,
-            job_title=f"{institution_type} Administrator",
-            can_manage_academics=True,
-            can_create_staff_accounts=True,
-            can_manage_staff_roles=True,
-            can_activate_deactivate_staff=True,
-            can_manage_teachers=True,
-            can_manage_students=True,
-            can_manage_parents=True,
-            can_manage_grades=True,
-            can_manage_reports=True,
-            can_view_audit_logs=True,
-            is_active=True,
-        )
+            # ── Create SchoolAdmin profile ────────────────────────────────────
+            SchoolAdminModel.objects.create(
+                user=user,
+                school=school,
+                job_title=f"{institution_type} Administrator",
+                can_manage_academics=True,
+                can_create_staff_accounts=True,
+                can_manage_staff_roles=True,
+                can_activate_deactivate_staff=True,
+                can_manage_teachers=True,
+                can_manage_students=True,
+                can_manage_parents=True,
+                can_manage_grades=True,
+                can_manage_reports=True,
+                can_view_audit_logs=True,
+                is_active=True,
+            )
 
         return JsonResponse({
             'success': True,
@@ -326,6 +342,20 @@ def api_get_schools(request):
     
     school_list = []
     for s in schools:
+        # Resolve admin user details via SchoolAdmin profile
+        admin_user_data = {}
+        try:
+            sa = s.admin
+            admin_user_data = {
+                'admin_username': sa.user.username,
+                'admin_first_name': sa.user.first_name,
+                'admin_last_name': sa.user.last_name,
+                'admin_full_name': sa.user.get_full_name(),
+                'admin_email': sa.user.email,
+            }
+        except Exception:
+            pass
+
         school_list.append({
             'id': s.id,
             'name': s.name,
@@ -333,10 +363,21 @@ def api_get_schools(request):
             'email': s.email,
             'phone': s.phone,
             'address': s.address,
+            'city': s.city,
+            'region': s.region,
+            'country': s.country,
+            'institution_type': s.institution_type,
+            'website': s.website,
+            'motto': s.motto,
+            'capacity': s.capacity,
+            'academic_system': s.academic_system,
+            'admin_email': s.admin_email,
             'principal_name': s.principal_name,
             'is_approved': s.is_approved,
             'is_active': s.is_active,
+            'changes_requested': s.changes_requested,
             'registration_date': s.registration_date.isoformat(),
+            **admin_user_data,
         })
     
     return JsonResponse({'success': True, 'schools': school_list})
@@ -358,23 +399,170 @@ def api_approve_school(request):
         data = json.loads(request.body)
         school_id = data.get('school_id')
         action = data.get('action', 'approve')
-        
+        note = data.get('note', '').strip()
+
         from eksms_core.models import School
         school = School.objects.get(id=school_id)
-        
+
         if action == 'approve':
             school.is_approved = True
+            school.changes_requested = False
             school.save()
-            return JsonResponse({'success': True, 'message': f'School "{school.name}" approved successfully.'})
+            return JsonResponse({'success': True, 'message': f'"{school.name}" has been approved. The school admin can now log in.'})
         elif action == 'reject':
-            # Archive or delete reject schools to keep the system clean
             school_name = school.name
             school.delete()
-            return JsonResponse({'success': True, 'message': f'School "{school_name}" rejected and removed.'})
-        
+            msg = f'"{school_name}" has been rejected and removed.'
+            if note:
+                msg += f' Reason: {note}'
+            return JsonResponse({'success': True, 'message': msg})
+        elif action == 'request_changes':
+            school.changes_requested = True
+            school.is_approved = False
+            school.save()
+            msg = f'Change request sent to "{school.name}".'
+            if note:
+                msg += f' Note: {note}'
+            return JsonResponse({'success': True, 'message': msg})
+
         return JsonResponse({'success': False, 'message': 'Invalid action.'}, status=400)
             
     except School.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'School not found.'}, status=404)
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+# ---------------------------------------------------------------------------
+# Waitlist — email capture from landing page
+# ---------------------------------------------------------------------------
+@require_http_methods(["POST"])
+@csrf_exempt
+def api_waitlist(request):
+    try:
+        data    = json.loads(request.body)
+        email   = data.get('email', '').strip().lower()
+        country = data.get('country', '').strip()
+
+        if not email or not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', email):
+            return JsonResponse({'success': False, 'message': 'Please enter a valid email address.'}, status=400)
+
+        from eksms_core.models import WaitlistEmail
+        _, created = WaitlistEmail.objects.get_or_create(
+            email=email, defaults={'country': country}
+        )
+        msg = "You're on the list! We'll notify you at launch." if created else "You're already on our list — we'll be in touch!"
+        return JsonResponse({'success': True, 'message': msg})
+
+    except Exception:
+        return JsonResponse({'success': False, 'message': 'Something went wrong. Please try again.'}, status=500)
+
+
+# ── Registration email OTP ────────────────────────────────────────────────────
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_send_otp(request):
+    """
+    Generate a 6-digit OTP and email it to the prospective admin.
+    The code is stored in Django's cache for 10 minutes.
+    """
+    import random
+    from django.core.cache import cache
+    from django.core.mail import send_mail
+    from django.conf import settings as django_settings
+
+    try:
+        data = json.loads(request.body)
+        email = data.get('email', '').strip().lower()
+        if not email or '@' not in email:
+            return JsonResponse({'error': 'A valid email address is required.'}, status=400)
+
+        code = f"{random.randint(100000, 999999)}"
+        cache.set(f"reg_otp_{email}", code, timeout=600)   # 10 minutes
+
+        from_email = getattr(django_settings, 'DEFAULT_FROM_EMAIL', 'EK-SMS <noreply@eksms.com>')
+
+        html_body = f"""
+        <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;
+                    background:#0d1117;border-radius:12px;border:1px solid #1e293b;">
+          <h2 style="color:#00B4D8;margin:0 0 4px;font-size:1.3rem;">EK-SMS</h2>
+          <p style="color:#94a3b8;margin:0 0 24px;font-size:13px;">Institution Registration Verification</p>
+          <p style="color:#e2e8f0;font-size:14px;margin:0 0 16px;">
+            Please use the code below to verify your email address:
+          </p>
+          <div style="background:#1e293b;border:1px solid #334155;border-radius:8px;
+                      padding:20px;text-align:center;margin-bottom:20px;">
+            <span style="font-size:34px;font-weight:800;letter-spacing:0.18em;
+                         color:#00B4D8;font-family:Consolas,monospace;">{code}</span>
+          </div>
+          <p style="color:#64748b;font-size:12px;margin:0;">
+            This code expires in <strong style="color:#94a3b8;">10 minutes</strong>.
+            If you did not request this, you can safely ignore this message.
+          </p>
+        </div>
+        """
+
+        send_mail(
+            subject='EK-SMS — Your Email Verification Code',
+            message=f'Your EK-SMS verification code is: {code}\n\nExpires in 10 minutes.',
+            from_email=from_email,
+            recipient_list=[email],
+            fail_silently=False,
+            html_message=html_body,
+        )
+
+        return JsonResponse({'success': True, 'message': 'Verification code sent to your email.'})
+
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid request body.'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': 'Could not send code. Please try again later.', 'detail': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_verify_otp(request):
+    """
+    Verify the OTP submitted by the user against the cached value.
+    Clears the code after a successful match.
+    """
+    from django.core.cache import cache
+
+    try:
+        data = json.loads(request.body)
+        email = data.get('email', '').strip().lower()
+        otp   = data.get('otp', '').strip()
+
+        if not email or not otp:
+            return JsonResponse({'success': False, 'message': 'Email and code are required.'}, status=400)
+
+        stored = cache.get(f"reg_otp_{email}")
+
+        if stored is None:
+            return JsonResponse(
+                {'success': False, 'message': 'Code expired or not found. Please request a new one.'},
+                status=400,
+            )
+
+        if stored != otp:
+            return JsonResponse({'success': False, 'message': 'Invalid code. Please try again.'}, status=400)
+
+        cache.delete(f"reg_otp_{email}")
+        return JsonResponse({'success': True, 'message': 'Email verified successfully.'})
+
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid request body.'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': 'Verification failed.', 'detail': str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
+def api_check_school_name(request):
+    """Check if a school name is already registered (case-insensitive)."""
+    from eksms_core.models import School
+    name = request.GET.get('name', '').strip()
+    if not name:
+        return JsonResponse({'exists': False})
+    exists = School.objects.filter(name__iexact=name).exists()
+    return JsonResponse({'exists': exists})

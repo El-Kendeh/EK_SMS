@@ -2,27 +2,40 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <link rel="icon" href="%PUBLIC_URL%/icon.jpeg" />
+    <link rel="icon" href="%PUBLIC_URL%/image/corLogo.svg" type="image/svg+xml" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon32.png" type="image/png" sizes="32x32" />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#000000" />
-    <meta
-      name="description"
-      content="A Digital School Management System"
-    />
+    <meta name="theme-color" content="#0dccf2" />
+    <meta name="description" content="EK-SMS — All-in-one school management platform for African educational institutions. Manage enrollment, grades, attendance, fees and more." />
+
+    <!-- PWA: Add to Home Screen (iOS Safari + Android/Edge) -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="EK-SMS" />
+
+    <!-- PWA: Windows / Android tile -->
+    <meta name="msapplication-TileColor" content="#0dccf2" />
+    <meta name="msapplication-TileImage" content="%PUBLIC_URL%/logo192.png" />
     
     <!-- Security Headers -->
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
     <!-- Note: frame-ancestors and X-Frame-Options directives are sent via HTTP headers only -->
     <!-- CSP meta tag: includes only directives supported in meta tags -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; media-src 'self' data:; connect-src 'self' http://localhost:8000 http://web:8000 https://ek-sms-backend.onrender.com; base-uri 'self'; form-action 'self'" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://embed.tawk.to https://*.tawk.to; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.tawk.to; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com https://*.tawk.to; media-src 'self' data:; connect-src 'self' http://localhost:8000 http://web:8000 https://ek-sms-backend.onrender.com https://*.tawk.to wss://*.tawk.to; frame-src https://tawk.to https://*.tawk.to; base-uri 'self'; form-action 'self'" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <!-- X-Content-Type-Options, X-Frame-Options, and X-XSS-Protection are sent via HTTP headers -->
     
     <!-- CSRF Token Meta Tag -->
     <meta name="csrf-token" content="" />
     
+    <!-- Lexend font for landing page -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+
     <!-- App Manifest -->
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/icon.jpeg" />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
     
     <title>EK-SMS</title>
@@ -30,5 +43,20 @@
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
+
+    <!-- Tawk.to disabled — using custom chat widget instead -->
+    <!--
+    <script type="text/javascript">
+      var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
+      (function(){
+        var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
+        s1.async=true;
+        s1.src='https://embed.tawk.to/69ab1a6a1b8f6e1c37a712ca/1jj25ud5o';
+        s1.charset='UTF-8';
+        s1.setAttribute('crossorigin','*');
+        s0.parentNode.insertBefore(s1,s0);
+      })();
+    </script>
+    -->
   </body>
 </html>
