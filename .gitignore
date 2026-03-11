@@ -28,13 +28,14 @@ public/stich-refrence/
 public/stich-refrence/constitch (5)
 
 # Python
+**/__pycache__/
+.venv/
 venv/
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
+*$py.class
 *.sqlite3
 logs/
+**/logs/
 
 npm-debug.log*
 yarn-debug.log*
