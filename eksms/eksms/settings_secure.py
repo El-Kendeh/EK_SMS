@@ -155,10 +155,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # SECURITY SETTINGS
 # ============================================================================
 
-# HTTPS/SSL Security
-SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=(not DEBUG), cast=bool)
-SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=(not DEBUG), cast=bool)
-CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=(not DEBUG), cast=bool)
+# HTTPS/SSL Security - Relaxed for HTTP testing on Server IP
+SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=False, cast=bool)
+SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=False, cast=bool)
+CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=False, cast=bool)
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_SECURITY_POLICY = {
     'default-src': ("'self'",),
@@ -169,11 +169,11 @@ SECURE_CONTENT_SECURITY_POLICY = {
     'connect-src': ("'self'", "https://ek-sms-backend.onrender.com", "http://localhost:8000"),
 }
 
-# HTTP Strict Transport Security (HSTS)
-SECURE_HSTS_SECONDS = config('SECURE_HSTS_SECONDS', default=(0 if DEBUG else 31536000), cast=int)
-SECURE_HSTS_INCLUDE_SUBDOMAINS = config('SECURE_HSTS_INCLUDE_SUBDOMAINS', default=(not DEBUG), cast=bool)
-SECURE_HSTS_PRELOAD = config('SECURE_HSTS_PRELOAD', default=(not DEBUG), cast=bool)
-SECURE_CROSS_ORIGIN_OPENER_POLICY = config('SECURE_CROSS_ORIGIN_OPENER_POLICY', default='same-origin', cast=lambda v: None if v == 'None' else v)
+# HTTP Strict Transport Security (HSTS) - Disabled for HTTP
+SECURE_HSTS_SECONDS = config('SECURE_HSTS_SECONDS', default=0, cast=int)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = config('SECURE_HSTS_INCLUDE_SUBDOMAINS', default=False, cast=bool)
+SECURE_HSTS_PRELOAD = config('SECURE_HSTS_PRELOAD', default=False, cast=bool)
+SECURE_CROSS_ORIGIN_OPENER_POLICY = config('SECURE_CROSS_ORIGIN_OPENER_POLICY', default=None, cast=lambda v: None if v == 'None' else v)
 
 # Clickjacking Protection
 X_FRAME_OPTIONS = 'DENY'
@@ -194,7 +194,7 @@ CSRF_TRUSTED_ORIGINS = config(
 # Session Security
 SESSION_COOKIE_AGE = 3600  # 1 hour
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
-SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = False
 
 # CORS Settings (already imported above)
 CORS_ALLOW_CREDENTIALS = True
