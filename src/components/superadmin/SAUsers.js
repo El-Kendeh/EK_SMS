@@ -1,108 +1,35 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { SECURITY_CONFIG } from '../../config/security';
+
+const API = SECURITY_CONFIG.API_URL;
 
 /* ---- Icons ---- */
-const IcSearch  = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>;
-const IcBack    = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>;
-const IcShield  = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>;
-const IcLock    = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>;
-const IcBlock   = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>;
-const IcList    = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1.2" fill="currentColor"/><circle cx="3" cy="12" r="1.2" fill="currentColor"/><circle cx="3" cy="18" r="1.2" fill="currentColor"/></svg>;
-const IcLogin   = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>;
-const IcGrade   = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>;
-const IcAdmin   = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="9" y1="12" x2="15" y2="12"/></svg>;
-const IcDesktop = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>;
-const IcPhone   = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18" strokeWidth="2.5"/></svg>;
-const IcLaptop  = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 20h20M4 6a2 2 0 012-2h12a2 2 0 012 2v10H4V6z"/></svg>;
-const IcTrendUp = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>;
-const IcTrendDn = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>;
-const IcEdit    = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>;
-const IcHistory = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102-.66"/></svg>;
-const IcKey     = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="M21 2l-9.6 9.6M15.5 7.5l2 2M18 5l2 2"/></svg>;
-const IcPlus    = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
-const IcX       = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
-const IcCheck   = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>;
-const IcMapPin  = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>;
-
-/* ---- Mock data ---- */
-const MOCK_USERS = [
-  {
-    id: 1, name: 'J. Bangura', email: 'j.bangura@mab.sl', role: 'Teacher', school: 'MAB Secondary School',
-    status: 'active', riskLevel: 'medium', riskScore: 48,
-    twoFAEnabled: true,
-    successLogins: 87, failedAttempts: 12, alertsTriggered: 3,
-    lastSeen: '2026-03-07 14:22',
-    recentActivity: [
-      { icon: 'grade', color: 'var(--sa-amber)',  title: 'Grade Modification',  desc: 'Updated entry for Student: #ST-1122 (Mathematics)',  time: 'Today, 14:22'      },
-      { icon: 'login', color: 'var(--sa-green)',  title: 'Successful Login',    desc: 'Authorized login from Chrome / Windows',             time: 'Today, 08:10'      },
-      { icon: 'admin', color: 'var(--sa-purple)', title: 'Permission Request',  desc: 'Requested access to Examination Records',            time: 'Yesterday, 16:45'  },
-    ],
-    sessions: [
-      { id: 'SID-1001', device: 'Chrome 120 / Windows 11', ip: '192.168.1.45', location: 'Freetown, SL', started: '2026-03-07 08:10', lastActive: '2026-03-07 14:22', active: true  },
-      { id: 'SID-1002', device: 'Safari / iPhone 14',      ip: '172.20.10.8',  location: 'Bo, SL',       started: '2026-03-06 18:30', lastActive: '2026-03-06 20:11', active: false },
-    ],
-  },
-  {
-    id: 2, name: 'E. Robinson', email: 'e.robinson@aic.sl', role: 'Teacher', school: 'AIC Grammar School',
-    status: 'active', riskLevel: 'low', riskScore: 12,
-    twoFAEnabled: true,
-    successLogins: 142, failedAttempts: 3, alertsTriggered: 1,
-    lastSeen: '2026-03-07 09:11',
-    recentActivity: [
-      { icon: 'login', color: 'var(--sa-green)', title: 'Successful Login',   desc: 'Authorized login from Chrome / macOS',        time: 'Today, 09:11'      },
-      { icon: 'grade', color: 'var(--sa-amber)', title: 'Grade Modification', desc: 'Updated entry for Student: #ST-4421 (Physics)', time: 'Yesterday, 15:30' },
-    ],
-    sessions: [
-      { id: 'SID-2001', device: 'Chrome 121 / macOS', ip: '10.0.1.55', location: 'Freetown, SL', started: '2026-03-07 09:11', lastActive: '2026-03-07 09:45', active: true },
-    ],
-  },
-  {
-    id: 3, name: 'A. Kamara', email: 'a.kamara@mab.sl', role: 'School Admin', school: 'MAB Secondary School',
-    status: 'active', riskLevel: 'low', riskScore: 8,
-    twoFAEnabled: false,
-    successLogins: 210, failedAttempts: 1, alertsTriggered: 0,
-    lastSeen: '2026-03-07 11:50',
-    recentActivity: [
-      { icon: 'admin', color: 'var(--sa-accent)', title: 'Settings Updated',  desc: 'Modified academic year configuration',   time: 'Today, 11:50' },
-      { icon: 'login', color: 'var(--sa-green)',  title: 'Successful Login',  desc: 'Authorized login from Firefox / Ubuntu', time: 'Today, 08:00' },
-    ],
-    sessions: [
-      { id: 'SID-3001', device: 'Firefox 123 / Ubuntu', ip: '192.168.1.10', location: 'Freetown, SL', started: '2026-03-07 08:00', lastActive: '2026-03-07 11:50', active: true },
-    ],
-  },
-  {
-    id: 4, name: 'K. Sesay', email: 'k.sesay@northacad.sl', role: 'Exam Officer', school: 'North Academy',
-    status: 'suspended', riskLevel: 'high', riskScore: 82,
-    twoFAEnabled: false,
-    successLogins: 55, failedAttempts: 31, alertsTriggered: 8,
-    lastSeen: '2026-02-28 18:30',
-    recentActivity: [
-      { icon: 'admin', color: 'var(--sa-red)', title: 'Unauthorized Access Attempt', desc: 'Attempted to access locked grade records', time: 'Feb 28, 18:30' },
-      { icon: 'login', color: 'var(--sa-red)', title: 'Failed Login ×5',             desc: 'Multiple consecutive auth failures',      time: 'Feb 28, 17:55' },
-    ],
-    sessions: [
-      { id: 'SID-4001', device: 'Unknown Browser / Android', ip: '196.10.6.90', location: 'Unknown', started: '2026-02-28 17:50', lastActive: '2026-02-28 18:30', active: false },
-    ],
-  },
-  {
-    id: 5, name: 'F. Koroma', email: 'f.koroma@aic.sl', role: 'Teacher', school: 'AIC Grammar School',
-    status: 'active', riskLevel: 'low', riskScore: 5,
-    twoFAEnabled: true,
-    successLogins: 198, failedAttempts: 0, alertsTriggered: 0,
-    lastSeen: '2026-03-07 13:05',
-    recentActivity: [
-      { icon: 'grade', color: 'var(--sa-green)', title: 'Grade Submitted',  desc: 'Term 2 grades locked for Form 4 Science', time: 'Today, 13:05' },
-      { icon: 'login', color: 'var(--sa-green)', title: 'Successful Login', desc: 'Authorized login from Chrome / Windows',  time: 'Today, 07:45' },
-    ],
-    sessions: [
-      { id: 'SID-5001', device: 'Chrome 120 / Windows 10', ip: '10.0.1.88', location: 'Freetown, SL', started: '2026-03-07 07:45', lastActive: '2026-03-07 13:05', active: true },
-    ],
-  },
-];
+const IcSearch = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>;
+const IcBack = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>;
+const IcShield = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>;
+const IcLock = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0110 0v4" /></svg>;
+const IcBlock = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="4.93" y1="4.93" x2="19.07" y2="19.07" /></svg>;
+const IcList = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><circle cx="3" cy="6" r="1.2" fill="currentColor" /><circle cx="3" cy="12" r="1.2" fill="currentColor" /><circle cx="3" cy="18" r="1.2" fill="currentColor" /></svg>;
+const IcLogin = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3" /></svg>;
+const IcGrade = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" /></svg>;
+const IcAdmin = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><line x1="9" y1="12" x2="15" y2="12" /></svg>;
+const IcDesktop = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" /><path d="M8 21h8M12 17v4" /></svg>;
+const IcPhone = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" /><line x1="12" y1="18" x2="12.01" y2="18" strokeWidth="2.5" /></svg>;
+const IcLaptop = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 20h20M4 6a2 2 0 012-2h12a2 2 0 012 2v10H4V6z" /></svg>;
+const IcTrendUp = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" /></svg>;
+const IcTrendDn = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6" /><polyline points="17 18 23 18 23 12" /></svg>;
+const IcEdit = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>;
+const IcHistory = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 102-.66" /></svg>;
+const IcKey = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="7.5" cy="15.5" r="5.5" /><path d="M21 2l-9.6 9.6M15.5 7.5l2 2M18 5l2 2" /></svg>;
+const IcPlus = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>;
+const IcX = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>;
+const IcCheck = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>;
+const IcMapPin = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" /></svg>;
 
 const RISK_CFG = {
-  low:    { color: 'var(--sa-green)',  bg: 'var(--sa-green-dim)',  label: 'Low'    },
-  medium: { color: 'var(--sa-amber)',  bg: 'var(--sa-amber-dim)',  label: 'Medium' },
-  high:   { color: 'var(--sa-red)',    bg: 'var(--sa-red-dim)',    label: 'High'   },
+  low: { color: 'var(--sa-green)', bg: 'var(--sa-green-dim)', label: 'Low' },
+  medium: { color: 'var(--sa-amber)', bg: 'var(--sa-amber-dim)', label: 'Medium' },
+  high: { color: 'var(--sa-red)', bg: 'var(--sa-red-dim)', label: 'High' },
 };
 
 /* ---- Deterministic 30-day risk sparkline ---- */
@@ -122,10 +49,10 @@ function genSparkData(userId, riskScore, failedAttempts) {
 }
 
 function RiskSparkline({ userId, riskScore, failedAttempts, color }) {
-  const data  = genSparkData(userId, riskScore, failedAttempts);
+  const data = genSparkData(userId, riskScore, failedAttempts);
   const W = 200, H = 40, PAD = 2;
-  const min   = Math.min(...data);
-  const max   = Math.max(...data) || 1;
+  const min = Math.min(...data);
+  const max = Math.max(...data) || 1;
   const scaleY = v => PAD + (H - PAD * 2) * (1 - (v - min) / (max - min || 1));
   const scaleX = i => (i / (data.length - 1)) * W;
   const points = data.map((v, i) => `${scaleX(i)},${scaleY(v)}`).join(' ');
@@ -154,12 +81,12 @@ function RiskSparkline({ userId, riskScore, failedAttempts, color }) {
 }
 
 const ROLE_COLORS = {
-  'Super Admin':    '#1B3FAF',
-  'School Admin':   '#0EA5E9',
-  'Teacher':        '#10B981',
-  'Exam Officer':   '#8B5CF6',
-  'Finance Officer':'#F59E0B',
-  'Parent':         '#6366F1',
+  'Super Admin': '#1B3FAF',
+  'School Admin': '#0EA5E9',
+  'Teacher': '#10B981',
+  'Exam Officer': '#8B5CF6',
+  'Finance Officer': '#F59E0B',
+  'Parent': '#6366F1',
 };
 
 const ACTIVITY_ICONS = { grade: <IcGrade />, login: <IcLogin />, admin: <IcAdmin /> };
@@ -170,15 +97,15 @@ const ACTIVITY_ICONS = { grade: <IcGrade />, login: <IcLogin />, admin: <IcAdmin
 const ROLES_LIST = ['Super Admin', 'School Admin', 'Teacher', 'Exam Officer', 'Finance Officer'];
 
 function CreateUserModal({ onClose }) {
-  const [form,     setForm]     = useState({ name: '', email: '', role: 'Teacher', school: '' });
+  const [form, setForm] = useState({ name: '', email: '', role: 'Teacher', school: '' });
   const [submitted, setSubmitted] = useState(false);
-  const [errors,   setErrors]   = useState({});
+  const [errors, setErrors] = useState({});
 
   const needsSchool = form.role !== 'Super Admin';
 
   const validate = () => {
     const e = {};
-    if (!form.name.trim())  e.name  = 'Full name is required';
+    if (!form.name.trim()) e.name = 'Full name is required';
     if (!form.email.trim()) e.email = 'Email is required';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = 'Enter a valid email';
     if (needsSchool && !form.school.trim()) e.school = 'School is required for this role';
@@ -243,7 +170,7 @@ function CreateUserModal({ onClose }) {
         ) : (
           /* Form */
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {field('name',  'Full Name',  'text', 'e.g. Aminata Koroma')}
+            {field('name', 'Full Name', 'text', 'e.g. Aminata Koroma')}
             {field('email', 'Email Address', 'email', 'user@school.edu.sl')}
 
             {/* Role */}
@@ -285,17 +212,17 @@ function CreateUserModal({ onClose }) {
    ============================================================ */
 function UserProfile({ user, onBack, onNavigate, showToast }) {
   const risk = RISK_CFG[user.riskLevel] || RISK_CFG.low;
-  const [suspended,  setSuspended]  = useState(user.status === 'suspended');
-  const [resetSent,  setResetSent]  = useState(false);
-  const [setupSent,  setSetupSent]  = useState(false);
-  const [sessions,   setSessions]   = useState(user.sessions);
-  const [twoFA,      setTwoFA]      = useState(user.twoFAEnabled);
+  const [suspended, setSuspended] = useState(user.status === 'suspended');
+  const [resetSent, setResetSent] = useState(false);
+  const [setupSent, setSetupSent] = useState(false);
+  const [sessions, setSessions] = useState(user.sessions);
+  const [twoFA, setTwoFA] = useState(user.twoFAEnabled);
 
-  const initials  = user.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  const initials = user.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
   const roleColor = ROLE_COLORS[user.role] || '#64748B';
 
   const terminateSession = (id) => setSessions(s => s.filter(sess => sess.id !== id));
-  const terminateAll     = () => setSessions(s => s.filter(sess => !sess.active));
+  const terminateAll = () => setSessions(s => s.filter(sess => !sess.active));
 
   return (
     <div>
@@ -373,9 +300,9 @@ function UserProfile({ user, onBack, onNavigate, showToast }) {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 18 }}>
             {[
-              { label: 'Successful Logins', value: user.successLogins, trend: '+5%',  trendUp: true  },
-              { label: 'Failed Attempts',   value: user.failedAttempts, trend: '-10%', trendUp: false },
-              { label: 'Alerts Triggered',  value: user.alertsTriggered,trend: '0%',   trendUp: null  },
+              { label: 'Successful Logins', value: user.successLogins, trend: '+5%', trendUp: true },
+              { label: 'Failed Attempts', value: user.failedAttempts, trend: '-10%', trendUp: false },
+              { label: 'Alerts Triggered', value: user.alertsTriggered, trend: '0%', trendUp: null },
             ].map((stat, i) => (
               <div key={i} style={{ background: 'var(--sa-card-bg2)', borderRadius: 10, padding: '14px 16px', border: '1px solid var(--sa-border)' }}>
                 <p style={{ margin: '0 0 8px', fontSize: '0.72rem', color: 'var(--sa-text-2)', fontWeight: 500 }}>{stat.label}</p>
@@ -539,27 +466,73 @@ function UserProfile({ user, onBack, onNavigate, showToast }) {
    User list view
    ============================================================ */
 export default function SAUsers({ onNavigate }) {
-  const [search,      setSearch]      = useState('');
-  const [roleFilter,  setRoleFilter]  = useState('all');
-  const [selected,    setSelected]    = useState(null);
-  const [showCreate,  setShowCreate]  = useState(false);
-  const [toast,       setToast]       = useState(null);
-  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [selected, setSelected] = useState(null);
+  const [showCreate, setShowCreate] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  const showToast = useCallback((msg, type = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  }, []);
+
+  const fetchUsers = useCallback(async () => {
+    setLoading(true);
+    const token = localStorage.getItem('token');
+    try {
+      const res = await fetch(`${API}/api/users/`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        // Enforce some structure for the UI
+        const mapped = data.users.map(u => ({
+          ...u,
+          riskLevel: u.riskLevel || 'low',
+          riskScore: u.riskScore || 0,
+          failedAttempts: u.failedAttempts || 0,
+          successLogins: u.successLogins || 0,
+          twoFAEnabled: !!u.twoFAEnabled,
+          lastSeen: u.last_login ? new Date(u.last_login).toLocaleString() : 'Never',
+          recentActivity: u.recentActivity || [],
+          sessions: u.sessions || []
+        }));
+        setUsers(mapped);
+      } else {
+        showToast(data.message || 'Failed to fetch users', 'error');
+      }
+    } catch (err) {
+      showToast('Connection error occurred', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [showToast]);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
   const filtered = useMemo(() => {
-    let list = [...MOCK_USERS];
+    let list = [...users];
     if (roleFilter !== 'all') list = list.filter(u => u.role === roleFilter);
     if (search.trim()) {
       const q = search.toLowerCase();
-      list = list.filter(u => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || u.school.toLowerCase().includes(q));
+      list = list.filter(u =>
+        u.name.toLowerCase().includes(q) ||
+        u.email.toLowerCase().includes(q) ||
+        u.school.toLowerCase().includes(q)
+      );
     }
     return list;
-  }, [search, roleFilter]);
+  }, [users, search, roleFilter]);
 
   if (selected) return <UserProfile user={selected} onBack={() => setSelected(null)} onNavigate={onNavigate} showToast={showToast} />;
 
-  const roles        = ['all', ...Array.from(new Set(MOCK_USERS.map(u => u.role)))];
-  const no2FACount   = MOCK_USERS.filter(u => !u.twoFAEnabled).length;
+  const roles = useMemo(() => ['all', ...Array.from(new Set(users.map(u => u.role)))], [users]);
+  const no2FACount = users.filter(u => !u.twoFAEnabled).length;
 
   return (
     <div style={{ position: 'relative' }}>
@@ -611,14 +584,19 @@ export default function SAUsers({ onNavigate }) {
       </div>
 
       {/* User cards */}
-      {filtered.length === 0 ? (
+      {loading ? (
+        <div className="sa-card" style={{ padding: 40, textAlign: 'center', color: 'var(--sa-text-2)' }}>
+          <div className="sa-live-dot" style={{ margin: '0 auto 12px' }} />
+          Loading users from directory...
+        </div>
+      ) : filtered.length === 0 ? (
         <div className="sa-card"><div className="sa-empty"><p className="sa-empty-title">No users found</p></div></div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {filtered.map(user => {
-            const risk      = RISK_CFG[user.riskLevel] || RISK_CFG.low;
+            const risk = RISK_CFG[user.riskLevel] || RISK_CFG.low;
             const roleColor = ROLE_COLORS[user.role] || '#64748B';
-            const initials  = user.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+            const initials = user.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
             return (
               <div
                 key={user.id}

@@ -1,38 +1,26 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { SECURITY_CONFIG } from '../../config/security';
+
+const API = SECURITY_CONFIG.API_URL;
 
 /* ---- Icons ---- */
-const IcSearch = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>;
-const IcShield = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>;
-const IcAlert  = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>;
-const IcUser   = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>;
-const IcLock   = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>;
-const IcArrow  = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>;
+const IcSearch = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>;
+const IcShield = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>;
+const IcAlert = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>;
+const IcUser = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>;
+const IcLock = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0110 0v4" /></svg>;
+const IcArrow = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>;
 
-/* ---- Severity config ---- */
 const SEVERITY_CFG = {
-  critical: { label: 'Critical', color: 'var(--sa-red)',    bg: 'var(--sa-red-dim)'    },
-  high:     { label: 'High',     color: 'var(--sa-amber)',  bg: 'var(--sa-amber-dim)'  },
-  medium:   { label: 'Medium',   color: 'var(--sa-accent)', bg: 'var(--sa-accent-dim)' },
-  low:      { label: 'Low',      color: 'var(--sa-purple)', bg: 'var(--sa-purple-dim)' },
-  info:     { label: 'Info',     color: 'var(--sa-green)',  bg: 'var(--sa-green-dim)'  },
+  critical: { label: 'Critical', color: 'var(--sa-red)', bg: 'var(--sa-red-dim)' },
+  high: { label: 'High', color: 'var(--sa-amber)', bg: 'var(--sa-amber-dim)' },
+  medium: { label: 'Medium', color: 'var(--sa-accent)', bg: 'var(--sa-accent-dim)' },
+  low: { label: 'Low', color: 'var(--sa-purple)', bg: 'var(--sa-purple-dim)' },
+  info: { label: 'Info', color: 'var(--sa-green)', bg: 'var(--sa-green-dim)' },
 };
 
-/* ---- Mock security events ---- */
-const MOCK_EVENTS = [
-  { id: 'EVT-001', ts: '2026-02-28 23:14:02', type: 'Brute Force',      severity: 'critical', action: 'Login Attempt',           actor: 'Unknown',         ip: '192.168.4.77',  status: 'Blocked'   },
-  { id: 'EVT-002', ts: '2026-02-28 22:51:19', type: 'Hash Mismatch',    severity: 'high',     action: 'Write on Locked Record',  actor: 'ID-9921',         ip: '10.0.0.211',    status: 'Flagged'   },
-  { id: 'EVT-003', ts: '2026-02-28 21:37:44', type: 'Failed Login',     severity: 'medium',   action: 'Auth Failure ×5',         actor: 'admin@school.sl', ip: '41.223.15.200', status: 'Logged'    },
-  { id: 'EVT-004', ts: '2026-02-28 20:00:08', type: 'Session Hijack',   severity: 'critical', action: 'Token Replay Attack',     actor: 'Unknown',         ip: '185.220.101.3', status: 'Blocked'   },
-  { id: 'EVT-005', ts: '2026-02-28 19:22:33', type: 'SQL Injection',    severity: 'high',     action: 'Malformed Query',         actor: 'Unknown',         ip: '77.91.230.14',  status: 'Blocked'   },
-  { id: 'EVT-006', ts: '2026-02-28 18:47:56', type: 'Rate Limit Hit',   severity: 'medium',   action: 'API Request Flood',       actor: 'bot_crawler_1',   ip: '45.33.32.156',  status: 'Throttled' },
-  { id: 'EVT-007', ts: '2026-02-28 17:03:12', type: 'Grade Tamper',     severity: 'critical', action: 'Unauthorized Edit',       actor: 'teacher_jb@mab',  ip: '192.168.1.45',  status: 'Blocked'   },
-  { id: 'EVT-008', ts: '2026-02-28 15:58:41', type: 'Geo Anomaly',      severity: 'low',      action: 'Suspicious Login Origin', actor: 'admin@mab.sl',    ip: '196.10.6.22',   status: 'Logged'    },
-  { id: 'EVT-009', ts: '2026-02-28 14:41:09', type: 'File Export',      severity: 'info',     action: 'Report Download',         actor: 'sa@elkendeh.com', ip: '192.168.0.1',   status: 'Allowed'   },
-  { id: 'EVT-010', ts: '2026-02-28 12:12:55', type: 'Config Change',    severity: 'low',      action: 'Settings Updated',        actor: 'ek_sms0000',      ip: '192.168.0.1',   status: 'Allowed'   },
-];
-
 /* 24-hour activity (events per hour, 0–23) */
-const ACTIVITY_BARS = [4,7,2,1,3,8,12,9,5,3,6,15,11,8,4,3,7,20,18,14,9,6,3,2];
+const ACTIVITY_BARS = [4, 7, 2, 1, 3, 8, 12, 9, 5, 3, 6, 15, 11, 8, 4, 3, 7, 20, 18, 14, 9, 6, 3, 2];
 
 function fmtTime(ts) {
   const d = new Date(ts);
@@ -40,43 +28,67 @@ function fmtTime(ts) {
 }
 
 export default function SASecurityLogs({ onForensic }) {
-  const [search,    setSearch]    = useState('');
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
   const [sevFilter, setSevFilter] = useState('all');
+
+  const fetchLogs = useCallback(async () => {
+    setLoading(true);
+    const token = localStorage.getItem('token');
+    try {
+      const res = await fetch(`${API}/api/security-logs/`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setLogs(data.logs);
+      }
+    } catch (err) {
+      console.error('Failed to fetch security logs', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchLogs();
+  }, [fetchLogs]);
 
   const counts = useMemo(() => {
     const c = { critical: 0, high: 0, medium: 0, low: 0, info: 0 };
-    MOCK_EVENTS.forEach(e => { if (c[e.severity] !== undefined) c[e.severity]++; });
+    logs.forEach(e => { if (c[e.severity] !== undefined) c[e.severity]++; });
     return c;
-  }, []);
+  }, [logs]);
 
   const filtered = useMemo(() => {
-    let list = MOCK_EVENTS;
+    let list = logs;
     if (sevFilter !== 'all') list = list.filter(e => e.severity === sevFilter);
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(e =>
         e.type.toLowerCase().includes(q) ||
-        e.actor.toLowerCase().includes(q) ||
-        e.ip.includes(q) ||
-        e.action.toLowerCase().includes(q)
+        (e.actor && e.actor.toLowerCase().includes(q)) ||
+        (e.ip && e.ip.includes(q)) ||
+        (e.action && e.action.toLowerCase().includes(q))
       );
     }
     return list;
-  }, [sevFilter, search]);
+  }, [logs, sevFilter, search]);
 
   const stats = [
-    { label: 'Threats Blocked', value: 4,   icon: <IcShield />, cls: 'sa-stat-icon--red',   trend: { dir: 'up',   label: '+2 today' }   },
-    { label: 'Active Sessions', value: 127,  icon: <IcUser />,   cls: 'sa-stat-icon--green', trend: { dir: 'flat', label: 'Stable' }      },
-    { label: 'Failed Logins',   value: 38,   icon: <IcLock />,   cls: 'sa-stat-icon--amber', trend: { dir: 'up',   label: '+12 today' }  },
-    { label: 'Flagged IPs',     value: 7,    icon: <IcAlert />,  cls: 'sa-stat-icon--blue',  trend: { dir: 'up',   label: '3 critical' } },
+    { label: 'Threats Blocked', value: 4, icon: <IcShield />, cls: 'sa-stat-icon--red', trend: { dir: 'up', label: '+2 today' } },
+    { label: 'Active Sessions', value: 127, icon: <IcUser />, cls: 'sa-stat-icon--green', trend: { dir: 'flat', label: 'Stable' } },
+    { label: 'Failed Logins', value: 38, icon: <IcLock />, cls: 'sa-stat-icon--amber', trend: { dir: 'up', label: '+12 today' } },
+    { label: 'Flagged IPs', value: 7, icon: <IcAlert />, cls: 'sa-stat-icon--blue', trend: { dir: 'up', label: '3 critical' } },
   ];
 
   const SEV_TABS = [
-    { key: 'all',      label: 'All Events', count: MOCK_EVENTS.length },
-    { key: 'critical', label: 'Critical',   count: counts.critical },
-    { key: 'high',     label: 'High',       count: counts.high },
-    { key: 'medium',   label: 'Medium',     count: counts.medium },
-    { key: 'low',      label: 'Low',        count: counts.low },
+    { key: 'all', label: 'All Events', count: logs.length },
+    { key: 'critical', label: 'Critical', count: counts.critical },
+    { key: 'high', label: 'High', count: counts.high },
+    { key: 'medium', label: 'Medium', count: counts.medium },
+    { key: 'low', label: 'Low', count: counts.low },
   ];
 
   const maxBar = Math.max(...ACTIVITY_BARS);
@@ -124,14 +136,14 @@ export default function SASecurityLogs({ onForensic }) {
         <div className="sa-card-body">
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 64, padding: '0 2px' }}>
             {ACTIVITY_BARS.map((val, i) => {
-              const pct    = (val / maxBar) * 100;
+              const pct = (val / maxBar) * 100;
               const isHigh = val >= 15;
-              const isMed  = val >= 8 && !isHigh;
-              const col    = isHigh ? 'var(--sa-red)' : isMed ? 'var(--sa-amber)' : 'var(--sa-accent)';
+              const isMed = val >= 8 && !isHigh;
+              const col = isHigh ? 'var(--sa-red)' : isMed ? 'var(--sa-amber)' : 'var(--sa-accent)';
               return (
                 <div
                   key={i}
-                  title={`${String(i).padStart(2,'0')}:00 — ${val} events`}
+                  title={`${String(i).padStart(2, '0')}:00 — ${val} events`}
                   style={{
                     flex: 1, height: `${Math.max(pct, 5)}%`,
                     background: col, opacity: 0.8, borderRadius: '3px 3px 0 0',
@@ -211,10 +223,10 @@ export default function SASecurityLogs({ onForensic }) {
               {filtered.map(ev => {
                 const cfg = SEVERITY_CFG[ev.severity];
                 const statusColor =
-                  ev.status === 'Blocked'   ? 'var(--sa-red)'    :
-                  ev.status === 'Flagged'   ? 'var(--sa-amber)'  :
-                  ev.status === 'Allowed'   ? 'var(--sa-green)'  :
-                  ev.status === 'Throttled' ? 'var(--sa-purple)' : 'var(--sa-text-2)';
+                  ev.status === 'Blocked' ? 'var(--sa-red)' :
+                    ev.status === 'Flagged' ? 'var(--sa-amber)' :
+                      ev.status === 'Allowed' ? 'var(--sa-green)' :
+                        ev.status === 'Throttled' ? 'var(--sa-purple)' : 'var(--sa-text-2)';
                 const isCritical = ev.severity === 'critical';
                 return (
                   <tr key={ev.id} style={{ cursor: 'pointer' }} onClick={() => onForensic && onForensic(ev)}>

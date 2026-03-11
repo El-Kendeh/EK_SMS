@@ -4,7 +4,7 @@
 
 export const SECURITY_CONFIG = {
   // API Configuration
-  API_URL: process.env.REACT_APP_API_URL || 'http://localhost:8000',
+  API_URL: process.env.REACT_APP_API_URL || 'http://87.106.65.209',
 
   // Security Headers
   SECURE_HEADERS: {
@@ -62,7 +62,7 @@ export const SECURITY_CONFIG = {
     'style-src': ["'self'", "'unsafe-inline'"],
     'img-src': ["'self'", 'data:', 'https:'],
     'font-src': ["'self'"],
-    'connect-src': ["'self'", 'https://ek-sms-backend.onrender.com', 'http://localhost:8000'],
+    'connect-src': ["'self'", 'https://ek-sms-backend.onrender.com', 'http://localhost:8000', 'http://87.106.65.209'],
     'frame-ancestors': ["'none'"],
     'base-uri': ["'self'"],
     'form-action': ["'self'"],
