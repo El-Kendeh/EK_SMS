@@ -7,7 +7,7 @@ import {
   useMotionValue,
   useVelocity,
   useAnimationFrame
-} from 'motion/react';
+} from 'framer-motion';
 
 function useElementWidth(ref) {
   const [width, setWidth] = useState(0);

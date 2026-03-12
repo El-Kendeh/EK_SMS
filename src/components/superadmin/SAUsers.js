@@ -529,10 +529,10 @@ export default function SAUsers({ onNavigate }) {
     return list;
   }, [users, search, roleFilter]);
 
-  if (selected) return <UserProfile user={selected} onBack={() => setSelected(null)} onNavigate={onNavigate} showToast={showToast} />;
-
   const roles = useMemo(() => ['all', ...Array.from(new Set(users.map(u => u.role)))], [users]);
   const no2FACount = users.filter(u => !u.twoFAEnabled).length;
+
+  if (selected) return <UserProfile user={selected} onBack={() => setSelected(null)} onNavigate={onNavigate} showToast={showToast} />;
 
   return (
     <div style={{ position: 'relative' }}>

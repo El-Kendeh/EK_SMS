@@ -11,12 +11,12 @@ services:
     environment:
       DEBUG: 'True'
       SECRET_KEY: django-insecure-dev-key-for-development-only
-      ALLOWED_HOSTS: localhost,127.0.0.1,web,backend
-      CORS_ALLOWED_ORIGINS: http://localhost:3000,http://127.0.0.1:3000,http://localhost:8000,http://frontend:3000,https://ek-sms-one.vercel.app
-      SECURE_SSL_REDIRECT: 'False'
-      SESSION_COOKIE_SECURE: 'False'
-      CSRF_COOKIE_SECURE: 'False'
-      SECURE_HSTS_SECONDS: '0'
+      ALLOWED_HOSTS: localhost,127.0.0.1,backend.pruhsms.africa,pruhsms.africa
+      CORS_ALLOWED_ORIGINS: https://backend.pruhsms.africa,https://pruhsms.africa,https://www.pruhsms.africa,https://ek-sms-one.vercel.app
+      SECURE_SSL_REDIRECT: 'True'
+      SESSION_COOKIE_SECURE: 'True'
+      CSRF_COOKIE_SECURE: 'True'
+      SECURE_HSTS_SECONDS: '31536000'
       DB_ENGINE: sqlite
     volumes:
       - ./eksms:/app/eksms
@@ -42,7 +42,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      REACT_APP_API_URL: http://localhost:8000
+      REACT_APP_API_URL: https://backend.pruhsms.africa
       REACT_APP_API_HOST: http://web:8000
       NODE_ENV: production
     depends_on:

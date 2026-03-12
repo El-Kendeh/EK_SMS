@@ -166,7 +166,7 @@ SECURE_CONTENT_SECURITY_POLICY = {
     'style-src': ("'self'", "'unsafe-inline'"),
     'img-src': ("'self'", 'data:', 'https:'),
     'font-src': ("'self'",),
-    'connect-src': ("'self'", "https://ek-sms-backend.onrender.com", "http://localhost:8000"),
+    'connect-src': ("'self'", "https://backend.pruhsms.africa", "https://pruhsms.africa", "http://localhost:8000"),
 }
 
 # HTTP Strict Transport Security (HSTS) - Disabled for HTTP
@@ -194,7 +194,7 @@ CSRF_TRUSTED_ORIGINS = config(
 # Session Security
 SESSION_COOKIE_AGE = 3600  # 1 hour
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
-SESSION_COOKIE_SECURE = False
+SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=True, cast=bool)
 
 # CORS Settings (already imported above)
 CORS_ALLOW_CREDENTIALS = True
