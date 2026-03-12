@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import './Login.css';
 import { SECURITY_CONFIG } from '../config/security';
 import ApiClient from '../api/client';
@@ -53,6 +53,30 @@ function Login({ onNavigate }) {
   const [error, setError] = useState('');
   const [forgotMsg, setForgotMsg] = useState(false);
   const [goingHome, setGoingHome] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  // Auto-redirect if already logged in
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const userStr = localStorage.getItem('user');
+    if (token && userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        const isSuper = user.is_superuser || user.role === 'superadmin' || user.role === 'admin' || user.role === 'superuser';
+        if (isSuper) {
+          onNavigate('dashboard');
+        } else if (user.role === 'school_admin') {
+          onNavigate('sa-dashboard');
+        } else {
+          onNavigate('home');
+        }
+      } catch (e) {
+        setCheckingAuth(false);
+      }
+    } else {
+      setCheckingAuth(false);
+    }
+  }, [onNavigate]);
 
   const handleBackHome = useCallback(() => {
     setGoingHome(true);
@@ -83,11 +107,13 @@ function Login({ onNavigate }) {
 
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
+      const user = data.user;
+      const isSuper = user.is_superuser || user.role === 'superadmin' || user.role === 'admin' || user.role === 'superuser';
 
       if (onNavigate) {
-        if (data.user.is_superuser) {
+        if (isSuper) {
           onNavigate('dashboard');
-        } else if (data.user.role === 'school_admin') {
+        } else if (user.role === 'school_admin') {
           onNavigate('sa-dashboard');
         } else {
           onNavigate('home');
@@ -99,6 +125,14 @@ function Login({ onNavigate }) {
       setIsLoading(false);
     }
   };
+
+  if (checkingAuth) {
+    return (
+      <div className="login-page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="sa-loader-ring" style={{ width: 40, height: 40 }} />
+      </div>
+    );
+  }
 
   return (
     <div className="login-page">

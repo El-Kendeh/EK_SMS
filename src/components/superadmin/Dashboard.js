@@ -335,7 +335,8 @@ export default function Dashboard({ onNavigate }) {
     if (!token || !userStr) { onNavigate && onNavigate('home'); return; }
     try {
       const parsed = JSON.parse(userStr);
-      if (!parsed.is_superuser) { onNavigate && onNavigate('home'); return; }
+      const isSuper = parsed.is_superuser || parsed.role === 'superadmin' || parsed.role === 'admin' || parsed.role === 'superuser';
+      if (!isSuper) { onNavigate && onNavigate('home'); return; }
       setUser(parsed);
       fetchSchools();
       fetchGradeAlerts();

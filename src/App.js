@@ -18,21 +18,35 @@ const PAGE_TO_PATH = {
 
 function resolvePageFromPath(path, user) {
   const hasAuth = !!user;
-  if (path === '/login')    return 'login';
-  if (path === '/register') return 'register';
-  if (path === '/dashboard' || path === '/admin') {
-    if (!hasAuth) return 'login';
-    return user.is_superuser ? 'dashboard'
+  
+  // If authenticated, redirect from public-only pages
+  if (hasAuth && (path === '/login' || path === '/register' || path === '/')) {
+    const isSuper = user.is_superuser || user.role === 'superadmin' || user.role === 'admin' || user.role === 'superuser';
+    return isSuper ? 'dashboard'
       : user.role === 'school_admin' ? 'sa-dashboard'
       : 'landing';
   }
+
+  if (path === '/login')    return 'login';
+  if (path === '/register') return 'register';
+  
+  if (path === '/dashboard' || path === '/admin') {
+    if (!hasAuth) return 'login';
+    const isSuper = user.is_superuser || user.role === 'superadmin' || user.role === 'admin' || user.role === 'superuser';
+    return isSuper ? 'dashboard'
+      : user.role === 'school_admin' ? 'sa-dashboard'
+      : 'landing';
+  }
+  
   if (path === '/school-admin') {
     if (!hasAuth) return 'login';
     return user.role === 'school_admin' ? 'sa-dashboard' : 'landing';
   }
-  // Default: authenticated users go to their dashboard
+
+  // Default: authenticated users go to their dashboard, otherwise landing
   if (hasAuth) {
-    return user.is_superuser ? 'dashboard'
+    const isSuper = user.is_superuser || user.role === 'superadmin' || user.role === 'admin' || user.role === 'superuser';
+    return isSuper ? 'dashboard'
       : user.role === 'school_admin' ? 'sa-dashboard'
       : 'landing';
   }
