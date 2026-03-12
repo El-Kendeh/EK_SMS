@@ -212,6 +212,9 @@ CORS_ALLOW_HEADERS = [
     'x-csrftoken',
     'x-requested-with',
     'referrer-policy',
+    'x-content-type-options',
+    'x-frame-options',
+    'x-xss-protection',
 ]
 CORS_ALLOW_METHODS = [
     'DELETE',
