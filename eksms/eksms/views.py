@@ -110,6 +110,14 @@ def api_login(request):
         try:
             from eksms_core.models import SchoolAdmin
             sa = SchoolAdmin.objects.select_related('school').get(user=user, is_active=True)
+            
+            # Check for school approval
+            if not sa.school.is_approved:
+                return JsonResponse(
+                    {'success': False, 'message': 'Your institution registration is pending approval by the platform administrator.'},
+                    status=403,
+                )
+
             school_data = {
                 'id':          sa.school.id,
                 'name':        sa.school.name,
@@ -159,13 +167,23 @@ def api_register(request):
     Creates: School + Django User (admin) + SchoolAdmin profile.
     """
     try:
-        data = json.loads(request.body)
+        # ── Handle both JSON and FormData (for file uploads) ─────────────────
+        if request.content_type == 'application/json':
+            data = json.loads(request.body)
+        else:
+            data = request.POST.dict()
+            # Parse brandColors if it's a JSON string in FormData
+            if 'brandColors' in data:
+                try:
+                    data['brandColors'] = json.loads(data['brandColors'])
+                except:
+                    pass
 
         # ── Extract ──────────────────────────────────────────────────────────
         institution_name = data.get('institutionName', '').strip()
         institution_type = data.get('institutionType', '').strip()
-        established      = data.get('established', '').strip()   # noqa: F841
-        motto            = data.get('motto', '').strip()         # noqa: F841
+        established      = data.get('established', '').strip()
+        motto            = data.get('motto', '').strip()
 
         address = data.get('address', '').strip()
         city    = data.get('city', '').strip()
@@ -174,17 +192,21 @@ def api_register(request):
 
         phone   = data.get('phone', '').strip()
         email   = data.get('email', '').strip()
-        website = data.get('website', '').strip()  # noqa: F841
+        website = data.get('website', '').strip()
 
         first_name  = data.get('firstName', '').strip()
         last_name   = data.get('lastName', '').strip()
         admin_email = data.get('adminEmail', '').strip()
+        admin_phone = data.get('adminPhone', '').strip()
         password    = data.get('password', '').strip()
 
-        capacity        = data.get('capacity', '1000')
-        academic_system = data.get('academicSystem', 'trimester')  # noqa: F841
-        grading_system  = data.get('gradingSystem', 'percentage')  # noqa: F841
-        language        = data.get('language', 'English')          # noqa: F841
+        capacity            = data.get('capacity', '1000')
+        academic_system     = data.get('academicSystem', 'trimester')
+        grading_system      = data.get('gradingSystem', 'percentage')
+        language            = data.get('language', 'English')
+        registration_number = data.get('registrationNumber', '').strip()
+        estimated_teachers  = data.get('estimatedTeachers', '').strip()
+        brand_colors        = data.get('brandColor', '').strip() # Frontend sends this as a joined string or JSON
 
         # ── Server-side required check ────────────────────────────────────────
         required_fields = {
@@ -198,6 +220,7 @@ def api_register(request):
             'First name':          first_name,
             'Last name':           last_name,
             'Admin email':         admin_email,
+            'Admin phone':         admin_phone,
             'Password':            password,
         }
         for field_name, value in required_fields.items():
@@ -284,11 +307,19 @@ def api_register(request):
                 motto=motto,
                 capacity=int(capacity) if str(capacity).isdigit() else None,
                 academic_system=academic_system,
+                grading_system=grading_system,
+                language=language,
+                registration_number=registration_number,
+                estimated_teachers=estimated_teachers,
+                brand_colors=brand_colors,
+                established=established,
                 admin_email=admin_email,
-                principal_name=f"{first_name} {last_name}",
+                admin_phone=admin_phone,
+                principal_name=f"{first_name} {lastName}" if 'lastName' in data else f"{first_name} {last_name}",
                 is_active=True,
                 is_approved=False,
                 created_by=user,
+                badge=request.FILES.get('schoolBadge')
             )
 
             # ── Create SchoolAdmin profile ────────────────────────────────────

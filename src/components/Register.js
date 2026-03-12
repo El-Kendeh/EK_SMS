@@ -1242,14 +1242,15 @@ function Register({ onNavigate }) {
         <div className="reg-card">
           <div className="reg-success">
             <div className="success-icon-wrap"><CheckIcon /></div>
-            <h2 className="success-title">Application Submitted!</h2>
+            <h2 className="success-title">Application Received!</h2>
             <p className="success-desc">
               <span className="success-school-name">{form.institutionName}</span> has been
-              successfully registered.
+              successfully submitted for review.
             </p>
             <p className="success-email-note">
-              A verification email has been sent to{' '}
-              <strong>{form.adminEmail}</strong>. Please check your inbox to activate your account.
+              Our team will review your application. You will receive an email once your 
+              institution has been <strong>approved</strong>. You cannot sign in until the 
+              approval process is complete.
             </p>
             <button className="btn-go-signin" onClick={() => onNavigate && onNavigate('login')}>
               Go to Sign In

@@ -12,6 +12,7 @@ class School(models.Model):
     phone = models.CharField(max_length=20, blank=True, help_text="School contact phone")
     address = models.TextField(blank=True, help_text="School physical address")
     principal_name = models.CharField(max_length=255, blank=True, help_text="Principal/Head of School name")
+    badge = models.ImageField(upload_to='school_badges/', blank=True, null=True, help_text="Institution logo/badge")
     
     # Extended registration fields (saved from registration wizard)
     city             = models.CharField(max_length=100, blank=True, default='')
@@ -22,7 +23,16 @@ class School(models.Model):
     motto            = models.CharField(max_length=300, blank=True, default='')
     capacity         = models.IntegerField(null=True, blank=True)
     academic_system  = models.CharField(max_length=50, blank=True, default='')
-    admin_email      = models.EmailField(blank=True, default='')
+    grading_system   = models.CharField(max_length=50, blank=True, default='')
+    language         = models.CharField(max_length=50, blank=True, default='English')
+    
+    registration_number = models.CharField(max_length=100, blank=True, default='')
+    estimated_teachers  = models.CharField(max_length=50, blank=True, default='')
+    brand_colors        = models.CharField(max_length=255, blank=True, default='')
+    established         = models.CharField(max_length=50, blank=True, default='')
+    admin_email         = models.EmailField(blank=True, default='')
+    admin_phone         = models.CharField(max_length=50, blank=True, default='')
+    
     changes_requested = models.BooleanField(default=False)
 
     # Registration details
