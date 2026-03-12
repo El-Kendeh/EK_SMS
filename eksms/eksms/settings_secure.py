@@ -30,7 +30,7 @@ ALLOWED_HOSTS = config(
 # CORS Configuration for frontend communication
 CORS_ALLOWED_ORIGINS = config(
     'CORS_ALLOWED_ORIGINS',
-    default='http://localhost:3000',
+    default='http://localhost:3000,https://ek-sms-one.vercel.app',
     cast=Csv()
 )
 
