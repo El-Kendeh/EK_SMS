@@ -45,7 +45,7 @@ export default function SAApplications({ schools, onReview }) {
   const [riskFilter, setRiskFilter] = useState('all');
 
   /* Split pending vs approved vs rejected */
-  const pending  = useMemo(() => schools.filter(s => !s.is_approved), [schools]);
+  const pending  = useMemo(() => schools.filter(s => !s.is_approved && s.is_active !== false), [schools]);
   const approved = useMemo(() => schools.filter(s => s.is_approved),  [schools]);
 
   /* Avg review time — mock for now */
@@ -168,8 +168,11 @@ export default function SAApplications({ schools, onReview }) {
             return (
               <div key={school.id} className={`sa-app-card sa-app-card--${risk}`}>
                 <div className="sa-app-card-top">
-                  <div className="sa-app-avatar" style={{ background: color }}>
-                    {school.name[0].toUpperCase()}
+                  <div className="sa-app-avatar" style={{ background: school.badge ? 'transparent' : color }}>
+                    {school.badge 
+                      ? <img src={school.badge} alt="" style={{ width: '100%', height: '100%', borderRadius: 'inherit', objectFit: 'cover' }} />
+                      : school.name[0].toUpperCase()
+                    }
                   </div>
                   <div className="sa-app-info">
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>

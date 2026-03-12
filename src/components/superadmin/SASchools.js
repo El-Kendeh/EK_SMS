@@ -141,8 +141,11 @@ export default function SASchools({ schools, onReview }) {
                       {/* School name + code */}
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <div style={{ width: 34, height: 34, borderRadius: 8, background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8125rem', fontWeight: 800, color: '#fff', flexShrink: 0, textTransform: 'uppercase' }}>
-                            {school.name[0]}
+                          <div style={{ width: 34, height: 34, borderRadius: 8, background: school.badge ? 'transparent' : color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8125rem', fontWeight: 800, color: '#fff', flexShrink: 0, textTransform: 'uppercase', overflow: 'hidden' }}>
+                            {school.badge 
+                              ? <img src={school.badge} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              : school.name[0]
+                            }
                           </div>
                           <div>
                             <span className="sa-table-school-name">{school.name}</span>
@@ -170,8 +173,12 @@ export default function SASchools({ schools, onReview }) {
 
                       {/* Status */}
                       <td>
-                        {school.is_approved
+                        {school.is_approved && school.is_active !== false
                           ? <span className="sa-badge sa-badge--approved">Active</span>
+                          : !school.is_approved && school.is_active === false
+                          ? <span className="sa-badge sa-badge--rejected">Rejected</span>
+                          : school.is_approved && school.is_active === false
+                          ? <span className="sa-badge sa-badge--inactive">Inactive</span>
                           : school.changes_requested
                           ? <span className="sa-badge sa-badge--changes">Changes Requested</span>
                           : <span className="sa-badge sa-badge--pending">Pending</span>

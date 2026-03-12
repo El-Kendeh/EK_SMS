@@ -408,6 +408,7 @@ def api_get_schools(request):
             'is_active': s.is_active,
             'changes_requested': s.changes_requested,
             'registration_date': s.registration_date.isoformat(),
+            'badge': request.build_absolute_uri(s.badge.url) if s.badge else None,
             **admin_user_data,
         })
     
@@ -441,15 +442,17 @@ def api_approve_school(request):
             school.save()
             return JsonResponse({'success': True, 'message': f'"{school.name}" has been approved. The school admin can now log in.'})
         elif action == 'reject':
-            school_name = school.name
-            school.delete()
-            msg = f'"{school_name}" has been rejected and removed.'
+            school.is_active = False
+            school.is_approved = False
+            school.save()
+            msg = f'"{school.name}" has been rejected.'
             if note:
                 msg += f' Reason: {note}'
             return JsonResponse({'success': True, 'message': msg})
         elif action == 'request_changes':
             school.changes_requested = True
             school.is_approved = False
+            school.is_active = True
             school.save()
             msg = f'Change request sent to "{school.name}".'
             if note:

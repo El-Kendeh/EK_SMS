@@ -203,8 +203,11 @@ export default function SAReview({ school, onBack, onApprove, onReject, onReques
 
         {/* Hero card */}
         <div className="sa-review-hero">
-          <div className="sa-review-avatar" style={{ background: color }}>
-            {school.name[0].toUpperCase()}
+          <div className="sa-review-avatar" style={{ background: school.badge ? 'transparent' : color }}>
+            {school.badge 
+              ? <img src={school.badge} alt="" style={{ width: '100%', height: '100%', borderRadius: 'inherit', objectFit: 'cover' }} />
+              : school.name[0].toUpperCase()
+            }
           </div>
           <div style={{ textAlign: 'center', marginBottom: 10 }}>
             {school.is_approved

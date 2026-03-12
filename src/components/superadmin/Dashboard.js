@@ -398,10 +398,7 @@ export default function Dashboard({ onNavigate }) {
   };
 
   const handleReconsider = (school) => {
-    /* Move school back to pending by re-fetching after a toast */
-    showToast(`${school.name} marked for reconsideration.`, 'info');
-    setActivePage('rejected');
-    setSelectedSchool(null);
+    handleAction(school.id, 'request_changes', 'Reconsidering rejected application');
   };
 
   const handleForensic = (event) => {
