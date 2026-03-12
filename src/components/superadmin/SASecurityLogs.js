@@ -27,7 +27,7 @@ function fmtTime(ts) {
 
 export default function SASecurityLogs({ onForensic }) {
   const [logs, setLogs] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [sevFilter, setSevFilter] = useState('all');
 

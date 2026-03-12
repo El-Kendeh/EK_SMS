@@ -247,7 +247,7 @@ const STATUS_TABS = [
 
 export default function SAGradeIntegrity({ onDetail }) {
   const [alerts, setAlerts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState('all');
   const [schoolFilt, setSchoolFilt] = useState('');

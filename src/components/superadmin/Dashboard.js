@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import './SA.css';
 import './Dashboard.css';
-import { SECURITY_CONFIG } from '../../config/security';
 import ApiClient from '../../api/client';
 import PruhLogo from '../PruhLogo';
 import SAOverview       from './SAOverview';
@@ -341,7 +340,7 @@ export default function Dashboard({ onNavigate }) {
       fetchSchools();
       fetchGradeAlerts();
     } catch { onNavigate && onNavigate('home'); }
-  }, [onNavigate, fetchSchools]);
+  }, [onNavigate, fetchSchools, fetchGradeAlerts]);
 
   /* ---- Global search keyboard shortcut ---- */
   useEffect(() => {

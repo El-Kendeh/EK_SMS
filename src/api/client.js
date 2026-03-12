@@ -2,7 +2,7 @@
  * Secure API client with CSRF token handling and security headers
  */
 
-import { getCSRFToken, isSecureContext } from '../utils/security';
+import { getCSRFToken } from '../utils/security';
 import SECURITY_CONFIG from '../config/security';
 
 class ApiClient {
@@ -180,5 +180,6 @@ class ApiError extends Error {
   }
 }
 
-export default new ApiClient();
+const apiClient = new ApiClient();
+export default apiClient;
 export { ApiError };

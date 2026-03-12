@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './Register.css';
-import { SECURITY_CONFIG } from '../config/security';
 import ApiClient from '../api/client';
 import PruhLogo from './PruhLogo';
 

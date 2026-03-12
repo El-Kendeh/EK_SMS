@@ -5,14 +5,7 @@ import ApiClient from '../../api/client';
 const IcShield = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>;
 const IcCheck = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>;
 const IcHistory = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 102-.66" /></svg>;
-const IcServer = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" /><rect x="2" y="14" width="20" height="8" rx="2" /><line x1="6" y1="6" x2="6.01" y2="6" /><line x1="6" y1="18" x2="6.01" y2="18" /></svg>;
-const IcDatabase = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3" /><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" /><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" /></svg>;
-const IcApi = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" /><path d="M8 21h8M12 17v4" /></svg>;
-const IcMail = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><polyline points="22,6 12,13 2,6" /></svg>;
-const IcKey = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" /></svg>;
-const IcAlert = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>;
 const IcCpu = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" /><rect x="9" y="9" width="6" height="6" /><line x1="9" y1="1" x2="9" y2="4" /><line x1="15" y1="1" x2="15" y2="4" /><line x1="9" y1="20" x2="9" y2="23" /><line x1="15" y1="20" x2="15" y2="23" /><line x1="20" y1="9" x2="23" y2="9" /><line x1="20" y1="14" x2="23" y2="14" /><line x1="1" y1="9" x2="4" y2="9" /><line x1="1" y1="14" x2="4" y2="14" /></svg>;
-const IcQr = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /><line x1="14" y1="14" x2="14" y2="14.01" /><line x1="17" y1="14" x2="17" y2="14.01" /><line x1="20" y1="14" x2="20" y2="14.01" /><line x1="20" y1="17" x2="20" y2="17.01" /><line x1="17" y1="20" x2="20" y2="20" /><line x1="14" y1="17" x2="17" y2="17" /><line x1="14" y1="20" x2="14" y2="20.01" /></svg>;
 
 /* ---- Helpers ---- */
 function genUptimeBars(uptimePct, slots = 30) {
@@ -38,25 +31,6 @@ function fmtUptime(secs) {
   return `${d}d ${String(h).padStart(2, '0')}h ${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`;
 }
 
-/* ---- Static service definitions ---- */
-const SERVICE_DEFS = [
-  { id: 'auth', label: 'User Authentication', icon: <IcKey />, uptime: 0.9998, status: 'Operational' },
-  { id: 'db', label: 'Grade Database', icon: <IcDatabase />, uptime: 0.9991, status: 'Operational' },
-  { id: 'api', label: 'API Gateway', icon: <IcApi />, uptime: 0.9995, status: 'Operational' },
-  { id: 'admin', label: 'Admin Portal', icon: <IcServer />, uptime: 0.9980, status: 'Operational' },
-  { id: 'sms', label: 'SMS Gateway', icon: <IcMail />, uptime: 0.9962, status: 'Operational' },
-  { id: 'audit', label: 'Audit Logger', icon: <IcShield />, uptime: 1.0000, status: 'Operational' },
-  { id: 'reports', label: 'Report Generator', icon: <IcServer />, uptime: 0.9640, status: 'Degraded' },
-  { id: 'alerts', label: 'Alert Broadcaster', icon: <IcAlert />, uptime: 0.9975, status: 'Operational' },
-  { id: 'qr', label: 'QR Verification', icon: <IcQr />, uptime: 0.9950, status: 'Operational' },
-];
-
-const RESOURCES = [
-  { label: 'CPU Usage', value: 42, unit: '%' },
-  { label: 'Memory', value: 67, unit: '%' },
-  { label: 'Disk', value: 29, unit: '%' },
-  { label: 'Network I/O', value: 81, unit: '%' },
-];
 
 const ACTIVITY = [
   {
