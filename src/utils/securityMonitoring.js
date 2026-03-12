@@ -2,6 +2,7 @@
  * Security and logging utilities
  * Tracks security events and suspicious activities
  */
+import ApiClient from '../api/client';
 
 export const SecurityLogger = {
   levels: {
@@ -48,14 +49,7 @@ export const SecurityLogger = {
 
   async sendToBackend(logEntry) {
     try {
-      await fetch(`${process.env.REACT_APP_API_URL}/api/logs/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(logEntry),
-        credentials: 'include',
-      });
+      await ApiClient.post('/api/logs/', logEntry);
     } catch (error) {
       console.error('Failed to send log to backend:', error);
     }

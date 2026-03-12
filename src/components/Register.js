@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './Register.css';
 import { SECURITY_CONFIG } from '../config/security';
+import ApiClient from '../api/client';
 import PruhLogo from './PruhLogo';
 
 /* ================================================================
@@ -1060,13 +1061,9 @@ function Register({ onNavigate }) {
     setOtpLoading(true);
     setOtpError('');
     try {
-      const res = await fetch(`${SECURITY_CONFIG.API_URL}/api/send-otp/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: form.adminEmail }),
-        signal: AbortSignal.timeout(10000),
+      await ApiClient.post('/api/send-otp/', { 
+        email: form.adminEmail 
       });
-      if (!res.ok) throw new Error('Failed to send code. Please try again.');
       setOtpSent(true);
       setOtpResendTimer(60);
     } catch (err) {
@@ -1087,14 +1084,11 @@ function Register({ onNavigate }) {
     setOtpLoading(true);
     setOtpError('');
     try {
-      const res = await fetch(`${SECURITY_CONFIG.API_URL}/api/verify-otp/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: form.adminEmail, otp: otpInput }),
-        signal: AbortSignal.timeout(10000),
+      const data = await ApiClient.post('/api/verify-otp/', { 
+        email: form.adminEmail, 
+        otp: otpInput 
       });
-      const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.message || 'Invalid or expired code.');
+      if (!data.success) throw new Error(data.message || 'Invalid or expired code.');
       setOtpVerified(true);
       setOtpError('');
     } catch (err) {
@@ -1114,14 +1108,8 @@ function Register({ onNavigate }) {
   /* ---- Async duplicate school name check ---- */
   const checkDuplicateName = async (name) => {
     try {
-      const res = await fetch(
-        `${SECURITY_CONFIG.API_URL}/api/check-school-name/?name=${encodeURIComponent(name)}`,
-        { signal: AbortSignal.timeout(5000) }
-      );
-      if (res.ok) {
-        const data = await res.json();
-        return data.exists === true;
-      }
+      const data = await ApiClient.get(`/api/check-school-name/?name=${encodeURIComponent(name)}`);
+      return data.exists === true;
     } catch { /* API unavailable — allow registration to proceed */ }
     return false;
   };
@@ -1209,20 +1197,30 @@ function Register({ onNavigate }) {
     setError('');
     setIsLoading(true);
     try {
-      const payload = {
-        ...form,
-        phone:      form.phoneCode + form.phoneNumber,
-        adminPhone: form.adminPhoneCode + form.adminPhoneNumber,
-        brandColor: form.brandColors.join(', '),
-        ...(badgeFile ? { schoolBadgeName: badgeFile.name, schoolBadgeSize: badgeFile.size } : {}),
-      };
-      const response = await fetch(`${SECURITY_CONFIG.API_URL}/api/register/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const data = await response.json();
-      if (!response.ok || !data.success) {
+      let payload;
+      if (badgeFile) {
+        payload = new FormData();
+        Object.entries(form).forEach(([key, val]) => {
+          if (key === 'brandColors') {
+            payload.append(key, JSON.stringify(val));
+          } else {
+            payload.append(key, val);
+          }
+        });
+        payload.append('phone', form.phoneCode + form.phoneNumber);
+        payload.append('adminPhone', form.adminPhoneCode + form.adminPhoneNumber);
+        payload.append('brandColor', form.brandColors.join(', '));
+        payload.append('schoolBadge', badgeFile);
+      } else {
+        payload = {
+          ...form,
+          phone:      form.phoneCode + form.phoneNumber,
+          adminPhone: form.adminPhoneCode + form.adminPhoneNumber,
+          brandColor: form.brandColors.join(', '),
+        };
+      }
+      const data = await ApiClient.post('/api/register/', payload);
+      if (!data.success) {
         throw new Error(data.message || 'Registration failed. Please try again.');
       }
       setSubmitted(true);

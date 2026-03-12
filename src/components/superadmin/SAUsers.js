@@ -1,7 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { SECURITY_CONFIG } from '../../config/security';
-
-const API = SECURITY_CONFIG.API_URL;
+import ApiClient from '../../api/client';
 
 /* ---- Icons ---- */
 const IcSearch = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>;
@@ -481,12 +479,8 @@ export default function SAUsers({ onNavigate }) {
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
-    const token = localStorage.getItem('token');
     try {
-      const res = await fetch(`${API}/api/users/`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await res.json();
+      const data = await ApiClient.get('/api/users/');
       if (data.success) {
         // Enforce some structure for the UI
         const mapped = data.users.map(u => ({

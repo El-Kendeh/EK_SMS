@@ -35,6 +35,14 @@ class ApiClient {
     // Add security headers
     Object.assign(headers, SECURITY_CONFIG.SECURE_HEADERS);
 
+    let body = options.body;
+    if (body && !(body instanceof FormData)) {
+      headers['Content-Type'] = 'application/json';
+      if (typeof body !== 'string') {
+        body = JSON.stringify(body);
+      }
+    }
+
     let lastError;
     for (let attempt = 0; attempt < this.retryAttempts; attempt++) {
       try {
@@ -45,6 +53,7 @@ class ApiClient {
           credentials: 'include', // Include cookies for CORS
           ...options,
           headers,
+          body, // Pass the processed body
           signal: controller.signal,
         });
 
@@ -101,7 +110,7 @@ class ApiClient {
     const response = await this.request(endpoint, {
       ...options,
       method: 'POST',
-      body: JSON.stringify(data),
+      body: data,
     });
     return response.json();
   }
@@ -113,7 +122,7 @@ class ApiClient {
     const response = await this.request(endpoint, {
       ...options,
       method: 'PUT',
-      body: JSON.stringify(data),
+      body: data,
     });
     return response.json();
   }
@@ -125,7 +134,7 @@ class ApiClient {
     const response = await this.request(endpoint, {
       ...options,
       method: 'PATCH',
-      body: JSON.stringify(data),
+      body: data,
     });
     return response.json();
   }

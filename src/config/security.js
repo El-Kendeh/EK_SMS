@@ -4,7 +4,7 @@
 
 export const SECURITY_CONFIG = {
   // API Configuration
-  API_URL: process.env.REACT_APP_API_URL || 'http://87.106.65.209',
+  API_URL: process.env.REACT_APP_API_URL || 'https://backend.pruhsms.africa',
 
   // Security Headers
   SECURE_HEADERS: {
@@ -62,7 +62,7 @@ export const SECURITY_CONFIG = {
     'style-src': ["'self'", "'unsafe-inline'"],
     'img-src': ["'self'", 'data:', 'https:'],
     'font-src': ["'self'"],
-    'connect-src': ["'self'", 'https://ek-sms-backend.onrender.com', 'http://localhost:8000', 'http://87.106.65.209'],
+    'connect-src': ["'self'", 'https://backend.pruhsms.africa', 'https://pruhsms.africa', 'http://localhost:8000'],
     'frame-ancestors': ["'none'"],
     'base-uri': ["'self'"],
     'form-action': ["'self'"],
@@ -80,7 +80,7 @@ export const SECURITY_CONFIG = {
   // Security Headers for Production
   PRODUCTION_HEADERS: {
     'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
-    'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https://ek-sms-backend.onrender.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+    'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https://backend.pruhsms.africa https://pruhsms.africa; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
     'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
   },
 };

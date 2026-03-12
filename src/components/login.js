@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import './Login.css';
 import { SECURITY_CONFIG } from '../config/security';
+import ApiClient from '../api/client';
 import PruhLogo from './PruhLogo';
 
 /* ---- Icons ---- */
@@ -71,15 +72,12 @@ function Login({ onNavigate }) {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`${SECURITY_CONFIG.API_URL}/api/login/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), password }),
+      const data = await ApiClient.post('/api/login/', {
+        email: email.trim(),
+        password
       });
 
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
+      if (!data.success) {
         throw new Error(data.message || 'Login failed. Please check your credentials.');
       }
 

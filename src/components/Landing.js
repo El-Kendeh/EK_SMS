@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback, createContext, useContext } from 'react';
+import ApiClient from '../api/client';
 import './Landing.css';
 import PruhLogo from './PruhLogo';
 import Ballpit from './Ballpit';
@@ -2484,17 +2485,12 @@ function WaitlistCapture() {
     e.preventDefault();
     setStatus('loading');
     try {
-      const res  = await fetch('/api/waitlist/', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ email }),
-      });
-      const data = await res.json();
+      const data = await ApiClient.post('/api/waitlist/', { email });
       setStatus(data.success ? 'success' : 'error');
       setMsg(data.message);
-    } catch {
+    } catch (err) {
       setStatus('error');
-      setMsg('Something went wrong. Please try again.');
+      setMsg(err.message || 'Something went wrong. Please try again.');
     }
   };
 

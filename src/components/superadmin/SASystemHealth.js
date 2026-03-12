@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { SECURITY_CONFIG } from '../../config/security';
-
-const API = SECURITY_CONFIG.API_URL;
+import ApiClient from '../../api/client';
 
 /* ---- Icons ---- */
 const IcShield = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>;
@@ -84,12 +82,8 @@ export default function SASystemHealth() {
   const [uptimeSecs, setUptimeSecs] = useState(0);
 
   const fetchHealth = useCallback(async () => {
-    const token = localStorage.getItem('token');
     try {
-      const res = await fetch(`${API}/api/system-health/`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await res.json();
+      const data = await ApiClient.get('/api/system-health/');
       if (data.success) {
         setMetrics(data);
         setUptimeSecs(data.uptime);

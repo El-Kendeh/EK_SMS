@@ -160,7 +160,7 @@ export const isValidUrl = (url) => {
     }
 
     // Only allow same origin and configured API domains
-    const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+    const apiUrl = process.env.REACT_APP_API_URL || 'https://backend.pruhsms.africa';
     const apiOrigin = new URL(apiUrl).origin;
     
     return urlObj.origin === window.location.origin || 

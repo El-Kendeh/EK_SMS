@@ -3,6 +3,7 @@ import { useTheme } from '../../context/ThemeContext';
 import './SA.css';
 import './Dashboard.css';
 import { SECURITY_CONFIG } from '../../config/security';
+import ApiClient from '../../api/client';
 import PruhLogo from '../PruhLogo';
 import SAOverview       from './SAOverview';
 import SAApplications   from './SAApplications';
@@ -27,9 +28,9 @@ import SAOnboarding      from './SAOnboarding';
 import SAUsers           from './SAUsers';
 import SANotifications, { INITIAL_UNREAD_COUNT } from './SANotifications';
 import SAProfile         from './SAProfile';
-import { MOCK_REQUESTS } from './SAGradeIntegrity';
 
-const API = SECURITY_CONFIG.API_URL;
+
+
 
 /* ================================================================
    SVG Icons — inline, no external deps
@@ -302,6 +303,7 @@ export default function Dashboard({ onNavigate }) {
   const [forensicEvent,   setForensicEvent]   = useState(null);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [schools,         setSchools]         = useState([]);
+  const [gradeAlerts,    setGradeAlerts]     = useState([]);
   const [isLoading,       setIsLoading]       = useState(true);
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [sidebarOpen,     setSidebarOpen]     = useState(false);
@@ -311,11 +313,16 @@ export default function Dashboard({ onNavigate }) {
   const [secLogFilter,     setSecLogFilter]     = useState('');
 
   /* ---- Data ---- */
-  const fetchSchools = useCallback(async (tok) => {
-    const token = tok || localStorage.getItem('token');
+  const fetchGradeAlerts = useCallback(async () => {
     try {
-      const res  = await fetch(`${API}/api/schools/`, { headers: { Authorization: `Bearer ${token}` } });
-      const data = await res.json();
+      const data = await ApiClient.get('/api/grade-alerts/');
+      if (data.success) setGradeAlerts(data.alerts);
+    } catch { /* silently ignore */ }
+  }, []);
+
+  const fetchSchools = useCallback(async () => {
+    try {
+      const data = await ApiClient.get('/api/schools/');
       if (data.success) setSchools(data.schools);
     } catch { /* network error — silently ignore */ }
     finally { setIsLoading(false); }
@@ -330,7 +337,8 @@ export default function Dashboard({ onNavigate }) {
       const parsed = JSON.parse(userStr);
       if (!parsed.is_superuser) { onNavigate && onNavigate('home'); return; }
       setUser(parsed);
-      fetchSchools(token);
+      fetchSchools();
+      fetchGradeAlerts();
     } catch { onNavigate && onNavigate('home'); }
   }, [onNavigate, fetchSchools]);
 
@@ -348,13 +356,9 @@ export default function Dashboard({ onNavigate }) {
   const handleAction = useCallback(async (schoolId, action, note = '') => {
     setIsActionLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      const res   = await fetch(`${API}/api/schools/approve/`, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body:    JSON.stringify({ school_id: schoolId, action, note }),
+      const data = await ApiClient.post('/api/schools/approve/', { 
+        school_id: schoolId, action, note 
       });
-      const data = await res.json();
       if (data.success) {
         showToast(data.message, 'success');
         await fetchSchools();
@@ -414,12 +418,9 @@ export default function Dashboard({ onNavigate }) {
     if (!ids.length) return;
     setIsActionLoading(true);
     try {
-      const token = localStorage.getItem('token');
       for (const id of ids) {
-        await fetch(`${API}/api/schools/approve/`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ school_id: id, action }),
+        await ApiClient.post('/api/schools/approve/', { 
+          school_id: id, action 
         }).catch(() => {});
       }
       showToast(`${ids.length} school${ids.length !== 1 ? 's' : ''} ${action === 'approve' ? 'approved' : 'rejected'}`, 'success');
@@ -472,7 +473,7 @@ export default function Dashboard({ onNavigate }) {
 
   const pendingCount      = schools.filter(s => !s.is_approved && !s.changes_requested).length;
   const rejectedCount     = schools.filter(s => !s.is_approved && !s.is_active).length;
-  const pendingGradeCount = MOCK_REQUESTS.filter(r => r.status === 'Pending').length;
+  const pendingGradeCount = gradeAlerts.filter(r => r.status === 'Pending').length;
 
   const isAppRelated   = ['applications', 'review', 'app-history', 'version-compare'].includes(activePage);
   const isRejRelated   = ['rejected', 'rejection-audit'].includes(activePage);
