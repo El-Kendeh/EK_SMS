@@ -37,12 +37,13 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
         # Note: This complements the meta tag in the HTML (meta tags have limitations)
         csp_header = (
             "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline'; "
-            "style-src 'self' 'unsafe-inline'; "
+            "script-src 'self' 'unsafe-inline' https://embed.tawk.to https://*.tawk.to; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.tawk.to; "
             "img-src 'self' data: https:; "
-            "font-src 'self'; "
+            "font-src 'self' https://fonts.gstatic.com https://*.tawk.to; "
             "media-src 'self' data:; "
-            "connect-src 'self' http://localhost:8000 http://web:8000 https://ek-sms-backend.onrender.com; "
+            "connect-src 'self' http://localhost:8000 http://web:8000 https://ek-sms-backend.onrender.com https://backend.pruhsms.africa https://pruhsms.africa https://*.tawk.to wss://*.tawk.to; "
+            "frame-src https://tawk.to https://*.tawk.to; "
             "frame-ancestors 'none'; "
             "base-uri 'self'; "
             "form-action 'self'"
