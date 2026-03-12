@@ -162,11 +162,12 @@ CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=False, cast=bool)
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_SECURITY_POLICY = {
     'default-src': ("'self'",),
-    'script-src': ("'self'", "'unsafe-inline'"),  # Consider removing unsafe-inline
-    'style-src': ("'self'", "'unsafe-inline'"),
+    'script-src': ("'self'", "'unsafe-inline'", "https://embed.tawk.to", "https://*.tawk.to", "https://vercel.live", "chrome-extension:"),
+    'style-src': ("'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://*.tawk.to"),
     'img-src': ("'self'", 'data:', 'https:'),
-    'font-src': ("'self'",),
-    'connect-src': ("'self'", "https://backend.pruhsms.africa", "https://pruhsms.africa", "http://localhost:8000"),
+    'font-src': ("'self'", "https://fonts.gstatic.com", "https://*.tawk.to"),
+    'connect-src': ("'self'", "https://backend.pruhsms.africa", "https://pruhsms.africa", "http://localhost:8000", "http://web:8000", "https://ek-sms-backend.onrender.com", "https://*.tawk.to", "wss://*.tawk.to", "https://vercel.live", "https://*.vercel.app"),
+    'frame-src': ("https://tawk.to", "https://*.tawk.to", "https://vercel.live"),
 }
 
 # HTTP Strict Transport Security (HSTS) - Disabled for HTTP
@@ -187,9 +188,10 @@ CSRF_COOKIE_SAMESITE = 'Strict'
 # CSRF Settings
 CSRF_TRUSTED_ORIGINS = config(
     'CORS_ALLOWED_ORIGINS',
-    default='http://localhost:3000',
+    default='http://localhost:3000,https://ek-sms-one.vercel.app,https://pruhsms.africa,https://www.pruhsms.africa',
     cast=Csv()
 )
+CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in CSRF_TRUSTED_ORIGINS]
 
 # Session Security
 SESSION_COOKIE_AGE = 3600  # 1 hour

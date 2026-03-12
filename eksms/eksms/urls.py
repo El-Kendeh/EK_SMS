@@ -12,7 +12,7 @@ from .views import (
     favicon_view, api_login, api_register, api_get_schools, 
     api_approve_school, api_waitlist, api_send_otp, 
     api_verify_otp, api_check_school_name, api_get_users, api_get_security_logs,
-    api_system_health, api_get_grade_alerts
+    api_system_health, api_get_grade_alerts, api_receive_logs, api_csp_report
 )
 from django.conf import settings
 from django.conf.urls.static import static
@@ -34,6 +34,8 @@ urlpatterns = [
     path('api/send-otp/',        api_send_otp,        name='api_send_otp'),
     path('api/verify-otp/',      api_verify_otp,      name='api_verify_otp'),
     path('api/check-school-name/', api_check_school_name, name='api_check_school_name'),
+    path('api/logs/',            api_receive_logs,      name='api_receive_logs'),
+    path('api/csp-report/',      api_csp_report,        name='api_csp_report'),
     
     # Root URL redirects to admin
     path('', RedirectView.as_view(url='admin/', permanent=False)),

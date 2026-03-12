@@ -743,3 +743,29 @@ def api_check_school_name(request):
         return JsonResponse({'exists': False})
     exists = School.objects.filter(name__iexact=name).exists()
     return JsonResponse({'exists': exists})
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_receive_logs(request):
+    """Receive security logs from the frontend."""
+    try:
+        data = json.loads(request.body)
+        # In a real app, you would log this to a file or database
+        # For now, we just acknowledge receipt
+        return JsonResponse({'success': True, 'message': 'Log received'})
+    except Exception:
+        return JsonResponse({'success': False, 'message': 'Invalid log data'}, status=400)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_csp_report(request):
+    """Receive CSP violation reports."""
+    try:
+        data = json.loads(request.body)
+        # Log the violation
+        print(f"CSP Violation: {data}")
+        return JsonResponse({'success': True})
+    except Exception:
+        return JsonResponse({'success': False}, status=400)

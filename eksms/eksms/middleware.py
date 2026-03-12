@@ -43,7 +43,7 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
             "font-src 'self' https://fonts.gstatic.com https://*.tawk.to; "
             "media-src 'self' data:; "
             "connect-src 'self' http://localhost:8000 http://web:8000 https://ek-sms-backend.onrender.com https://backend.pruhsms.africa https://pruhsms.africa https://*.tawk.to wss://*.tawk.to https://vercel.live https://*.vercel.app; "
-            "frame-src https://tawk.to https://*.tawk.to; "
+            "frame-src https://tawk.to https://*.tawk.to https://vercel.live; "
             "frame-ancestors 'none'; "
             "base-uri 'self'; "
             "form-action 'self'"
