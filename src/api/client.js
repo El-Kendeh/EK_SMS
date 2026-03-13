@@ -34,6 +34,12 @@ class ApiClient {
     // Add security headers
     Object.assign(headers, SECURITY_CONFIG.SECURE_HEADERS);
 
+    // Add Authorization header if token exists
+    const token = localStorage.getItem('token');
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     let body = options.body;
     if (body && !(body instanceof FormData)) {
       headers['Content-Type'] = 'application/json';

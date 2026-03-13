@@ -593,15 +593,22 @@ const Hyperspeed = ({ effectOptions = DEFAULT_EFFECT_OPTIONS }) => {
       setSize(w, h, updateStyles) { this.composer.setSize(w, h, updateStyles); }
 
       tick() {
-        if (this.disposed) return;
-        if (resizeRendererToDisplaySize(this.renderer, this.setSize)) {
-          this.camera.aspect = this.renderer.domElement.clientWidth / this.renderer.domElement.clientHeight;
-          this.camera.updateProjectionMatrix();
-        }
-        const delta = this.clock.getDelta();
-        this.composer.render(delta);
-        this.update(delta);
-        requestAnimationFrame(this.tick);
+        let lastTime = 0;
+        const animate = (time) => {
+          if (this.disposed) return;
+
+          const delta = (time - lastTime) / 1000 || 0;
+          lastTime = time;
+
+          if (resizeRendererToDisplaySize(this.renderer, this.setSize)) {
+            this.camera.aspect = this.renderer.domElement.clientWidth / this.renderer.domElement.clientHeight;
+            this.camera.updateProjectionMatrix();
+          }
+          this.composer.render(delta);
+          this.update(delta);
+          requestAnimationFrame(animate);
+        };
+        requestAnimationFrame(animate);
       }
 
       dispose() {

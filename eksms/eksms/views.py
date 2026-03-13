@@ -315,7 +315,7 @@ def api_register(request):
                 established=established,
                 admin_email=admin_email,
                 admin_phone=admin_phone,
-                principal_name=f"{first_name} {lastName}" if 'lastName' in data else f"{first_name} {last_name}",
+                principal_name=f"{first_name} {last_name}",
                 is_active=True,
                 is_approved=False,
                 created_by=user,
