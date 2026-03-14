@@ -60,7 +60,15 @@ function SchoolAdminDashboard({ onNavigate }) {
                 <div className="pending-container">
                     <div className="pending-card">
                         <div className="pending-brand">
-                            <PruhLogo size={48} variant="white" />
+                            {user.school?.badge ? (
+                                <img 
+                                    src={user.school.badge} 
+                                    alt={`${user.school.name} logo`} 
+                                    style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '12px' }} 
+                                />
+                            ) : (
+                                <PruhLogo size={48} variant="white" />
+                            )}
                         </div>
                         <div className="pending-icon-glow">
                             <ClockIcon />
@@ -99,7 +107,17 @@ function SchoolAdminDashboard({ onNavigate }) {
         <div className="sa-dashboard approved">
             <header className="sa-header">
                 <div className="sa-logo-section">
-                    <div className="sa-logo-icon"><PruhLogo size={40} variant="white" /></div>
+                    <div className="sa-logo-icon" style={user.school?.badge ? { background: 'transparent' } : {}}>
+                        {user.school?.badge ? (
+                            <img 
+                                src={user.school.badge} 
+                                alt={`${user.school.name} logo`} 
+                                style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'inherit' }} 
+                            />
+                        ) : (
+                            <PruhLogo size={40} variant="white" />
+                        )}
+                    </div>
                     <div className="sa-school-info">
                         <h1 className="sa-school-name">{user.school.name}</h1>
                         <span className="sa-role-badge">School Administrator</span>

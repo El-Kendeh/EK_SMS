@@ -123,6 +123,7 @@ def api_login(request):
                 'name':        sa.school.name,
                 'code':        sa.school.code,
                 'is_approved': sa.school.is_approved,
+                'badge':       request.build_absolute_uri(sa.school.badge.url) if sa.school.badge else None,
             }
         except Exception:
             if not (user.is_superuser or user.is_staff):
