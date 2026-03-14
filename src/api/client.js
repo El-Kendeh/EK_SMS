@@ -69,8 +69,19 @@ class ApiClient {
             // CSRF token might be invalid
             this.refreshCSRFToken();
           }
+
+          let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+          try {
+            const errorData = await response.clone().json();
+            if (errorData && errorData.message) {
+              errorMessage = errorData.message;
+            }
+          } catch (e) {
+            // ignore non-json errors
+          }
+
           throw new ApiError(
-            `HTTP ${response.status}: ${response.statusText}`,
+            errorMessage,
             response.status,
             response
           );
