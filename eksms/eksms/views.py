@@ -111,12 +111,7 @@ def api_login(request):
             from eksms_core.models import SchoolAdmin
             sa = SchoolAdmin.objects.select_related('school').get(user=user, is_active=True)
             
-            # Check for school approval
-            if not sa.school.is_approved:
-                return JsonResponse(
-                    {'success': False, 'message': 'Your institution registration is pending approval by the platform administrator.'},
-                    status=403,
-                )
+            # Check for school approval was removed to allow the frontend to show the pending dashboard.
 
             school_data = {
                 'id':          sa.school.id,

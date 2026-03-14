@@ -41,6 +41,43 @@ const AlertIcon = () => (
 );
 
 /* ===================================================================
+   Error Modal Component
+   =================================================================== */
+function ErrorModal({ message, onClose }) {
+  return (
+    <div className="modal-overlay" role="dialog" aria-modal="true" onClick={onClose} style={{
+      position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', 
+      backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', 
+      justifyContent: 'center', zIndex: 9999, backdropFilter: 'blur(4px)'
+    }}>
+      <div className="modal-box" onClick={(e) => e.stopPropagation()} style={{
+        background: 'white', padding: '32px', borderRadius: '16px', maxWidth: '360px',
+        width: '90%', textAlign: 'center', boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+        animation: 'fadeInDown 0.3s ease-out'
+      }}>
+        <div style={{ 
+          width: '60px', height: '60px', borderRadius: '50%', background: '#fee2e2',
+          color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          margin: '0 auto 20px'
+        }}>
+          <AlertIcon />
+        </div>
+        <h3 style={{ margin: '0 0 12px', color: '#1e293b', fontSize: '20px', fontWeight: '700' }}>Login Failed</h3>
+        <p style={{ margin: '0 0 24px', color: '#64748b', fontSize: '15px', lineHeight: 1.5 }}>{message}</p>
+        <button type="button" onClick={onClose} style={{
+          background: '#ef4444', color: 'white', border: 'none', padding: '12px 24px',
+          borderRadius: '10px', fontWeight: '600', cursor: 'pointer', width: '100%',
+          fontSize: '15px', transition: 'background 0.2s'
+        }} onMouseOver={(e) => e.currentTarget.style.background = '#dc2626'}
+           onMouseOut={(e) => e.currentTarget.style.background = '#ef4444'}>
+          Try Again
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ===================================================================
    Login Component
    =================================================================== */
 function Login({ onNavigate }) {
@@ -207,13 +244,8 @@ function Login({ onNavigate }) {
           {goingHome ? 'Going home…' : 'Back to Home'}
         </button>
 
-        {/* ── Error banner ── */}
-        {error && (
-          <div className="login-error" role="alert">
-            <AlertIcon />
-            {error}
-          </div>
-        )}
+        {/* ── Error modal ── */}
+        {error && <ErrorModal message={error} onClose={() => setError('')} />}
 
         {/* ── Forgot password info ── */}
         {forgotMsg && (
