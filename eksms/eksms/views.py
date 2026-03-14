@@ -354,8 +354,9 @@ def api_register(request):
     except json.JSONDecodeError:
         return JsonResponse({'success': False, 'message': 'Invalid JSON payload.'}, status=400)
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
-
 
 # ---------------------------------------------------------------------------
 # Superadmin: Manage Schools
