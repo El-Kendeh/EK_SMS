@@ -180,33 +180,38 @@ def api_register(request):
                     pass
 
         # ── Extract ──────────────────────────────────────────────────────────
-        institution_name = data.get('institutionName', '').strip()
-        institution_type = data.get('institutionType', '').strip()
-        established      = data.get('established', '').strip()
-        motto            = data.get('motto', '').strip()
+        def get_str(k, default=''):
+            v = data.get(k, default)
+            return str(v).strip() if v is not None else default
 
-        address = data.get('address', '').strip()
-        city    = data.get('city', '').strip()
-        region  = data.get('region', '').strip()
-        country = data.get('country', '').strip()
+        institution_name = get_str('institutionName')
+        institution_type = get_str('institutionType')
+        established      = get_str('established')
+        motto            = get_str('motto')
 
-        phone   = data.get('phone', '').strip()
-        email   = data.get('email', '').strip()
-        website = data.get('website', '').strip()
+        address = get_str('address')
+        city    = get_str('city')
+        region  = get_str('region')
+        country = get_str('country')
 
-        first_name  = data.get('firstName', '').strip()
-        last_name   = data.get('lastName', '').strip()
-        admin_email = data.get('adminEmail', '').strip()
-        admin_phone = data.get('adminPhone', '').strip()
-        password    = data.get('password', '').strip()
+        phone   = get_str('phone')
+        email   = get_str('email')
+        website = get_str('website')
 
-        capacity            = data.get('capacity', '1000')
-        academic_system     = data.get('academicSystem', 'trimester')
-        grading_system      = data.get('gradingSystem', 'percentage')
-        language            = data.get('language', 'English')
-        registration_number = data.get('registrationNumber', '').strip()
-        estimated_teachers  = data.get('estimatedTeachers', '').strip()
-        brand_colors        = data.get('brandColor', '').strip() # Frontend sends this as a joined string or JSON
+        first_name  = get_str('firstName')
+        last_name   = get_str('lastName')
+        admin_email = get_str('adminEmail')
+        admin_phone = get_str('adminPhone')
+        password    = get_str('password')
+
+        capacity            = get_str('capacity', '1000')
+        academic_system     = get_str('academicSystem', 'trimester')
+        grading_system      = get_str('gradingSystem', 'percentage')
+        language            = get_str('language', 'English')
+        registration_number = get_str('registrationNumber')
+        estimated_teachers  = get_str('estimatedTeachers')
+        brand_colors        = get_str('brandColor') # Frontend sends this as a joined string or JSON
+
 
         # ── Server-side required check ────────────────────────────────────────
         required_fields = {
@@ -270,7 +275,7 @@ def api_register(request):
         full_address = ', '.join(p for p in [address, city, region, country] if p)
 
         # ── Resolve username from adminUsername field or fall back to email prefix ──
-        requested_username = data.get('adminUsername', '').strip()
+        requested_username = get_str('adminUsername')
         if requested_username and re.match(r'^[a-zA-Z0-9_-]{3,30}$', requested_username):
             base_username = requested_username.lower()
         else:
