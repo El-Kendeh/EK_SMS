@@ -244,8 +244,7 @@ function Login({ onNavigate }) {
           {goingHome ? 'Going home…' : 'Back to Home'}
         </button>
 
-        {/* ── Error modal ── */}
-        {error && <ErrorModal message={error} onClose={() => setError('')} />}
+
 
         {/* ── Forgot password info ── */}
         {forgotMsg && (
@@ -357,6 +356,8 @@ function Login({ onNavigate }) {
       </p>
       </div>{/* end .login-right */}
 
+      {/* ── Error modal ── */}
+      {error && <ErrorModal message={error} onClose={() => setError('')} />}
     </div>
   );
 }
