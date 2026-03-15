@@ -1,157 +1,52 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
-import { ThemeProvider } from './context/ThemeContext';
-import Landing from './components/Landing';
 import Login from './components/login';
-import Register from './components/Register';
-import Dashboard from './components/superadmin/Dashboard';
-import SchoolAdminDashboard from './components/schooladmin/dashboard';
-
-/* ---- URL ↔ page helpers ---- */
-const PAGE_TO_PATH = {
-  landing:        '/',
-  login:          '/login',
-  register:       '/register',
-  dashboard:      '/dashboard',
-  'sa-dashboard': '/school-admin',
-};
-
-function resolvePageFromPath(path, user) {
-  const hasAuth = !!user;
-  
-  // If authenticated, redirect from public-only pages
-  if (hasAuth && (path === '/login' || path === '/register' || path === '/')) {
-    const isSuper = user.is_superuser || user.role === 'superadmin' || user.role === 'admin' || user.role === 'superuser';
-    return isSuper ? 'dashboard'
-      : user.role === 'school_admin' ? 'sa-dashboard'
-      : 'landing';
-  }
-
-  if (path === '/login')    return 'login';
-  if (path === '/register') return 'register';
-  
-  if (path === '/dashboard' || path === '/admin') {
-    if (!hasAuth) return 'login';
-    const isSuper = user.is_superuser || user.role === 'superadmin' || user.role === 'admin' || user.role === 'superuser';
-    return isSuper ? 'dashboard'
-      : user.role === 'school_admin' ? 'sa-dashboard'
-      : 'landing';
-  }
-  
-  if (path === '/school-admin') {
-    if (!hasAuth) return 'login';
-    return user.role === 'school_admin' ? 'sa-dashboard' : 'landing';
-  }
-
-  // Default: authenticated users go to their dashboard, otherwise landing
-  if (hasAuth) {
-    const isSuper = user.is_superuser || user.role === 'superadmin' || user.role === 'admin' || user.role === 'superuser';
-    return isSuper ? 'dashboard'
-      : user.role === 'school_admin' ? 'sa-dashboard'
-      : 'landing';
-  }
-  return 'landing';
-}
+import Dashboard from './components/superadmin/dashboard';
 
 function App() {
-  const [page, setPage] = useState('loading');
+  const [currentPage, setCurrentPage] = useState('login');
   const [isLoading, setIsLoading] = useState(true);
 
-  /* ---- Initial load: resolve page from current URL ---- */
   useEffect(() => {
+    // Check if user is authenticated on app load
     const token = localStorage.getItem('token');
-    const userStr = localStorage.getItem('user');
-    let user = null;
-    try { if (userStr) user = JSON.parse(userStr); } catch (e) { }
+    const user = localStorage.getItem('user');
 
-    const resolvedPage = resolvePageFromPath(
-      window.location.pathname,
-      token && user ? user : null
-    );
-    setPage(resolvedPage);
-
-    // Canonicalise URL (e.g. /login → / if not authenticated for that route)
-    const canonical = PAGE_TO_PATH[resolvedPage] || '/';
-    if (window.location.pathname !== canonical) {
-      window.history.replaceState(null, '', canonical);
+    if (token && user) {
+      setCurrentPage('dashboard');
+    } else {
+      setCurrentPage('login');
     }
-
     setIsLoading(false);
   }, []);
 
-  /* ---- Sync logout across tabs ---- */
+  // Listen for storage changes (login/logout in other tabs)
   useEffect(() => {
-    const handleStorage = () => {
+    const handleStorageChange = () => {
       const token = localStorage.getItem('token');
-      const userStr = localStorage.getItem('user');
-      let user = null;
-      try { if (userStr) user = JSON.parse(userStr); } catch (e) { }
-
-      if (token && user) {
-        if (user.is_superuser) {
-          setPage('dashboard');
-        } else if (user.role === 'school_admin') {
-          setPage('sa-dashboard');
-        } else {
-          setPage('landing');
-          window.history.replaceState(null, '', '/');
-        }
+      if (!token) {
+        setCurrentPage('login');
       } else {
-        setPage('landing');
-        window.history.replaceState(null, '', '/');
+        setCurrentPage('dashboard');
       }
     };
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
-  }, []);
 
-  /* ---- Browser back/forward ---- */
-  useEffect(() => {
-    const handlePop = () => {
-      const token = localStorage.getItem('token');
-      const userStr = localStorage.getItem('user');
-      let user = null;
-      try { if (userStr) user = JSON.parse(userStr); } catch (e) { }
-      const resolved = resolvePageFromPath(
-        window.location.pathname,
-        token && user ? user : null
-      );
-      setPage(resolved);
-    };
-    window.addEventListener('popstate', handlePop);
-    return () => window.removeEventListener('popstate', handlePop);
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
-
-  /* ---- Navigation helper (used by all child components) ---- */
-  const navigate = (target) => {
-    if (target === 'home') target = 'landing';
-    if (target === 'dashboard') {
-      const token = localStorage.getItem('token');
-      if (!token) target = 'landing';
-    }
-    setPage(target);
-    const path = PAGE_TO_PATH[target] || '/';
-    window.history.pushState(null, '', path);
-  };
 
   if (isLoading) {
     return (
-      <div className="App app-loading">
-        <div className="app-spinner" />
+      <div className="App loading-container">
+        <div className="loading-spinner">Loading...</div>
       </div>
     );
   }
 
   return (
-    <ThemeProvider>
-      <div className="App">
-        {page === 'landing'      && <Landing               onNavigate={navigate} />}
-        {page === 'login'        && <Login                 onNavigate={navigate} />}
-        {page === 'register'     && <Register              onNavigate={navigate} />}
-        {page === 'dashboard'    && <Dashboard             onNavigate={navigate} />}
-        {page === 'sa-dashboard' && <SchoolAdminDashboard  onNavigate={navigate} />}
-      </div>
-    </ThemeProvider>
+    <div className="App">
+      {currentPage === 'login' ? <Login /> : <Dashboard />}
+    </div>
   );
 }
 

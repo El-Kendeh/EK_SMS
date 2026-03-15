@@ -2,47 +2,17 @@
   text-align: center;
 }
 
-/* ---- Global dark base ---- */
-body {
-  margin: 0;
-  background: #080D1A;
-}
-
-/* ---- App loading screen ---- */
-.app-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  background: #080D1A;
-}
-
-.app-spinner {
-  width: 36px;
-  height: 36px;
-  border: 3px solid rgba(0, 180, 216, 0.2);
-  border-top-color: #00B4D8;
-  border-radius: 50%;
-  animation: appSpin 0.8s linear infinite;
-  will-change: transform;
-}
-
-@keyframes appSpin {
-  to { transform: rotate(360deg); }
-}
-
-/* Legacy loading classes kept for Dashboard compatibility */
 .loading-container {
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background: #080D1A;
+  background: #ffffff;
 }
 
 .loading-spinner {
   font-size: 1.2rem;
-  color: #00B4D8;
+  color: #1e40af;
 }
 
 .App-logo {
@@ -119,53 +89,5 @@ body {
   }
   to {
     transform: rotate(360deg);
-  }
-}
-
-/* ──────────────────────────────────────────────────────────────
-   PRUH Logo — drop-shadow glow · entrance animation · hover
-   ────────────────────────────────────────────────────────────── */
-
-/* Outer wrapper: handles scale-on-hover cleanly (no conflict with
-   the translateY entrance animation on the inner icon element) */
-.pruh-logo {
-  cursor: default;
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.pruh-logo:hover {
-  transform: scale(1.06);
-}
-
-/* Icon: ambient glow + entrance slide-down */
-.pruh-logo__icon {
-  display: inline-flex;
-  filter: drop-shadow(0 4px 16px rgba(59, 130, 246, 0.38))
-          drop-shadow(0 1px  4px rgba(0,   0,   0,   0.20));
-  transition: filter 0.3s ease;
-  animation: pruhEnter 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-.pruh-logo:hover .pruh-logo__icon {
-  filter: drop-shadow(0 6px 28px rgba(59, 130, 246, 0.65))
-          drop-shadow(0 2px  8px rgba(0,   0,   0,   0.25));
-}
-
-/* Wordmark: slight delay so icon leads the entrance */
-.pruh-logo__text {
-  animation: pruhEnter 0.6s 0.08s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-/* Entrance: fade + slide down */
-@keyframes pruhEnter {
-  from { opacity: 0; transform: translateY(-10px); }
-  to   { opacity: 1; transform: translateY(0);     }
-}
-
-/* Respect reduced-motion preference */
-@media (prefers-reduced-motion: reduce) {
-  .pruh-logo,
-  .pruh-logo__icon,
-  .pruh-logo__text {
-    animation: none;
-    transition: none;
   }
 }
