@@ -5,7 +5,6 @@
 
 import React, { useRef, useEffect } from 'react';
 import {
-  Clock,
   PerspectiveCamera,
   Scene,
   WebGLRenderer,
@@ -397,8 +396,8 @@ function createBallpit(canvas, userConfig = {}) {
   const scene  = new Scene();
   let   spheres = null;
 
-  // Clock & state
-  const clock    = new Clock();
+  // State
+  let   lastTime = 0;
   let   rafId    = 0;
   let   running  = false;
   let   paused   = false;
@@ -448,10 +447,11 @@ function createBallpit(canvas, userConfig = {}) {
     spheres.config.maxY = wH / 2;
   }
 
-  function loop() {
+  function loop(time) {
     if (disposed) return;
     rafId = requestAnimationFrame(loop);
-    const delta = clock.getDelta();
+    const delta = lastTime === 0 ? 0 : (time - lastTime) / 1000;
+    lastTime = time;
     if (!paused && spheres) spheres.update({ delta });
     renderer.render(scene, camera);
   }
@@ -459,15 +459,14 @@ function createBallpit(canvas, userConfig = {}) {
   function startLoop() {
     if (running || disposed) return;
     running = true;
-    clock.start();
-    loop();
+    lastTime = 0;
+    loop(0);
   }
 
   function stopLoop() {
     if (!running) return;
     running = false;
     cancelAnimationFrame(rafId);
-    clock.stop();
   }
 
   // Resize handling

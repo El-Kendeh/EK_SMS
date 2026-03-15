@@ -496,7 +496,7 @@ const Hyperspeed = ({ effectOptions = DEFAULT_EFFECT_OPTIONS }) => {
         this.scene.fog = fog;
         this.fogUniforms = { fogColor:{value:fog.color}, fogNear:{value:fog.near}, fogFar:{value:fog.far} };
 
-        this.clock = new THREE.Clock();
+        this.elapsedTime = 0;
         this.fovTarget = options.fov;
         this.speedUpTarget = 0;
         this.speedUp = 0;
@@ -570,8 +570,9 @@ const Hyperspeed = ({ effectOptions = DEFAULT_EFFECT_OPTIONS }) => {
       update(delta) {
         const lerpPct = Math.exp(-(-60 * Math.log2(1 - 0.1)) * delta);
         this.speedUp    += lerp(this.speedUp, this.speedUpTarget, lerpPct, 0.00001);
+        this.elapsedTime += delta;
         this.timeOffset += this.speedUp * delta;
-        const time = this.clock.elapsedTime + this.timeOffset;
+        const time = this.elapsedTime + this.timeOffset;
 
         this.rightCarLights.update(time);
         this.leftCarLights.update(time);

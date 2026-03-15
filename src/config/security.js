@@ -61,8 +61,8 @@ export const SECURITY_CONFIG = {
     'script-src': ["'self'", "'unsafe-inline'"], // Consider removing unsafe-inline
     'style-src': ["'self'", "'unsafe-inline'"],
     'img-src': ["'self'", 'data:', 'https:'],
-    'font-src': ["'self'"],
-    'connect-src': ["'self'", 'https://backend.pruhsms.africa', 'https://pruhsms.africa', 'http://localhost:8000'],
+    'font-src': ["'self'", "https://fonts.gstatic.com", "https://*.tawk.to", "https://vercel.live"],
+    'connect-src': ["'self'", 'https://backend.pruhsms.africa', 'https://pruhsms.africa', 'https://*.vercel.app', 'http://localhost:8000'],
     'frame-ancestors': ["'none'"],
     'base-uri': ["'self'"],
     'form-action': ["'self'"],
@@ -80,7 +80,7 @@ export const SECURITY_CONFIG = {
   // Security Headers for Production
   PRODUCTION_HEADERS: {
     'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
-    'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https://backend.pruhsms.africa https://pruhsms.africa; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+    'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com https://*.tawk.to https://vercel.live; connect-src 'self' https://backend.pruhsms.africa https://pruhsms.africa https://*.vercel.app; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
     'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
   },
 };
