@@ -100,3 +100,83 @@ def api_login(request):
             'success': False,
             'message': str(e)
         }, status=500)
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def api_receive_logs(request):
+    """
+    API endpoint to receive logs from the frontend.
+    """
+    try:
+        data = json.loads(request.body)
+        # Log to Django logs
+        import logging
+        logger = logging.getLogger('django.security')
+        logger.warning(f"Frontend Log: {json.dumps(data)}")
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Log received successfully.'
+        }, status=200)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': str(e)
+        }, status=400)
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def api_csp_report(request):
+    """
+    API endpoint to receive CSP violation reports.
+    """
+    try:
+        data = json.loads(request.body)
+        import logging
+        logger = logging.getLogger('django.security')
+        logger.error(f"CSP Violation: {json.dumps(data)}")
+        return JsonResponse({'status': 'ok'}, status=200)
+    except:
+        return JsonResponse({'status': 'error'}, status=400)
+
+
+# Placeholders for missing views to prevent import errors in urls.py
+@csrf_exempt
+def api_register(request):
+    return JsonResponse({'success': False, 'message': 'Register endpoint placeholder'}, status=501)
+
+def api_get_schools(request):
+    return JsonResponse({'success': True, 'schools': []}, status=200)
+
+@csrf_exempt
+def api_approve_school(request):
+    return JsonResponse({'success': False, 'message': 'Approve endpoint placeholder'}, status=501)
+
+@csrf_exempt
+def api_waitlist(request):
+    return JsonResponse({'success': False, 'message': 'Waitlist endpoint placeholder'}, status=501)
+
+@csrf_exempt
+def api_send_otp(request):
+    return JsonResponse({'success': True, 'message': 'OTP sent (placeholder)'}, status=200)
+
+@csrf_exempt
+def api_verify_otp(request):
+    return JsonResponse({'success': False, 'message': 'OTP verification placeholder'}, status=501)
+
+def api_check_school_name(request):
+    return JsonResponse({'available': True}, status=200)
+
+def api_get_users(request):
+    return JsonResponse({'success': True, 'users': []}, status=200)
+
+def api_get_security_logs(request):
+    return JsonResponse({'success': True, 'logs': []}, status=200)
+
+def api_system_health(request):
+    return JsonResponse({'status': 'healthy', 'version': '1.0.0'}, status=200)
+
+def api_get_grade_alerts(request):
+    return JsonResponse({'success': True, 'alerts': []}, status=200)
