@@ -100,7 +100,7 @@ function Login({ onNavigate }) {
         const user = JSON.parse(userStr);
         const isSuper = user.is_superuser || user.role === 'superadmin' || user.role === 'admin' || user.role === 'superuser';
         if (isSuper) {
-          onNavigate('dashboard');
+          onNavigate('superadmindashboard');
         } else if (user.role === 'school_admin') {
           onNavigate('sa-dashboard');
         } else {
@@ -148,7 +148,7 @@ function Login({ onNavigate }) {
 
       if (onNavigate) {
         if (isSuper) {
-          onNavigate('dashboard');
+          onNavigate('superadmindashboard');
         } else if (user.role === 'school_admin') {
           onNavigate('sa-dashboard');
         } else {

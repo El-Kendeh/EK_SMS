@@ -21,7 +21,7 @@ function App() {
         const isSuper = user.is_superuser || user.role === 'superadmin' || user.role === 'admin' || user.role === 'superuser';
 
         if (isSuper) {
-          setCurrentPage('dashboard');
+          setCurrentPage('superadmindashboard');
         } else if (user.role === 'school_admin') {
           setCurrentPage('sa-dashboard');
         } else {
@@ -49,7 +49,7 @@ function App() {
           const user = JSON.parse(userStr);
           const isSuper = user.is_superuser || user.role === 'superadmin' || user.role === 'admin' || user.role === 'superuser';
           if (isSuper) {
-            setCurrentPage('dashboard');
+            setCurrentPage('superadmindashboard');
           } else if (user.role === 'school_admin') {
             setCurrentPage('sa-dashboard');
           } else {
@@ -76,13 +76,13 @@ function App() {
   return (
     <div className="App">
       {currentPage === 'login' && <Login onNavigate={setCurrentPage} />}
-      {currentPage === 'dashboard' && <SuperadminDashboard onNavigate={setCurrentPage} />}
+      {currentPage === 'superadmindashboard' && <SuperadminDashboard onNavigate={setCurrentPage} />}
       {currentPage === 'sa-dashboard' && <SchoolAdminDashboard onNavigate={setCurrentPage} />}
       {(currentPage === 'home' || currentPage === 'landing') && <Landing onNavigate={setCurrentPage} />}
       {currentPage === 'register' && <Register onNavigate={setCurrentPage} />}
 
       {/* Fallback for unknown pages */}
-      {!['login', 'dashboard', 'sa-dashboard', 'home', 'landing', 'register'].includes(currentPage) && (
+      {!['login', 'superadmindashboard', 'sa-dashboard', 'home', 'landing', 'register'].includes(currentPage) && (
         <Login onNavigate={setCurrentPage} />
       )}
     </div>
