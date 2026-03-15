@@ -1,6 +1,6 @@
 .sa-dashboard {
   min-height: 100vh;
-  background-color: #f8fafc;
+  background-color: #f1f5f9;
   color: #1e293b;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
@@ -255,22 +255,48 @@
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 
+.sa-card.stat {
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.sa-card.stat:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.1);
+}
+
+.sa-card.stat::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: var(--sa-accent);
+}
+
 .sa-card.stat h3 {
-  font-size: 14px;
+  font-size: 13px;
   color: #64748b;
   font-weight: 600;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
 }
 
 .stat-value {
-  font-size: 32px;
+  font-size: 36px;
   font-weight: 800;
   margin: 0;
+  color: #0f172a;
 }
 
 .stat-label {
-  font-size: 12px;
+  font-size: 13px;
   color: #94a3b8;
+  display: block;
+  margin-top: 4px;
 }
 
 .action-card h3 {
