@@ -11,6 +11,7 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from eksms_core.models import School, SchoolAdmin, GradeChangeAlert
 import json
+import logging
 import os
 import shutil
 import psutil
@@ -115,20 +116,34 @@ def api_login(request):
         elif role == 'school_admin':
             redirect_url = '/sa-dashboard'
             s = user.school_admin_profile.school
+            badge_url = None
+            if s.badge:
+                try:
+                    badge_url = request.build_absolute_uri(s.badge.url)
+                except:
+                    badge_url = s.badge.url
+            
             school_data = {
                 'id': s.id,
                 'name': s.name,
-                'badge': s.badge.url if s.badge else None,
+                'badge': badge_url,
                 'brand_colors': s.brand_colors,
                 'is_approved': s.is_approved
             }
         elif role == 'teacher':
             redirect_url = '/teacher/dashboard'
             s = user.teacher_profile.school
+            badge_url = None
+            if s.badge:
+                try:
+                    badge_url = request.build_absolute_uri(s.badge.url)
+                except:
+                    badge_url = s.badge.url
+
             school_data = {
                 'id': s.id,
                 'name': s.name,
-                'badge': s.badge.url if s.badge else None,
+                'badge': badge_url,
                 'brand_colors': s.brand_colors
             }
         
@@ -305,6 +320,13 @@ def api_get_schools(request):
         schools = School.objects.all()
         school_list = []
         for s in schools:
+            badge_url = None
+            if s.badge:
+                try:
+                    badge_url = request.build_absolute_uri(s.badge.url)
+                except:
+                    badge_url = s.badge.url
+
             school_list.append({
                 'id': s.id,
                 'name': s.name,
@@ -316,7 +338,7 @@ def api_get_schools(request):
                 'city': s.city,
                 'region': s.region,
                 'country': s.country,
-                'badge': s.badge.url if s.badge else None,
+                'badge': badge_url,
                 'brand_colors': s.brand_colors,
                 'is_approved': s.is_approved,
                 'is_active': s.is_active,
