@@ -1,6 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import './dashboard.css';
 import PruhLogo from '../PruhLogo';
+import SECURITY_CONFIG from '../../config/security';
+
+const getBadgeUrl = (badgePath) => {
+    if (!badgePath) return '';
+    if (badgePath.startsWith('http') || badgePath.startsWith('data:')) return badgePath;
+    const baseUrl = SECURITY_CONFIG.API_URL.replace(/\/$/, '');
+    return `${baseUrl}${badgePath.startsWith('/') ? '' : '/'}${badgePath}`;
+};
 
 // eslint-disable-next-line no-unused-vars
 const GradCapIcon = () => (
@@ -62,7 +70,7 @@ function SchoolAdminDashboard({ onNavigate }) {
                         <div className="pending-brand">
                             {user.school?.badge ? (
                                 <img 
-                                    src={user.school.badge} 
+                                    src={getBadgeUrl(user.school.badge)} 
                                     alt={`${user.school.name} logo`} 
                                     style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '12px' }} 
                                 />
@@ -110,7 +118,7 @@ function SchoolAdminDashboard({ onNavigate }) {
                     <div className="sa-logo-icon" style={user.school?.badge ? { background: 'transparent' } : {}}>
                         {user.school?.badge ? (
                             <img 
-                                src={user.school.badge} 
+                                src={getBadgeUrl(user.school.badge)} 
                                 alt={`${user.school.name} logo`} 
                                 style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'inherit' }} 
                             />

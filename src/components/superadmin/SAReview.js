@@ -1,4 +1,12 @@
 import React, { useState } from 'react';
+import SECURITY_CONFIG from '../../config/security';
+
+const getBadgeUrl = (badgePath) => {
+    if (!badgePath) return '';
+    if (badgePath.startsWith('http') || badgePath.startsWith('data:')) return badgePath;
+    const baseUrl = SECURITY_CONFIG.API_URL.replace(/\/$/, '');
+    return `${baseUrl}${badgePath.startsWith('/') ? '' : '/'}${badgePath}`;
+};
 
 /* ---- Icons ---- */
 const IcBack    = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>;
@@ -205,7 +213,7 @@ export default function SAReview({ school, onBack, onApprove, onReject, onReques
         <div className="sa-review-hero">
           <div className="sa-review-avatar" style={{ background: school.badge ? 'transparent' : color }}>
             {school.badge 
-              ? <img src={school.badge} alt="" style={{ width: '100%', height: '100%', borderRadius: 'inherit', objectFit: 'cover' }} />
+              ? <img src={getBadgeUrl(school.badge)} alt="" style={{ width: '100%', height: '100%', borderRadius: 'inherit', objectFit: 'cover' }} />
               : school.name[0].toUpperCase()
             }
           </div>
