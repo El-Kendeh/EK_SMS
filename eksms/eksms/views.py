@@ -42,39 +42,74 @@ def favicon_view(request):
 def api_login(request):
     """
     API endpoint for user login.
-    Expects JSON payload with 'username' and 'password'.
+    Expects JSON payload with 'username' (can be email) and 'password'.
     Returns user token and role if successful.
     """
     try:
         data = json.loads(request.body)
-        username = data.get('username')
+        username_or_email = data.get('username')
         password = data.get('password')
         
-        if not username or not password:
+        if not username_or_email or not password:
             return JsonResponse({
                 'success': False,
-                'message': 'Username and password are required.'
+                'message': 'Username/email and password are required.'
             }, status=400)
         
         # Authenticate user
-        user = authenticate(username=username, password=password)
+        # 1. Try standard username authentication
+        user = authenticate(username=username_or_email, password=password)
+        
+        # 2. If it fails and looks like an email, try authenticating with email
+        if user is None and '@' in username_or_email:
+            try:
+                # Find user by email
+                target_user = User.objects.get(email=username_or_email)
+                # Authenticate using their actual username
+                user = authenticate(username=target_user.username, password=password)
+            except (User.DoesNotExist, User.MultipleObjectsReturned):
+                pass
         
         if user is None:
             return JsonResponse({
                 'success': False,
-                'message': 'Invalid username or password.'
+                'message': 'Invalid username/email or password.'
             }, status=401)
         
-        # Check if user is superuser/staff
-        if not user.is_staff and not user.is_superuser:
+        # Determine user role
+        role = 'user'
+        if user.is_superuser:
+            role = 'superadmin'
+        elif hasattr(user, 'school_admin_profile'):
+            role = 'school_admin'
+        elif hasattr(user, 'teacher_profile'):
+            role = 'teacher'
+        elif hasattr(user, 'student_profile'):
+            role = 'student'
+        elif hasattr(user, 'parent_profile'):
+            role = 'parent'
+        elif user.is_staff:
+            role = 'admin'
+        
+        # If user has no recognized role and isn't staff/superuser, block (optional, but safer)
+        if role == 'user' and not user.is_staff and not user.is_superuser:
             return JsonResponse({
                 'success': False,
-                'message': 'Only admin users can login.'
+                'message': 'Your account does not have access to this system.'
             }, status=403)
         
         # Generate a simple token (in production, use Django REST Framework Token or JWT)
-        from django.contrib.auth.models import User
-        token = f"token_{user.id}_{user.username}"
+        # Using a more standard-looking token format
+        token = f"token_{user.id}_{user.username.replace(' ', '_')}"
+        
+        # Determine redirect URL based on role
+        redirect_url = '/home'
+        if role == 'superadmin':
+            redirect_url = '/superadmindashboard'
+        elif role == 'school_admin':
+            redirect_url = '/sa-dashboard'
+        elif role == 'teacher':
+            redirect_url = '/teacher/dashboard'
         
         return JsonResponse({
             'success': True,
@@ -86,9 +121,10 @@ def api_login(request):
                 'email': user.email,
                 'is_superuser': user.is_superuser,
                 'is_staff': user.is_staff,
-                'role': 'superadmin' if user.is_superuser else 'admin'
+                'role': role,
+                'full_name': f"{user.first_name} {user.last_name}".strip() or user.username
             },
-            'redirect': '/dashboard' if user.is_superuser else '/admin/'
+            'redirect': redirect_url
         }, status=200)
     
     except json.JSONDecodeError:
