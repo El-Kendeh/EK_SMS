@@ -9,7 +9,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from django.utils import timezone
-from eksms_core.models import School, GradeChangeAlert
+from eksms_core.models import School, SchoolAdmin, GradeChangeAlert
 import json
 import os
 import shutil
