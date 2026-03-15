@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import './dashboard.css';
-import PruhLogo from '../PruhLogo';
+
 import SECURITY_CONFIG from '../../config/security';
 
 const getBadgeUrl = (badgePath) => {
