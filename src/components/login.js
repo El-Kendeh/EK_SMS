@@ -133,7 +133,7 @@ function Login({ onNavigate }) {
     setIsLoading(true);
     try {
       const data = await ApiClient.post('/api/login/', {
-        email: email.trim(),
+        username: email.trim(),
         password
       });
 
