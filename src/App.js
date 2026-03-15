@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import Login from './components/login';
-import Dashboard from './components/superadmin/dashboard';
+import Dashboard from './components/superadmin/Dashboard';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('login');
