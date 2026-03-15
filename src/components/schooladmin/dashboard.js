@@ -1,6 +1,32 @@
 import React, { useEffect, useState } from 'react';
 import './dashboard.css';
 import PruhLogo from '../PruhLogo';
+import SECURITY_CONFIG from '../../config/security';
+
+const getBadgeUrl = (badgePath) => {
+    if (!badgePath) return '';
+    if (badgePath.startsWith('http') || badgePath.startsWith('data:')) return badgePath;
+    const baseUrl = SECURITY_CONFIG.API_URL.replace(/\/$/, '');
+    return `${baseUrl}${badgePath.startsWith('/') ? '' : '/'}${badgePath}`;
+};
+
+function SchoolBadge({ badge, name, size = 80 }) {
+  const [failed, setFailed] = useState(false);
+  const initials = name?.trim().charAt(0).toUpperCase() || '🏫';
+
+  if (!badge || failed) {
+    return <span style={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.4, fontWeight: 700, color: '#fff' }}>{initials}</span>;
+  }
+
+  return (
+    <img
+      src={getBadgeUrl(badge)}
+      alt={`${name} logo`}
+      style={{ width: size, height: size, objectFit: 'cover', borderRadius: 12 }}
+      onError={() => setFailed(true)}
+    />
+  );
+}
 
 // eslint-disable-next-line no-unused-vars
 const GradCapIcon = () => (
@@ -60,15 +86,7 @@ function SchoolAdminDashboard({ onNavigate }) {
                 <div className="pending-container">
                     <div className="pending-card">
                         <div className="pending-brand">
-                            {user.school?.badge ? (
-                                <img 
-                                    src={user.school.badge} 
-                                    alt={`${user.school.name} logo`} 
-                                    style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '12px' }} 
-                                />
-                            ) : (
-                                <PruhLogo size={48} variant="white" />
-                            )}
+                            <SchoolBadge badge={user.school?.badge} name={user.school?.name} size={80} />
                         </div>
                         <div className="pending-icon-glow">
                             <ClockIcon />
@@ -107,16 +125,8 @@ function SchoolAdminDashboard({ onNavigate }) {
         <div className="sa-dashboard approved">
             <header className="sa-header">
                 <div className="sa-logo-section">
-                    <div className="sa-logo-icon" style={user.school?.badge ? { background: 'transparent' } : {}}>
-                        {user.school?.badge ? (
-                            <img 
-                                src={user.school.badge} 
-                                alt={`${user.school.name} logo`} 
-                                style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'inherit' }} 
-                            />
-                        ) : (
-                            <PruhLogo size={40} variant="white" />
-                        )}
+                    <div className="sa-logo-icon" style={{ background: user.school?.badge ? 'transparent' : undefined }}>
+                        <SchoolBadge badge={user.school?.badge} name={user.school?.name} size={40} />
                     </div>
                     <div className="sa-school-info">
                         <h1 className="sa-school-name">{user.school.name}</h1>

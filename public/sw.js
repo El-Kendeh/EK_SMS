@@ -71,14 +71,18 @@ self.addEventListener('fetch', (event) => {
   /* Static assets → cache-first, update in background */
   event.respondWith(
     caches.match(request).then((cached) => {
-      const networkFetch = fetch(request).then((response) => {
-        if (response.ok) {
-          const clone = response.clone();
-          caches.open(STATIC_CACHE).then((c) => c.put(request, clone));
-        }
-        return response;
-      });
-      return cached || networkFetch;
+      return fetch(request)
+        .then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(STATIC_CACHE).then((c) => c.put(request, clone));
+          }
+          return response;
+        })
+        .catch((err) => {
+          console.warn('SW fetch failed, using cache fallback:', request.url, err);
+          return cached || Response.error();
+        });
     })
   );
 });

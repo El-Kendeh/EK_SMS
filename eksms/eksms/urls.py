@@ -14,6 +14,7 @@ from .views import (
     api_verify_otp, api_check_school_name, api_get_users, api_get_security_logs,
     api_system_health, api_get_grade_alerts, api_receive_logs, api_csp_report
 )
+from .secure_views import csrf_token_view
 from django.conf import settings
 from django.conf.urls.static import static
 
@@ -36,6 +37,7 @@ urlpatterns = [
     path('api/check-school-name/', api_check_school_name, name='api_check_school_name'),
     path('api/logs/',            api_receive_logs,      name='api_receive_logs'),
     path('api/csp-report/',      api_csp_report,        name='api_csp_report'),
+    path('api/csrf-token/',      csrf_token_view,       name='csrf_token_view'),
     
     # Root URL redirects to admin
     path('', RedirectView.as_view(url='admin/', permanent=False)),

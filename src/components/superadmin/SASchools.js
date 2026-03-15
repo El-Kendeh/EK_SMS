@@ -1,4 +1,30 @@
 import React, { useState, useMemo } from 'react';
+import SECURITY_CONFIG from '../../config/security';
+
+const getBadgeUrl = (badgePath) => {
+    if (!badgePath) return '';
+    if (badgePath.startsWith('http') || badgePath.startsWith('data:')) return badgePath;
+    const baseUrl = SECURITY_CONFIG.API_URL.replace(/\/$/, '');
+    return `${baseUrl}${badgePath.startsWith('/') ? '' : '/'}${badgePath}`;
+};
+
+function SchoolBadge({ badge, name, size = 34 }) {
+  const [failed, setFailed] = useState(false);
+  const initials = name?.trim().charAt(0).toUpperCase() || '🏫';
+
+  if (!badge || failed) {
+    return <span style={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.45, fontWeight: 700 }}>{initials}</span>;
+  }
+
+  return (
+    <img
+      src={getBadgeUrl(badge)}
+      alt={`${name} logo`}
+      style={{ width: size, height: size, objectFit: 'cover', borderRadius: 8 }}
+      onError={() => setFailed(true)}
+    />
+  );
+}
 
 /* ---- Icons ---- */
 const IcSearch  = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>;
@@ -142,10 +168,7 @@ export default function SASchools({ schools, onReview }) {
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           <div style={{ width: 34, height: 34, borderRadius: 8, background: school.badge ? 'transparent' : color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8125rem', fontWeight: 800, color: '#fff', flexShrink: 0, textTransform: 'uppercase', overflow: 'hidden' }}>
-                            {school.badge 
-                              ? <img src={school.badge} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                              : school.name[0]
-                            }
+                            <SchoolBadge badge={school.badge} name={school.name} size={34} />
                           </div>
                           <div>
                             <span className="sa-table-school-name">{school.name}</span>

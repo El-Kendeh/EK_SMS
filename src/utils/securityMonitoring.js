@@ -51,7 +51,8 @@ export const SecurityLogger = {
     try {
       await ApiClient.post('/api/logs/', logEntry);
     } catch (error) {
-      console.error('Failed to send log to backend:', error);
+      // If CORS or network error occurs, do not break the app; keep logging local only.
+      console.warn('Failed to send log to backend (CORS/network issue or backend unavailable):', error);
     }
   },
 
