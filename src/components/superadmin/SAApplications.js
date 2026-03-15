@@ -8,6 +8,24 @@ const getBadgeUrl = (badgePath) => {
     return `${baseUrl}${badgePath.startsWith('/') ? '' : '/'}${badgePath}`;
 };
 
+function SchoolBadge({ badge, name, size = 48 }) {
+  const [failed, setFailed] = useState(false);
+  const initials = name?.trim().charAt(0).toUpperCase() || '🏫';
+
+  if (!badge || failed) {
+    return <span style={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.4, fontWeight: 700 }}>{initials}</span>;
+  }
+
+  return (
+    <img
+      src={getBadgeUrl(badge)}
+      alt={`${name} logo`}
+      style={{ width: size, height: size, objectFit: 'cover', borderRadius: 'inherit' }}
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 /* ---- Icons ---- */
 const IcSearch   = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>;
 const IcPin      = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>;
@@ -177,10 +195,7 @@ export default function SAApplications({ schools, onReview }) {
               <div key={school.id} className={`sa-app-card sa-app-card--${risk}`}>
                 <div className="sa-app-card-top">
                   <div className="sa-app-avatar" style={{ background: school.badge ? 'transparent' : color }}>
-                    {school.badge 
-                      ? <img src={getBadgeUrl(school.badge)} alt="" style={{ width: '100%', height: '100%', borderRadius: 'inherit', objectFit: 'cover' }} />
-                      : school.name[0].toUpperCase()
-                    }
+                    <SchoolBadge badge={school.badge} name={school.name} size={48} />
                   </div>
                   <div className="sa-app-info">
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>

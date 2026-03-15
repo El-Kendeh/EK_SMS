@@ -8,6 +8,24 @@ const getBadgeUrl = (badgePath) => {
     return `${baseUrl}${badgePath.startsWith('/') ? '' : '/'}${badgePath}`;
 };
 
+function SchoolBadge({ badge, name, size = 56 }) {
+  const [failed, setFailed] = useState(false);
+  const initials = name?.trim().charAt(0).toUpperCase() || '🏫';
+
+  if (!badge || failed) {
+    return <span style={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.4, fontWeight: 700 }}>{initials}</span>;
+  }
+
+  return (
+    <img
+      src={getBadgeUrl(badge)}
+      alt={`${name} logo`}
+      style={{ width: size, height: size, objectFit: 'cover', borderRadius: 'inherit' }}
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 /* ---- Icons ---- */
 const IcBack    = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>;
 const IcInfo    = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>;
@@ -212,10 +230,7 @@ export default function SAReview({ school, onBack, onApprove, onReject, onReques
         {/* Hero card */}
         <div className="sa-review-hero">
           <div className="sa-review-avatar" style={{ background: school.badge ? 'transparent' : color }}>
-            {school.badge 
-              ? <img src={getBadgeUrl(school.badge)} alt="" style={{ width: '100%', height: '100%', borderRadius: 'inherit', objectFit: 'cover' }} />
-              : school.name[0].toUpperCase()
-            }
+            <SchoolBadge badge={school.badge} name={school.name} size={56} />
           </div>
           <div style={{ textAlign: 'center', marginBottom: 10 }}>
             {school.is_approved
