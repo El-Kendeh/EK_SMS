@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import './SA.css';
-import './Dashboard.css';
+import './SuperadminDashboard.css';
 import ApiClient from '../../api/client';
 import PruhLogo from '../PruhLogo';
 import SAOverview       from './SAOverview';

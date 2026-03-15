@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import Login from './components/login';
-import SuperadminDashboard from '/components/superadmin/Dashboard';
+import SuperadminDashboard from './components/superadmin/SuperadminDashboard';
 import Landing from './components/Landing';
 import Register from './components/Register';
 import SchoolAdminDashboard from './components/schooladmin/dashboard';
