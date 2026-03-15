@@ -80,15 +80,26 @@ function SchoolAdminDashboard({ onNavigate }) {
 
     if (!user) return null;
 
+    // BRANDING: Apply school colors if available
+    const colors = user.school?.brand_colors?.split(',').filter(Boolean) || [];
+    const primaryColor = colors[0] || '#6366f1'; // Default Fallback
+    const secondaryColor = colors[1] || primaryColor;
+    
+    const brandingStyles = {
+        '--sa-accent': primaryColor,
+        '--sa-accent-dim': `${primaryColor}15`,
+        '--sa-accent-hover': `${primaryColor}dd`,
+    };
+
     if (!isApproved) {
         return (
-            <div className="sa-dashboard pending">
+            <div className="sa-dashboard pending" style={brandingStyles}>
                 <div className="pending-container">
                     <div className="pending-card">
                         <div className="pending-brand">
-                            <SchoolBadge badge={user.school?.badge} name={user.school?.name} size={80} />
+                            <SchoolBadge badge={user.school?.badge} name={user.school?.name} size={100} />
                         </div>
-                        <div className="pending-icon-glow">
+                        <div className="pending-icon-glow" style={{ background: brandingStyles['--sa-accent-dim'], color: primaryColor }}>
                             <ClockIcon />
                         </div>
                         <h1 className="pending-title">Account Under Review</h1>
@@ -96,12 +107,12 @@ function SchoolAdminDashboard({ onNavigate }) {
                             Welcome, <strong>{user.full_name}</strong>. Your registration for <strong>{user.school?.name}</strong> is currently being reviewed by our system administrators.
                         </p>
                         <div className="pending-steps">
-                            <div className="pending-step done">
-                                <div className="step-check"><CheckIcon /></div>
+                            <div className="pending-step done" style={{ color: primaryColor }}>
+                                <div className="step-check" style={{ background: brandingStyles['--sa-accent-dim'], color: primaryColor }}><CheckIcon /></div>
                                 <span>Application Submitted</span>
                             </div>
                             <div className="pending-step active">
-                                <div className="step-circle">2</div>
+                                <div className="step-circle" style={{ borderColor: primaryColor }}>2</div>
                                 <span>Superadmin Review</span>
                             </div>
                             <div className="pending-step">
@@ -122,15 +133,15 @@ function SchoolAdminDashboard({ onNavigate }) {
     }
 
     return (
-        <div className="sa-dashboard approved">
+        <div className="sa-dashboard approved" style={brandingStyles}>
             <header className="sa-header">
                 <div className="sa-logo-section">
-                    <div className="sa-logo-icon" style={{ background: user.school?.badge ? 'transparent' : undefined }}>
-                        <SchoolBadge badge={user.school?.badge} name={user.school?.name} size={40} />
+                    <div className="sa-logo-icon" style={{ background: 'transparent' }}>
+                        <SchoolBadge badge={user.school?.badge} name={user.school?.name} size={42} />
                     </div>
                     <div className="sa-school-info">
                         <h1 className="sa-school-name">{user.school.name}</h1>
-                        <span className="sa-role-badge">School Administrator</span>
+                        <span className="sa-role-badge" style={{ color: primaryColor }}>School Administrator</span>
                     </div>
                 </div>
                 <div className="sa-user-nav">
