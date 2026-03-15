@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-24jmp77ga17g(!!69paff+-wwoe0+6a&0!%yda-=z#)+b-kk^f
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['backend.pruhsms.africa', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -124,12 +124,7 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # CORS Configuration
-CORS_ALLOWED_ORIGINS = [
-    "https://ek-sms-one.vercel.app",
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-]
-
+CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
 # CSRF Trusted Origins (needed for POST requests from different origins)
