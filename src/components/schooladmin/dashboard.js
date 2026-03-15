@@ -83,7 +83,6 @@ function SchoolAdminDashboard({ onNavigate }) {
     // BRANDING: Apply school colors if available
     const colors = user.school?.brand_colors?.split(',').filter(Boolean) || [];
     const primaryColor = colors[0] || '#6366f1'; // Default Fallback
-    const secondaryColor = colors[1] || primaryColor;
     
     const brandingStyles = {
         '--sa-accent': primaryColor,
