@@ -85,7 +85,8 @@ def api_login(request):
                 'username': user.username,
                 'email': user.email,
                 'is_superuser': user.is_superuser,
-                'is_staff': user.is_staff
+                'is_staff': user.is_staff,
+                'role': 'superadmin' if user.is_superuser else 'admin'
             },
             'redirect': '/dashboard' if user.is_superuser else '/admin/'
         }, status=200)

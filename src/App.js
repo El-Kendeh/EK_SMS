@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import Login from './components/login';
-import Dashboard from './components/superadmin/Dashboard';
+import SuperadminDashboard from './components/superadmin/dashboard';
+import Landing from './components/Landing';
+import Register from './components/Register';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('login');
@@ -45,7 +47,15 @@ function App() {
 
   return (
     <div className="App">
-      {currentPage === 'login' ? <Login /> : <Dashboard />}
+      {currentPage === 'login' && <Login onNavigate={setCurrentPage} />}
+      {currentPage === 'dashboard' && <SuperadminDashboard onNavigate={setCurrentPage} />}
+      {(currentPage === 'home' || currentPage === 'landing') && <Landing onNavigate={setCurrentPage} />}
+      {currentPage === 'register' && <Register onNavigate={setCurrentPage} />}
+      
+      {/* Fallback for unknown pages */}
+      {!['login', 'dashboard', 'home', 'landing', 'register'].includes(currentPage) && (
+        <Login onNavigate={setCurrentPage} />
+      )}
     </div>
   );
 }
