@@ -30,9 +30,10 @@ ALLOWED_HOSTS = config(
 # CORS Configuration for frontend communication
 CORS_ALLOWED_ORIGINS = config(
     'CORS_ALLOWED_ORIGINS',
-    default='http://localhost:3000,https://ek-sms-one.vercel.app',
+    default='http://localhost:3000,https://ek-sms-one.vercel.app,https://ek-sms-backend.onrender.com',
     cast=Csv()
 )
+CORS_ALLOW_ALL_ORIGINS = config('CORS_ALLOW_ALL_ORIGINS', default=False, cast=bool)
 
 # SECURITY: Ensure no trailing commas in ALLOWED_HOSTS
 ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS]
