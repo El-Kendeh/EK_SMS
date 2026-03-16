@@ -229,21 +229,30 @@ def api_register(request):
         from django.db import transaction
         import uuid
         
-        # Determine if data is in a JSON field 'settings' or individual fields
-        settings_str = request.POST.get('settings')
-        if settings_str:
-            data = json.loads(settings_str)
-        else:
-            # Fallback to individual fields from POST
-            data = request.POST.dict()
-
-        # Handle brand colors (might be JSON string or comma-separated)
-        brand_colors = data.get('brandColors', '')
-        if isinstance(brand_colors, str) and brand_colors.startswith('['):
+        # Handle JSON or Form data
+        if request.content_type == 'application/json':
             try:
-                brand_colors = ','.join(json.loads(brand_colors))
+                data = json.loads(request.body)
+            except json.JSONDecodeError:
+                return JsonResponse({'success': False, 'message': 'Invalid JSON payload.'}, status=400)
+        else:
+            settings_str = request.POST.get('settings')
+            if settings_str:
+                data = json.loads(settings_str)
+            else:
+                data = request.POST.dict()
+
+        # Handle brand colors (might be JSON array, JSON string, or comma-separated)
+        brand_colors_raw = data.get('brandColors') or data.get('brandColor', '')
+        if isinstance(brand_colors_raw, list):
+            brand_colors = ','.join(brand_colors_raw)
+        elif isinstance(brand_colors_raw, str) and brand_colors_raw.startswith('['):
+            try:
+                brand_colors = ','.join(json.loads(brand_colors_raw))
             except:
-                pass
+                brand_colors = brand_colors_raw
+        else:
+            brand_colors = brand_colors_raw
         
         # Basic validation (using frontend field names)
         required = ['institutionName', 'adminUsername', 'password', 'email']
@@ -251,10 +260,22 @@ def api_register(request):
             if not data.get(field):
                 return JsonResponse({'success': False, 'message': f'Missing field: {field}'}, status=400)
         
-        # Check if user already exists
+        # Check if user or school already exists
         admin_email = data.get('adminEmail') or data.get('email')
-        if User.objects.filter(username=data['adminUsername']).exists() or User.objects.filter(email=admin_email).exists():
-            return JsonResponse({'success': False, 'message': 'Username or email already in use.'}, status=400)
+        institution_name = data.get('institutionName')
+        admin_username = data.get('adminUsername')
+
+        if not institution_name or not admin_username or not admin_email:
+            return JsonResponse({'success': False, 'message': 'Missing required fields (Institution Name, Admin Username, or Email).'}, status=400)
+
+        if School.objects.filter(name__iexact=institution_name).exists():
+            return JsonResponse({'success': False, 'message': f'Institution "{institution_name}" is already registered.'}, status=400)
+
+        if User.objects.filter(username=admin_username).exists():
+            return JsonResponse({'success': False, 'message': 'Admin username already in use.'}, status=400)
+            
+        if User.objects.filter(email=admin_email).exists():
+            return JsonResponse({'success': False, 'message': 'Admin email already in use.'}, status=400)
 
         with transaction.atomic():
             # Create School
@@ -405,8 +426,10 @@ def api_verify_otp(request):
 
 def api_check_school_name(request):
     name = request.GET.get('name', '')
+    if not name:
+        return JsonResponse({'available': True, 'exists': False}, status=200)
     exists = School.objects.filter(name__iexact=name).exists()
-    return JsonResponse({'available': not exists}, status=200)
+    return JsonResponse({'available': not exists, 'exists': exists}, status=200)
 
 def api_get_users(request):
     """Fetch user summary for superadmin with detailed role/school mapping"""

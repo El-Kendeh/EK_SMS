@@ -8,7 +8,7 @@ import SECURITY_CONFIG from '../config/security';
 class ApiClient {
   constructor() {
     this.baseURL = SECURITY_CONFIG.API_URL;
-    this.timeout = 30000; // 30 seconds
+    this.timeout = 60000; // Increased to 60 seconds for registration
     this.retryAttempts = 3;
   }
 
@@ -193,6 +193,13 @@ class ApiError extends Error {
     this.status = status;
     this.response = response;
     this.name = 'ApiError';
+    
+    // Log error details for debugging
+    console.error(`[ApiError] ${status}: ${message}`, {
+      status, 
+      message,
+      url: response?.url
+    });
   }
 }
 

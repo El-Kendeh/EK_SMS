@@ -1108,7 +1108,8 @@ function Register({ onNavigate }) {
   const checkDuplicateName = async (name) => {
     try {
       const data = await ApiClient.get(`/api/check-school-name/?name=${encodeURIComponent(name)}`);
-      return data.exists === true;
+      // Check both available and exists keys (backend uses both for compatibility)
+      return data.exists === true || data.available === false;
     } catch { /* API unavailable — allow registration to proceed */ }
     return false;
   };
@@ -1225,7 +1226,13 @@ function Register({ onNavigate }) {
       setSubmitted(true);
       try { sessionStorage.removeItem('ek_reg_form'); sessionStorage.removeItem('ek_reg_step'); } catch {}
     } catch (err) {
-      setError(err.message || 'An error occurred. Please try again.');
+      console.error('Registration submission error:', err);
+      // More helpful error message for "Failed to fetch"
+      if (err.message === 'Failed to fetch' || err.status === 0) {
+        setError('Network error: Could not reach the server. Please check your internet connection or try again later.');
+      } else {
+        setError(err.message || 'An error occurred. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
