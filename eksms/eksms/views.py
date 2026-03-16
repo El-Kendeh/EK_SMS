@@ -228,6 +228,9 @@ def api_register(request):
     try:
         from django.db import transaction
         import uuid
+        import logging
+        logger = logging.getLogger('django.security')
+        logger.info(f"Registration attempt started for: {request.POST.get('institutionName') or 'JSON payload'}")
         
         # Handle JSON or Form data
         if request.content_type == 'application/json':
