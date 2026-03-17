@@ -6,7 +6,7 @@
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "env": {
-    "REACT_APP_API_URL": "https://ek-sms-backend.onrender.com",
+    "REACT_APP_API_URL": "https://backend.pruhsms.africa",
     "REACT_APP_ENVIRONMENT": "production"
   }
 }

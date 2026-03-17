@@ -806,3 +806,28 @@ class WaitlistEmail(models.Model):
 
     def __str__(self):
         return self.email
+
+
+# ---------------------------------------------------------------------------
+# OTP Records — stores one-time passwords for email verification
+# ---------------------------------------------------------------------------
+class OTPRecord(models.Model):
+    """Stores a hashed OTP code sent to a user's email for identity verification."""
+    email       = models.EmailField(db_index=True, help_text="Recipient email address")
+    code_hash   = models.CharField(max_length=64, help_text="SHA-256 hash of the 6-digit OTP")
+    expires_at  = models.DateTimeField(help_text="When this OTP stops being valid")
+    is_used     = models.BooleanField(default=False, help_text="True once the OTP has been verified")
+    attempts    = models.IntegerField(default=0, help_text="Number of failed verification attempts")
+    created_at  = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering            = ['-created_at']
+        verbose_name        = 'OTP Record'
+        verbose_name_plural = 'OTP Records'
+
+    def __str__(self):
+        return f"OTP for {self.email} ({'used' if self.is_used else 'active'})"
+
+    def is_valid(self):
+        """Returns True if the OTP has not expired and has not been used."""
+        return not self.is_used and timezone.now() < self.expires_at

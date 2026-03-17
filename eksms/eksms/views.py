@@ -228,34 +228,22 @@ def api_register(request):
     try:
         from django.db import transaction
         import uuid
-        import logging
-        logger = logging.getLogger('django.security')
-        logger.info(f"Registration attempt started for: {request.POST.get('institutionName') or 'JSON payload'}")
         
-        # Handle JSON or Form data
-        if request.content_type == 'application/json':
-            try:
-                data = json.loads(request.body)
-            except json.JSONDecodeError:
-                return JsonResponse({'success': False, 'message': 'Invalid JSON payload.'}, status=400)
+        # Determine if data is in a JSON field 'settings' or individual fields
+        settings_str = request.POST.get('settings')
+        if settings_str:
+            data = json.loads(settings_str)
         else:
-            settings_str = request.POST.get('settings')
-            if settings_str:
-                data = json.loads(settings_str)
-            else:
-                data = request.POST.dict()
+            # Fallback to individual fields from POST
+            data = request.POST.dict()
 
-        # Handle brand colors (might be JSON array, JSON string, or comma-separated)
-        brand_colors_raw = data.get('brandColors') or data.get('brandColor', '')
-        if isinstance(brand_colors_raw, list):
-            brand_colors = ','.join(brand_colors_raw)
-        elif isinstance(brand_colors_raw, str) and brand_colors_raw.startswith('['):
+        # Handle brand colors (might be JSON string or comma-separated)
+        brand_colors = data.get('brandColors', '')
+        if isinstance(brand_colors, str) and brand_colors.startswith('['):
             try:
-                brand_colors = ','.join(json.loads(brand_colors_raw))
+                brand_colors = ','.join(json.loads(brand_colors))
             except:
-                brand_colors = brand_colors_raw
-        else:
-            brand_colors = brand_colors_raw
+                pass
         
         # Basic validation (using frontend field names)
         required = ['institutionName', 'adminUsername', 'password', 'email']
@@ -263,22 +251,10 @@ def api_register(request):
             if not data.get(field):
                 return JsonResponse({'success': False, 'message': f'Missing field: {field}'}, status=400)
         
-        # Check if user or school already exists
+        # Check if user already exists
         admin_email = data.get('adminEmail') or data.get('email')
-        institution_name = data.get('institutionName')
-        admin_username = data.get('adminUsername')
-
-        if not institution_name or not admin_username or not admin_email:
-            return JsonResponse({'success': False, 'message': 'Missing required fields (Institution Name, Admin Username, or Email).'}, status=400)
-
-        if School.objects.filter(name__iexact=institution_name).exists():
-            return JsonResponse({'success': False, 'message': f'Institution "{institution_name}" is already registered.'}, status=400)
-
-        if User.objects.filter(username=admin_username).exists():
-            return JsonResponse({'success': False, 'message': 'Admin username already in use.'}, status=400)
-            
-        if User.objects.filter(email=admin_email).exists():
-            return JsonResponse({'success': False, 'message': 'Admin email already in use.'}, status=400)
+        if User.objects.filter(username=data['adminUsername']).exists() or User.objects.filter(email=admin_email).exists():
+            return JsonResponse({'success': False, 'message': 'Username or email already in use.'}, status=400)
 
         with transaction.atomic():
             # Create School
@@ -420,19 +396,167 @@ def api_waitlist(request):
 @require_http_methods(["POST"])
 @csrf_exempt
 def api_send_otp(request):
-    return JsonResponse({'success': True, 'message': 'OTP sent (placeholder demo)'}, status=200)
+    """
+    Generate a 6-digit OTP, store a hash of it in the DB, and
+    send it to the user's email via the Resend API.
+
+    Expected JSON body: { "email": "user@example.com" }
+    """
+    import hashlib
+    import secrets
+    from datetime import timedelta
+    from django.conf import settings
+    from eksms_core.models import OTPRecord
+
+    try:
+        data  = json.loads(request.body)
+        email = (data.get('email') or '').strip().lower()
+
+        if not email:
+            return JsonResponse({'success': False, 'message': 'Email is required.'}, status=400)
+
+        # -- Invalidate any previous unused OTPs for this email --
+        OTPRecord.objects.filter(email=email, is_used=False).update(is_used=True)
+
+        # -- Generate a cryptographically secure 6-digit OTP --
+        otp_code = str(secrets.randbelow(1_000_000)).zfill(6)
+        code_hash = hashlib.sha256(otp_code.encode()).hexdigest()
+        expires_at = timezone.now() + timedelta(minutes=getattr(settings, 'OTP_EXPIRY_MINUTES', 10))
+
+        OTPRecord.objects.create(
+            email      = email,
+            code_hash  = code_hash,
+            expires_at = expires_at,
+        )
+
+        # -- Send via Resend --
+        api_key = getattr(settings, 'RESEND_API_KEY', '')
+        if not api_key:
+            logging.getLogger(__name__).error('RESEND_API_KEY is not configured.')
+            return JsonResponse({'success': False, 'message': 'Email service not configured on the server.'}, status=500)
+
+        import resend
+        resend.api_key = api_key
+
+        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'EK-SMS <noreply@elkendeh.com>')
+        expiry_mins = getattr(settings, 'OTP_EXPIRY_MINUTES', 10)
+
+        html_body = f"""
+        <div style="font-family:Inter,Arial,sans-serif;max-width:480px;margin:0 auto;background:#0f172a;border-radius:12px;overflow:hidden;">
+          <div style="background:linear-gradient(135deg,#6366f1,#8b5cf6);padding:32px 24px;text-align:center;">
+            <h1 style="color:#fff;margin:0;font-size:22px;letter-spacing:-0.5px;">EK-SMS Platform</h1>
+            <p style="color:rgba(255,255,255,0.8);margin:6px 0 0;font-size:13px;">El-Kendeh School Management System</p>
+          </div>
+          <div style="padding:36px 32px;">
+            <h2 style="color:#e2e8f0;font-size:18px;margin:0 0 12px;">Your One-Time Password</h2>
+            <p style="color:#94a3b8;font-size:14px;line-height:1.6;margin:0 0 28px;">
+              Use the code below to verify your email address. It expires in <strong style="color:#a78bfa;">{expiry_mins} minutes</strong>.
+            </p>
+            <div style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:20px;text-align:center;margin-bottom:28px;">
+              <span style="font-size:42px;letter-spacing:14px;font-weight:700;color:#a78bfa;font-family:monospace;">{otp_code}</span>
+            </div>
+            <p style="color:#64748b;font-size:12px;line-height:1.6;margin:0;">
+              If you did not request this code, please ignore this email. Do not share this code with anyone.
+            </p>
+          </div>
+          <div style="background:#0f172a;padding:16px 32px;border-top:1px solid #1e293b;text-align:center;">
+            <p style="color:#475569;font-size:12px;margin:0;">
+              &copy; {timezone.now().year} EK-SMS &mdash; El-Kendeh School Management System
+            </p>
+          </div>
+        </div>
+        """
+
+        resend.Emails.send({
+            "from":    from_email,
+            "to":      [email],
+            "subject": f"Your EK-SMS verification code: {otp_code}",
+            "html":    html_body,
+        })
+
+        return JsonResponse({
+            'success': True,
+            'message': f'A verification code has been sent to {email}. It expires in {expiry_mins} minutes.',
+        }, status=200)
+
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON payload.'}, status=400)
+    except Exception as e:
+        logging.getLogger(__name__).error(f'api_send_otp error: {e}')
+        return JsonResponse({'success': False, 'message': 'Failed to send OTP. Please try again.'}, status=500)
+
 
 @require_http_methods(["POST"])
 @csrf_exempt
 def api_verify_otp(request):
-    return JsonResponse({'success': True, 'message': 'OTP verified (placeholder demo)'}, status=200)
+    """
+    Verify a 6-digit OTP previously sent to the user's email.
+
+    Expected JSON body: { "email": "user@example.com", "otp": "123456" }
+    Returns { "success": true/false, "message": "..." }
+    """
+    import hashlib
+    from eksms_core.models import OTPRecord
+
+    MAX_ATTEMPTS = 5
+
+    try:
+        data      = json.loads(request.body)
+        email     = (data.get('email') or '').strip().lower()
+        otp_input = (data.get('otp') or '').strip()
+
+        if not email or not otp_input:
+            return JsonResponse({'success': False, 'message': 'Email and OTP code are required.'}, status=400)
+
+        # Find the most recent active OTP record for this email
+        record = (
+            OTPRecord.objects
+            .filter(email=email, is_used=False)
+            .order_by('-created_at')
+            .first()
+        )
+
+        if not record:
+            return JsonResponse({'success': False, 'message': 'No active OTP found for this email. Please request a new one.'}, status=400)
+
+        if not record.is_valid():
+            record.is_used = True
+            record.save(update_fields=['is_used'])
+            return JsonResponse({'success': False, 'message': 'OTP has expired. Please request a new one.'}, status=400)
+
+        if record.attempts >= MAX_ATTEMPTS:
+            record.is_used = True
+            record.save(update_fields=['is_used'])
+            return JsonResponse({'success': False, 'message': 'Too many failed attempts. Please request a new OTP.'}, status=429)
+
+        # Compare hashes (constant-time comparison via ==)
+        provided_hash = hashlib.sha256(otp_input.encode()).hexdigest()
+        if provided_hash != record.code_hash:
+            record.attempts += 1
+            record.save(update_fields=['attempts'])
+            remaining = MAX_ATTEMPTS - record.attempts
+            return JsonResponse({
+                'success': False,
+                'message': f'Incorrect OTP. {remaining} attempt(s) remaining.',
+            }, status=400)
+
+        # Mark as used
+        record.is_used = True
+        record.save(update_fields=['is_used'])
+
+        return JsonResponse({'success': True, 'message': 'Email verified successfully.'}, status=200)
+
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON payload.'}, status=400)
+    except Exception as e:
+        logging.getLogger(__name__).error(f'api_verify_otp error: {e}')
+        return JsonResponse({'success': False, 'message': 'Verification failed. Please try again.'}, status=500)
+
 
 def api_check_school_name(request):
     name = request.GET.get('name', '')
-    if not name:
-        return JsonResponse({'available': True, 'exists': False}, status=200)
     exists = School.objects.filter(name__iexact=name).exists()
-    return JsonResponse({'available': not exists, 'exists': exists}, status=200)
+    return JsonResponse({'available': not exists}, status=200)
 
 def api_get_users(request):
     """Fetch user summary for superadmin with detailed role/school mapping"""
