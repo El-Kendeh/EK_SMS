@@ -61,6 +61,7 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django_otp.middleware.OTPMiddleware',  # Two-Factor Authentication check
+    'eksms.middleware.TokenAuthenticationMiddleware', # Custom token auth
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'eksms.middleware.SecurityHeadersMiddleware',  # Custom security headers
@@ -87,7 +88,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'eksms.wsgi.application'
 
 # Database Configuration
-# Supports both MySQL (Producton) and SQLite (Default)
+# Supports both MySQL (Production) and SQLite (Default)
 DATABASE_TYPE = config('DATABASE_TYPE', default='sqlite3')
 
 if DATABASE_TYPE == 'mysql':
@@ -139,6 +140,7 @@ USE_I18N = True
 USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
+LANGUAGE_CODE = 'en-us' # typo check from original step 134-142
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
@@ -158,7 +160,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # HTTPS/SSL Security - Relaxed for HTTP testing on Server IP
 SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=False, cast=bool)
-SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=False, cast=bool)
+# Cookie Security
+SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=True, cast=bool)
 CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=False, cast=bool)
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_SECURITY_POLICY = {
@@ -182,9 +185,9 @@ X_FRAME_OPTIONS = 'DENY'
 
 # Cookie Security
 SESSION_COOKIE_HTTPONLY = True
-SESSION_COOKIE_SAMESITE = 'Strict'
-CSRF_COOKIE_HTTPONLY = True
-CSRF_COOKIE_SAMESITE = 'Strict'
+CSRF_COOKIE_HTTPONLY = False  # Must be False for React to read the cookie
+CSRF_COOKIE_SAMESITE = 'Lax'    # More compatible for cross-domain APIs
+SESSION_COOKIE_SAMESITE = 'Lax'
 
 # CSRF Settings
 CSRF_TRUSTED_ORIGINS = config(
@@ -192,14 +195,13 @@ CSRF_TRUSTED_ORIGINS = config(
     default='http://localhost:3000,https://ek-sms-one.vercel.app,https://pruhsms.africa,https://www.pruhsms.africa',
     cast=Csv()
 )
-CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in CSRF_TRUSTED_ORIGINS]
+CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in CSRF_TRUSTED_ORIGINS if origin.strip()]
 
 # Session Security
 SESSION_COOKIE_AGE = 3600  # 1 hour
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
-SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=True, cast=bool)
 
-# CORS Settings (already imported above)
+# CORS Settings (already handled above)
 CORS_ALLOW_CREDENTIALS = True
 CORS_EXPOSE_HEADERS = ['Content-Type', 'X-CSRFToken']
 CORS_ALLOW_HEADERS = [
@@ -224,6 +226,7 @@ CORS_ALLOW_METHODS = [
     'PATCH',
     'POST',
     'PUT',
+    'WEBSITE',
 ]
 
 # Rate Limiting (requires django-ratelimit)
@@ -246,7 +249,7 @@ LOGGING = {
         'file': {
             'level': 'WARNING',
             'class': 'logging.FileHandler',
-            'filename': BASE_DIR / 'logs' / 'django.log',
+            'filename': str(BASE_DIR / 'logs' / 'django.log'),
             'formatter': 'verbose',
         },
         'console': {

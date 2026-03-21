@@ -1055,7 +1055,7 @@ function Register({ onNavigate }) {
     setFieldErrors((p) => ({ ...p, [field]: validateFieldInline(field) }));
   };
 
-  /* ---- OTP: send code to adminEmail ---- */
+  /* ---- OTP: send initial code to adminEmail ---- */
   const sendOtp = async () => {
     setOtpLoading(true);
     setOtpError('');
@@ -1072,6 +1072,31 @@ function Register({ onNavigate }) {
         setOtpError(err.message || 'Could not send code. Try again or skip.');
       }
       setOtpSent(false);
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  /* ---- OTP: resend code (uses dedicated /api/resend-otp/ with server-side cooldown) ---- */
+  const resendOtp = async () => {
+    setOtpLoading(true);
+    setOtpError('');
+    setOtpInput('');
+    try {
+      await ApiClient.post('/api/resend-otp/', { 
+        email: form.adminEmail 
+      });
+      setOtpResendTimer(60);
+    } catch (err) {
+      // If server says cooldown is still active, sync the timer
+      if (err.status === 429 && err.data?.retry_after) {
+        setOtpResendTimer(err.data.retry_after);
+        setOtpError(`Please wait before requesting another code.`);
+      } else if (err.name === 'TimeoutError' || err.name === 'AbortError' || err.message?.includes('fetch')) {
+        setOtpError('Email service unavailable. Please try again later.');
+      } else {
+        setOtpError(err.message || 'Could not resend code. Try again.');
+      }
     } finally {
       setOtpLoading(false);
     }
@@ -1801,7 +1826,7 @@ function Register({ onNavigate }) {
                     {otpLoading ? <><span className="spin" /> Verifying…</> : 'Verify Code'}
                   </button>
                   <button type="button" className="btn-resend-otp"
-                    onClick={sendOtp} disabled={otpResendTimer > 0 || otpLoading}>
+                    onClick={resendOtp} disabled={otpResendTimer > 0 || otpLoading}>
                     {otpResendTimer > 0 ? `Resend in ${otpResendTimer}s` : 'Resend Code'}
                   </button>
                 </div>

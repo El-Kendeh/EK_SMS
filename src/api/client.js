@@ -71,8 +71,9 @@ class ApiClient {
           }
 
           let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+          let errorData = null;
           try {
-            const errorData = await response.clone().json();
+            errorData = await response.clone().json();
             if (errorData && errorData.message) {
               errorMessage = errorData.message;
             }
@@ -83,7 +84,8 @@ class ApiClient {
           throw new ApiError(
             errorMessage,
             response.status,
-            response
+            response,
+            errorData
           );
         }
 
@@ -188,10 +190,11 @@ class ApiClient {
  * Custom API Error class
  */
 class ApiError extends Error {
-  constructor(message, status, response) {
+  constructor(message, status, response, data = null) {
     super(message);
     this.status = status;
     this.response = response;
+    this.data = data;          // full parsed JSON body (if any)
     this.name = 'ApiError';
     
     // Log error details for debugging

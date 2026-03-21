@@ -3,10 +3,11 @@ Django views for the eksms project.
 """
 
 from django.http import FileResponse, JsonResponse
+from django.conf import settings
 from django.views.decorators.cache import cache_page
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth import authenticate
+from django.contrib.auth import authenticate, login
 from django.contrib.auth.models import User
 from django.utils import timezone
 from eksms_core.models import School, SchoolAdmin, GradeChangeAlert
@@ -103,6 +104,9 @@ def api_login(request):
                 'message': 'Your account does not have access to this system.'
             }, status=403)
         
+        # Log the user in to start a session
+        login(request, user)
+        
         # Generate a simple token (in production, use Django REST Framework Token or JWT)
         # Using a more standard-looking token format
         token = f"token_{user.id}_{user.username.replace(' ', '_')}"
@@ -176,6 +180,21 @@ def api_login(request):
             'success': False,
             'message': str(e)
         }, status=500)
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def api_logout(request):
+    """
+    API endpoint for user logout.
+    Clears the session.
+    """
+    from django.contrib.auth import logout
+    logout(request)
+    return JsonResponse({
+        'success': True,
+        'message': 'Logged out successfully.'
+    }, status=200)
 
 
 @require_http_methods(["POST"])
@@ -488,6 +507,122 @@ def api_send_otp(request):
 
 @require_http_methods(["POST"])
 @csrf_exempt
+def api_resend_otp(request):
+    """
+    Resend a fresh OTP to the user's email.
+
+    Enforces a server-side 60-second cooldown: if the most recent OTP for the
+    requested email was created less than 60 seconds ago the request is
+    rejected with HTTP 429 and the number of seconds remaining is returned.
+
+    Expected JSON body: { "email": "user@example.com" }
+    """
+    import hashlib
+    import secrets
+    from datetime import timedelta
+    from django.conf import settings
+    from eksms_core.models import OTPRecord
+
+    RESEND_COOLDOWN_SECONDS = 60
+
+    try:
+        data  = json.loads(request.body)
+        email = (data.get('email') or '').strip().lower()
+
+        if not email:
+            return JsonResponse({'success': False, 'message': 'Email is required.'}, status=400)
+
+        # -- Enforce cooldown: check when the latest OTP was created --
+        latest = (
+            OTPRecord.objects
+            .filter(email=email)
+            .order_by('-created_at')
+            .first()
+        )
+        if latest:
+            elapsed = (timezone.now() - latest.created_at).total_seconds()
+            remaining = int(RESEND_COOLDOWN_SECONDS - elapsed)
+            if remaining > 0:
+                return JsonResponse({
+                    'success': False,
+                    'message': f'Please wait {remaining} second(s) before requesting a new code.',
+                    'retry_after': remaining,
+                }, status=429)
+
+        # -- Invalidate any previous unused OTPs for this email --
+        OTPRecord.objects.filter(email=email, is_used=False).update(is_used=True)
+
+        # -- Generate a cryptographically secure 6-digit OTP --
+        otp_code  = str(secrets.randbelow(1_000_000)).zfill(6)
+        code_hash = hashlib.sha256(otp_code.encode()).hexdigest()
+        expires_at = timezone.now() + timedelta(minutes=getattr(settings, 'OTP_EXPIRY_MINUTES', 10))
+
+        OTPRecord.objects.create(
+            email      = email,
+            code_hash  = code_hash,
+            expires_at = expires_at,
+        )
+
+        # -- Send via Resend --
+        api_key = getattr(settings, 'RESEND_API_KEY', '')
+        if not api_key:
+            logging.getLogger(__name__).error('RESEND_API_KEY is not configured.')
+            return JsonResponse({'success': False, 'message': 'Email service not configured on the server.'}, status=500)
+
+        import resend
+        resend.api_key = api_key
+
+        from_email  = getattr(settings, 'DEFAULT_FROM_EMAIL', 'EK-SMS <noreply@elkendeh.com>')
+        expiry_mins = getattr(settings, 'OTP_EXPIRY_MINUTES', 10)
+
+        html_body = f"""
+        <div style="font-family:Inter,Arial,sans-serif;max-width:480px;margin:0 auto;background:#0f172a;border-radius:12px;overflow:hidden;">
+          <div style="background:linear-gradient(135deg,#6366f1,#8b5cf6);padding:32px 24px;text-align:center;">
+            <h1 style="color:#fff;margin:0;font-size:22px;letter-spacing:-0.5px;">EK-SMS Platform</h1>
+            <p style="color:rgba(255,255,255,0.8);margin:6px 0 0;font-size:13px;">El-Kendeh School Management System</p>
+          </div>
+          <div style="padding:36px 32px;">
+            <h2 style="color:#e2e8f0;font-size:18px;margin:0 0 12px;">New Verification Code</h2>
+            <p style="color:#94a3b8;font-size:14px;line-height:1.6;margin:0 0 28px;">
+              You requested a new code. Use the code below to verify your email address.
+              It expires in <strong style="color:#a78bfa;">{expiry_mins} minutes</strong>.
+            </p>
+            <div style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:20px;text-align:center;margin-bottom:28px;">
+              <span style="font-size:42px;letter-spacing:14px;font-weight:700;color:#a78bfa;font-family:monospace;">{otp_code}</span>
+            </div>
+            <p style="color:#64748b;font-size:12px;line-height:1.6;margin:0;">
+              If you did not request this code, please ignore this email. Do not share this code with anyone.
+            </p>
+          </div>
+          <div style="background:#0f172a;padding:16px 32px;border-top:1px solid #1e293b;text-align:center;">
+            <p style="color:#475569;font-size:12px;margin:0;">
+              &copy; {timezone.now().year} EK-SMS &mdash; El-Kendeh School Management System
+            </p>
+          </div>
+        </div>
+        """
+
+        resend.Emails.send({
+            "from":    from_email,
+            "to":      [email],
+            "subject": f"Your new EK-SMS verification code: {otp_code}",
+            "html":    html_body,
+        })
+
+        return JsonResponse({
+            'success': True,
+            'message': f'A new verification code has been sent to {email}. It expires in {expiry_mins} minutes.',
+        }, status=200)
+
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON payload.'}, status=400)
+    except Exception as e:
+        logging.getLogger(__name__).error(f'api_resend_otp error: {e}')
+        return JsonResponse({'success': False, 'message': 'Failed to resend OTP. Please try again.'}, status=500)
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
 def api_verify_otp(request):
     """
     Verify a 6-digit OTP previously sent to the user's email.
@@ -603,13 +738,50 @@ def api_get_users(request):
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
 def api_get_security_logs(request):
-    """Fetch mock security logs for dashboard visualization"""
-    # In a real app, this might pull from a model or a specialized log aggregator
-    logs = [
-        {'id': 1, 'event': 'Failed Login Attempt', 'user': 'admin_test', 'ip': '192.168.1.45', 'time': timezone.now().isoformat(), 'severity': 'high'},
-        {'id': 2, 'event': 'Successful Superadmin Login', 'user': 'superadmin', 'ip': '10.0.0.5', 'time': timezone.now().isoformat(), 'severity': 'low'},
-        {'id': 3, 'event': 'School Approval', 'user': 'superadmin', 'ip': '10.0.0.5', 'time': timezone.now().isoformat(), 'severity': 'info'},
-    ]
+    """Fetch real security logs from the log file or fallback to better formatted mock data"""
+    logs = []
+    log_file_path = Path(settings.BASE_DIR) / 'logs' / 'django.log'
+    
+    try:
+        if os.path.exists(log_file_path):
+            with open(log_file_path, 'r') as f:
+                # Read last 100 lines
+                lines = f.readlines()[-100:]
+                for i, line in enumerate(lines):
+                    if 'Sensitive endpoint accessed' in line or 'Response' in line:
+                        parts = line.split(' ')
+                        # Basic parsing based on the format: WARNING YYYY-MM-DD HH:MM:SS,mmm ...
+                        ts = f"{parts[1]} {parts[2].split(',')[0]}"
+                        severity = 'low'
+                        if '403' in line or '500' in line: severity = 'high'
+                        if 'admin' in line: severity = 'medium'
+                        
+                        # Extract message
+                        msg = ' '.join(parts[5:])
+                        
+                        logs.append({
+                            'id': f"log_{i}",
+                            'ts': ts,
+                            'type': 'Security Audit' if 'Sensitive' in line else 'Traffic Monitor',
+                            'severity': severity,
+                            'action': msg.split(' by ')[0].split(' from ')[0],
+                            'actor': msg.split(' by ')[1].split(' ')[1] if ' by ' in line else 'System',
+                            'ip': msg.split(' from ')[1].strip() if ' from ' in line else (msg.split(' by ')[1].split(' ')[0] if ' by ' in line else 'Unknown'),
+                            'status': 'Flagged' if severity in ['high', 'critical'] else 'Allowed'
+                        })
+    except Exception as e:
+        # Fallback to better mock data if file reading fails
+        pass
+
+    if not logs:
+        logs = [
+            {'id': 1, 'type': 'System Login', 'action': 'Login Success', 'actor': 'superadmin', 'ip': '10.0.0.5', 'ts': timezone.now().isoformat(), 'severity': 'info', 'status': 'Allowed'},
+            {'id': 2, 'type': 'Security Alert', 'action': 'Failed Login Attempt', 'actor': 'admin_test', 'ip': '192.168.1.45', 'ts': timezone.now().isoformat(), 'severity': 'high', 'status': 'Blocked'},
+            {'id': 3, 'type': 'Admin Action', 'action': 'School Approved', 'actor': 'superadmin', 'ip': '10.0.0.5', 'ts': timezone.now().isoformat(), 'severity': 'info', 'status': 'Allowed'},
+        ]
+    
+    # Sort by time descending
+    logs.reverse()
     return JsonResponse({'success': True, 'logs': logs}, status=200)
 
 def api_system_health(request):
@@ -626,9 +798,9 @@ def api_system_health(request):
         uptime_seconds = int(time.time() - boot_time)
 
         resources = [
-            {'label': 'CPU Usage', 'value': cpu_usage, 'unit': '%'},
-            {'label': 'Memory Usage', 'value': memory.percent, 'unit': '%'},
-            {'label': 'Disk Usage', 'value': round((disk.used / disk.total) * 100, 1), 'unit': '%'},
+            {'label': 'CPU Usage', 'value': float(cpu_usage), 'unit': '%'},
+            {'label': 'Memory Usage', 'value': float(memory.percent), 'unit': '%'},
+            {'label': 'Disk Usage', 'value': float(round(disk.used / disk.total * 100, 1)), 'unit': '%'},
             {'label': 'Database Load', 'value': 12, 'unit': '%'},
         ]
 

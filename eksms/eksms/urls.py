@@ -10,7 +10,7 @@ from django.views.generic import RedirectView
 from django.views.defaults import page_not_found, server_error
 from .views import (
     favicon_view, api_login, api_register, api_get_schools, 
-    api_approve_school, api_waitlist, api_send_otp, 
+    api_approve_school, api_waitlist, api_send_otp, api_resend_otp,
     api_verify_otp, api_check_school_name, api_get_users, api_get_security_logs,
     api_system_health, api_get_grade_alerts, api_receive_logs, api_csp_report
 )
@@ -24,6 +24,7 @@ urlpatterns = [
     
     # API endpoints
     path('api/login/',    api_login,    name='api_login'),
+    path('api/logout/',   api_logout,   name='api_logout'),
     path('api/register/', api_register, name='api_register'),
     path('api/schools/', api_get_schools, name='api_get_schools'),
     path('api/schools/approve/', api_approve_school, name='api_approve_school'),
@@ -33,6 +34,7 @@ urlpatterns = [
     path('api/grade-alerts/',    api_get_grade_alerts,  name='api_get_grade_alerts'),
     path('api/waitlist/',        api_waitlist,        name='api_waitlist'),
     path('api/send-otp/',        api_send_otp,        name='api_send_otp'),
+    path('api/resend-otp/',      api_resend_otp,      name='api_resend_otp'),
     path('api/verify-otp/',      api_verify_otp,      name='api_verify_otp'),
     path('api/check-school-name/', api_check_school_name, name='api_check_school_name'),
     path('api/logs/',            api_receive_logs,      name='api_receive_logs'),
