@@ -6,10 +6,10 @@ The `urlpatterns` list routes URLs to views. For more information please see:
 """
 from django.contrib import admin
 from django.urls import path
-from django.views.generic import RedirectView
+from django.views.generic import RedirectView, TemplateView
 from django.views.defaults import page_not_found, server_error
 from .views import (
-    favicon_view, api_login, api_register, api_get_schools, 
+    favicon_view, api_login, api_logout, api_register, api_get_schools, 
     api_approve_school, api_waitlist, api_send_otp, api_resend_otp,
     api_verify_otp, api_check_school_name, api_get_users, api_get_security_logs,
     api_system_health, api_get_grade_alerts, api_receive_logs, api_csp_report
@@ -19,8 +19,10 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
-    # Favicon
+    # Favicon & SEO
     path('favicon.jpeg', favicon_view, name='favicon'),
+    path('favicon.ico',  favicon_view), # Fallback for browsers
+    path('robots.txt',   TemplateView.as_view(template_name="robots.txt", content_type="text/plain")),
     
     # API endpoints
     path('api/login/',    api_login,    name='api_login'),

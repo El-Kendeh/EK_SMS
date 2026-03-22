@@ -120,9 +120,8 @@ class TokenAuthenticationMiddleware(MiddlewareMixin):
                     user_id = parts[1]
                     username = '_'.join(parts[2:])
                     
-                    # In a real app, use a proper token table or JWT
-                    # Here we trust the token if it matches an existing user (demo simplified)
-                    user = User.objects.get(id=user_id, username=username.replace('_', ' '))
+                    # Simplified validation: check if user exists by ID
+                    user = User.objects.get(id=user_id)
                     
                     # Set user in request if not already authenticated by session
                     if not request.user.is_authenticated:

@@ -1192,7 +1192,7 @@ function Register({ onNavigate }) {
       if (!form.agreementAuthorized)     { setError('Please confirm you are authorised to register this institution.'); return false; }
     }
     if (step === 7) {
-      if (!otpVerified && !otpSkipped) {
+      if (!otpVerified) {
         setError('Please verify your email address before continuing.'); return false;
       }
     }
