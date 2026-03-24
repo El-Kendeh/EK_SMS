@@ -308,8 +308,10 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 # ── Resend Email / OTP ───────────────────────────────────────────────────────
 # Resend is used for transactional OTP emails.
 # Set RESEND_API_KEY on your hosting platform (Render, etc.) for production.
-RESEND_API_KEY   = os.environ.get('RESEND_API_KEY', '')
-DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'EK-SMS <noreply@elkendeh.com>')
+# Resend is used for transactional OTP emails.
+# Set RESEND_API_KEY on your hosting platform (Render, etc.) for production.
+RESEND_API_KEY   = config('RESEND_API_KEY', default='')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='EK-SMS <noreply@elkendeh.com>')
 
 # OTP settings
-OTP_EXPIRY_MINUTES = int(os.environ.get('OTP_EXPIRY_MINUTES', 10))
+OTP_EXPIRY_MINUTES = config('OTP_EXPIRY_MINUTES', default=10, cast=int)

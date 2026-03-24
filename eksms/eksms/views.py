@@ -445,7 +445,16 @@ def api_send_otp(request):
         except:
             return JsonResponse({'success': False, 'message': 'Invalid email format.'}, status=400)
         
-        # Check if there's already a valid OTP for this email
+        # 1. Check if email service is configured
+        resend_api_key = getattr(settings, 'RESEND_API_KEY', '')
+        if not resend_api_key:
+            return JsonResponse({
+                'success': False, 
+                'message': 'Email service is not configured. Please contact support.'
+            }, status=500)
+            
+        # 2. Check if there's already a valid OTP for this email
+        from eksms_core.models import OTPRecord
         existing_otp = OTPRecord.objects.filter(
             email=email,
             is_used=False,
@@ -459,34 +468,15 @@ def api_send_otp(request):
                 'retry_after': 60
             }, status=429)
         
-        # Generate 6-digit OTP
+        # 3. Generate 6-digit OTP
         otp_code = str(secrets.randbelow(900000) + 100000)
-        
-        # Hash the OTP for storage
         otp_hash = hashlib.sha256(otp_code.encode()).hexdigest()
         
-        # Set expiry time
-        from django.conf import settings
         expiry_minutes = getattr(settings, 'OTP_EXPIRY_MINUTES', 10)
         expires_at = timezone.now() + timezone.timedelta(minutes=expiry_minutes)
         
-        # Save OTP record
-        OTPRecord.objects.create(
-            email=email,
-            code_hash=otp_hash,
-            expires_at=expires_at
-        )
-        
-        # Send email using Resend
-        resend_api_key = getattr(settings, 'RESEND_API_KEY', '')
-        if not resend_api_key:
-            return JsonResponse({
-                'success': False, 
-                'message': 'Email service is not configured. Please contact support.'
-            }, status=500)
-        
+        # 4. Try sending the email FIRST
         resend.api_key = resend_api_key
-        
         default_from = getattr(settings, 'DEFAULT_FROM_EMAIL', 'EK-SMS <noreply@elkendeh.com>')
         
         try:
@@ -512,6 +502,13 @@ def api_send_otp(request):
                 </div>
                 """
             })
+            
+            # 5. Build record only AFTER successful send
+            OTPRecord.objects.create(
+                email=email,
+                code_hash=otp_hash,
+                expires_at=expires_at
+            )
         except Exception as email_error:
             # Log the error but don't expose it to user
             import logging
@@ -557,7 +554,15 @@ def api_resend_otp(request):
         if not email:
             return JsonResponse({'success': False, 'message': 'Email is required.'}, status=400)
         
-        # Check cooldown (60 seconds between resend requests)
+        # 1. Check if email service is configured
+        resend_api_key = getattr(settings, 'RESEND_API_KEY', '')
+        if not resend_api_key:
+            return JsonResponse({
+                'success': False, 
+                'message': 'Email service is not configured. Please contact support.'
+            }, status=500)
+
+        # 2. Check cooldown
         cache_key = f"otp_resend_cooldown_{email}"
         last_resend = cache.get(cache_key)
         if last_resend:
@@ -570,39 +575,15 @@ def api_resend_otp(request):
                     'retry_after': remaining
                 }, status=429)
         
-        # Invalidate any existing unused OTPs for this email
-        OTPRecord.objects.filter(
-            email=email,
-            is_used=False
-        ).update(is_used=True)
-        
-        # Generate new 6-digit OTP
+        # 3. Generate new 6-digit OTP
         otp_code = str(secrets.randbelow(900000) + 100000)
-        
-        # Hash the OTP for storage
         otp_hash = hashlib.sha256(otp_code.encode()).hexdigest()
         
-        # Set expiry time
         expiry_minutes = getattr(settings, 'OTP_EXPIRY_MINUTES', 10)
         expires_at = timezone.now() + timezone.timedelta(minutes=expiry_minutes)
         
-        # Save new OTP record
-        OTPRecord.objects.create(
-            email=email,
-            code_hash=otp_hash,
-            expires_at=expires_at
-        )
-        
-        # Send email using Resend
-        resend_api_key = getattr(settings, 'RESEND_API_KEY', '')
-        if not resend_api_key:
-            return JsonResponse({
-                'success': False, 
-                'message': 'Email service is not configured. Please contact support.'
-            }, status=500)
-        
+        # 4. Send email using Resend
         resend.api_key = resend_api_key
-        
         default_from = getattr(settings, 'DEFAULT_FROM_EMAIL', 'EK-SMS <noreply@elkendeh.com>')
         
         try:
@@ -628,6 +609,18 @@ def api_resend_otp(request):
                 </div>
                 """
             })
+            
+            # 5. Invalidate old and save new AFTER successful send
+            OTPRecord.objects.filter(
+                email=email,
+                is_used=False
+            ).update(is_used=True)
+            
+            OTPRecord.objects.create(
+                email=email,
+                code_hash=otp_hash,
+                expires_at=expires_at
+            )
         except Exception as email_error:
             import logging
             logger = logging.getLogger('django')

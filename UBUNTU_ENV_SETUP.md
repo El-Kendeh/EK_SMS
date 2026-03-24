@@ -111,7 +111,7 @@ pip install --upgrade pip setuptools wheel
 pip install -r requirements.txt
 
 # Test that Resend is installed
-python -c "import resend; print('Resend installed successfully')"
+python3 -c "import resend; print('Resend installed successfully')"
 ```
 
 ---
@@ -298,7 +298,7 @@ python manage.py createsuperuser --settings=eksms.settings_secure
 ```bash
 cd /var/www/ek-sms/eksms
 source venv/bin/activate
-python manage.py shell --settings=eksms.settings_secure
+python3 manage.py shell --settings=eksms.settings_secure
 ```
 
 Then in shell:
@@ -311,7 +311,7 @@ resend.api_key = settings.RESEND_API_KEY
 # Test send
 result = resend.Emails.send({
     "from": settings.DEFAULT_FROM_EMAIL,
-    "to": ["test@example.com"],
+    "to": ["mohamedsallu24@example.com"],
     "subject": "Test Email",
     "html": "<p>This is a test</p>"
 })
