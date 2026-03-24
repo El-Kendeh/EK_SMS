@@ -732,6 +732,34 @@
   }
 }
 
+@media (max-width: 480px) {
+  .reg-card {
+    padding: 26px 18px 22px;
+  }
+
+  .reg-title {
+    font-size: 1.125rem;
+  }
+
+  .step-circle {
+    width: 28px;
+    height: 28px;
+    font-size: 0.75rem;
+  }
+
+  .stepper-track {
+    top: 14px;
+    left: 14px;
+    right: 14px;
+  }
+
+  .btn-back,
+  .btn-next,
+  .btn-submit {
+    min-height: 44px;
+  }
+}
+
 @media (max-width: 400px) {
   .reg-page {
     padding: 20px 10px 36px;

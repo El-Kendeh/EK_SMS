@@ -27,6 +27,7 @@ import SAOnboarding      from './SAOnboarding';
 import SAUsers           from './SAUsers';
 import SANotifications, { INITIAL_UNREAD_COUNT } from './SANotifications';
 import SAProfile         from './SAProfile';
+import SAChangeAlerts    from './SAChangeAlerts';
 
 
 
@@ -142,6 +143,13 @@ const IcOnboarding = () => (
     <polyline points="16 11 18 13 22 9"/>
   </svg>
 );
+const IcChangeAlert = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+    <path d="M13.73 21a2 2 0 01-3.46 0"/>
+    <line x1="12" y1="2" x2="12" y2="4"/>
+  </svg>
+);
 const IcUsers = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
@@ -188,7 +196,8 @@ function GlobalSearch({ pages, schools, onSelect, onClose }) {
       onClick={onClose}
     >
       <div
-        style={{ width: '100%', maxWidth: 540, background: 'var(--sa-card-bg)', border: '1px solid var(--sa-border)', borderRadius: 14, boxShadow: '0 24px 64px rgba(0,0,0,0.5)', overflow: 'hidden' }}
+        className="sa-search-modal"
+        style={{ background: 'var(--sa-card-bg)', border: '1px solid var(--sa-border)', borderRadius: 14, boxShadow: '0 24px 64px rgba(0,0,0,0.5)', overflow: 'hidden' }}
         onClick={e => e.stopPropagation()}
       >
         {/* Input row */}
@@ -310,6 +319,9 @@ export default function Dashboard({ onNavigate }) {
   const [unreadNotifCount, setUnreadNotifCount] = useState(INITIAL_UNREAD_COUNT);
   const [searchOpen,       setSearchOpen]       = useState(false);
   const [secLogFilter,     setSecLogFilter]     = useState('');
+  const [profileAvatar,    setProfileAvatar]    = useState(() => {
+    try { return JSON.parse(localStorage.getItem('ek-sms-profile') || '{}').avatarSrc || null; } catch { return null; }
+  });
 
   /* ---- Data ---- */
   const fetchGradeAlerts = useCallback(async () => {
@@ -441,7 +453,7 @@ export default function Dashboard({ onNavigate }) {
     onNavigate && onNavigate('home');
   };
 
-  const SEC_PAGES   = ['security-logs', 'forensics', 'alert-broadcast', 'system-health'];
+  const SEC_PAGES   = ['security-logs', 'forensics', 'alert-broadcast', 'system-health', 'change-alerts'];
   const GRADE_PAGES = ['grade-report', 'grade-requests', 'grade-audit'];
 
   const goTo = (page) => {
@@ -491,8 +503,9 @@ export default function Dashboard({ onNavigate }) {
     { key: 'users',           label: 'Users',        icon: <IcUsers />,        badge: 0,             section: 'Governance'       },
     { key: 'security-logs',   label: 'Audit Logs',   icon: <IcSecLogs />,      badge: 0,             section: 'Security & Audit' },
     { key: 'forensics',       label: 'Forensics',    icon: <IcForensics />,    badge: 0,             section: 'Security & Audit' },
-    { key: 'alert-broadcast', label: 'Broadcast',    icon: <IcBroadcast />,    badge: 0,             section: 'Security & Audit' },
-    { key: 'system-health',   label: 'System Health',icon: <IcHealth />,       badge: 0,             section: 'Security & Audit' },
+    { key: 'alert-broadcast', label: 'Broadcast',     icon: <IcBroadcast />,     badge: 0,         section: 'Security & Audit' },
+    { key: 'change-alerts',   label: 'Change Alerts', icon: <IcChangeAlert />,   badge: 0,         section: 'Security & Audit' },
+    { key: 'system-health',   label: 'System Health', icon: <IcHealth />,        badge: 0,         section: 'Security & Audit' },
     { key: 'notifications',   label: 'Notifications',icon: <IcBell />,         badge: 0,             section: null     },
     { key: 'settings',        label: 'Settings',     icon: <IcSettings />,     badge: 0,             section: null     },
   ];
@@ -552,8 +565,11 @@ export default function Dashboard({ onNavigate }) {
 
         <div className="sa-sidebar-foot">
           <div className="sa-user-chip" onClick={() => goTo('profile')} style={{ cursor: 'pointer' }} title="My profile">
-            <div className="sa-user-avatar">
-              {(user?.full_name || user?.email || 'A')[0].toUpperCase()}
+            <div className="sa-user-avatar" style={profileAvatar ? { padding: 0, overflow: 'hidden' } : {}}>
+              {profileAvatar
+                ? <img src={profileAvatar} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'inherit' }} />
+                : (user?.full_name || user?.email || 'A')[0].toUpperCase()
+              }
             </div>
             <div style={{ minWidth: 0 }}>
               <p className="sa-user-name">{user?.full_name || user?.username || 'Admin'}</p>
@@ -603,8 +619,11 @@ export default function Dashboard({ onNavigate }) {
               <IcBell />
               {(pendingCount > 0 || unreadNotifCount > 0) && <span className="sa-notif-dot" />}
             </button>
-            <div className="sa-avatar-sm" onClick={() => goTo('profile')} title="My profile" style={{ cursor: 'pointer' }}>
-              {(user?.full_name || user?.email || 'A')[0].toUpperCase()}
+            <div className="sa-avatar-sm" onClick={() => goTo('profile')} title="My profile" style={{ cursor: 'pointer', padding: profileAvatar ? 0 : undefined, overflow: profileAvatar ? 'hidden' : undefined }}>
+              {profileAvatar
+                ? <img src={profileAvatar} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'inherit' }} />
+                : (user?.full_name || user?.email || 'A')[0].toUpperCase()
+              }
             </div>
           </div>
         </header>
@@ -714,6 +733,10 @@ export default function Dashboard({ onNavigate }) {
             <SAAlertBroadcast onNavigate={goTo} />
           )}
 
+          {activePage === 'change-alerts' && (
+            <SAChangeAlerts />
+          )}
+
           {activePage === 'system-health' && (
             <SASystemHealth />
           )}
@@ -723,7 +746,21 @@ export default function Dashboard({ onNavigate }) {
           )}
 
           {activePage === 'analytics' && (
-            <SAAnalytics schools={schools} onLoginAs={(school) => showToast(`Login as "${school.name}" admin — impersonation requires backend support.`, 'info')} />
+            <SAAnalytics schools={schools} onLoginAs={async (school) => {
+              try {
+                const data = await ApiClient.post('/api/impersonate/', { school_id: school.id });
+                if (!data.success) { showToast(data.message || 'Could not impersonate admin.', 'error'); return; }
+                // Save superadmin session so App.js can restore it
+                sessionStorage.setItem('ek-sms-prev-token', localStorage.getItem('token') || '');
+                sessionStorage.setItem('ek-sms-prev-user',  localStorage.getItem('user')  || '');
+                sessionStorage.setItem('ek-sms-impersonating', JSON.stringify({ schoolName: school.name }));
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('user',  JSON.stringify(data.user));
+                window.dispatchEvent(new Event('storage'));
+              } catch (err) {
+                showToast(err.message || 'Impersonation failed.', 'error');
+              }
+            }} />
           )}
 
           {activePage === 'benchmarks' && (
@@ -743,7 +780,12 @@ export default function Dashboard({ onNavigate }) {
           )}
 
           {activePage === 'notifications' && (
-            <SANotifications onNavigate={goTo} onUnreadChange={setUnreadNotifCount} />
+            <SANotifications
+              onNavigate={goTo}
+              onUnreadChange={setUnreadNotifCount}
+              schools={schools}
+              gradeAlerts={gradeAlerts}
+            />
           )}
 
           {activePage === 'settings' && (
@@ -751,7 +793,7 @@ export default function Dashboard({ onNavigate }) {
           )}
 
           {activePage === 'profile' && (
-            <SAProfile user={user} onBack={() => goTo('overview')} />
+            <SAProfile user={user} onBack={() => goTo('overview')} onAvatarChange={setProfileAvatar} />
           )}
 
         </main>

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import ApiClient from '../../api/client';
 
 /* ---- Icons ---- */
 const IcExport  = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
@@ -9,9 +10,20 @@ const IcAlert   = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColo
 const IcCheck   = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>;
 const IcArrow   = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>;
 
-/* ---- Chart data: events per day for 30 days ---- */
-const CHART_30D = [3,5,4,7,9,6,8,5,3,4,7,11,9,6,4,3,5,7,10,14,20,16,11,8,5,3,6,9,7,4];
-const CHART_90D = [2,3,4,3,5,4,6,5,4,3,4,7,9,6,4,3,5,7,10,14,20,16,11,8,5,3,6,9,7,4,3,5,4,7,9,6,8,5,3,4,7,11,9,6,4,3,5,7,10,14,20,16,11,8,5,3,6,9,7,4,3,5,4,7,9,6,8,5,3,4,7,11,9,6,4,3,5,7,10,14,20,16,11,8,5,3,6,9,7,4];
+/* ---- Derive per-day alert counts from real alert timestamps ---- */
+function buildChartFromAlerts(alerts, days) {
+  const counts = new Array(days).fill(0);
+  const now = Date.now();
+  alerts.forEach(a => {
+    if (!a.ts) return;
+    const age = Math.floor((now - new Date(a.ts).getTime()) / 86400000);
+    if (age >= 0 && age < days) counts[days - 1 - age]++;
+  });
+  return counts;
+}
+/* Fallback mock data (used only when no real alerts loaded yet) */
+const CHART_30D_MOCK = [3,5,4,7,9,6,8,5,3,4,7,11,9,6,4,3,5,7,10,14,20,16,11,8,5,3,6,9,7,4];
+const CHART_90D_MOCK = [2,3,4,3,5,4,6,5,4,3,4,7,9,6,4,3,5,7,10,14,20,16,11,8,5,3,6,9,7,4,3,5,4,7,9,6,8,5,3,4,7,11,9,6,4,3,5,7,10,14,20,16,11,8,5,3,6,9,7,4,3,5,4,7,9,6,8,5,3,4,7,11,9,6,4,3,5,7,10,14,20,16,11,8,5,3,6,9,7,4];
 
 /* ---- Schools at risk (most overrides) ---- */
 const TOP_SCHOOLS = [
@@ -63,23 +75,109 @@ function statusStyle(s) {
   return                                            { color: 'var(--sa-amber)',  bg: 'var(--sa-amber-dim)'  };
 }
 
+/* ---- CSV export helper ---- */
+function exportCSV(rows, filename) {
+  if (!rows.length) return;
+  const headers = Object.keys(rows[0]);
+  const csv = [
+    headers.join(','),
+    ...rows.map(r => headers.map(h => `"${String(r[h] ?? '').replace(/"/g, '""')}"`).join(',')),
+  ].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 /* ============================================================
    Main Component
    ============================================================ */
 export default function SAGradeReport({ onViewRequests, onViewDetail }) {
   const [period, setPeriod] = useState('30D');
-  const chartData = period === '30D' ? CHART_30D : CHART_90D;
+  const [alerts, setAlerts]  = useState([]);
+
+  /* Derive chart arrays from real alert timestamps */
+  const chart30Real = useMemo(() => buildChartFromAlerts(alerts, 30),  [alerts]);
+  const chart90Real = useMemo(() => buildChartFromAlerts(alerts, 90),  [alerts]);
+  const chartData = alerts.length > 0
+    ? (period === '30D' ? chart30Real : chart90Real)
+    : (period === '30D' ? CHART_30D_MOCK : CHART_90D_MOCK);
   const { line, area } = buildAreaPath(chartData);
 
+  useEffect(() => {
+    ApiClient.get('/api/grade-alerts/').then(data => {
+      if (data.success && Array.isArray(data.alerts)) setAlerts(data.alerts);
+    }).catch(() => {});
+  }, []);
+
+  /* ── Derived stats ── */
+  const totalAlerts   = alerts.length;
+  const pendingCount  = alerts.filter(a => a.status === 'Pending').length;
+  const flaggedCount  = alerts.filter(a => a.urgency === 'critical' || a.status === 'Flagged').length;
+  const hashVerPct    = totalAlerts > 0
+    ? Math.round(alerts.filter(a => a.hashMatch !== false).length / totalAlerts * 100)
+    : 100;
+
   const stats = [
-    { label: 'Manual Modifications', value: '142', icon: <IcEdit />,   iconCls: 'sa-stat-icon--amber', trend: { dir: 'up',   label: '+5% this term'  } },
-    { label: 'Hash-Verified',         value: '100%', icon: <IcShield />, iconCls: 'sa-stat-icon--green', trend: { dir: 'flat', label: 'All records clean' } },
-    { label: 'Pending Requests',      value: '12',   icon: <IcClock />,  iconCls: 'sa-stat-icon--blue',  trend: { dir: 'down', label: '−2% from last week' } },
-    { label: 'Anomalous Alerts',      value: '3',    icon: <IcAlert />,  iconCls: 'sa-stat-icon--red',   trend: { dir: 'up',   label: '+1 new today',   isAlert: true } },
+    { label: 'Manual Modifications', value: totalAlerts > 0 ? String(totalAlerts) : '—', icon: <IcEdit />,   iconCls: 'sa-stat-icon--amber', trend: { dir: 'up',   label: totalAlerts > 0 ? `${totalAlerts} total` : 'Loading…' } },
+    { label: 'Hash-Verified',         value: `${hashVerPct}%`,  icon: <IcShield />, iconCls: 'sa-stat-icon--green', trend: { dir: 'flat', label: 'All records checked' } },
+    { label: 'Pending Requests',      value: totalAlerts > 0 ? String(pendingCount) : '—', icon: <IcClock />,  iconCls: 'sa-stat-icon--blue',  trend: { dir: pendingCount > 0 ? 'up' : 'flat', label: `${pendingCount} queued` } },
+    { label: 'Anomalous Alerts',      value: totalAlerts > 0 ? String(flaggedCount) : '—', icon: <IcAlert />,  iconCls: 'sa-stat-icon--red',   trend: { dir: flaggedCount > 0 ? 'up' : 'flat', label: flaggedCount > 0 ? `${flaggedCount} need review` : 'None flagged', isAlert: flaggedCount > 0 } },
   ];
 
-  /* Donut gradient string */
-  const donutGrad = `conic-gradient(var(--sa-accent) 0% 45%, var(--sa-red) 45% 70%, var(--sa-amber) 70% 100%)`;
+  /* ── Top schools by alert count ── */
+  const schoolCountMap = {};
+  alerts.forEach(a => { if (a.school) schoolCountMap[a.school] = (schoolCountMap[a.school] || 0) + 1; });
+  const RISK_COLORS = ['var(--sa-red)', 'var(--sa-amber)', 'var(--sa-accent)', 'var(--sa-purple)'];
+  const maxCount    = Math.max(1, ...Object.values(schoolCountMap));
+  const topSchoolsData = Object.entries(schoolCountMap)
+    .sort((a, b) => b[1] - a[1]).slice(0, 4)
+    .map(([name, count], i) => ({ name, count, pct: Math.round(count / maxCount * 100), color: RISK_COLORS[i] }));
+  const displayTopSchools = topSchoolsData.length > 0 ? topSchoolsData : TOP_SCHOOLS;
+
+  /* ── Reasons breakdown ── */
+  const reasonMap = {};
+  alerts.forEach(a => { if (a.reason) reasonMap[a.reason] = (reasonMap[a.reason] || 0) + 1; });
+  const totalWithReason = Object.values(reasonMap).reduce((s, n) => s + n, 0);
+  const REASON_COLORS = ['var(--sa-accent)', 'var(--sa-red)', 'var(--sa-amber)', 'var(--sa-purple)'];
+  const realReasons = totalWithReason > 0
+    ? Object.entries(reasonMap).sort((a, b) => b[1] - a[1]).slice(0, 3)
+        .map(([label, count], i) => ({ label, pct: Math.round(count / totalWithReason * 100), color: REASON_COLORS[i] }))
+    : null;
+  const displayReasons = realReasons || REASONS;
+
+  /* ── Recent logs from real alerts ── */
+  const recentLogs = alerts.length > 0
+    ? alerts.slice(0, 5).map(a => ({
+        id:       a.id,
+        time:     a.ts ? new Date(a.ts).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '—',
+        date:     a.ts ? new Date(a.ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '—',
+        school:   a.school   || '—',
+        subject:  a.subject  || '—',
+        oldGrade: a.oldGrade || '—',
+        newGrade: a.newGrade || '—',
+        actor:    a.requester?.name || 'Unknown',
+        status:   a.status   || 'Pending',
+        isFlag:   a.urgency === 'critical' || a.hashMatch === false,
+        _raw:     a,
+      }))
+    : RECENT_LOGS;
+
+  /* Donut gradient from real reasons */
+  const donutGrad = displayReasons.length >= 2
+    ? (() => {
+        let stops = '', pos = 0;
+        displayReasons.forEach((r, i) => {
+          const end = pos + r.pct;
+          stops += `${r.color} ${pos}% ${Math.min(end, 100)}%${i < displayReasons.length - 1 ? ', ' : ''}`;
+          pos = end;
+        });
+        return `conic-gradient(${stops})`;
+      })()
+    : `conic-gradient(var(--sa-accent) 0% 45%, var(--sa-red) 45% 70%, var(--sa-amber) 70% 100%)`;
 
   return (
     <div>
@@ -94,6 +192,21 @@ export default function SAGradeReport({ onViewRequests, onViewDetail }) {
           className="sa-btn sa-btn--primary"
           style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}
           aria-label="Export audit report"
+          onClick={() => exportCSV(
+            recentLogs.map(r => ({
+              'Request ID': r.id,
+              'Date':       r.date,
+              'Time':       r.time,
+              'School':     r.school,
+              'Subject':    r.subject,
+              'Old Grade':  r.oldGrade,
+              'New Grade':  r.newGrade,
+              'Actor':      r.actor,
+              'Status':     r.status,
+              'Flagged':    r.isFlag ? 'Yes' : 'No',
+            })),
+            `ek-sms-grade-audit-${new Date().toISOString().slice(0,10)}.csv`
+          )}
         >
           <span style={{ width: 16, height: 16, display: 'flex' }}><IcExport /></span>
           <span>Export Audit</span>
@@ -222,7 +335,7 @@ export default function SAGradeReport({ onViewRequests, onViewDetail }) {
             <p className="sa-card-title">Top Schools — Manual Overrides</p>
           </div>
           <div className="sa-card-body">
-            {TOP_SCHOOLS.map((s, i) => (
+            {displayTopSchools.map((s, i) => (
               <div key={i} className="sa-gi-bar-row">
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
                   <span style={{ fontSize: '0.8125rem', color: 'var(--sa-text-2)' }}>{s.name}</span>
@@ -247,12 +360,12 @@ export default function SAGradeReport({ onViewRequests, onViewDetail }) {
               <div className="sa-gi-donut" style={{ background: donutGrad }} aria-hidden="true">
                 <div className="sa-gi-donut-inner">
                   <span style={{ fontSize: '0.625rem', color: 'var(--sa-text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total</span>
-                  <span style={{ fontSize: '0.9375rem', fontWeight: 800, color: 'var(--sa-text)' }}>142</span>
+                  <span style={{ fontSize: '0.9375rem', fontWeight: 800, color: 'var(--sa-text)' }}>{totalAlerts || '—'}</span>
                 </div>
               </div>
               {/* Legend */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 1 }}>
-                {REASONS.map((r, i) => (
+                {displayReasons.map((r, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.75rem' }}>
                     <div style={{ width: 10, height: 10, borderRadius: '50%', background: r.color, flexShrink: 0 }} />
                     <span style={{ color: 'var(--sa-text-2)', flex: 1 }}>{r.label}</span>
@@ -289,13 +402,13 @@ export default function SAGradeReport({ onViewRequests, onViewDetail }) {
               </tr>
             </thead>
             <tbody>
-              {RECENT_LOGS.map(log => {
+              {recentLogs.map(log => {
                 const st = statusStyle(log.status);
                 return (
                   <tr
                     key={log.id}
                     style={{ cursor: 'pointer' }}
-                    onClick={() => onViewDetail && onViewDetail(log)}
+                    onClick={() => onViewDetail && onViewDetail(log._raw || log)}
                   >
                     <td style={{ whiteSpace: 'nowrap' }}>
                       <div style={{ fontWeight: 600, color: 'var(--sa-text)', fontSize: '0.8125rem' }}>{log.time}</div>

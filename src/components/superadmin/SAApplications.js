@@ -71,16 +71,26 @@ export default function SAApplications({ schools, onReview }) {
   const [riskFilter, setRiskFilter] = useState('all');
 
   /* Split pending vs approved vs rejected */
-  const pending  = useMemo(() => schools.filter(s => !s.is_approved && s.is_active !== false), [schools]);
+  const pending  = useMemo(() => schools.filter(s => !s.is_approved && !s.rejection_reason), [schools]);
   const approved = useMemo(() => schools.filter(s => s.is_approved),  [schools]);
+  const rejected = useMemo(() => schools.filter(s => !s.is_approved && !!s.rejection_reason), [schools]);
 
-  /* Avg review time — mock for now */
-  const avgReview = '3h 20m';
+  /* Avg review time: mean gap between registration_date and approval_date for approved schools */
+  const avgReview = useMemo(() => {
+    const withDates = approved.filter(s => s.registration_date && s.approval_date);
+    if (!withDates.length) return '—';
+    const avgMs = withDates.reduce((sum, s) => sum + (new Date(s.approval_date) - new Date(s.registration_date)), 0) / withDates.length;
+    const h = Math.floor(avgMs / 3600000);
+    const d = Math.floor(h / 24);
+    if (d > 0) return `${d}d ${h % 24}h`;
+    const m = Math.floor((avgMs % 3600000) / 60000);
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  }, [approved]);
 
   const stats = [
     { label: 'Pending',    value: pending.length,  icon: <IcClock />,    cls: 'sa-stat-icon--amber',  trend: { dir: pending.length > 0 ? 'up' : 'flat',    label: pending.length > 0 ? `${pending.length} awaiting` : 'All caught up' } },
     { label: 'Approved',   value: approved.length, icon: <IcCheck />,    cls: 'sa-stat-icon--green',  trend: { dir: approved.length > 0 ? 'up' : 'flat',   label: approved.length > 0 ? `+${approved.length} total` : 'None yet' } },
-    { label: 'Rejected',   value: 0,               icon: <IcX />,        cls: 'sa-stat-icon--red',    trend: { dir: 'flat', label: 'No change' } },
+    { label: 'Rejected',   value: rejected.length,  icon: <IcX />,        cls: 'sa-stat-icon--red',    trend: { dir: rejected.length > 0 ? 'up' : 'flat', label: rejected.length > 0 ? `${rejected.length} rejected` : 'None rejected' } },
     { label: 'Avg Review', value: avgReview,        icon: <IcCalendar />, cls: 'sa-stat-icon--blue',   trend: { dir: 'down', label: '−10m faster' } },
   ];
 
@@ -238,9 +248,18 @@ export default function SAApplications({ schools, onReview }) {
                   </div>
                 </div>
 
+                {school.rejection_reason && (
+                  <div style={{ marginBottom: 10, padding: '8px 12px', background: 'var(--sa-red-dim)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8 }}>
+                    <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--sa-red)', fontWeight: 600 }}>Rejected</p>
+                    <p style={{ margin: '2px 0 0', fontSize: '0.75rem', color: 'var(--sa-text-2)', lineHeight: 1.5 }}>{school.rejection_reason}</p>
+                    {school.approval_date && (
+                      <p style={{ margin: '2px 0 0', fontSize: '0.6875rem', color: 'var(--sa-text-3)' }}>{fmtDate(school.approval_date)}</p>
+                    )}
+                  </div>
+                )}
                 <button
                   className={`sa-btn sa-btn--full${isHighRisk ? ' sa-btn--primary' : ' sa-btn--ghost'}`}
-                  onClick={() => onReview(school)}
+                  onClick={() => onReview && onReview(school)}
                 >
                   Review Application <IcArrowR />
                 </button>

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import ApiClient from '../../api/client';
 
 /* ---- Icons ---- */
 const IcCampaign = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2L11 13"/><path d="M22 2L15 22l-4-9-9-4 22-7z"/></svg>;
@@ -11,30 +12,6 @@ const IcArrow    = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentCol
 const IcAnalytics= () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>;
 const IcBack     = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>;
 
-/* ---- Mock data ---- */
-const ALERTS = [
-  {
-    id: 'ALT-001', title: 'Emergency Grade Lock Protocol Update',
-    type: 'Security', severity: 'critical',
-    target: 'All Schools', status: 'Sent', time: 'Today, 09:42 AM',
-    body: 'Please be advised that the emergency grade lock protocol has been updated effective immediately. All school administrators are required to review the new procedures regarding classroom lockdown drills and real-time reporting mechanisms. Failure to acknowledge this protocol may result in suspension of administrative override privileges.',
-    readRate: 87, recipients: 1245,
-  },
-  {
-    id: 'ALT-002', title: 'Scheduled Server Maintenance Window',
-    type: 'System Ops', severity: 'medium',
-    target: 'Region: Western', status: 'Scheduled', time: 'Tomorrow, 11:00 PM',
-    body: 'A planned maintenance window is scheduled for the Western region servers. Expect brief service interruptions. Administrators should notify their users in advance and ensure all pending grade submissions are saved before the window begins.',
-    readRate: 0, recipients: 342,
-  },
-  {
-    id: 'ALT-003', title: 'Policy Update: Q4 Data Retention',
-    type: 'General', severity: 'low',
-    target: 'Admin Staff', status: 'Draft', time: 'Last edited 2h ago',
-    body: 'The Q4 data retention policy update is currently in draft. This will affect how student records are archived at the end of the academic year. Please review and provide feedback before the policy goes into effect.',
-    readRate: 0, recipients: 0,
-  },
-];
 
 const STATUS_STYLE = {
   Sent:      { color: 'var(--sa-green)',  bg: 'var(--sa-green-dim)'  },
@@ -127,41 +104,31 @@ function AlertDetail({ alert, onBack }) {
 
       {/* Secondary */}
       <div style={{ display: 'flex', gap: 10 }}>
-        <button className="sa-btn sa-btn--ghost sa-btn--full" style={{ justifyContent: 'center', fontSize: '0.8125rem' }}>
+        <button className="sa-btn sa-btn--ghost sa-btn--full"
+          style={{ justifyContent: 'center', fontSize: '0.8125rem', opacity: 0.5, cursor: 'not-allowed' }}
+          disabled title="Audit log view not yet available">
           View Full Audit Log
         </button>
-        <button className="sa-btn sa-btn--ghost sa-btn--full" style={{ justifyContent: 'center', fontSize: '0.8125rem' }}>
+        <button className="sa-btn sa-btn--ghost sa-btn--full"
+          style={{ justifyContent: 'center', fontSize: '0.8125rem', opacity: 0.5, cursor: 'not-allowed' }}
+          disabled title="Not yet available">
           Review School Settings
         </button>
       </div>
 
-      {/* Delivery analytics — only for Sent */}
+      {/* Delivery analytics placeholder — read tracking not yet available */}
       {alert.status === 'Sent' && (
         <div className="sa-card" style={{ marginTop: 20 }}>
           <div className="sa-card-head">
-            <p className="sa-card-title"><IcAnalytics style={{ display: 'inline', verticalAlign: 'middle', width: 14, height: 14, marginRight: 6 }} />Delivery Analytics</p>
+            <p className="sa-card-title">
+              <IcAnalytics style={{ display: 'inline', verticalAlign: 'middle', width: 14, height: 14, marginRight: 6 }} />
+              Delivery Analytics
+            </p>
           </div>
           <div className="sa-card-body">
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ fontSize: '0.8125rem', color: 'var(--sa-text-2)' }}>Read Rate</span>
-                <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: alert.readRate >= 90 ? 'var(--sa-green)' : 'var(--sa-amber)' }}>{alert.readRate}%</span>
-              </div>
-              <div className="sa-progress-track">
-                <div className="sa-progress-fill" style={{ width: `${alert.readRate}%`, background: alert.readRate >= 90 ? 'var(--sa-green)' : 'var(--sa-amber)' }} />
-              </div>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              {[
-                ['Recipients', alert.recipients.toLocaleString()],
-                ['Read',       Math.round(alert.recipients * alert.readRate / 100).toLocaleString()],
-              ].map(([k, v]) => (
-                <div key={k} style={{ background: 'var(--sa-card-bg2)', borderRadius: 8, padding: '10px 12px', border: '1px solid var(--sa-border)' }}>
-                  <p style={{ margin: '0 0 2px', fontSize: '0.6875rem', color: 'var(--sa-text-2)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{k}</p>
-                  <p style={{ margin: 0, fontWeight: 700, fontSize: '1.125rem', color: 'var(--sa-text)' }}>{v}</p>
-                </div>
-              ))}
-            </div>
+            <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--sa-text-2)', textAlign: 'center', padding: '12px 0' }}>
+              Read-receipt tracking is not yet enabled for this broadcast.
+            </p>
           </div>
         </div>
       )}
@@ -172,7 +139,7 @@ function AlertDetail({ alert, onBack }) {
 /* ==============================
    Compose View
    ============================== */
-function ComposeAlert({ onBack }) {
+function ComposeAlert({ onBack, onSent }) {
   const [title,    setTitle]    = useState('');
   const [type,     setType]     = useState('General');
   const [severity, setSeverity] = useState('low');
@@ -183,9 +150,18 @@ function ComposeAlert({ onBack }) {
 
   const canSend = title.trim().length > 0 && body.trim().length > 0;
 
-  const handleSend = () => {
+  const handleSend = async () => {
     setSending(true);
-    setTimeout(() => { setSent(true); setTimeout(onBack, 1200); }, 800);
+    try {
+      const res = await ApiClient.post('/api/broadcast-alerts/', { title, message: body, severity, audience: target });
+      if (!res?.success) throw new Error(res?.message || 'Broadcast failed');
+      setSent(true);
+      if (onSent) onSent();
+      setTimeout(onBack, 1200);
+    } catch (err) {
+      console.error('Failed to send alert', err);
+      setSending(false);
+    }
   };
 
   if (sent) return (
@@ -220,7 +196,7 @@ function ComposeAlert({ onBack }) {
       </div>
 
       {/* Type + Severity */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+      <div className="sa-compose-field-row">
         <div>
           <label className="sa-field-label" htmlFor="cmp-type">Alert Type</label>
           <div className="sa-select-wrap">
@@ -292,14 +268,14 @@ function ComposeAlert({ onBack }) {
         </button>
         <div style={{ display: 'flex', gap: 10 }}>
           <button className="sa-btn sa-btn--ghost sa-btn--full"
-            style={{ justifyContent: 'center', fontSize: '0.8125rem' }}
-            disabled={sending} onClick={onBack}>
-            Schedule
+            style={{ justifyContent: 'center', fontSize: '0.8125rem', opacity: 0.5, cursor: 'not-allowed' }}
+            disabled title="Scheduled broadcasts not yet available">
+            Schedule (soon)
           </button>
           <button className="sa-btn sa-btn--ghost sa-btn--full"
-            style={{ justifyContent: 'center', fontSize: '0.8125rem' }}
-            disabled={sending} onClick={onBack}>
-            Save as Draft
+            style={{ justifyContent: 'center', fontSize: '0.8125rem', opacity: 0.5, cursor: 'not-allowed' }}
+            disabled title="Draft saving not yet available">
+            Save Draft (soon)
           </button>
         </div>
       </div>
@@ -311,20 +287,58 @@ function ComposeAlert({ onBack }) {
    Main List View
    ============================== */
 export default function SAAlertBroadcast() {
-  const [selected,  setSelected]  = useState(null);
-  const [composing, setComposing] = useState(false);
+  const [selected,      setSelected]      = useState(null);
+  const [composing,     setComposing]     = useState(false);
+  const [alerts,        setAlerts]        = useState([]);
+  const [activeAdmins,  setActiveAdmins]  = useState(null);
 
-  if (composing) return <ComposeAlert onBack={() => setComposing(false)} />;
+  const fetchAlerts = useCallback(async () => {
+    try {
+      const data = await ApiClient.get('/api/broadcast-alerts/');
+      if (data.success && Array.isArray(data.broadcasts)) {
+        setAlerts(data.broadcasts.map(b => {
+          const sev = b.severity === 'critical' ? 'critical' : b.severity === 'warning' || b.severity === 'medium' ? 'medium' : 'low';
+          const type = sev === 'critical' ? 'Security' : sev === 'medium' ? 'System Ops' : 'General';
+          return {
+            id:       String(b.id),
+            title:    b.title,
+            type,
+            severity: sev,
+            target:   b.audience === 'all' ? 'All Schools' : (b.target_school || b.audience),
+            status:   b.status === 'sent' ? 'Sent' : b.status === 'draft' ? 'Draft' : 'Scheduled',
+            time:     b.sent_at ? new Date(b.sent_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Queued',
+            body:     b.message,
+          };
+        }));
+      }
+    } catch (err) {
+      console.error('Failed to fetch broadcast alerts', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAlerts();
+    ApiClient.get('/api/get-users/').then(data => {
+      if (data.success && Array.isArray(data.users)) {
+        setActiveAdmins(data.users.filter(u => u.status === 'active').length);
+      }
+    }).catch(() => {});
+  }, [fetchAlerts]);
+
+  if (composing) return <ComposeAlert onBack={() => setComposing(false)} onSent={fetchAlerts} />;
 
   if (selected) {
-    const alert = ALERTS.find(a => a.id === selected);
+    const alert = alerts.find(a => a.id === selected);
     if (alert) return <AlertDetail alert={alert} onBack={() => setSelected(null)} />;
   }
 
+  const criticalCount = alerts.filter(a => a.severity === 'critical').length;
+  const sentCount     = alerts.filter(a => a.status === 'Sent').length;
+
   const metrics = [
-    { label: 'Active Admins',   value: '1,245', sub: '+2.4% this week', icon: <IcUsers />,    cls: 'sa-stat-icon--blue'  },
-    { label: 'Avg Read Rate',   value: '94.2%', sub: 'Target: 90%',      icon: <IcMail />,     cls: 'sa-stat-icon--green' },
-    { label: 'Critical Alerts', value: 12,      sub: 'This month',       icon: <IcAlert />,    cls: 'sa-stat-icon--red'   },
+    { label: 'Active Users',    value: activeAdmins === null ? '…' : activeAdmins.toLocaleString(), sub: 'Live count',   icon: <IcUsers />, cls: 'sa-stat-icon--blue'  },
+    { label: 'Total Sent',      value: sentCount,       sub: 'All time',      icon: <IcMail />,  cls: 'sa-stat-icon--green' },
+    { label: 'Critical Alerts', value: criticalCount,   sub: 'All time',      icon: <IcAlert />, cls: 'sa-stat-icon--red'   },
   ];
 
   return (
@@ -373,7 +387,7 @@ export default function SAAlertBroadcast() {
 
       {/* Alert cards */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {ALERTS.map(alert => {
+        {alerts.map(alert => {
           const ss  = STATUS_STYLE[alert.status] || STATUS_STYLE.Draft;
           const sev = SEV_STYLE[alert.severity]  || SEV_STYLE.low;
           const typeIcon = TYPE_ICONS[alert.type] || <IcCampaign />;
@@ -381,8 +395,8 @@ export default function SAAlertBroadcast() {
             <div key={alert.id} className="sa-card" style={{ cursor: 'pointer' }} onClick={() => setSelected(alert.id)}>
               <div style={{ padding: '16px 20px' }}>
                 {/* Top row */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 12 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: '1 1 0' }}>
                     <div style={{
                       width: 40, height: 40, borderRadius: 10, background: sev.iconBg, color: sev.color,
                       display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
@@ -402,7 +416,7 @@ export default function SAAlertBroadcast() {
                 </div>
 
                 {/* Meta grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+                <div className="sa-alert-meta-grid">
                   {[['Target', alert.target], ['Type', alert.type]].map(([k, v]) => (
                     <div key={k} style={{ background: 'var(--sa-card-bg2)', borderRadius: 6, padding: '8px 10px', border: '1px solid var(--sa-border)' }}>
                       <p style={{ margin: '0 0 2px', fontSize: '0.625rem', color: 'var(--sa-text-2)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{k}</p>

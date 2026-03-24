@@ -3,22 +3,11 @@
    Dark theme. Pure CSS.
    ============================================================ */
 
-/* ---- Tokens ---- */
+/* ---- Tokens (layout/spacing/colours that never change) ---- */
 :root {
-  --sa-bg:           #070C1A;
-  --sa-sidebar-bg:   #0A0F1E;
-  --sa-card-bg:      #0F1629;
-  --sa-card-bg2:     #141D33;
-  --sa-border:       rgba(255,255,255,0.07);
-  --sa-border-hover: rgba(255,255,255,0.13);
-
   --sa-accent:       #0EA5E9;
   --sa-accent-dim:   rgba(14,165,233,0.15);
   --sa-brand:        #1B3FAF;
-
-  --sa-text:         #EFF4FF;
-  --sa-text-2:       #7A8BA8;
-  --sa-text-3:       #3D4F6B;
 
   --sa-green:        #10B981;
   --sa-green-dim:    rgba(16,185,129,0.15);
@@ -37,24 +26,80 @@
   --sa-font:         -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
+/* ---- Dark theme (default when data-theme="dark" or unset) ---- */
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --sa-bg:           #070C1A;
+  --sa-sidebar-bg:   #0A0F1E;
+  --sa-card-bg:      #0F1629;
+  --sa-card-bg2:     #141D33;
+  --sa-border:       rgba(255,255,255,0.07);
+  --sa-border-hover: rgba(255,255,255,0.13);
+
+  --sa-text:         #EFF4FF;
+  --sa-text-2:       #7A8BA8;
+  --sa-text-3:       #3D4F6B;
+
+  --sa-ghost-bg:     rgba(255,255,255,0.06);
+}
+
 /* ---- Light theme overrides ---- */
 [data-theme="light"] {
-  --sa-bg:           #F0F4F8;
-  --sa-sidebar-bg:   #FFFFFF;
+  color-scheme: light;
+
+  --sa-bg:           #DDE4EF;
+  --sa-sidebar-bg:   #F4F7FB;
   --sa-card-bg:      #FFFFFF;
-  --sa-card-bg2:     #F8FAFC;
-  --sa-border:       rgba(0,0,0,0.09);
-  --sa-border-hover: rgba(0,0,0,0.18);
+  --sa-card-bg2:     #EEF2F8;
+  --sa-border:       rgba(0,0,0,0.13);
+  --sa-border-hover: rgba(0,0,0,0.22);
 
   --sa-text:         #0F172A;
-  --sa-text-2:       #475569;
-  --sa-text-3:       #94A3B8;
+  --sa-text-2:       #3D4F6B;
+  --sa-text-3:       #7A8BA8;
 
-  --sa-accent-dim:   rgba(14,165,233,0.12);
-  --sa-green-dim:    rgba(16,185,129,0.12);
-  --sa-amber-dim:    rgba(245,158,11,0.12);
-  --sa-red-dim:      rgba(239,68,68,0.12);
-  --sa-purple-dim:   rgba(139,92,246,0.12);
+  --sa-accent-dim:   rgba(14,165,233,0.14);
+  --sa-green-dim:    rgba(16,185,129,0.14);
+  --sa-amber-dim:    rgba(245,158,11,0.14);
+  --sa-red-dim:      rgba(239,68,68,0.14);
+  --sa-purple-dim:   rgba(139,92,246,0.14);
+  --sa-ghost-bg:     rgba(0,0,0,0.07);
+}
+
+/* Dark mode — explicit backgrounds so cards are never rendered white.
+   These hardcode the value so they win over any variable-resolution failure. */
+[data-theme="dark"] .sa-card,
+[data-theme="dark"] .sa-stat-card,
+[data-theme="dark"] .sa-integrity-card,
+[data-theme="dark"] .sa-app-card { background: #0F1629; }
+
+/* Cards need elevation in light mode so they stand out from the bg */
+[data-theme="light"] .sa-card {
+  background: #FFFFFF;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.05);
+}
+
+/* Sidebar needs a right shadow to separate it from content */
+[data-theme="light"] .sa-sidebar {
+  box-shadow: 2px 0 12px rgba(0,0,0,0.07);
+}
+
+/* Topbar needs a bottom shadow */
+[data-theme="light"] .sa-topbar {
+  box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+}
+
+/* Nav hover — hardcoded white is invisible in light mode */
+[data-theme="light"] .sa-nav-btn:hover {
+  background: rgba(0,0,0,0.06);
+  color: var(--sa-text);
+}
+
+/* Stat cards in light mode */
+[data-theme="light"] .sa-stat-card {
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
 }
 
 /* ============================================================
@@ -157,7 +202,7 @@
 }
 
 .sa-nav-btn:hover {
-  background: rgba(255,255,255,0.05);
+  background: var(--sa-ghost-bg);
   color: var(--sa-text);
 }
 
@@ -328,7 +373,7 @@
   flex-shrink: 0;
 }
 
-.sa-menu-btn:hover { background: rgba(255,255,255,0.07); }
+.sa-menu-btn:hover { background: var(--sa-ghost-bg); }
 
 .sa-menu-btn svg {
   width: 20px;
@@ -370,7 +415,7 @@
   transition: background 0.15s;
 }
 
-.sa-notif-btn:hover { background: rgba(255,255,255,0.07); }
+.sa-notif-btn:hover { background: var(--sa-ghost-bg); }
 
 .sa-notif-btn svg {
   width: 18px;
@@ -404,6 +449,14 @@
   text-transform: uppercase;
   cursor: pointer;
 }
+
+/* ---- Scrollbars — dark mode ---- */
+.sa-wrap ::-webkit-scrollbar              { width: 6px; height: 6px; }
+.sa-wrap ::-webkit-scrollbar-track        { background: transparent; }
+.sa-wrap ::-webkit-scrollbar-thumb        { background: rgba(255,255,255,0.12); border-radius: 999px; }
+.sa-wrap ::-webkit-scrollbar-thumb:hover  { background: rgba(255,255,255,0.22); }
+[data-theme="light"] .sa-wrap ::-webkit-scrollbar-thumb       { background: rgba(0,0,0,0.18); }
+[data-theme="light"] .sa-wrap ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.32); }
 
 /* ---- Scrollable content area ---- */
 .sa-content {
@@ -647,7 +700,7 @@
 
 .sa-stat-trend--up   { background: var(--sa-green-dim); color: var(--sa-green); }
 .sa-stat-trend--down { background: var(--sa-red-dim);   color: var(--sa-red); }
-.sa-stat-trend--flat { background: rgba(255,255,255,0.06); color: var(--sa-text-2); }
+.sa-stat-trend--flat { background: var(--sa-border); color: var(--sa-text-2); }
 
 /* ---- Cards ---- */
 .sa-card {
@@ -793,7 +846,7 @@
 }
 
 .sa-filter-tab:hover {
-  background: rgba(255,255,255,0.05);
+  background: var(--sa-ghost-bg);
   color: var(--sa-text);
 }
 
@@ -851,7 +904,7 @@
 .sa-table tr:last-child td { border-bottom: none; }
 
 .sa-table tbody tr:hover td {
-  background: rgba(255,255,255,0.025);
+  background: var(--sa-ghost-bg);
 }
 
 .sa-table-school-name {
@@ -997,7 +1050,7 @@
 .sa-btn--approve  { background: var(--sa-green);   color: #fff; }
 .sa-btn--reject   { background: var(--sa-red);     color: #fff; }
 .sa-btn--changes  { background: var(--sa-amber);   color: #fff; }
-.sa-btn--ghost    { background: rgba(255,255,255,0.06); color: var(--sa-text); border: 1px solid var(--sa-border); }
+.sa-btn--ghost    { background: var(--sa-ghost-bg); color: var(--sa-text); border: 1px solid var(--sa-border); }
 .sa-btn--full     { width: 100%; }
 .sa-btn--sm       { padding: 6px 14px; font-size: 0.8125rem; }
 
@@ -2383,6 +2436,10 @@
   transition: transform 0.2s;
   pointer-events: none;
 }
+[data-theme="light"] .sa-toggle-knob {
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+}
 .sa-toggle-knob--on { transform: translateX(20px); }
 
 /* Slider */
@@ -2420,6 +2477,7 @@
   transition: border-color 0.15s;
 }
 .sa-select:focus      { outline: none; border-color: var(--sa-accent); }
+.sa-select option     { background: var(--sa-card-bg); color: var(--sa-text); }
 .sa-select-chevron    { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--sa-text-3); display: flex; }
 
 /* Upload grid */
@@ -2694,6 +2752,44 @@
 .san-map-dot             { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; }
 .san-map-dot--active     { background: var(--sa-accent); }
 .san-map-dot--pending    { background: var(--sa-amber); }
+
+/* ── Geo Distribution Map ────────────────────────────────────── */
+.san-geo-wrap            { display: flex; gap: 20px; align-items: flex-start; }
+.san-geo-map-col         { position: relative; flex: 1 1 0; min-width: 0; }
+.san-geo-live-badge      {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--sa-green-dim); color: var(--sa-green);
+  border: 1px solid rgba(16,185,129,0.25); border-radius: 20px;
+  padding: 3px 11px; font-size: 0.6875rem; font-weight: 700;
+  margin-bottom: 8px;
+}
+.san-geo-tooltip         {
+  position: absolute; z-index: 10; pointer-events: none;
+  background: var(--sa-card-bg2); border: 1px solid var(--sa-border);
+  border-radius: 8px; padding: 9px 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  min-width: 140px; max-width: 200px;
+}
+.san-geo-tt-name         { font-size: 0.8125rem; font-weight: 700; color: var(--sa-text); margin: 0 0 3px; }
+.san-geo-tt-loc          { font-size: 0.6875rem; color: var(--sa-text-2); margin: 0 0 6px; }
+.san-geo-tt-status       { font-size: 0.625rem; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
+.san-geo-tt-status--active  { background: var(--sa-accent-dim); color: var(--sa-accent); }
+.san-geo-tt-status--pending { background: var(--sa-amber-dim);  color: var(--sa-amber);  }
+.san-geo-sidebar         { width: 190px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; padding-top: 34px; }
+.san-geo-sidebar-title   { font-size: 0.75rem; font-weight: 700; color: var(--sa-text-2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; }
+.san-geo-country-row     { display: flex; flex-direction: column; gap: 4px; }
+.san-geo-country-top     { display: flex; justify-content: space-between; align-items: baseline; }
+.san-geo-country-name    { font-size: 0.8125rem; font-weight: 600; color: var(--sa-text); }
+.san-geo-country-count   { font-size: 0.75rem; font-weight: 700; color: var(--sa-accent); }
+.san-geo-bar-bg          { height: 4px; background: var(--sa-border); border-radius: 2px; overflow: hidden; }
+.san-geo-bar-fill        { height: 100%; background: var(--sa-accent); border-radius: 2px; transition: width 0.4s; }
+.san-geo-country-sub     { font-size: 0.625rem; color: var(--sa-text-3); font-weight: 600; }
+
+/* Mobile: stack geo map above sidebar */
+@media (max-width: 700px) {
+  .san-geo-wrap      { flex-direction: column; }
+  .san-geo-sidebar   { width: 100%; padding-top: 0; flex-direction: row; flex-wrap: wrap; gap: 8px; }
+  .san-geo-country-row { flex: 1 1 140px; }
+}
 
 /* ── Allocation bars ────────────────────────────────────────── */
 .san-alloc-body          { gap: 10px; }
@@ -3087,4 +3183,256 @@
   .sp-activity-row  { gap: 10px; padding: 12px 16px; }
   .sp-field         { padding: 14px 16px; }
   .sp-section-hdr   { padding: 12px 16px; }
+}
+
+/* ============================================================
+   GLOBAL MOBILE OVERRIDES
+   ============================================================ */
+
+/* ---- Reusable layout classes (desktop base) ---- */
+.sa-search-modal      { width: 100%; max-width: 540px; }
+.sa-alert-meta-grid   { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.sa-compose-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+
+/* ============================================================
+   ≤ 768px additions (tablet)
+   ============================================================ */
+@media (max-width: 768px) {
+  .sa-toolbar-search { min-width: unset; width: 100%; }
+}
+
+/* ============================================================
+   ≤ 600px  (phones portrait, small tablets)
+   ============================================================ */
+@media (max-width: 600px) {
+  /* Governance stats → 1 column */
+  .sa-gov-stats { grid-template-columns: 1fr; }
+
+  /* Permission matrix → 3 cols so checkboxes stay tappable */
+  .sa-perm-matrix { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .sa-perm-checkbox { width: 22px; height: 22px; }
+  .sa-perm-col-label { font-size: 0.625rem; }
+
+  /* Search modal → full width with breathing room */
+  .sa-search-modal { max-width: calc(100vw - 32px); }
+
+  /* Broadcast card meta grid → single column */
+  .sa-alert-meta-grid { grid-template-columns: 1fr; }
+
+  /* Compose form type+severity → stack */
+  .sa-compose-field-row { grid-template-columns: 1fr; }
+
+  /* Security table — hide Action / Actor / Source IP */
+  .sa-sec-table th:nth-child(4),
+  .sa-sec-table td:nth-child(4),
+  .sa-sec-table th:nth-child(5),
+  .sa-sec-table td:nth-child(5),
+  .sa-sec-table th:nth-child(6),
+  .sa-sec-table td:nth-child(6) { display: none; }
+
+  /* LCC impact grid → 1 column */
+  .sa-lcc-impact-grid { grid-template-columns: 1fr; }
+
+  /* Oversight header → stack */
+  .san-oversight-hdr { flex-direction: column; align-items: flex-start; gap: 8px; }
+
+  /* School card section headers → allow wrap */
+  .san-card-hdr { flex-wrap: wrap; gap: 8px; }
+
+  /* School card stat row → 2-col grid */
+  .san-school-stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .san-school-stat { flex-direction: column; gap: 2px; }
+
+  /* KPI cards tighten */
+  .san-kpi-card { padding: 12px; gap: 10px; }
+
+  /* Broadcast filter tabs → horizontal scroll */
+  .sa-broadcast-tabs { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; }
+
+  /* Geo sidebar adapts */
+  .san-geo-sidebar { gap: 6px; }
+  .san-geo-country-row { flex: 1 1 120px; }
+}
+
+/* ============================================================
+   ≤ 480px  (most phones portrait)
+   ============================================================ */
+@media (max-width: 480px) {
+  /* Permission matrix → 2 columns */
+  .sa-perm-matrix { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+
+  /* Security table — also hide Event Type; keep Time + Severity + Status + actions */
+  .sa-sec-table th:nth-child(2),
+  .sa-sec-table td:nth-child(2) { display: none; }
+
+  /* Gov editor footer → stacked buttons */
+  .sa-gov-footer { flex-direction: column; gap: 8px; }
+  .sa-gov-cancel-btn,
+  .sa-gov-save-btn { width: 100%; }
+
+  /* KPI strip → single column */
+  .san-kpi-row { grid-template-columns: 1fr !important; }
+  .san-kpi-row .san-kpi-card:last-child { grid-column: span 1 !important; }
+
+  /* Perm item header → stack on tight screens */
+  .sa-perm-item-header { flex-direction: column; gap: 6px; }
+
+  /* Broadcast action buttons → stack */
+  .sa-broadcast-action-row { flex-direction: column; gap: 6px; }
+  .sa-broadcast-action-row .sa-btn { width: 100%; justify-content: center; }
+}
+
+/* ============================================================
+   ≤ 360px  (tiny phones — iPhone SE, budget Android)
+   ============================================================ */
+@media (max-width: 360px) {
+  /* Permission matrix → single column with label+checkbox in row */
+  .sa-perm-matrix { grid-template-columns: 1fr; }
+  .sa-perm-matrix-col { flex-direction: row; justify-content: space-between; align-items: center; }
+  .sa-perm-matrix-col label { flex-direction: row; gap: 8px; align-items: center; }
+  .sa-perm-col-label { font-size: 0.6875rem; text-align: left; }
+
+  /* Content padding tighten */
+  .sa-content { padding: 12px 12px calc(var(--sa-mobnav-h) + 12px); }
+
+  /* Typography scale down */
+  .sa-page-title  { font-size: 1.125rem; }
+  .san-kpi-val    { font-size: 1.375rem; }
+  .sa-gov-stat-value { font-size: 1.625rem; }
+
+  /* Card inner padding */
+  .sa-stat-card { padding: 12px; }
+  .sa-card      { padding: 14px; }
+
+  /* Topbar tighten */
+  .sa-topbar { padding: 0 10px; }
+
+  /* Search modal */
+  .sa-search-modal { max-width: calc(100vw - 24px); }
+
+  /* Geo map */
+  .san-geo-map-col { min-width: 0; }
+}
+
+/* ============================================================
+   TOUCH TARGETS & ADDITIONAL MOBILE POLISH
+   ============================================================ */
+
+/* WCAG 2.5.5 — all interactive elements ≥ 44×44px on mobile */
+@media (max-width: 768px) {
+  .sa-btn { min-height: 44px; }
+  .sa-btn--sm { min-height: 44px; padding: 6px 14px; }
+  .sa-filter-tab { min-height: 36px; }
+  .sa-select { min-height: 44px; }
+  .sa-text-input { min-height: 44px; }
+  .sa-search-input { min-height: 44px; }
+}
+
+/* ============================================================
+   ≤ 600px — additional component polish
+   ============================================================ */
+@media (max-width: 600px) {
+  /* Alert broadcast top row → allow title to wrap on small screens */
+  .sa-card .sa-alert-card-top { flex-wrap: wrap; }
+
+  /* Benchmark row → hide performance column, tighten grid */
+  .san-bench-row { grid-template-columns: 28px 1fr 60px; }
+  .san-bench-perf { display: none; }
+
+  /* Stat card number size */
+  .sa-stat-value { font-size: 1.75rem; }
+
+  /* Page head refresh/action button → full width */
+  .sa-page-head > button { width: 100%; justify-content: center; }
+
+  /* Schools table — hide extra cols */
+  .sa-schools-table th:nth-child(4),
+  .sa-schools-table td:nth-child(4),
+  .sa-schools-table th:nth-child(5),
+  .sa-schools-table td:nth-child(5) { display: none; }
+
+  /* Users table — hide extra cols */
+  .sa-users-table th:nth-child(3),
+  .sa-users-table td:nth-child(3),
+  .sa-users-table th:nth-child(5),
+  .sa-users-table td:nth-child(5) { display: none; }
+
+  /* Card stack actions */
+  .sa-card-actions { flex-direction: column; gap: 8px; }
+  .sa-card-actions .sa-btn { width: 100%; justify-content: center; }
+}
+
+/* ============================================================
+   ≤ 480px — further tighten
+   ============================================================ */
+@media (max-width: 480px) {
+  /* Benchmark row — also hide school name, show only rank + score */
+  .san-bench-row { grid-template-columns: 24px 1fr 54px; gap: 6px; padding: 10px 12px; }
+
+  /* Stat card value */
+  .sa-stat-value { font-size: 1.5rem; }
+  .sa-stat-label { font-size: 0.6875rem; }
+
+  /* Card padding tighten */
+  .sa-card { padding: 14px 14px; }
+  .sa-stat-card { padding: 14px; }
+
+  /* Topbar school name — prevent overflow */
+  .sa-school-name {
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* ============================================================
+   ≤ 360px — micro phone adjustments
+   ============================================================ */
+@media (max-width: 360px) {
+  /* Benchmark row — only rank + abbreviated score */
+  .san-bench-row { grid-template-columns: 20px 1fr 48px; gap: 4px; padding: 8px 10px; font-size: 0.75rem; }
+
+  /* Stat value */
+  .sa-stat-value { font-size: 1.375rem; }
+
+  /* Card padding minimum */
+  .sa-card { padding: 12px; }
+
+  /* Page sub text — smaller */
+  .sa-page-sub { font-size: 0.75rem; }
+
+  /* Topbar school name shrinks more */
+  .sa-school-name { max-width: 90px; }
+
+  /* Notification channel legend wraps tighter */
+  .sa-notif-legend { gap: 6px; }
+}
+
+/* ============================================================
+   REUSABLE RESPONSIVE GRID UTILITIES
+   ============================================================ */
+
+/* Base desktop definitions */
+.sa-two-col-grid    { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.sa-user-detail-grid { display: grid; grid-template-columns: minmax(200px, 260px) 1fr; gap: 16px; margin-bottom: 16px; align-items: start; }
+.sa-user-stat-grid  { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 18px; }
+.sa-module-grid     { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-top: 8px; }
+
+/* ≤ 768px — tablet */
+@media (max-width: 768px) {
+  .sa-user-detail-grid { grid-template-columns: 1fr; }
+}
+
+/* ≤ 600px — phones */
+@media (max-width: 600px) {
+  .sa-two-col-grid    { grid-template-columns: 1fr; gap: 10px; }
+  .sa-user-stat-grid  { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .sa-module-grid     { grid-template-columns: 1fr 1fr; }
+}
+
+/* ≤ 480px — small phones */
+@media (max-width: 480px) {
+  .sa-user-stat-grid  { grid-template-columns: 1fr; }
+  .sa-module-grid     { grid-template-columns: 1fr; }
 }

@@ -1,13 +1,14 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import ApiClient from '../../api/client';
 
 /* ================================================================
-   Mock data
+   Role definitions (structure is by design; user counts are live)
    ================================================================ */
-const ROLES = [
-  { id: 'superadmin', name: 'Super Admin',      desc: 'Full system oversight with unrestricted access to all modules and configuration settings.', users: 4,  isProtected: true,  isCustom: false },
-  { id: 'principal',  name: 'School Principal', desc: 'Manage school-level operations, view reports, and manage staff accounts.',                  users: 12, isProtected: false, isCustom: false },
-  { id: 'teacher',    name: 'Teacher',          desc: 'Access to assigned courses, student grading, and attendance tracking only.',                users: 84, isProtected: false, isCustom: false },
-  { id: 'registrar',  name: 'Registrar',        desc: 'Admissions management and student record keeping access.',                                  users: 4,  isProtected: false, isCustom: true  },
+const ROLE_DEFS = [
+  { id: 'superadmin', name: 'Super Admin',      desc: 'Full system oversight with unrestricted access to all modules and configuration settings.', isProtected: true,  isCustom: false, apiRole: 'Super Admin'   },
+  { id: 'principal',  name: 'School Principal', desc: 'Manage school-level operations, view reports, and manage staff accounts.',                  isProtected: false, isCustom: false, apiRole: 'School Admin'  },
+  { id: 'teacher',    name: 'Teacher',          desc: 'Access to assigned courses, student grading, and attendance tracking only.',                isProtected: false, isCustom: false, apiRole: 'Teacher'       },
+  { id: 'registrar',  name: 'Registrar',        desc: 'Admissions management and student record keeping access.',                                  isProtected: false, isCustom: true,  apiRole: 'Registrar'     },
 ];
 
 const PERM_COLS = ['view', 'create', 'edit', 'delete', 'approve'];
@@ -210,15 +211,62 @@ export default function SAGovernance() {
   const [search,       setSearch]       = useState('');
   const [perms,        setPerms]        = useState(DEFAULT_PERMS);
   const [savedToast,   setSavedToast]   = useState(false);
+  const [roleCounts,   setRoleCounts]   = useState({});
+
+  /* Load saved permissions + real user counts on mount */
+  useEffect(() => {
+    ApiClient.get('/api/admin-settings/').then(data => {
+      if (data.success && data.settings?.rbac_role_permissions) {
+        setPerms(prev => ({ ...prev, ...data.settings.rbac_role_permissions }));
+      }
+    }).catch(() => {});
+
+    ApiClient.get('/api/get-users/').then(data => {
+      if (data.success && Array.isArray(data.users)) {
+        const counts = {};
+        data.users.forEach(u => {
+          counts[u.role] = (counts[u.role] || 0) + 1;
+        });
+        setRoleCounts(counts);
+      }
+    }).catch(() => {});
+  }, []);
+
+  /* Build roles with live user counts */
+  const ROLES = useMemo(
+    () => ROLE_DEFS.map(r => ({ ...r, users: roleCounts[r.apiRole] || 0 })),
+    [roleCounts],
+  );
 
   const filteredRoles = useMemo(
     () => ROLES.filter(r => r.name.toLowerCase().includes(search.toLowerCase())),
-    [search],
+    [ROLES, search],
+  );
+
+  /* Compute real stats */
+  const totalUsers     = useMemo(() => ROLES.reduce((s, r) => s + r.users, 0), [ROLES]);
+  const totalPerms     = useMemo(() => {
+    let count = 0;
+    Object.values(perms).forEach(rolePerms =>
+      Object.values(rolePerms).forEach(cols =>
+        Object.values(cols).forEach(v => { if (v) count++; })
+      )
+    );
+    return count;
+  }, [perms]);
+  const elevatedRoles  = useMemo(
+    () => ROLES.filter(r => r.isProtected || perms[r.id]?.modify_locked?.edit || perms[r.id]?.bulk_delete?.delete).length,
+    [ROLES, perms],
   );
 
   const handleEditRole = (role) => { setSelectedRole(role); setView('editor'); };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    try {
+      await ApiClient.patch('/api/admin-settings/', { settings: { rbac_role_permissions: perms } });
+    } catch (err) {
+      console.error('Failed to save permissions', err);
+    }
     setView('list');
     setSavedToast(true);
     setTimeout(() => setSavedToast(false), 3000);
@@ -260,8 +308,8 @@ export default function SAGovernance() {
             <span className="sa-gov-stat-label">Security</span>
           </div>
           <div>
-            <span className="sa-gov-stat-value">142</span>
-            <p className="sa-gov-stat-sub">Total Permissions Defined</p>
+            <span className="sa-gov-stat-value">{totalPerms}</span>
+            <p className="sa-gov-stat-sub">Active Permissions Granted</p>
           </div>
         </div>
         <div className="sa-gov-stat">
@@ -274,8 +322,23 @@ export default function SAGovernance() {
             <span className="sa-gov-stat-label">Critical</span>
           </div>
           <div>
-            <span className="sa-gov-stat-value">3</span>
+            <span className="sa-gov-stat-value">{elevatedRoles}</span>
             <p className="sa-gov-stat-sub">Roles with Elevated Access</p>
+          </div>
+        </div>
+        <div className="sa-gov-stat">
+          <div className="sa-gov-stat-icon">
+            <div className="sa-gov-stat-icon-wrap sa-gov-stat-icon-wrap--blue">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+              </svg>
+            </div>
+            <span className="sa-gov-stat-label">Users</span>
+          </div>
+          <div>
+            <span className="sa-gov-stat-value">{totalUsers}</span>
+            <p className="sa-gov-stat-sub">Total Managed Users</p>
           </div>
         </div>
       </div>

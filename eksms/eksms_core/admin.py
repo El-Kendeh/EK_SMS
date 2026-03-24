@@ -27,6 +27,7 @@ from .models import (
     GradeAuditLog,
     GradeChangeAlert,
     GradeVerification,
+    SystemWideAlert,
 )
 
 
@@ -1347,6 +1348,44 @@ class StaffAccountAuditLogAdmin(SchoolStaffAccountAccessMixin, admin.ModelAdmin)
     def has_delete_permission(self, request, obj=None):
         """Audit logs cannot be deleted"""
         return False
+
+
+@admin.register(SystemWideAlert)
+class SystemWideAlertAdmin(admin.ModelAdmin):
+    list_display  = ['title', 'trigger_type', 'severity', 'status', 'school', 'triggered_by', 'triggered_at']
+    list_filter   = ['trigger_type', 'severity', 'status', 'triggered_at',
+                     'notif_email', 'notif_sms', 'notif_push']
+    search_fields = ['title', 'description', 'school__name', 'triggered_by__username']
+    readonly_fields = ['triggered_at', 'acknowledged_at', 'notif_email_sent_at',
+                       'notif_sms_sent_at', 'notif_push_sent_at']
+    date_hierarchy  = 'triggered_at'
+    fieldsets = (
+        ('Alert', {
+            'fields': ('trigger_type', 'title', 'description', 'severity', 'school',
+                       'triggered_by', 'triggered_at', 'metadata')
+        }),
+        ('Status', {
+            'fields': ('status', 'acknowledged_by', 'acknowledged_at', 'notes')
+        }),
+        ('Notification Channels', {
+            'fields': ('notif_in_app',
+                       'notif_email', 'notif_email_sent_at',
+                       'notif_sms',   'notif_sms_sent_at',
+                       'notif_push',  'notif_push_sent_at'),
+            'classes': ('collapse',),
+        }),
+    )
+    actions = ['mark_acknowledged', 'mark_resolved']
+
+    def mark_acknowledged(self, request, queryset):
+        queryset.update(status='acknowledged')
+        self.message_user(request, f'Marked {queryset.count()} alert(s) as acknowledged.')
+    mark_acknowledged.short_description = 'Mark as acknowledged'
+
+    def mark_resolved(self, request, queryset):
+        queryset.update(status='resolved')
+        self.message_user(request, f'Marked {queryset.count()} alert(s) as resolved.')
+    mark_resolved.short_description = 'Mark as resolved'
 
 
 def get_client_ip(request):

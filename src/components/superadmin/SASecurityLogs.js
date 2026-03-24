@@ -25,11 +25,12 @@ function fmtTime(ts) {
   return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
-export default function SASecurityLogs({ onForensic }) {
+export default function SASecurityLogs({ onForensic, initialSearch, onMount }) {
   const [logs, setLogs] = useState([]);
   const [, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(initialSearch || '');
   const [sevFilter, setSevFilter] = useState('all');
+  const [counters, setCounters] = useState({ threats_blocked: 0, active_sessions: 0, failed_logins: 0, flagged_ips: 0 });
 
   const fetchLogs = useCallback(async () => {
     setLoading(true);
@@ -45,9 +46,26 @@ export default function SASecurityLogs({ onForensic }) {
     }
   }, []);
 
+  const fetchCounters = useCallback(async () => {
+    try {
+      const data = await ApiClient.get('/api/security-counters/');
+      if (data.success) setCounters({
+        threats_blocked: data.threats_blocked ?? 0,
+        active_sessions: data.active_sessions ?? 0,
+        failed_logins:   data.failed_logins_24h ?? 0,
+        flagged_ips:     data.failed_logins_7d ?? 0,
+      });
+    } catch (err) {
+      console.error('Failed to fetch security counters', err);
+    }
+  }, []);
+
   useEffect(() => {
     fetchLogs();
-  }, [fetchLogs]);
+    fetchCounters();
+    if (onMount) onMount();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchLogs, fetchCounters]); // onMount intentionally omitted — run once on mount only
 
   const counts = useMemo(() => {
     const c = { critical: 0, high: 0, medium: 0, low: 0, info: 0 };
@@ -71,10 +89,10 @@ export default function SASecurityLogs({ onForensic }) {
   }, [logs, sevFilter, search]);
 
   const stats = [
-    { label: 'Threats Blocked', value: 4, icon: <IcShield />, cls: 'sa-stat-icon--red', trend: { dir: 'up', label: '+2 today' } },
-    { label: 'Active Sessions', value: 127, icon: <IcUser />, cls: 'sa-stat-icon--green', trend: { dir: 'flat', label: 'Stable' } },
-    { label: 'Failed Logins', value: 38, icon: <IcLock />, cls: 'sa-stat-icon--amber', trend: { dir: 'up', label: '+12 today' } },
-    { label: 'Flagged IPs', value: 7, icon: <IcAlert />, cls: 'sa-stat-icon--blue', trend: { dir: 'up', label: '3 critical' } },
+    { label: 'Threats Blocked', value: counters.threats_blocked, icon: <IcShield />, cls: 'sa-stat-icon--red', trend: { dir: 'up', label: 'Live count' } },
+    { label: 'Active Sessions', value: counters.active_sessions, icon: <IcUser />, cls: 'sa-stat-icon--green', trend: { dir: 'flat', label: 'Live count' } },
+    { label: 'Failed Logins', value: counters.failed_logins, icon: <IcLock />, cls: 'sa-stat-icon--amber', trend: { dir: 'up', label: 'Live count' } },
+    { label: 'Flagged IPs', value: counters.flagged_ips, icon: <IcAlert />, cls: 'sa-stat-icon--blue', trend: { dir: 'up', label: 'Live count' } },
   ];
 
   const SEV_TABS = [

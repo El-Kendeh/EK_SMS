@@ -84,10 +84,22 @@ export default function SAGradeAuditDetail({ request, onBack }) {
     );
   }
 
-  const isAnomaly    = !request.hashMatch;
-  const isExternal   = request.requester.ip.startsWith('45.') || request.requester.ip.startsWith('103.');
-  const scoreDelta   = request.newScore - request.oldScore;
-  const isLargeJump  = Math.abs(scoreDelta) >= 15;
+  // Normalise: real API alerts have a flat shape; mock requests have rich nested fields.
+  // We safely fall back so neither format crashes.
+  const requester  = request.requester  || { name: 'System', role: 'Automated', initials: 'SY', ip: 'N/A', device: 'N/A', location: 'N/A' };
+  const approver   = request.approver   || { name: 'Pending', role: 'Awaiting Review', initials: '—', ip: 'N/A', device: 'N/A', location: 'N/A' };
+  const oldScore   = request.oldScore   ?? null;
+  const newScore   = request.newScore   ?? null;
+  const hashMatch  = request.hashMatch  ?? true;
+  // eslint-disable-next-line no-unused-vars
+  const ledger     = request.ledger     || [];
+  // eslint-disable-next-line no-unused-vars
+  const files      = request.files      || [];
+
+  const isAnomaly    = !hashMatch;
+  const isExternal   = !!(requester.ip && requester.ip !== 'N/A' && typeof requester.ip === 'string' && (requester.ip.startsWith('45.') || requester.ip.startsWith('103.')));
+  const scoreDelta   = (newScore !== null && oldScore !== null) ? newScore - oldScore : null;
+  const isLargeJump  = scoreDelta !== null && Math.abs(scoreDelta) >= 15;
 
   return (
     <div style={{ maxWidth: 760, margin: '0 auto' }}>
@@ -139,8 +151,8 @@ export default function SAGradeAuditDetail({ request, onBack }) {
         <div className="sa-gi-state-prev">
           <p style={{ margin: '0 0 4px', fontSize: '0.6875rem', color: 'var(--sa-text-2)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>Previous</p>
           <p style={{ margin: 0, fontFamily: 'Consolas, monospace', fontSize: '2rem', fontWeight: 800, color: 'var(--sa-text-3)', textDecoration: 'line-through', textDecorationColor: 'var(--sa-red)' }}>
-            {request.oldScore}
-            <span style={{ fontSize: '1.125rem', fontWeight: 600, marginLeft: 8 }}>({request.oldGrade})</span>
+            {oldScore ?? '—'}
+            {request.oldGrade && <span style={{ fontSize: '1.125rem', fontWeight: 600, marginLeft: 8 }}>({request.oldGrade})</span>}
           </p>
           {request.prevHash && (
             <p style={{ margin: '6px 0 0', fontFamily: 'Consolas, monospace', fontSize: '0.625rem', color: 'var(--sa-text-3)', wordBreak: 'break-all' }}>
@@ -152,16 +164,15 @@ export default function SAGradeAuditDetail({ request, onBack }) {
         <div className="sa-gi-state-new">
           <p style={{ margin: '0 0 4px', fontSize: '0.6875rem', color: 'var(--sa-text-2)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>New</p>
           <p style={{ margin: 0, fontFamily: 'Consolas, monospace', fontSize: '2rem', fontWeight: 800, color: isAnomaly ? 'var(--sa-red)' : 'var(--sa-green)' }}>
-            {request.newScore}
-            <span style={{ fontSize: '1.125rem', fontWeight: 600, marginLeft: 8 }}>({request.newGrade})</span>
+            {newScore ?? '—'}
+            {request.newGrade && <span style={{ fontSize: '1.125rem', fontWeight: 600, marginLeft: 8 }}>({request.newGrade})</span>}
           </p>
-          {request.blockHash && (
+          {request.blockHash ? (
             <p style={{ margin: '6px 0 0', fontFamily: 'Consolas, monospace', fontSize: '0.625rem', color: isAnomaly ? 'var(--sa-red)' : 'var(--sa-text-3)', wordBreak: 'break-all' }}>
               h: {request.blockHash.slice(0, 16)}…
               {isAnomaly && <span style={{ marginLeft: 6, color: 'var(--sa-red)', fontWeight: 700 }}>MISMATCH</span>}
             </p>
-          )}
-          {!request.blockHash && (
+          ) : (
             <p style={{ margin: '6px 0 0', fontFamily: 'Consolas, monospace', fontSize: '0.625rem', color: 'var(--sa-red)', fontWeight: 700 }}>
               No hash recorded
             </p>
@@ -171,45 +182,45 @@ export default function SAGradeAuditDetail({ request, onBack }) {
         <div className="sa-gi-state-meta">
           <div>
             <p style={{ margin: '0 0 3px', fontSize: '0.625rem', color: 'var(--sa-text-3)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Timestamp</p>
-            <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--sa-text)', fontWeight: 600, fontFamily: 'Consolas, monospace' }}>{request.ts}</p>
+            <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--sa-text)', fontWeight: 600, fontFamily: 'Consolas, monospace' }}>{request.ts || request.triggered_at || '—'}</p>
           </div>
           <div>
-            <p style={{ margin: '0 0 3px', fontSize: '0.625rem', color: 'var(--sa-text-3)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Subject</p>
-            <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--sa-text)', fontWeight: 600 }}>{request.subject}</p>
+            <p style={{ margin: '0 0 3px', fontSize: '0.625rem', color: 'var(--sa-text-3)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Type</p>
+            <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--sa-text)', fontWeight: 600 }}>{request.subject || request.alert_type || '—'}</p>
           </div>
           <div>
             <p style={{ margin: '0 0 3px', fontSize: '0.625rem', color: 'var(--sa-text-3)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Student</p>
-            <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--sa-text)', fontWeight: 600 }}>{request.student}</p>
+            <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--sa-text)', fontWeight: 600 }}>{request.student || '—'}</p>
           </div>
           <div>
             <p style={{ margin: '0 0 3px', fontSize: '0.625rem', color: 'var(--sa-text-3)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>School</p>
-            <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--sa-text)', fontWeight: 600 }}>{request.school}</p>
+            <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--sa-text)', fontWeight: 600 }}>{request.school || '—'}</p>
           </div>
         </div>
       </div>
 
-      {/* Reason box */}
+      {/* Reason / Description box */}
       <div style={{
         background: 'var(--sa-card-bg2)', border: '1px solid var(--sa-border)',
         borderLeft: '3px solid var(--sa-accent)', borderRadius: '0 10px 10px 0',
         padding: '12px 16px', marginBottom: 4,
       }}>
         <p style={{ margin: '0 0 4px', fontSize: '0.625rem', color: 'var(--sa-text-3)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>Stated Reason</p>
-        <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--sa-text-2)', lineHeight: 1.6 }}>{request.reason}</p>
+        <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--sa-text-2)', lineHeight: 1.6 }}>{request.reason || request.description || 'No reason provided.'}</p>
       </div>
 
       {/* ── Actor Profiles ── */}
       <SectionHead>Actor Profiles</SectionHead>
       <ActorCard
         role="Requester"
-        actor={request.requester}
+        actor={requester}
         accentColor="var(--sa-accent)"
         isExternal={isExternal}
       />
       {request.approver ? (
         <ActorCard
           role="Approver"
-          actor={request.approver}
+          actor={approver}
           accentColor="var(--sa-purple)"
           isExternal={false}
         />
@@ -262,23 +273,21 @@ export default function SAGradeAuditDetail({ request, onBack }) {
       <div className="sa-gi-ledger">
         {request.blockHash ? (
           <>
-            {/* Current block */}
             <div className="sa-gi-ledger-block">
               <p style={{ margin: '0 0 4px', color: 'var(--sa-text-3)' }}>
-                Block #{request.blockNum} · {request.ts} UTC
+                Block #{request.blockNum} · {request.ts || request.triggered_at || '—'} UTC
               </p>
               <p style={{ margin: '0 0 2px', color: 'var(--sa-green)', wordBreak: 'break-all' }}>
                 hash: {request.blockHash}
               </p>
               <p style={{ margin: 0, color: 'var(--sa-text-2)' }}>Status: Confirmed</p>
             </div>
-            {/* Previous block */}
             <div className="sa-gi-ledger-block" style={{ paddingBottom: 0 }}>
               <p style={{ margin: '0 0 4px', color: 'var(--sa-text-3)' }}>
                 Prev Block #{(request.blockNum || 0) - 1}
               </p>
               <p style={{ margin: 0, color: 'var(--sa-text-2)', wordBreak: 'break-all' }}>
-                hash: {request.prevHash}
+                hash: {request.prevHash || '—'}
               </p>
             </div>
           </>

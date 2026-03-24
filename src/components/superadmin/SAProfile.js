@@ -1,4 +1,5 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import ApiClient from '../../api/client';
 
 /* ================================================================
    Icons
@@ -68,20 +69,34 @@ function Field({ label, children }) {
 }
 
 /* ================================================================
-   Activity log mock
+   Activity icon mapper
    ================================================================ */
-const ACTIVITY = [
-  { action: 'Approved school registration',       target: 'Freetown International Academy', time: '14m ago',  icon: 'green'  },
-  { action: 'Initiated Emergency Lockdown Test',  target: 'System-wide',                    time: '2h ago',   icon: 'red'    },
-  { action: 'Exported Audit Logs (CSV)',          target: 'Compliance — Term 2',             time: '5h ago',   icon: 'accent' },
-  { action: 'Rejected school registration',       target: 'Lunsar Islamic School',           time: '1d ago',   icon: 'amber'  },
-  { action: 'Updated Global 2FA enforcement',     target: 'Security Settings',               time: '2d ago',   icon: 'purple' },
-];
+function activityIcon(evType) {
+  if (!evType) return 'accent';
+  const t = evType.toLowerCase();
+  if (t.includes('approv')) return 'green';
+  if (t.includes('reject') || t.includes('fail') || t.includes('block')) return 'red';
+  if (t.includes('warn') || t.includes('flag')) return 'amber';
+  if (t.includes('login')) return 'purple';
+  return 'accent';
+}
+
+function fmtRelative(ts) {
+  if (!ts) return '';
+  const diff = Date.now() - new Date(ts).getTime();
+  const mins = Math.floor(diff / 60000);
+  const hrs  = Math.floor(mins / 60);
+  const days = Math.floor(hrs / 24);
+  if (mins < 2) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${days}d ago`;
+}
 
 /* ================================================================
    Main Component
    ================================================================ */
-export default function SAProfile({ user, onBack }) {
+export default function SAProfile({ user, onBack, onAvatarChange }) {
   const fileInputRef = useRef(null);
 
   /* ---- Load persisted profile data ---- */
@@ -108,11 +123,46 @@ export default function SAProfile({ user, onBack }) {
   /* ---- UI state ---- */
   const [saved2,      setSaved2]      = useState(false);
   const [toast,       setToast]       = useState(null);
+  const [activity,    setActivity]    = useState([]);
+  const [lastLogin,   setLastLogin]   = useState('—');
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
   };
+
+  /* ---- Load from API on mount (server overrides localStorage) ---- */
+  useEffect(() => {
+    ApiClient.get('/api/profile/').then(data => {
+      if (data.success && data.profile) {
+        if (data.profile.full_name) setFullName(data.profile.full_name);
+        if (data.profile.email)     setEmail(data.profile.email);
+      }
+    }).catch(() => {});
+    ApiClient.get('/api/admin-settings/').then(data => {
+      if (data.success && data.settings) {
+        const s = data.settings;
+        if (s.phone      !== undefined) setPhone(s.phone);
+        if (s.bio        !== undefined) setBio(s.bio);
+        if (s.language   !== undefined) setLanguage(s.language);
+        if (s.timezone   !== undefined) setTimezone(s.timezone);
+        if (s.avatarColor !== undefined) setAvatarColor(s.avatarColor);
+      }
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    const identifiers = [user.email, user.username].filter(Boolean);
+    ApiClient.get('/api/security-logs/').then(data => {
+      if (data.success && data.logs) {
+        const mine = data.logs.filter(l => l.actor && identifiers.includes(l.actor));
+        setActivity(mine.slice(0, 5));
+        const loginEntry = data.logs.find(l => l.type === 'login_success' && identifiers.includes(l.actor));
+        if (loginEntry) setLastLogin(new Date(loginEntry.ts).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }));
+      }
+    }).catch(() => {});
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ---- Avatar file upload ---- */
   const handleFileChange = (e) => {
@@ -121,16 +171,36 @@ export default function SAProfile({ user, onBack }) {
     if (file.size > 2 * 1024 * 1024) { showToast('Image must be under 2 MB', 'error'); return; }
     if (!file.type.startsWith('image/')) { showToast('Please select an image file', 'error'); return; }
     const reader = new FileReader();
-    reader.onload = (ev) => setAvatarSrc(ev.target.result);
+    reader.onload = (ev) => {
+      setAvatarSrc(ev.target.result);
+    };
     reader.readAsDataURL(file);
   };
 
-  const removeAvatar = () => { setAvatarSrc(null); fileInputRef.current && (fileInputRef.current.value = ''); };
+  const removeAvatar = () => {
+    setAvatarSrc(null);
+    fileInputRef.current && (fileInputRef.current.value = '');
+    if (onAvatarChange) onAvatarChange(null);
+    const localData = { avatarSrc: null, avatarColor, fullName, email, phone, bio, language, timezone };
+    localStorage.setItem('ek-sms-profile', JSON.stringify(localData));
+  };
 
   /* ---- Save profile ---- */
-  const handleSave = () => {
-    const data = { avatarSrc, avatarColor, fullName, email, phone, bio, language, timezone };
-    localStorage.setItem('ek-sms-profile', JSON.stringify(data));
+  const handleSave = async () => {
+    const localData = { avatarSrc, avatarColor, fullName, email, phone, bio, language, timezone };
+    localStorage.setItem('ek-sms-profile', JSON.stringify(localData));
+    if (onAvatarChange) onAvatarChange(avatarSrc);
+    try {
+      const nameParts = fullName.trim().split(' ');
+      await ApiClient.patch('/api/profile/', {
+        first_name: nameParts[0] || '',
+        last_name: nameParts.slice(1).join(' ') || '',
+        email,
+      });
+      await ApiClient.patch('/api/admin-settings/', { settings: { phone, bio, language, timezone, avatarColor } });
+    } catch (err) {
+      console.error('Failed to save profile', err);
+    }
     setSaved2(true);
     showToast('Profile updated successfully');
     setTimeout(() => setSaved2(false), 2000);
@@ -142,11 +212,20 @@ export default function SAProfile({ user, onBack }) {
   const mismatch     = confirmPw.length > 0 && newPw !== confirmPw;
   const canSavePw    = currPw.length > 0 && strengthLvl >= 3 && newPw === confirmPw && confirmPw.length > 0;
 
-  const handleSavePassword = () => {
-    setPwSaved(true);
-    setCurrPw(''); setNewPw(''); setConfirmPw('');
-    showToast('Password changed successfully');
-    setTimeout(() => setPwSaved(false), 2000);
+  const handleSavePassword = async () => {
+    try {
+      const res = await ApiClient.post('/api/change-password/', { current_password: currPw, new_password: newPw });
+      if (res.success) {
+        setPwSaved(true);
+        setCurrPw(''); setNewPw(''); setConfirmPw('');
+        showToast('Password changed successfully');
+        setTimeout(() => setPwSaved(false), 2000);
+      } else {
+        showToast(res.error || 'Password change failed', 'error');
+      }
+    } catch (err) {
+      showToast('Password change failed', 'error');
+    }
   };
 
   /* ---- Derived ---- */
@@ -334,7 +413,7 @@ export default function SAProfile({ user, onBack }) {
               { label: 'Role',         value: 'Super Administrator' },
               { label: 'Account ID',   value: `UID-${String(user?.id || '0001').padStart(4,'0')}` },
               { label: 'Member Since', value: joinDate },
-              { label: 'Last Login',   value: 'Today, 09:42 AM' },
+              { label: 'Last Login',   value: lastLogin },
               { label: 'Status',       value: 'Active', green: true },
             ].map(row => (
               <div key={row.label} className="sp-account-row">
@@ -443,14 +522,16 @@ export default function SAProfile({ user, onBack }) {
         {/* ===== Recent Activity ===== */}
         <Section title="Recent Activity" icon={<IcActivity />}>
           <div className="sp-activity-list">
-            {ACTIVITY.map((a, i) => (
+            {activity.length === 0 ? (
+              <p style={{ fontSize: '0.8125rem', color: 'var(--sa-text-2)', padding: '12px 0' }}>No recent activity logged for this account.</p>
+            ) : activity.map((a, i) => (
               <div key={i} className="sp-activity-row">
-                <div className={`sp-activity-dot sp-activity-dot--${a.icon}`} />
+                <div className={`sp-activity-dot sp-activity-dot--${activityIcon(a.type)}`} />
                 <div className="sp-activity-content">
-                  <p className="sp-activity-action">{a.action}</p>
-                  <p className="sp-activity-target">{a.target}</p>
+                  <p className="sp-activity-action">{a.action || a.type}</p>
+                  <p className="sp-activity-target">{a.actor || '—'}</p>
                 </div>
-                <span className="sp-activity-time"><IcClock /> {a.time}</span>
+                <span className="sp-activity-time"><IcClock /> {fmtRelative(a.ts)}</span>
               </div>
             ))}
           </div>

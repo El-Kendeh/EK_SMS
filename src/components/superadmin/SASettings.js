@@ -1,9 +1,11 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import ApiClient from '../../api/client';
 
 /* ================================================================
    Constants
    ================================================================ */
-const RECOVERY_CODES = ['8392-1029', '4829-5932', '1029-4820', '5938-1923', '4920-5839', '9201-4829', '5820-1029', '1923-4829'];
+const DEFAULT_RECOVERY_CODES = ['8392-1029', '4829-5932', '1029-4820', '5938-1923', '4920-5839', '9201-4829', '5820-1029', '1923-4829'];
+const DEFAULT_TOTP_KEY = 'JKW8-392S-K29S-293S';
 const TABS = ['General', 'Security', 'Compliance', 'Backups'];
 
 function calcStrength(pw) {
@@ -186,7 +188,7 @@ function PasswordView({ onBack, onNext }) {
 /* ================================================================
    2FA Setup sub-view
    ================================================================ */
-function TwoFAView({ onBack, onComplete }) {
+function TwoFAView({ onBack, onComplete, totpKey = DEFAULT_TOTP_KEY, recoveryCodes = DEFAULT_RECOVERY_CODES }) {
   const otpRefs                         = useRef([]);
   const [otpDigits, setOtpDigits]       = useState(Array(6).fill(''));
   const [copied,    setCopied]          = useState(false);
@@ -203,7 +205,7 @@ function TwoFAView({ onBack, onComplete }) {
   };
 
   const handleCopyKey = () => {
-    navigator.clipboard?.writeText('JKW8-392S-K29S-293S').catch(() => {});
+    navigator.clipboard?.writeText(totpKey).catch(() => {});
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -251,7 +253,7 @@ function TwoFAView({ onBack, onComplete }) {
           <div style={{ width: '100%' }}>
             <p className="sa-manual-key-label">Manual Entry Key</p>
             <div className="sa-manual-key-wrap">
-              <code className="sa-manual-key">JKW8-392S-K29S-293S</code>
+              <code className="sa-manual-key">{totpKey}</code>
               <button style={{ background: 'none', border: 'none', color: copied ? 'var(--sa-green)' : 'var(--sa-text-3)', cursor: 'pointer', padding: 4, transition: 'color 0.2s' }} onClick={handleCopyKey} aria-label="Copy key">
                 {copied ? <IcCheck /> : <IcCopy />}
               </button>
@@ -299,7 +301,7 @@ function TwoFAView({ onBack, onComplete }) {
             </div>
           </div>
           <div className="sa-recovery-grid">
-            {RECOVERY_CODES.map((code, i) => (
+            {recoveryCodes.map((code, i) => (
               <div key={i} className="sa-recovery-item">
                 <span className="sa-recovery-num">{i+1}.</span>
                 <code className="sa-recovery-code">{code}</code>
@@ -401,10 +403,41 @@ export default function SASettings() {
   const [exporting,       setExporting]       = useState(false);
   const [exported,        setExported]        = useState(false);
 
+  /* 2FA + recovery */
+  const [recoveryCodes, setRecoveryCodes] = useState(DEFAULT_RECOVERY_CODES);
+  const [totpKey,       setTotpKey]       = useState(DEFAULT_TOTP_KEY);
+  const [lastBackupAt,  setLastBackupAt]  = useState(null);
+
   const [toast, setToast] = useState(null);
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
+  };
+
+  /* Load admin settings on mount */
+  useEffect(() => {
+    ApiClient.get('/api/admin-settings/').then(data => {
+      if (data.success && data.settings) {
+        const s = data.settings;
+        if (s.twoFA !== undefined)          setTwoFA(s.twoFA);
+        if (s.autoLock !== undefined)        setAutoLock(s.autoLock);
+        if (s.sessionTimeout !== undefined)  setSessionTimeout(s.sessionTimeout);
+        if (s.auditRetention !== undefined)  setAuditRetention(s.auditRetention);
+        if (Array.isArray(s.recovery_codes) && s.recovery_codes.length > 0)
+          setRecoveryCodes(s.recovery_codes);
+        if (s.totp_key)       setTotpKey(s.totp_key);
+        if (s.last_backup_at) setLastBackupAt(s.last_backup_at);
+      }
+    }).catch(() => {});
+  }, []);
+
+  const saveSecuritySettings = async () => {
+    try {
+      await ApiClient.patch('/api/admin-settings/', { settings: { twoFA, autoLock, sessionTimeout, auditRetention } });
+      showToast('Security settings saved');
+    } catch (err) {
+      showToast('Failed to save settings', 'error');
+    }
   };
 
   /* ---- Sub-views ---- */
@@ -412,7 +445,7 @@ export default function SASettings() {
     return <PasswordView onBack={() => setSecView('main')} onNext={() => setSecView('2fa')} />;
   }
   if (secView === '2fa') {
-    return <TwoFAView onBack={() => setSecView('password')} onComplete={() => { setSecView('main'); showToast('2FA setup complete'); }} />;
+    return <TwoFAView onBack={() => setSecView('password')} onComplete={() => { setSecView('main'); showToast('2FA setup complete'); }} totpKey={totpKey} recoveryCodes={recoveryCodes} />;
   }
 
   /* ---- Main view ---- */
@@ -482,6 +515,14 @@ export default function SASettings() {
                   aria-label="Session timeout duration"
                 />
                 <div className="sa-slider-labels"><span>5m</span><span>120m</span></div>
+              </div>
+              <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
+                <button
+                  className="sa-btn sa-btn--primary sa-btn--sm"
+                  onClick={saveSecuritySettings}
+                >
+                  Apply Security Settings
+                </button>
               </div>
             </div>
 
@@ -721,7 +762,11 @@ export default function SASettings() {
                   <div className="sa-backup-card-status">
                     <IcSuccess /> Successful
                   </div>
-                  <p className="sa-backup-card-time">Oct 24, 2023 at 04:00 AM UTC</p>
+                  <p className="sa-backup-card-time">
+                    {lastBackupAt
+                      ? new Date(lastBackupAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' UTC'
+                      : 'No backups recorded'}
+                  </p>
                 </div>
                 <div className="sa-backup-card-icon"><IcCloud /></div>
               </div>

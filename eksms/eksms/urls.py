@@ -9,10 +9,17 @@ from django.urls import path
 from django.views.generic import RedirectView, TemplateView
 from django.views.defaults import page_not_found, server_error
 from .views import (
-    favicon_view, api_login, api_logout, api_register, api_get_schools, 
+    favicon_view, api_login, api_logout, api_register, api_get_schools,
     api_approve_school, api_waitlist, api_send_otp, api_resend_otp,
     api_verify_otp, api_check_school_name, api_get_users, api_get_security_logs,
-    api_system_health, api_get_grade_alerts, api_receive_logs, api_csp_report
+    api_system_health, api_get_grade_alerts, api_receive_logs, api_csp_report,
+    # New endpoints
+    api_school_events, api_grade_stats, api_school_stats,
+    api_forensic_events, api_broadcast_alerts, api_permissions,
+    api_profile, api_change_password, api_admin_settings, api_security_counters,
+    api_impersonate,
+    api_sa_stats,
+    api_system_alerts,
 )
 from .secure_views import csrf_token_view
 from django.conf import settings
@@ -42,6 +49,20 @@ urlpatterns = [
     path('api/logs/',            api_receive_logs,      name='api_receive_logs'),
     path('api/csp-report/',      api_csp_report,        name='api_csp_report'),
     path('api/csrf-token/',      csrf_token_view,       name='csrf_token_view'),
+    # New endpoints
+    path('api/school-events/',      api_school_events,      name='api_school_events'),
+    path('api/grade-stats/',        api_grade_stats,        name='api_grade_stats'),
+    path('api/school-stats/',       api_school_stats,       name='api_school_stats'),
+    path('api/forensic-events/',    api_forensic_events,    name='api_forensic_events'),
+    path('api/broadcast-alerts/',   api_broadcast_alerts,   name='api_broadcast_alerts'),
+    path('api/permissions/',        api_permissions,        name='api_permissions'),
+    path('api/profile/',            api_profile,            name='api_profile'),
+    path('api/change-password/',    api_change_password,    name='api_change_password'),
+    path('api/admin-settings/',     api_admin_settings,     name='api_admin_settings'),
+    path('api/security-counters/',  api_security_counters,  name='api_security_counters'),
+    path('api/impersonate/',        api_impersonate,        name='api_impersonate'),
+    path('api/sa-stats/',          api_sa_stats,           name='api_sa_stats'),
+    path('api/system-alerts/',     api_system_alerts,      name='api_system_alerts'),
     
     # Root URL redirects to admin
     path('', RedirectView.as_view(url='admin/', permanent=False)),

@@ -144,7 +144,7 @@ export default function SASystemHealth() {
               <span style={{ fontSize: '0.6875rem', color: 'var(--sa-text-2)' }}>Continuous Monitoring</span>
             </div>
             <div className="sa-card-body">
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div className="sa-two-col-grid">
                 <div style={{ background: 'var(--sa-card-bg2)', borderRadius: 10, padding: '14px 16px', border: '1px solid var(--sa-border)' }}>
                   <p style={{ margin: '0 0 6px', fontSize: '0.6875rem', color: 'var(--sa-text-2)', textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 700 }}>Data Integrity</p>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--sa-green)', fontWeight: 700 }}>

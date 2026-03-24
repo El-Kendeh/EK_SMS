@@ -34,6 +34,8 @@ class School(models.Model):
     admin_phone         = models.CharField(max_length=50, blank=True, default='')
     
     changes_requested = models.BooleanField(default=False)
+    rejection_reason = models.TextField(blank=True, default='', help_text="Reason provided when rejecting a school application")
+    approval_date = models.DateTimeField(null=True, blank=True, help_text="When the school was approved by a superadmin")
 
     # Registration details
     registration_date = models.DateTimeField(auto_now_add=True)
@@ -556,6 +558,84 @@ class GradeChangeAlert(models.Model):
         self.save()
 
 
+class SystemWideAlert(models.Model):
+    """Real-time alerts for significant system-wide change events."""
+
+    TRIGGER_CHOICES = [
+        ('grade_lock_attempt', 'Grade Modification on Locked Record'),
+        ('enrollment_change',  'Student Enrollment Status Change'),
+        ('fee_payment',        'Fee Payment Recorded'),
+        ('attendance_anomaly', 'Attendance Anomaly Detected'),
+        ('permission_change',  'User Permission Change'),
+    ]
+    SEVERITY_CHOICES = [
+        ('low',      'Low'),
+        ('medium',   'Medium'),
+        ('high',     'High'),
+        ('critical', 'Critical'),
+    ]
+    STATUS_CHOICES = [
+        ('new',          'New'),
+        ('acknowledged', 'Acknowledged'),
+        ('resolved',     'Resolved'),
+    ]
+
+    trigger_type    = models.CharField(max_length=50, choices=TRIGGER_CHOICES, db_index=True)
+    title           = models.CharField(max_length=255)
+    description     = models.TextField()
+    severity        = models.CharField(max_length=20, choices=SEVERITY_CHOICES, default='medium')
+    school          = models.ForeignKey('School', on_delete=models.SET_NULL, null=True, blank=True,
+                                        related_name='system_alerts')
+    triggered_by    = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                        related_name='triggered_system_alerts')
+    triggered_at    = models.DateTimeField(auto_now_add=True, db_index=True)
+    metadata        = models.JSONField(default=dict, blank=True)
+
+    status          = models.CharField(max_length=20, choices=STATUS_CHOICES, default='new', db_index=True)
+    acknowledged_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                        related_name='acknowledged_system_alerts')
+    acknowledged_at = models.DateTimeField(null=True, blank=True)
+    notes           = models.TextField(blank=True)
+
+    # Notification channels
+    notif_in_app        = models.BooleanField(default=True)   # always created; this IS the in-app notif
+    notif_email         = models.BooleanField(default=False)
+    notif_email_sent_at = models.DateTimeField(null=True, blank=True)
+    notif_sms           = models.BooleanField(default=False)  # critical only
+    notif_sms_sent_at   = models.DateTimeField(null=True, blank=True)
+    notif_push          = models.BooleanField(default=False)
+    notif_push_sent_at  = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-triggered_at']
+        indexes = [
+            models.Index(fields=['trigger_type', '-triggered_at']),
+            models.Index(fields=['severity', '-triggered_at']),
+            models.Index(fields=['status']),
+        ]
+        verbose_name        = 'System Wide Alert'
+        verbose_name_plural = 'System Wide Alerts'
+
+    def __str__(self):
+        return f"[{self.severity.upper()}] {self.title} ({self.triggered_at:%Y-%m-%d %H:%M})"
+
+    def acknowledge(self, user, notes=''):
+        self.status = 'acknowledged'
+        self.acknowledged_by = user
+        self.acknowledged_at = timezone.now()
+        self.notes = notes
+        self.save()
+
+    def resolve(self, user=None, notes=''):
+        self.status = 'resolved'
+        if user:
+            self.acknowledged_by = user
+            self.acknowledged_at = timezone.now()
+        if notes:
+            self.notes = notes
+        self.save()
+
+
 class GradeVerification(models.Model):
     """QR Code and cryptographic verification for grades"""
     grade = models.OneToOneField(Grade, on_delete=models.CASCADE, related_name='verification')
@@ -830,4 +910,187 @@ class OTPRecord(models.Model):
 
     def is_valid(self):
         """Returns True if the OTP has not expired and has not been used."""
-        return not self.is_used and timezone.now() < self.expires_at
+        return not self.is_used and timezone.now() < self.expires_at
+
+
+# ---------------------------------------------------------------------------
+# School Application Events — audit trail for the approval workflow
+# ---------------------------------------------------------------------------
+class SchoolApplicationEvent(models.Model):
+    EVENT_CHOICES = [
+        ('SUBMITTED', 'Application Submitted'),
+        ('UNDER_REVIEW', 'Under Review'),
+        ('APPROVED', 'Application Approved'),
+        ('REJECTED', 'Application Rejected'),
+        ('CHANGES_REQUESTED', 'Changes Requested'),
+        ('RESUBMITTED', 'Application Resubmitted'),
+        ('NOTE', 'Admin Note'),
+    ]
+    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='application_events')
+    event_type = models.CharField(max_length=30, choices=EVENT_CHOICES, db_index=True)
+    actor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                              related_name='school_application_events')
+    actor_label = models.CharField(max_length=255, blank=True, help_text='Display label for the actor')
+    note = models.TextField(blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'School Application Event'
+        verbose_name_plural = 'School Application Events'
+
+    def __str__(self):
+        return f"{self.school.name} — {self.get_event_type_display()} at {self.created_at}"
+
+
+# ---------------------------------------------------------------------------
+# Forensic Events — real security incident records
+# ---------------------------------------------------------------------------
+class ForensicEvent(models.Model):
+    SEVERITY_CHOICES = [
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+        ('critical', 'Critical'),
+    ]
+    TYPE_CHOICES = [
+        ('auth_failure', 'Auth Failure'),
+        ('brute_force', 'Brute Force'),
+        ('suspicious_access', 'Suspicious Access'),
+        ('data_export', 'Data Export'),
+        ('privilege_escalation', 'Privilege Escalation'),
+        ('grade_tampering', 'Grade Tampering'),
+        ('unauthorized_api', 'Unauthorized API Call'),
+        ('other', 'Other'),
+    ]
+    event_type = models.CharField(max_length=50, choices=TYPE_CHOICES, db_index=True)
+    severity = models.CharField(max_length=20, choices=SEVERITY_CHOICES, db_index=True)
+    actor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                              related_name='forensic_events')
+    actor_label = models.CharField(max_length=255, blank=True,
+                                   help_text='Display label when actor is anonymous/unknown')
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    description = models.TextField()
+    metadata = models.JSONField(default=dict, blank=True)
+    school = models.ForeignKey(School, on_delete=models.SET_NULL, null=True, blank=True,
+                               related_name='forensic_events')
+    resolved = models.BooleanField(default=False, db_index=True)
+    resolved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                    related_name='resolved_forensic_events')
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Forensic Event'
+        verbose_name_plural = 'Forensic Events'
+
+    def __str__(self):
+        return f"{self.get_event_type_display()} ({self.severity}) at {self.created_at}"
+
+
+# ---------------------------------------------------------------------------
+# Alert Broadcasts — superadmin-sent system-wide notifications
+# ---------------------------------------------------------------------------
+class AlertBroadcast(models.Model):
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('sent', 'Sent'),
+        ('scheduled', 'Scheduled'),
+    ]
+    SEVERITY_CHOICES = [
+        ('info', 'Info'),
+        ('warning', 'Warning'),
+        ('critical', 'Critical'),
+    ]
+    AUDIENCE_CHOICES = [
+        ('all', 'All Users'),
+        ('school_admins', 'School Admins'),
+        ('superadmins', 'Super Admins'),
+        ('specific_school', 'Specific School'),
+    ]
+    title = models.CharField(max_length=255)
+    message = models.TextField()
+    severity = models.CharField(max_length=20, choices=SEVERITY_CHOICES, default='info')
+    audience = models.CharField(max_length=30, choices=AUDIENCE_CHOICES, default='all')
+    target_school = models.ForeignKey(School, on_delete=models.SET_NULL, null=True, blank=True,
+                                      related_name='broadcasts')
+    sent_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                related_name='sent_broadcasts')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    sent_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Alert Broadcast'
+        verbose_name_plural = 'Alert Broadcasts'
+
+    def __str__(self):
+        return f"{self.title} ({self.status})"
+
+
+# ---------------------------------------------------------------------------
+# Admin Settings — per-user key-value store for preferences
+# ---------------------------------------------------------------------------
+class AdminSetting(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='admin_settings')
+    key = models.CharField(max_length=100)
+    value = models.JSONField(default=None, null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('user', 'key')
+        ordering = ['user', 'key']
+        verbose_name = 'Admin Setting'
+        verbose_name_plural = 'Admin Settings'
+
+    def __str__(self):
+        return f"{self.user.username} — {self.key}"
+
+
+# ---------------------------------------------------------------------------
+# Security Log Entries — real aggregated security event log
+# ---------------------------------------------------------------------------
+class SecurityLogEntry(models.Model):
+    TYPE_CHOICES = [
+        ('login_success', 'Login Success'),
+        ('login_failure', 'Login Failure'),
+        ('logout', 'Logout'),
+        ('password_changed', 'Password Changed'),
+        ('permission_changed', 'Permission Changed'),
+        ('school_approved', 'School Approved'),
+        ('school_rejected', 'School Rejected'),
+        ('broadcast_sent', 'Broadcast Sent'),
+        ('suspicious_activity', 'Suspicious Activity'),
+        ('api_rate_limited', 'API Rate Limited'),
+        ('profile_updated', 'Profile Updated'),
+    ]
+    SEVERITY_CHOICES = [
+        ('info', 'Info'),
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+        ('critical', 'Critical'),
+    ]
+    event_type = models.CharField(max_length=50, choices=TYPE_CHOICES, db_index=True)
+    actor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                              related_name='security_log_entries')
+    actor_label = models.CharField(max_length=255, blank=True,
+                                   help_text='Display label (email/username) for audit display')
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True)
+    description = models.TextField(blank=True)
+    severity = models.CharField(max_length=20, choices=SEVERITY_CHOICES, default='info', db_index=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Security Log Entry'
+        verbose_name_plural = 'Security Log Entries'
+
+    def __str__(self):
+        label = self.actor_label or (self.actor.username if self.actor else 'anonymous')
+        return f"{self.get_event_type_display()} by {label} at {self.created_at}"

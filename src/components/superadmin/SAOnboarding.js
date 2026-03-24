@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import ApiClient from '../../api/client';
 
 /* ── Icons ──────────────────────────────────────────────────── */
 const IcChevDown = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>;
@@ -131,17 +132,102 @@ function HBar({ label, value, max = 100, color, unit = '%' }) {
 }
 
 /* ── Main: SAOnboarding ─────────────────────────────────────── */
-export default function SAOnboarding() {
+export default function SAOnboarding({ schools: schoolsProp = [] }) {
   const [dateRange,  setDateRange]  = useState('Last 30 Days');
   const [schoolType, setSchoolType] = useState('All Types');
   const [region,     setRegion]     = useState('All Regions');
+  const [fetched,    setFetched]    = useState([]);
 
-  const kpis = [
-    { label: 'Conversion Rate',    value: '76%',   badge: '+12%', badgeCls: 'san-kbadge--green',   sub: 'Of submissions approved' },
-    { label: 'Avg. Review Time',   value: '2.4',   badge: '-5%',  badgeCls: 'san-kbadge--green',   sub: 'Days to decision', unit: 'Days' },
-    { label: 'Registered Schools', value: '1,245', badge: 'YTD',  badgeCls: 'san-kbadge--neutral', sub: 'Total on platform' },
-    { label: 'Pending Queue',      value: '48',    badge: '+2%',  badgeCls: 'san-kbadge--amber',   sub: 'Awaiting review' },
+  useEffect(() => {
+    // Only fetch if no schools were passed down from the parent dashboard
+    if (schoolsProp.length > 0) return;
+    ApiClient.get('/api/schools/').then(data => {
+      if (data.success && Array.isArray(data.schools)) setFetched(data.schools);
+    }).catch(() => {});
+  }, [schoolsProp.length]);
+
+  const schools = schoolsProp.length > 0 ? schoolsProp : fetched;
+
+  /* ── Derived KPIs from real school data ── */
+  const totalSchools   = schools.length;
+  const approvedCount  = schools.filter(s => s.is_approved).length;
+  const pendingCount   = schools.filter(s => !s.is_approved && s.is_active && !s.changes_requested).length;
+  // eslint-disable-next-line no-unused-vars
+  const rejectedCount  = schools.filter(s => !s.is_active && !s.is_approved).length;
+  const conversionRate = totalSchools > 0 ? Math.round((approvedCount / totalSchools) * 100) : 0;
+
+  const kpis = totalSchools > 0 ? [
+    { label: 'Conversion Rate',    value: `${conversionRate}%`, badge: 'Live',  badgeCls: 'san-kbadge--green',   sub: 'Of submissions approved' },
+    { label: 'Registered Schools', value: totalSchools.toLocaleString(), badge: 'YTD', badgeCls: 'san-kbadge--neutral', sub: 'Total on platform' },
+    { label: 'Approved Schools',   value: approvedCount.toLocaleString(), badge: 'Active', badgeCls: 'san-kbadge--green', sub: 'Currently live' },
+    { label: 'Pending Queue',      value: pendingCount.toLocaleString(), badge: pendingCount > 0 ? 'Review' : 'Clear', badgeCls: pendingCount > 0 ? 'san-kbadge--amber' : 'san-kbadge--neutral', sub: 'Awaiting review' },
+  ] : [
+    { label: 'Conversion Rate',    value: '—',   badge: '…', badgeCls: 'san-kbadge--neutral', sub: 'Of submissions approved' },
+    { label: 'Registered Schools', value: '—',   badge: '…', badgeCls: 'san-kbadge--neutral', sub: 'Total on platform' },
+    { label: 'Approved Schools',   value: '—',   badge: '…', badgeCls: 'san-kbadge--neutral', sub: 'Currently live' },
+    { label: 'Pending Queue',      value: '—',   badge: '…', badgeCls: 'san-kbadge--neutral', sub: 'Awaiting review' },
   ];
+
+  /* ── Registration volume by month (submissions) ── */
+  const regVolData = useMemo(() => {
+    if (schools.length === 0) return REG_VOL;
+    const monthMap = {};
+    schools.forEach(s => {
+      if (!s.registration_date) return;
+      const d = new Date(s.registration_date);
+      const key = d.toLocaleString('en-GB', { month: 'short' });
+      monthMap[key] = (monthMap[key] || { sub: 0, app: 0 });
+      monthMap[key].sub++;
+      if (s.is_approved) monthMap[key].app++;
+    });
+    const labels      = Object.keys(monthMap).slice(-6);
+    const submissions = labels.map(k => monthMap[k]?.sub || 0);
+    const approvals   = labels.map(k => monthMap[k]?.app || 0);
+    return labels.length >= 2 ? { labels, submissions, approvals } : REG_VOL;
+  }, [schools]);
+
+  /* ── Rejection reasons from real rejection_reason field ── */
+  const rejectData = useMemo(() => {
+    const rejected = schools.filter(s => !s.is_active && !s.is_approved && s.rejection_reason);
+    if (rejected.length === 0) return REJECT_REASONS;
+    const reasonMap = {};
+    rejected.forEach(s => {
+      const r = s.rejection_reason.trim().slice(0, 30) || 'Other';
+      reasonMap[r] = (reasonMap[r] || 0) + 1;
+    });
+    const COLORS = ['var(--sa-red)', 'var(--sa-amber)', 'var(--sa-purple)', 'var(--sa-text-2)'];
+    const total = rejected.length;
+    return Object.entries(reasonMap).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([reason, n], i) => ({
+      reason, pct: Math.round((n / total) * 100), color: COLORS[i],
+    }));
+  }, [schools]);
+
+  /* ── Pipeline real counts ── */
+  const pipelineSteps = totalSchools > 0 ? [
+    { step: 'Submitted',  count: totalSchools,  color: 'var(--sa-accent)', pct: 100 },
+    { step: 'In Review',  count: pendingCount + approvedCount, color: 'var(--sa-amber)', pct: totalSchools > 0 ? Math.round(((pendingCount + approvedCount) / totalSchools) * 80) : 60 },
+    { step: 'Approved',   count: approvedCount, color: 'var(--sa-green)',  pct: totalSchools > 0 ? Math.round((approvedCount / totalSchools) * 80) : 40 },
+    { step: 'Active',     count: approvedCount, color: 'var(--sa-green)',  pct: totalSchools > 0 ? Math.round((approvedCount / totalSchools) * 70) : 30 },
+  ] : [
+    { step: 'Submitted', count: 0, color: 'var(--sa-accent)', pct: 100 },
+    { step: 'In Review',  count: 0, color: 'var(--sa-amber)', pct: 75  },
+    { step: 'Approved',   count: 0, color: 'var(--sa-green)', pct: 60  },
+    { step: 'Active',     count: 0, color: 'var(--sa-green)', pct: 45  },
+  ];
+
+  /* ── Regions from real school.region field ── */
+  const regionData = useMemo(() => {
+    const regionMap = {};
+    schools.forEach(s => {
+      if (!s.region) return;
+      regionMap[s.region] = (regionMap[s.region] || 0) + 1;
+    });
+    const entries = Object.entries(regionMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    if (entries.length === 0) return null;
+    return entries.map(([name, count], i) => ({
+      name, count, growth: '', flag: name.slice(0, 2).toUpperCase(),
+    }));
+  }, [schools]);
 
   return (
     <div className="san-onboarding">
@@ -190,7 +276,7 @@ export default function SAOnboarding() {
           <button className="san-card-action">View Report</button>
         </div>
         <div className="san-card-body">
-          <DualLineChart data={REG_VOL} height={110} />
+          <DualLineChart data={regVolData} height={110} />
         </div>
       </div>
 
@@ -235,7 +321,7 @@ export default function SAOnboarding() {
           <div><h3 className="san-card-title">Rejection Reasons</h3><p className="san-card-sub">Top causes for application denial</p></div>
         </div>
         <div className="san-card-body">
-          {REJECT_REASONS.map(r => (
+          {rejectData.map(r => (
             <HBar key={r.reason} label={r.reason} value={r.pct} color={r.color}/>
           ))}
         </div>
@@ -250,8 +336,9 @@ export default function SAOnboarding() {
         {/* Regional growth bars */}
         <div className="san-card-body">
           <div className="san-region-chart">
-            {REGIONS.map((r, i) => {
-              const maxCount = REGIONS[0].count;
+            {(regionData || REGIONS).map((r, i) => {
+              const list = regionData || REGIONS;
+              const maxCount = list[0].count;
               return (
                 <div key={r.name} className="san-region-row">
                   <div className="san-region-flag" style={{ background: REGION_COLORS[i] }}>{r.flag}</div>
@@ -280,12 +367,7 @@ export default function SAOnboarding() {
         </div>
         <div className="san-card-body">
           <div className="san-pipeline-steps">
-            {[
-              { step: 'Submitted', count: 248, color: 'var(--sa-accent)',  pct: 100 },
-              { step: 'In Review', count: 186, color: 'var(--sa-amber)',   pct: 75  },
-              { step: 'Approved',  count: 148, color: 'var(--sa-green)',   pct: 60  },
-              { step: 'Active',    count: 112, color: 'var(--sa-green)',   pct: 45  },
-            ].map((s, i) => (
+            {pipelineSteps.map((s, i) => (
               <div key={s.step} className="san-pipeline-step">
                 <div className="san-pipeline-bar-wrap">
                   <div className="san-pipeline-bar" style={{ height: `${s.pct * 0.8}px`, background: s.color }}/>

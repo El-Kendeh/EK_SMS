@@ -1,106 +1,97 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 
 /* ================================================================
-   Mock notification data
+   Derive real notifications from schools + gradeAlerts props.
+   Static placeholders are kept for security/system types that
+   have no dedicated API endpoint yet.
    ================================================================ */
-const MOCK_NOTIFICATIONS = [
-  {
-    id: 1,
-    type: 'application',
-    severity: 'info',
-    title: 'New school application submitted',
-    body: 'Freetown International Academy has submitted a registration application and is awaiting review.',
-    school: 'Freetown International Academy',
-    timestamp: new Date(Date.now() - 1000 * 60 * 12).toISOString(),
-    read: false,
-    actionLabel: 'Review Application',
-    actionPage: 'applications',
-  },
-  {
-    id: 2,
-    type: 'security',
-    severity: 'critical',
-    title: 'Multiple failed login attempts detected',
-    body: '14 consecutive failed login attempts from IP 197.242.81.34 targeting admin accounts at Bo Science Secondary.',
-    school: 'Bo Science Secondary School',
-    timestamp: new Date(Date.now() - 1000 * 60 * 34).toISOString(),
-    read: false,
-    actionLabel: 'View Security Logs',
-    actionPage: 'security-logs',
-  },
-  {
-    id: 3,
-    type: 'grade',
-    severity: 'warning',
-    title: 'Grade modification request pending',
-    body: 'A grade modification request for JSS 3B Mathematics (Final Exam) at Kenema Girls Secondary is awaiting approval.',
-    school: 'Kenema Girls Secondary',
-    timestamp: new Date(Date.now() - 1000 * 60 * 58).toISOString(),
-    read: false,
-    actionLabel: 'Review Request',
-    actionPage: 'grade-requests',
-  },
-  {
-    id: 4,
-    type: 'application',
-    severity: 'success',
-    title: 'School registration approved',
-    body: 'Makeni United College was successfully approved and onboarded. School admin credentials have been dispatched.',
-    school: 'Makeni United College',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-    read: true,
-    actionLabel: 'View School',
-    actionPage: 'schools',
-  },
-  {
-    id: 5,
-    type: 'system',
-    severity: 'warning',
-    title: 'System health degraded',
-    body: 'Database response time exceeded threshold (2.4s avg). Performance may be affected for up to 200 concurrent users.',
+function buildNotifications(schools, gradeAlerts) {
+  const notifs = [];
+
+  /* Application notifications — one per school, sorted by recency */
+  const sorted = [...schools].sort(
+    (a, b) => new Date(b.registration_date) - new Date(a.registration_date)
+  );
+  sorted.forEach(s => {
+    if (s.is_approved) {
+      notifs.push({
+        id: `school-${s.id}-approved`,
+        type: 'application', severity: 'success',
+        title: 'School registration approved',
+        body: `"${s.name}" was approved and onboarded. School admin credentials have been dispatched.`,
+        school: s.name, timestamp: s.registration_date,
+        read: true, actionLabel: 'View School', actionPage: 'schools',
+      });
+    } else if (s.changes_requested) {
+      notifs.push({
+        id: `school-${s.id}-changes`,
+        type: 'application', severity: 'warning',
+        title: 'Changes requested for application',
+        body: `"${s.name}" has been asked to provide additional information before approval.`,
+        school: s.name, timestamp: s.registration_date,
+        read: false, actionLabel: 'Review Application', actionPage: 'applications',
+      });
+    } else if (!s.is_active && !s.is_approved) {
+      notifs.push({
+        id: `school-${s.id}-rejected`,
+        type: 'application', severity: 'error',
+        title: 'Application rejected',
+        body: `Registration for "${s.name}" was rejected. Rejection notice sent to the applicant.`,
+        school: s.name, timestamp: s.registration_date,
+        read: true, actionLabel: 'View Rejected', actionPage: 'rejected',
+      });
+    } else {
+      notifs.push({
+        id: `school-${s.id}-pending`,
+        type: 'application', severity: 'info',
+        title: 'New school application submitted',
+        body: `"${s.name}" has submitted a registration application and is awaiting review.`,
+        school: s.name, timestamp: s.registration_date,
+        read: false, actionLabel: 'Review Application', actionPage: 'applications',
+      });
+    }
+  });
+
+  /* Grade alert notifications — from real /api/grade-alerts/ data */
+  const SEVERITY_MAP = { critical: 'critical', high: 'warning', medium: 'warning', low: 'info' };
+  gradeAlerts.slice(0, 8).forEach(a => {
+    const urgency = a.urgency?.toLowerCase();
+    const titleStr = a.urgency
+      ? a.urgency.charAt(0).toUpperCase() + a.urgency.slice(1) + ' grade alert'
+      : 'Grade modification alert';
+    const bodyStr = a.student
+      ? `Grade change for ${a.student} in ${a.subject || 'unknown subject'} — ${a.oldGrade || '?'} → ${a.newGrade || '?'}`
+      : 'A grade modification event was detected and flagged for review.';
+    notifs.push({
+      id: `grade-${a.id}`,
+      type: 'grade',
+      severity: SEVERITY_MAP[urgency] || 'info',
+      title: titleStr,
+      body: bodyStr,
+      school: a.school || null,
+      timestamp: a.ts,
+      read: a.status !== 'Pending',
+      actionLabel: 'Review Request',
+      actionPage: 'grade-requests',
+    });
+  });
+
+  /* Static system placeholder — no dedicated API endpoint */
+  notifs.push({
+    id: 'sys-backup',
+    type: 'system', severity: 'info',
+    title: 'System Backup Completed',
+    body: 'Daily automated snapshot completed successfully.',
     school: null,
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(),
-    read: true,
-    actionLabel: 'View System Health',
-    actionPage: 'system-health',
-  },
-  {
-    id: 6,
-    type: 'security',
-    severity: 'warning',
-    title: 'Unusual access pattern flagged',
-    body: 'User k.sesay@portloko-sec.edu.sl accessed grade records outside normal working hours (02:47 AM).',
-    school: 'Port Loko Secondary School',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
-    read: true,
-    actionLabel: 'View Forensics',
-    actionPage: 'forensics',
-  },
-  {
-    id: 7,
-    type: 'application',
-    severity: 'error',
-    title: 'Application rejected',
-    body: 'Registration for Lunsar Islamic School was rejected due to incomplete documentation. Rejection notice sent.',
-    school: 'Lunsar Islamic School',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 8).toISOString(),
-    read: true,
-    actionLabel: 'View Rejected',
-    actionPage: 'rejected',
-  },
-  {
-    id: 8,
-    type: 'grade',
-    severity: 'info',
-    title: 'Grade lock period started',
-    body: 'Term 2 grade lock has been applied across 6 active schools. No further edits are permitted without a modification request.',
-    school: null,
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-    read: true,
-    actionLabel: 'View Grade Integrity',
-    actionPage: 'grade-report',
-  },
-];
+    timestamp: new Date(Date.now() - 4 * 3600000).toISOString(),
+    read: true, actionLabel: 'View System Health', actionPage: 'system-health',
+  });
+
+  return notifs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+}
+
+/* Exported so Dashboard can initialise its bell-badge state */
+export const INITIAL_UNREAD_COUNT = 0;
 
 /* ================================================================
    SVG Icons
@@ -170,16 +161,28 @@ function formatFull(iso) {
 }
 
 /* ================================================================
-   Initial unread count — exported so Dashboard can initialise badge
-   ================================================================ */
-export const INITIAL_UNREAD_COUNT = MOCK_NOTIFICATIONS.filter(n => !n.read).length;
-
-/* ================================================================
    Main Component
    ================================================================ */
-export default function SANotifications({ onNavigate, onUnreadChange }) {
-  const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
+export default function SANotifications({ onNavigate, onUnreadChange, schools = [], gradeAlerts = [] }) {
+  const derived = useMemo(() => buildNotifications(schools, gradeAlerts), [schools, gradeAlerts]);
+  const [notifications, setNotifications] = useState([]);
   const [filter, setFilter]               = useState('all');   // all | unread | application | security | grade | system
+
+  /* Sync when derived data changes (e.g. schools loaded after mount).
+     Preserve any read-state the user set during this session. */
+  useEffect(() => {
+    setNotifications(prev => {
+      const readSet = new Set(prev.filter(n => n.read).map(n => n.id));
+      return derived.map(n => readSet.has(n.id) ? { ...n, read: true } : n);
+    });
+  }, [derived]);
+
+  /* Report initial unread count once notifications load */
+  useEffect(() => {
+    if (notifications.length > 0) {
+      onUnreadChange && onUnreadChange(notifications.filter(n => !n.read).length);
+    }
+  }, [notifications, onUnreadChange]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 

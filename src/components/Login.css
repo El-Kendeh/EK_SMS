@@ -230,8 +230,8 @@
   align-items: center;
   transition: color 0.2s;
   flex-shrink: 0;
-  min-width: 36px;
-  min-height: 36px;
+  min-width: 44px;
+  min-height: 44px;
   justify-content: center;
 }
 

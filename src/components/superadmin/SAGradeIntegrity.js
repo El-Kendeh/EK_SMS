@@ -1,6 +1,23 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import ApiClient from '../../api/client';
 
+/* ---- CSV export helper ---- */
+function exportCSV(rows, filename) {
+  if (!rows.length) return;
+  const headers = Object.keys(rows[0]);
+  const csv = [
+    headers.join(','),
+    ...rows.map(r => headers.map(h => `"${String(r[h] ?? '').replace(/"/g, '""')}"`).join(',')),
+  ].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 /* ---- Icons ---- */
 const IcSearch = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>;
 const IcFilter = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>;
@@ -8,132 +25,6 @@ const IcShield = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor
 const IcWarn = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>;
 const IcArrow = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>;
 const IcTrend = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" /></svg>;
-
-/* ================================================================
-   Mock data — realistic school grade modification requests
-   ================================================================ */
-export const MOCK_REQUESTS = [
-  {
-    id: 'REQ-2026-001',
-    student: 'Fatima Koroma',
-    school: 'MAB Secondary School',
-    term: 'Term 2, 2025/26',
-    subject: 'Mathematics',
-    oldGrade: 'B+', oldScore: 88,
-    newGrade: 'A-', newScore: 91,
-    reason: 'Calculation error on final project weighting. Re-calculation verified by Department Head.',
-    status: 'Pending',
-    urgency: 'medium',
-    verified: true,
-    hashMatch: true,
-    ts: '2026-02-28 14:30',
-    requester: { name: 'Mr. A. Jalloh', role: 'Mathematics Dept.', initials: 'AJ', ip: '192.168.1.42', device: 'Campus PC — Windows 11', location: 'Campus WiFi — Building A' },
-    approver: null,
-    blockHash: '0x7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069',
-    prevHash: '0x3a19b22f91e4c7d8a5b63f21c40d985e77a1234f560cb72e89df41c33de78ba1',
-    blockNum: 192048,
-  },
-  {
-    id: 'REQ-2026-002',
-    student: 'Ibrahim Bangura',
-    school: 'AIC Grammar School',
-    term: 'Term 2, 2025/26',
-    subject: 'Physics 101',
-    oldGrade: 'C', oldScore: 74,
-    newGrade: 'B', newScore: 82,
-    reason: 'Late submission approved due to verified medical emergency. Supporting certificate attached.',
-    status: 'Pending',
-    urgency: 'low',
-    verified: true,
-    hashMatch: true,
-    ts: '2026-02-28 11:15',
-    requester: { name: 'Mrs. E. Robinson', role: 'Science Dept.', initials: 'ER', ip: '10.0.1.55', device: 'Laptop — macOS', location: 'School Network — Staff Room' },
-    approver: null,
-    blockHash: '0xa2c9d4f1b3e78902a45c6d71e2f834b1',
-    prevHash: '0x1f3d9a2c7b40f85e3d12c6a9b8e70421',
-    blockNum: 192031,
-  },
-  {
-    id: 'REQ-2026-003',
-    student: 'Mohamed Conteh',
-    school: 'UMU School',
-    term: 'Term 1, 2025/26',
-    subject: 'Biology AP',
-    oldGrade: 'F', oldScore: 55,
-    newGrade: 'A', newScore: 95,
-    reason: '"System Error" — No supporting documentation provided. Unusual 40-point jump in score.',
-    status: 'Flagged',
-    urgency: 'critical',
-    verified: false,
-    hashMatch: false,
-    ts: '2026-02-27 08:50',
-    requester: { name: 'Mr. S. Kamara', role: 'Science Dept.', initials: 'SK', ip: '45.22.19.112', device: 'Unknown — External', location: 'External Network (Flagged)' },
-    approver: null,
-    blockHash: null,
-    prevHash: null,
-    blockNum: null,
-  },
-  {
-    id: 'REQ-2026-004',
-    student: 'Aminata Turay',
-    school: 'MAB Secondary School',
-    term: 'Term 2, 2025/26',
-    subject: 'English Literature',
-    oldGrade: 'B', oldScore: 80,
-    newGrade: 'B+', newScore: 87,
-    reason: 'Essay re-graded after formal appeal. Department peer review confirmed higher score.',
-    status: 'Approved',
-    urgency: 'low',
-    verified: true,
-    hashMatch: true,
-    ts: '2026-02-26 16:22',
-    requester: { name: 'Ms. P. Williams', role: 'English Dept.', initials: 'PW', ip: '192.168.1.33', device: 'MacBook — macOS', location: 'Campus WiFi — Library' },
-    approver: { name: 'Principal Sesay', role: 'Administration', initials: 'PS', ip: '192.168.1.10', device: 'Desktop — Windows', location: 'Admin Office Network' },
-    blockHash: '0xb1d4e7f2a9c38b12456d91e0f7a23c84',
-    prevHash: '0x9a2c4b8e1d67f032c5a8b3e9d14f7601',
-    blockNum: 191987,
-  },
-  {
-    id: 'REQ-2026-005',
-    student: 'Abdul Turay',
-    school: 'AIC Grammar School',
-    term: 'Term 2, 2025/26',
-    subject: 'Chemistry',
-    oldGrade: 'A-', oldScore: 90,
-    newGrade: 'A+', newScore: 97,
-    reason: 'Marking error on practical exam — verified independently by external examiner board.',
-    status: 'Pending',
-    urgency: 'medium',
-    verified: true,
-    hashMatch: true,
-    ts: '2026-02-28 09:42',
-    requester: { name: 'Dr. B. Mansaray', role: 'Science Dept.', initials: 'BM', ip: '192.168.2.18', device: 'PC — Windows 11', location: 'Science Lab Network' },
-    approver: null,
-    blockHash: '0xf2e1c9b4a7d36520e8f13b94c50a7d12',
-    prevHash: '0x7c3a1e8b4d92f067c5a4b8e2d31f6090',
-    blockNum: 192041,
-  },
-  {
-    id: 'REQ-2026-006',
-    student: 'Sia Bangura',
-    school: 'Fourah Bay Secondary',
-    term: 'Term 1, 2025/26',
-    subject: 'History AP',
-    oldGrade: 'C+', oldScore: 78,
-    newGrade: 'B-', newScore: 80,
-    reason: 'Minor marking oversight — confirmed via recorded oral examination transcript.',
-    status: 'Approved',
-    urgency: 'low',
-    verified: true,
-    hashMatch: true,
-    ts: '2026-02-25 13:10',
-    requester: { name: 'Mr. J. Kanu', role: 'Humanities Dept.', initials: 'JK', ip: '10.0.3.22', device: 'Tablet — Android', location: 'Campus WiFi — Classroom B' },
-    approver: { name: 'Vice Principal Koroma', role: 'Administration', initials: 'VK', ip: '10.0.1.5', device: 'Desktop', location: 'Admin Network' },
-    blockHash: '0xe4c1a7f2b9d38012456c91e0f8a23b75',
-    prevHash: '0x8b3c5d9e2f174062c4a7b2e8d03f6512',
-    blockNum: 191964,
-  },
-];
 
 /* ---- Urgency accent colour ---- */
 function accentClass(urgency) {
@@ -155,9 +46,9 @@ function statusCfg(status) {
    Request Card
    ================================================================ */
 function RequestCard({ req, onClick }) {
-  const accent = accentClass(req.urgency);
+  const accent = accentClass(req.urgency || 'low');
   const st = statusCfg(req.status);
-  const isFlagged = !req.hashMatch;
+  const isFlagged = req.hashMatch === false;
 
   return (
     <div className="sa-gi-card" onClick={onClick} role="button" tabIndex={0} onKeyDown={e => e.key === 'Enter' && onClick()} aria-label={`Grade modification request ${req.id}`}>
@@ -199,7 +90,9 @@ function RequestCard({ req, onClick }) {
         <div className={`sa-gi-compare-box ${isFlagged ? 'sa-gi-compare-box--flagged' : 'sa-gi-compare-box--new'}`}>
           <p style={{ margin: '0 0 4px', fontSize: '0.5625rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: isFlagged ? 'var(--sa-red)' : 'var(--sa-accent)', fontWeight: 700 }}>Requested</p>
           <p className={isFlagged ? 'sa-gi-grade-new sa-gi-grade-new--flagged' : 'sa-gi-grade-new'}>{req.newGrade} <span style={{ fontSize: '0.75rem' }}>({req.newScore})</span></p>
-          <p style={{ margin: '2px 0 0', fontSize: '0.625rem', color: 'var(--sa-text-3)' }}>+{req.newScore - req.oldScore} pts</p>
+          <p style={{ margin: '2px 0 0', fontSize: '0.625rem', color: 'var(--sa-text-3)' }}>
+            {req.newScore != null && req.oldScore != null ? `+${req.newScore - req.oldScore} pts` : '—'}
+          </p>
         </div>
       </div>
 
@@ -220,12 +113,12 @@ function RequestCard({ req, onClick }) {
       {/* Footer: requester + timestamp + arrow */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, borderTop: '1px solid var(--sa-border)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div className="sa-gi-avatar">{req.requester.initials}</div>
-          <span style={{ fontSize: '0.75rem', color: 'var(--sa-text-2)' }}>{req.requester.name}</span>
+          <div className="sa-gi-avatar">{req.requester?.initials || '?'}</div>
+          <span style={{ fontSize: '0.75rem', color: 'var(--sa-text-2)' }}>{req.requester?.name || '—'}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontSize: '0.6875rem', color: 'var(--sa-text-3)' }}>
-            {req.ts.slice(11, 16)} · {req.ts.slice(5, 10)}
+            {req.ts ? req.ts.slice(11, 16) + ' · ' + req.ts.slice(5, 10) : '—'}
           </span>
           <span style={{ width: 16, height: 16, display: 'flex', color: 'var(--sa-text-3)' }}><IcArrow /></span>
         </div>
@@ -251,13 +144,14 @@ export default function SAGradeIntegrity({ onDetail }) {
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState('all');
   const [schoolFilt, setSchoolFilt] = useState('');
+  const [gradeStats, setGradeStats] = useState(null);
 
   const fetchAlerts = useCallback(async () => {
     setLoading(true);
     try {
       const data = await ApiClient.get('/api/grade-alerts/');
       if (data.success) {
-        setAlerts(data.alerts);
+        setAlerts(Array.isArray(data.alerts) ? data.alerts : []);
       }
     } catch (err) {
       console.error('Failed to fetch grade alerts', err);
@@ -268,35 +162,60 @@ export default function SAGradeIntegrity({ onDetail }) {
 
   useEffect(() => {
     fetchAlerts();
+    ApiClient.get('/api/grade-stats/').then(data => {
+      if (data.success) setGradeStats(data);
+    }).catch(() => {});
   }, [fetchAlerts]);
 
   const counts = useMemo(() => {
-    const c = { all: alerts.length, Pending: 0, Approved: 0, Flagged: 0, Rejected: 0 };
-    alerts.forEach(r => { if (c[r.status] !== undefined) c[r.status]++; });
+    const base = schoolFilt ? alerts.filter(r => r.school === schoolFilt) : alerts;
+    const c = { all: base.length, Pending: 0, Approved: 0, Flagged: 0, Rejected: 0 };
+    base.forEach(r => { if (c[r.status] !== undefined) c[r.status]++; });
     return c;
-  }, [alerts]);
+  }, [alerts, schoolFilt]);
 
   const filtered = useMemo(() => {
     let list = alerts;
     if (activeTab !== 'all') list = list.filter(r => r.status === activeTab);
+    if (schoolFilt) list = list.filter(r => r.school === schoolFilt);
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(r =>
-        r.student.toLowerCase().includes(q) ||
-        r.school.toLowerCase().includes(q) ||
-        r.subject.toLowerCase().includes(q) ||
-        r.id.toLowerCase().includes(q) ||
-        r.requester.name.toLowerCase().includes(q)
+        (r.student || '').toLowerCase().includes(q) ||
+        (r.school || '').toLowerCase().includes(q) ||
+        (r.subject || '').toLowerCase().includes(q) ||
+        String(r.id || '').toLowerCase().includes(q) ||
+        (r.requester?.name || '').toLowerCase().includes(q)
       );
     }
     return list;
-  }, [alerts, activeTab, search]);
+  }, [alerts, activeTab, schoolFilt, search]);
 
   /* Schools for filter dropdown */
-  const schools = useMemo(() => [...new Set(alerts.map(r => r.school))], [alerts]);
+  const schools = useMemo(() => [...new Set(alerts.map(r => r.school).filter(Boolean))], [alerts]);
 
   return (
     <div>
+
+      {/* ── Grade Stats Summary ── */}
+      {gradeStats && (
+        <div className="sa-stat-grid" style={{ marginBottom: 16 }}>
+          {[
+            { label: 'Total Grades', value: gradeStats.total_grades, cls: 'sa-stat-icon--blue' },
+            { label: 'Locked',       value: gradeStats.locked_grades, cls: 'sa-stat-icon--green' },
+            { label: 'Unlocked',     value: gradeStats.unlocked_grades, cls: 'sa-stat-icon--amber' },
+            { label: 'Avg Score',    value: gradeStats.average_score != null ? `${gradeStats.average_score}%` : '—', cls: 'sa-stat-icon--purple' },
+          ].map((s, i) => (
+            <div key={i} className="sa-stat-card">
+              <p className="sa-stat-label">{s.label}</p>
+              <div className="sa-stat-row">
+                <span className="sa-stat-value">{s.value}</span>
+                <span className={`sa-stat-icon ${s.cls}`}><IcTrend /></span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* ── Page Header ── */}
       <div className="sa-page-head" style={{ marginBottom: 16 }}>
@@ -317,6 +236,32 @@ export default function SAGradeIntegrity({ onDetail }) {
               {counts.Flagged} Flagged
             </div>
           )}
+          <button
+            className="sa-btn sa-btn--primary"
+            style={{ display: 'flex', alignItems: 'center', gap: 7 }}
+            onClick={() => exportCSV(
+              filtered.map(r => ({
+                'Alert ID':  r.id,
+                'Urgency':   r.urgency,
+                'Status':    r.status,
+                'Student':   r.student,
+                'School':    r.school,
+                'Subject':   r.subject,
+                'Old Grade': r.oldGrade,
+                'New Grade': r.newGrade,
+                'Old Score': r.oldScore,
+                'New Score': r.newScore,
+                'Reason':    r.reason,
+                'Hash Match': r.hashMatch ? 'Yes' : 'No',
+                'Timestamp': r.ts,
+              })),
+              `ek-sms-grade-alerts-${new Date().toISOString().slice(0,10)}.csv`
+            )}
+            aria-label="Export grade alerts as CSV"
+          >
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export Audit
+          </button>
         </div>
       </div>
 
@@ -374,13 +319,10 @@ export default function SAGradeIntegrity({ onDetail }) {
 
       {/* ── Request Cards ── */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {filtered
-          .filter(r => !schoolFilt || r.school === schoolFilt)
-          .map(req => (
-            <RequestCard key={req.id} req={req} onClick={() => onDetail && onDetail(req)} />
-          ))
-        }
-        {filtered.filter(r => !schoolFilt || r.school === schoolFilt).length === 0 && (
+        {filtered.map(req => (
+          <RequestCard key={req.id} req={req} onClick={() => onDetail && onDetail(req)} />
+        ))}
+        {filtered.length === 0 && (
           <div className="sa-empty">
             <div className="sa-empty-icon" style={{ fontSize: 32 }}>
               <IcTrend />

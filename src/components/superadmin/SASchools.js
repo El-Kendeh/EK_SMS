@@ -224,7 +224,7 @@ export default function SASchools({ schools, onReview }) {
                                 style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 14px', border: 'none', background: 'transparent', color: 'var(--sa-text)', fontSize: '0.875rem', cursor: 'pointer', fontFamily: 'var(--sa-font)', textAlign: 'left' }}
                                 onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
                                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                                onClick={() => { onReview(school); setMenuOpen(null); }}
+                                onClick={() => { onReview && onReview(school); setMenuOpen(null); }}
                               >
                                 <IcEye /> View Details
                               </button>

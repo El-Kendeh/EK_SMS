@@ -79,12 +79,14 @@ function RiskSparkline({ userId, riskScore, failedAttempts, color }) {
 }
 
 const ROLE_COLORS = {
-  'Super Admin': '#1B3FAF',
-  'School Admin': '#0EA5E9',
-  'Teacher': '#10B981',
-  'Exam Officer': '#8B5CF6',
-  'Finance Officer': '#F59E0B',
-  'Parent': '#6366F1',
+  'Super Admin':    '#1B3FAF',
+  'School Admin':   '#0EA5E9',
+  'Teacher':        '#10B981',
+  'Exam Officer':   '#8B5CF6',
+  'Finance Officer':'#F59E0B',
+  'Parent':         '#6366F1',
+  'Staff Admin':    '#64748B',
+  'User':           '#94A3B8',
 };
 
 const ACTIVITY_ICONS = { grade: <IcGrade />, login: <IcLogin />, admin: <IcAdmin /> };
@@ -97,6 +99,7 @@ const ROLES_LIST = ['Super Admin', 'School Admin', 'Teacher', 'Exam Officer', 'F
 function CreateUserModal({ onClose }) {
   const [form, setForm] = useState({ name: '', email: '', role: 'Teacher', school: '' });
   const [submitted, setSubmitted] = useState(false);
+  const [sending,   setSending]   = useState(false);
   const [errors, setErrors] = useState({});
 
   const needsSchool = form.role !== 'Super Admin';
@@ -110,11 +113,28 @@ function CreateUserModal({ onClose }) {
     return e;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const errs = validate();
     if (Object.keys(errs).length) { setErrors(errs); return; }
-    setSubmitted(true);
+    setSending(true);
+    try {
+      const res = await ApiClient.post('/api/users/', {
+        name:   form.name,
+        email:  form.email,
+        role:   form.role,
+        school: form.school,
+      });
+      if (!res.success) {
+        setErrors({ email: res.message || 'Failed to create user' });
+        return;
+      }
+      setSubmitted(true);
+    } catch (err) {
+      setErrors({ email: err.message || 'Failed to create user. Please try again.' });
+    } finally {
+      setSending(false);
+    }
   };
 
   const field = (key, label, type = 'text', placeholder = '') => (
@@ -195,8 +215,8 @@ function CreateUserModal({ onClose }) {
             </div>
 
             <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-              <button type="button" className="sa-btn sa-btn--ghost" style={{ flex: 1 }} onClick={onClose}>Cancel</button>
-              <button type="submit" className="sa-btn sa-btn--primary" style={{ flex: 2 }}>Send Invitation</button>
+              <button type="button" className="sa-btn sa-btn--ghost" style={{ flex: 1 }} onClick={onClose} disabled={sending}>Cancel</button>
+              <button type="submit" className="sa-btn sa-btn--primary" style={{ flex: 2 }} disabled={sending}>{sending ? 'Creating…' : 'Send Invitation'}</button>
             </div>
           </form>
         )}
@@ -216,7 +236,7 @@ function UserProfile({ user, onBack, onNavigate, showToast }) {
   const [sessions, setSessions] = useState(user.sessions);
   const [twoFA, setTwoFA] = useState(user.twoFAEnabled);
 
-  const initials = user.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  const initials = (user.name || user.username || 'U').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
   const roleColor = ROLE_COLORS[user.role] || '#64748B';
 
   const terminateSession = (id) => setSessions(s => s.filter(sess => sess.id !== id));
@@ -240,7 +260,7 @@ function UserProfile({ user, onBack, onNavigate, showToast }) {
       </div>
 
       {/* Top section */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(200px, 260px) 1fr', gap: 16, marginBottom: 16, alignItems: 'start' }}>
+      <div className="sa-user-detail-grid">
 
         {/* Avatar card */}
         <div className="sa-card" style={{ padding: '28px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 8 }}>
@@ -296,7 +316,7 @@ function UserProfile({ user, onBack, onNavigate, showToast }) {
               Risk Level: {risk.label}
             </span>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 18 }}>
+          <div className="sa-user-stat-grid">
             {[
               { label: 'Successful Logins', value: user.successLogins, trend: '+5%', trendUp: true },
               { label: 'Failed Attempts', value: user.failedAttempts, trend: '-10%', trendUp: false },
@@ -322,7 +342,7 @@ function UserProfile({ user, onBack, onNavigate, showToast }) {
               <span>Risk Assessment Score</span>
               <span style={{ color: risk.color }}>{user.riskScore}/100</span>
             </div>
-            <div style={{ height: 6, width: '100%', background: 'rgba(255,255,255,0.06)', borderRadius: 999, overflow: 'hidden' }}>
+            <div style={{ height: 6, width: '100%', background: 'var(--sa-border)', borderRadius: 999, overflow: 'hidden' }}>
               <div style={{ height: '100%', width: `${user.riskScore}%`, background: risk.color, borderRadius: 999, transition: 'width 0.5s ease' }} />
             </div>
           </div>
@@ -369,7 +389,7 @@ function UserProfile({ user, onBack, onNavigate, showToast }) {
       </div>
 
       {/* Activity + Sessions */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div className="sa-two-col-grid" style={{ gap: 16 }}>
 
         {/* Recent Activity */}
         <div className="sa-card" style={{ padding: '20px 24px' }}>
@@ -490,6 +510,7 @@ export default function SAUsers({ onNavigate }) {
           failedAttempts: u.failedAttempts || 0,
           successLogins: u.successLogins || 0,
           twoFAEnabled: !!u.twoFAEnabled,
+          alertsTriggered: u.alertsTriggered || 0,
           lastSeen: u.last_login ? new Date(u.last_login).toLocaleString() : 'Never',
           recentActivity: u.recentActivity || [],
           sessions: u.sessions || []
@@ -530,7 +551,7 @@ export default function SAUsers({ onNavigate }) {
 
   return (
     <div style={{ position: 'relative' }}>
-      {toast && <div className="sa-toast sa-toast--success">{toast}</div>}
+      {toast && <div className={`sa-toast sa-toast--${toast.type || 'success'}`}>{toast.msg}</div>}
       {showCreate && <CreateUserModal onClose={() => setShowCreate(false)} />}
 
       <div className="sa-page-head">
@@ -590,7 +611,7 @@ export default function SAUsers({ onNavigate }) {
           {filtered.map(user => {
             const risk = RISK_CFG[user.riskLevel] || RISK_CFG.low;
             const roleColor = ROLE_COLORS[user.role] || '#64748B';
-            const initials = user.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+            const initials = (user.name || user.username || 'U').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
             return (
               <div
                 key={user.id}

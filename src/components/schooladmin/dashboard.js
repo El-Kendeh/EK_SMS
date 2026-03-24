@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import './dashboard.css';
 
 import SECURITY_CONFIG from '../../config/security';
+import ApiClient from '../../api/client';
 
 const getBadgeUrl = (badgePath) => {
     if (!badgePath) return '';
@@ -60,6 +61,7 @@ const LogoutIcon = () => (
 function SchoolAdminDashboard({ onNavigate }) {
     const [user, setUser] = useState(null);
     const [isApproved, setIsApproved] = useState(false);
+    const [saStats, setSaStats] = useState(null);
 
     useEffect(() => {
         const userStr = localStorage.getItem('user');
@@ -71,6 +73,13 @@ function SchoolAdminDashboard({ onNavigate }) {
             onNavigate('login');
         }
     }, [onNavigate]);
+
+    useEffect(() => {
+        if (!isApproved) return;
+        ApiClient.get('/api/sa-stats/').then(data => {
+            if (data.success) setSaStats(data);
+        }).catch(() => {});
+    }, [isApproved]);
 
     const handleLogout = () => {
         localStorage.removeItem('token');
@@ -131,6 +140,13 @@ function SchoolAdminDashboard({ onNavigate }) {
         );
     }
 
+    const approvalDate = user.school?.approval_date
+        ? new Date(user.school.approval_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+        : null;
+    const registrationDate = user.school?.registration_date
+        ? new Date(user.school.registration_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+        : null;
+
     return (
         <div className="sa-dashboard approved" style={brandingStyles}>
             <header className="sa-header">
@@ -153,34 +169,89 @@ function SchoolAdminDashboard({ onNavigate }) {
 
             <main className="sa-main">
                 <div className="sa-welcome-banner">
-                    <h2>Dashboard Overview</h2>
-                    <p>Manage your institution's academic data, staff, and students from one central location.</p>
+                    <h2>Welcome back, {user.first_name || user.full_name || 'Admin'}</h2>
+                    <p>Your school dashboard is active. Academic data management features are coming soon.</p>
                 </div>
 
+                {/* Live stats row */}
                 <div className="sa-grid">
-                    {/* Quick Stats */}
                     <div className="sa-card stat">
-                        <h3>Total Students</h3>
-                        <p className="stat-value">0</p>
-                        <span className="stat-label">Enrolled</span>
+                        <h3>Students</h3>
+                        <p className="stat-value" style={{ fontSize: '1.75rem', color: primaryColor }}>
+                            {saStats ? saStats.student_count.toLocaleString() : '—'}
+                        </p>
+                        <span className="stat-label">Enrolled &amp; active</span>
                     </div>
                     <div className="sa-card stat">
-                        <h3>Total Teachers</h3>
-                        <p className="stat-value">0</p>
-                        <span className="stat-label">Active</span>
+                        <h3>Teachers</h3>
+                        <p className="stat-value" style={{ fontSize: '1.75rem', color: primaryColor }}>
+                            {saStats ? saStats.teacher_count.toLocaleString() : '—'}
+                        </p>
+                        <span className="stat-label">Active staff</span>
+                    </div>
+                    <div className="sa-card stat">
+                        <h3>Classrooms</h3>
+                        <p className="stat-value" style={{ fontSize: '1.75rem', color: primaryColor }}>
+                            {saStats ? saStats.classroom_count.toLocaleString() : '—'}
+                        </p>
+                        <span className="stat-label">Active classes</span>
                     </div>
                     <div className="sa-card stat">
                         <h3>Academic Year</h3>
-                        <p className="stat-value">N/A</p>
-                        <span className="stat-label">Current Term</span>
+                        <p className="stat-value" style={{ fontSize: '1.1rem', fontWeight: 700, color: primaryColor }}>
+                            {saStats ? (saStats.academic_year || 'Not set') : '—'}
+                        </p>
+                        <span className="stat-label">Current year</span>
                     </div>
                 </div>
 
+                {/* School info cards */}
+                <div className="sa-grid">
+                    <div className="sa-card stat">
+                        <h3>School Code</h3>
+                        <p className="stat-value" style={{ fontSize: '1.5rem' }}>
+                            {user.school?.code || '—'}
+                        </p>
+                        <span className="stat-label">Institution ID</span>
+                    </div>
+                    <div className="sa-card stat">
+                        <h3>Status</h3>
+                        <p className="stat-value" style={{ fontSize: '1.25rem', color: primaryColor }}>Active</p>
+                        <span className="stat-label">
+                            {approvalDate ? `Approved ${approvalDate}` : registrationDate ? `Registered ${registrationDate}` : 'Approved'}
+                        </span>
+                    </div>
+                    <div className="sa-card stat">
+                        <h3>Contact Email</h3>
+                        <p className="stat-value" style={{ fontSize: '0.9rem', fontWeight: 600, wordBreak: 'break-all' }}>
+                            {user.school?.email || user.email || '—'}
+                        </p>
+                        <span className="stat-label">Primary contact</span>
+                    </div>
+                </div>
+
+                {/* Coming-soon feature cards */}
                 <div className="sa-sections">
                     <div className="sa-card action-card">
-                        <h3>Recent Activity</h3>
-                        <div className="empty-state">
-                            <p>No recent activity to show.</p>
+                        <h3>Academic Modules</h3>
+                        <div className="sa-module-grid">
+                            {[
+                                { label: 'Students', desc: 'Enrol and manage students', icon: '🎓' },
+                                { label: 'Teachers', desc: 'Staff records and assignments', icon: '👩‍🏫' },
+                                { label: 'Classes', desc: 'Classrooms and timetables', icon: '🏫' },
+                                { label: 'Grades & Reports', desc: 'Scores, terms, and report cards', icon: '📊' },
+                            ].map(m => (
+                                <div key={m.label} style={{ background: 'var(--sa-card-bg, #f8fafc)', border: '1px solid var(--sa-border, #e2e8f0)', borderRadius: '10px', padding: '16px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                                    <span style={{ fontSize: '1.5rem' }}>{m.icon}</span>
+                                    <div>
+                                        <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem', color: 'var(--sa-text, #1e293b)' }}>{m.label}</p>
+                                        <p style={{ margin: '2px 0 6px', fontSize: '0.78rem', color: 'var(--sa-text-2, #64748b)' }}>{m.desc}</p>
+                                        <span style={{ fontSize: '0.7rem', fontWeight: 700, color: primaryColor, background: `${primaryColor}18`, padding: '2px 8px', borderRadius: '20px' }}>
+                                            Coming Soon
+                                        </span>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </div>

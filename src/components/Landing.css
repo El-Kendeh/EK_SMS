@@ -142,6 +142,7 @@
   cursor: pointer;
   border: none;
   line-height: 1;
+  min-height: 44px;
 }
 
 .lp-btn--primary {
@@ -4341,7 +4342,6 @@ body { overflow-x: hidden; max-width: 100%; }
   }
   .lp-compare {
     overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
     border-radius: 0;
     margin: 0;
   }

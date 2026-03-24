@@ -46,8 +46,8 @@ const AlertIcon = () => (
 function ErrorModal({ message, onClose }) {
   return (
     <div className="modal-overlay" role="dialog" aria-modal="true" onClick={onClose} style={{
-      position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', 
-      backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', 
+      position: 'fixed', inset: 0,
+      backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center',
       justifyContent: 'center', zIndex: 9999, backdropFilter: 'blur(4px)'
     }}>
       <div className="modal-box" onClick={(e) => e.stopPropagation()} style={{
@@ -81,7 +81,7 @@ function ErrorModal({ message, onClose }) {
    Login Component
    =================================================================== */
 function Login({ onNavigate }) {
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
   const [remember, setRemember] = useState(false);
@@ -125,15 +125,15 @@ function Login({ onNavigate }) {
     e.preventDefault();
     setError('');
 
-    if (!email.trim() || !password.trim()) {
-      setError('Please enter your email address and password.');
+    if (!identifier.trim() || !password.trim()) {
+      setError('Please enter your email or username and password.');
       return;
     }
 
     setIsLoading(true);
     try {
       const data = await ApiClient.post('/api/login/', {
-        username: email.trim(),
+        username: identifier.trim(),
         password
       });
 
@@ -156,7 +156,16 @@ function Login({ onNavigate }) {
         }
       }
     } catch (err) {
-      setError(err.message || 'An error occurred. Please try again.');
+      const raw = err.message || '';
+      if (raw.toLowerCase().includes('failed to fetch') || raw.toLowerCase().includes('networkerror') || raw.toLowerCase().includes('load failed')) {
+        setError('Unable to reach the server. Please check your connection and try again.');
+      } else if (raw.toLowerCase().includes('invalid') || raw.toLowerCase().includes('credentials') || raw.toLowerCase().includes('password') || raw.toLowerCase().includes('401')) {
+        setError('Incorrect email/username or password. Please check your credentials and try again.');
+      } else if (raw) {
+        setError(raw);
+      } else {
+        setError('Something went wrong. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -258,17 +267,19 @@ function Login({ onNavigate }) {
         {/* ── Form ── */}
         <form onSubmit={handleSubmit} className="login-form" noValidate>
 
-          {/* Email */}
+          {/* Email or Username */}
           <div className="form-field">
-            <label htmlFor="login-email" className="sr-only">Email or National ID</label>
+            <label htmlFor="login-identifier" className="sr-only">Email or Username</label>
             <input
-              id="login-email"
-              type="email"
+              id="login-identifier"
+              type="text"
               className="form-input"
-              placeholder="Email or National ID"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
+              placeholder="Email or username"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              autoComplete="username"
+              autoCapitalize="none"
+              spellCheck={false}
               required
             />
           </div>

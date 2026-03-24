@@ -1,4 +1,5 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import ApiClient from '../../api/client';
 
 /* ---- Icons ---- */
 const IcSchool   = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18M5 21V10.6M19 21V10.6M12 3L2 8h20L12 3z"/><rect x="9" y="13" width="6" height="8" rx="1"/></svg>;
@@ -28,6 +29,7 @@ function getRisk(school) {
 
 /* ---- Relative time helper ---- */
 function timeAgo(dateStr) {
+  if (!dateStr) return '—';
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
   const hrs  = Math.floor(mins / 60);
@@ -38,13 +40,81 @@ function timeAgo(dateStr) {
   return `${days}d ago`;
 }
 
+/* ---- Map a SecurityLogEntry to an activity-feed item ---- */
+const LOG_MESSAGES = {
+  login_success:       l => `${l.actor} logged in`,
+  login_failure:       l => `Failed login attempt — ${l.actor}`,
+  school_approved:     l => `School approved by ${l.actor}`,
+  school_rejected:     l => `School rejected by ${l.actor}`,
+  password_changed:    l => `Password changed — ${l.actor}`,
+  profile_updated:     l => `Profile updated — ${l.actor}`,
+  broadcast_sent:      l => `Alert broadcast sent by ${l.actor}`,
+  permission_changed:  l => `Permissions changed by ${l.actor}`,
+  suspicious_activity: l => `Suspicious activity flagged — ${l.actor}`,
+  logout:              l => `${l.actor} logged out`,
+};
+
+function logToActivity(l) {
+  const msgFn = LOG_MESSAGES[l.type];
+  const message = msgFn ? msgFn(l) : (l.action || l.type);
+  const type =
+    l.severity === 'critical' || l.severity === 'high'  ? 'critical'
+    : l.type === 'school_approved'                       ? 'approved'
+    : l.type === 'login_failure' || l.severity === 'medium' ? 'warning'
+    : 'success';
+  return { id: l.id, type, message, sub: l.ip !== '—' ? l.ip : l.actor || '—', time: l.ts };
+}
+
+/* ---- Map a log entry to a security-alert panel item ---- */
+function logToAlert(l) {
+  const iconType =
+    l.severity === 'critical' || l.severity === 'high' || l.type === 'login_failure' ? 'error'
+    : l.severity === 'medium' ? 'amber'
+    : 'blue';
+  return {
+    id: l.id,
+    type: iconType,
+    title: l.action?.length > 55 ? l.action.slice(0, 55) + '…' : (l.action || l.type),
+    desc: `${l.actor} · ${l.ip}`,
+    time: timeAgo(l.ts),
+  };
+}
+
 export default function SAOverview({ schools, user, onNavigate, onReview }) {
+  const [secCounters, setSecCounters] = useState({ threats_blocked: 0, failed_logins: 0 });
+  const [activityLogs, setActivityLogs] = useState([]);
+  const [recentAlerts, setRecentAlerts] = useState([]);
+
+  const fetchSecurityData = useCallback(() => {
+    ApiClient.get('/api/security-counters/').then(data => {
+      if (data.success) setSecCounters({
+        threats_blocked: data.threats_blocked ?? 0,
+        failed_logins:   data.failed_logins_24h ?? 0,
+      });
+    }).catch(() => {});
+
+    ApiClient.get('/api/security-logs/?limit=20').then(data => {
+      if (data.success && data.logs?.length > 0) {
+        setActivityLogs(data.logs.slice(0, 6).map(logToActivity));
+        // Security alerts: pick the most recent high/medium/critical entries (up to 4)
+        const alertable = data.logs.filter(l =>
+          ['critical', 'high', 'medium'].includes(l.severity) ||
+          l.type === 'login_failure'
+        );
+        setRecentAlerts(alertable.slice(0, 4).map(logToAlert));
+      }
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => { fetchSecurityData(); }, [fetchSecurityData]);
+
   const pending  = useMemo(() => schools.filter(s => !s.is_approved && !s.changes_requested), [schools]);
   const approved = useMemo(() => schools.filter(s => s.is_approved), [schools]);
   const changes  = useMemo(() => schools.filter(s => s.changes_requested), [schools]);
 
-  /* Derive activity from recent school registrations */
+  /* Activity feed: prefer real audit logs; fall back to school registrations if empty */
   const activity = useMemo(() => {
+    if (activityLogs.length > 0) return activityLogs;
     return [...schools]
       .sort((a, b) => new Date(b.registration_date) - new Date(a.registration_date))
       .slice(0, 6)
@@ -57,7 +127,18 @@ export default function SAOverview({ schools, user, onNavigate, onReview }) {
         sub:     s.city ? `${s.city}${s.country ? ', ' + s.country : ''}` : s.address || '—',
         time:    s.registration_date,
       }));
-  }, [schools]);
+  }, [activityLogs, schools]);
+
+  /* Security alerts: prefer real log-derived alerts; fall back to counter summary */
+  const secAlerts = useMemo(() => {
+    if (recentAlerts.length > 0) return recentAlerts;
+    // Fallback: build 3 counter-based summary alerts
+    return [
+      { id: 1, type: 'error',  title: 'Failed Login Attempts',     desc: `${secCounters.failed_logins} failed login event${secCounters.failed_logins !== 1 ? 's' : ''} recorded`,  time: 'Live' },
+      { id: 2, type: 'amber',  title: 'New School Awaiting Review', desc: pending.length > 0 ? `${pending.length} application${pending.length > 1 ? 's' : ''} pending approval` : 'No pending applications', time: 'Now' },
+      { id: 3, type: 'blue',   title: 'Threats Blocked',           desc: `${secCounters.threats_blocked} threat${secCounters.threats_blocked !== 1 ? 's' : ''} blocked by security layer`, time: 'Live' },
+    ];
+  }, [recentAlerts, secCounters, pending.length]);
 
   const stats = [
     {
@@ -76,13 +157,6 @@ export default function SAOverview({ schools, user, onNavigate, onReview }) {
       label: 'Changes Requested', value: changes.length,
       icon: <IcActivity />, cls: 'sa-stat-icon--purple', trend: 'Awaiting resubmit', trendDir: 'flat',
     },
-  ];
-
-  /* Static security alerts (real-world: these would come from an audit log API) */
-  const secAlerts = [
-    { id: 1, type: 'error',  title: 'Failed Login Attempt',      desc: 'Multiple failures detected from Admin Portal',       time: '2m ago' },
-    { id: 2, type: 'amber',  title: 'New School Awaiting Review', desc: pending.length > 0 ? `${pending.length} application${pending.length > 1 ? 's' : ''} pending approval` : 'No pending applications', time: 'Now' },
-    { id: 3, type: 'blue',   title: 'System Backup Completed',   desc: 'Daily automated snapshot completed successfully',     time: '4h ago' },
   ];
 
   return (
@@ -201,7 +275,7 @@ export default function SAOverview({ schools, user, onNavigate, onReview }) {
               <div className="sa-activity-list">
                 {activity.map(a => (
                   <div key={a.id} className="sa-activity-item">
-                    <div className={`sa-activity-dot sa-activity-dot--${a.type === 'approved' ? 'green' : 'amber'}`} />
+                    <div className={`sa-activity-dot sa-activity-dot--${a.type === 'approved' || a.type === 'success' ? 'green' : a.type === 'critical' ? 'red' : 'amber'}`} />
                     <div className="sa-activity-content">
                       <p className="sa-activity-msg">{a.message}</p>
                       <p className="sa-activity-time">{a.sub} · {timeAgo(a.time)}</p>
@@ -242,7 +316,7 @@ export default function SAOverview({ schools, user, onNavigate, onReview }) {
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <p style={{ margin: 0, fontSize: '0.875rem', fontWeight: 600, color: 'var(--sa-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</p>
-                        <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--sa-text-2)' }}>{s.city || s.address?.split(',')[0] || '—'}</p>
+                        <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--sa-text-2)' }}>{s.city || (s.address ? s.address.split(',')[0] : null) || '—'}</p>
                       </div>
                       <span className={`sa-badge sa-badge--${risk}`}>{risk.charAt(0).toUpperCase() + risk.slice(1)}</span>
                     </div>
