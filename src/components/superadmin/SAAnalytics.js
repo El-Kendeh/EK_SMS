@@ -9,7 +9,6 @@ const IcList     = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentCol
 const IcUsers    = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>;
 const IcSchool   = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18M5 21V10.6M19 21V10.6M12 3L2 8h20L12 3z"/><rect x="9" y="13" width="6" height="8" rx="1"/></svg>;
 const IcMapPin   = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>;
-const IcChevDown = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>;
 const IcDots     = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="5" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="12" cy="19" r="1" fill="currentColor"/></svg>;
 const IcLogin    = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>;
 const IcCheck    = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>;
@@ -27,10 +26,6 @@ const COLORS = ['#1B3FAF','#0EA5E9','#10B981','#8B5CF6','#F59E0B','#EF4444','#06
 const avatarColor = name => COLORS[(name?.charCodeAt(0) || 0) % COLORS.length];
 const initials    = name => (name || 'SC').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 
-const TIER_COLORS  = { Enterprise: 'var(--sa-purple)', Pro: 'var(--sa-accent)', Basic: 'var(--sa-amber)' };
-const TIER_BG      = { Enterprise: 'var(--sa-purple-dim)', Pro: 'var(--sa-accent-dim)', Basic: 'var(--sa-amber-dim)' };
-const REGIONS      = ['West Africa', 'East Africa', 'North Africa', 'Central Africa', 'Southern Africa'];
-const TIERS        = ['Enterprise', 'Pro', 'Basic'];
 
 /* Empty overlay — real values fetched from API where available */
 const NULL_OVERLAY = {
