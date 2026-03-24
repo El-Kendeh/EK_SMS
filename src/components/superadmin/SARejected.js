@@ -12,15 +12,6 @@ const IcTag     = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColo
 const AVATAR_COLORS = ['#1B3FAF','#0EA5E9','#10B981','#8B5CF6','#F59E0B','#EF4444','#06B6D4','#6366F1'];
 const avatarColor   = (name) => AVATAR_COLORS[(name?.charCodeAt(0) || 0) % AVATAR_COLORS.length];
 
-const REASONS = [
-  'Incomplete Documentation',
-  'Fraud Risk',
-  'Policy Violation',
-  'Invalid Credentials',
-  'Duplicate Registration',
-];
-const getReason = (school) => REASONS[school.id % REASONS.length];
-
 function fmtDate(dateStr) {
   if (!dateStr) return '—';
   return new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -58,13 +49,17 @@ export default function SARejected({ schools, onAudit, onReconsider }) {
         s.country?.toLowerCase().includes(q)
       );
     }
-    if (tab === 'fraud')      list = list.filter(s => getReason(s) === 'Fraud Risk');
-    if (tab === 'incomplete') list = list.filter(s => getReason(s) === 'Incomplete Documentation');
-    if (tab === 'policy')     list = list.filter(s => getReason(s) === 'Policy Violation');
+    if (tab === 'fraud')      list = list.filter(s => (s.rejection_reason || '').toLowerCase().includes('fraud'));
+    if (tab === 'incomplete') list = list.filter(s => (s.rejection_reason || '').toLowerCase().includes('incomplete') || (s.rejection_reason || '').toLowerCase().includes('document'));
+    if (tab === 'policy')     list = list.filter(s => (s.rejection_reason || '').toLowerCase().includes('policy'));
     return list;
   }, [rejected, search, tab]);
 
-  const topReason = rejected.length > 0 ? getReason(rejected[0]) : '—';
+  const reasonCounts = {};
+  rejected.forEach(s => { if (s.rejection_reason) reasonCounts[s.rejection_reason] = (reasonCounts[s.rejection_reason] || 0) + 1; });
+  const topReason = Object.keys(reasonCounts).length > 0
+    ? Object.entries(reasonCounts).sort((a, b) => b[1] - a[1])[0][0]
+    : '—';
 
   return (
     <div>
@@ -145,7 +140,7 @@ export default function SARejected({ schools, onAudit, onReconsider }) {
       ) : (
         <div className="sa-app-list">
           {filtered.map(school => {
-            const reason = getReason(school);
+            const reason = school.rejection_reason || '—';
             const color  = avatarColor(school.name);
             const loc    = [school.city, school.country].filter(Boolean).join(', ') || '—';
             return (

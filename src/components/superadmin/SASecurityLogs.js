@@ -17,9 +17,6 @@ const SEVERITY_CFG = {
   info: { label: 'Info', color: 'var(--sa-green)', bg: 'var(--sa-green-dim)' },
 };
 
-/* 24-hour activity (events per hour, 0–23) */
-const ACTIVITY_BARS = [4, 7, 2, 1, 3, 8, 12, 9, 5, 3, 6, 15, 11, 8, 4, 3, 7, 20, 18, 14, 9, 6, 3, 2];
-
 function fmtTime(ts) {
   const d = new Date(ts);
   return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -103,7 +100,17 @@ export default function SASecurityLogs({ onForensic, initialSearch, onMount }) {
     { key: 'low', label: 'Low', count: counts.low },
   ];
 
-  const maxBar = Math.max(...ACTIVITY_BARS);
+  const activityBars = useMemo(() => {
+    const bars = new Array(24).fill(0);
+    logs.forEach(e => {
+      const ts = e.ts || e.created_at;
+      if (!ts) return;
+      const hour = new Date(ts).getHours();
+      if (hour >= 0 && hour < 24) bars[hour]++;
+    });
+    return bars;
+  }, [logs]);
+  const maxBar = Math.max(...activityBars, 1);
 
   return (
     <div>
@@ -147,7 +154,7 @@ export default function SASecurityLogs({ onForensic, initialSearch, onMount }) {
         </div>
         <div className="sa-card-body">
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 64, padding: '0 2px' }}>
-            {ACTIVITY_BARS.map((val, i) => {
+            {activityBars.map((val, i) => {
               const pct = (val / maxBar) * 100;
               const isHigh = val >= 15;
               const isMed = val >= 8 && !isHigh;

@@ -32,24 +32,6 @@ function fmtUptime(secs) {
 }
 
 
-const ACTIVITY = [
-  {
-    dot: 'green', label: 'Database Maintenance Completed',
-    desc: 'Scheduled maintenance for the Grade Database has been completed successfully. All systems are operating normally.',
-    date: '24 Oct, 14:30',
-  },
-  {
-    dot: 'amber', label: 'API Gateway Latency Spike',
-    desc: 'Briefly elevated API response times resolved after 15 minutes. Post-incident report filed.',
-    date: '12 Oct, 09:15',
-  },
-  {
-    dot: 'amber', label: 'SMS Gateway Connectivity',
-    desc: 'Temporary connectivity issue with third-party SMS provider resolved without data loss.',
-    date: '28 Sep, 11:00',
-  },
-];
-
 export default function SASystemHealth() {
   const [metrics, setMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -234,23 +216,7 @@ export default function SASystemHealth() {
           <div className="sa-card">
             <div className="sa-card-head"><p className="sa-card-title">Recent Activity</p></div>
             <div className="sa-card-body" style={{ paddingBottom: 8 }}>
-              <div className="sa-tl">
-                {ACTIVITY.map((ev, i) => (
-                  <div key={i} className="sa-tl-item">
-                    <div className="sa-tl-left">
-                      <div className={`sa-tl-dot sa-tl-dot--${ev.dot}`} />
-                      {i < ACTIVITY.length - 1 && <div className="sa-tl-line" />}
-                    </div>
-                    <div className="sa-tl-content" style={{ paddingBottom: i < ACTIVITY.length - 1 ? 20 : 0 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, marginBottom: 4 }}>
-                        <p style={{ margin: 0, fontWeight: 700, fontSize: '0.875rem', color: 'var(--sa-text)' }}>{ev.label}</p>
-                        <p style={{ margin: 0, fontSize: '0.6875rem', color: 'var(--sa-text-2)', whiteSpace: 'nowrap', flexShrink: 0 }}>{ev.date}</p>
-                      </div>
-                      <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--sa-text-2)', lineHeight: 1.55 }}>{ev.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <p style={{ fontSize: '0.8125rem', color: 'var(--sa-text-3)', padding: '8px 0' }}>No recent system activity recorded.</p>
             </div>
           </div>
         </>

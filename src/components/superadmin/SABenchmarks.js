@@ -7,31 +7,6 @@ const IcTrend    = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentCol
 const IcTrendDn  = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>;
 const IcMinus    = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>;
 
-/* ── Mock Data ──────────────────────────────────────────────── */
-const PASS_RATE  = [76, 78, 79, 81, 80, 82, 81.8, 82.4];
-const GPA_DATA   = [2.7, 2.8, 2.9, 2.95, 3.0, 3.05, 3.1, 3.1];
-const ATTEND     = [88, 90, 91, 92, 93, 93.5, 94, 94];
-const IMPROVEMENT= [0.8, 1.0, 1.2, 1.5, 1.7, 1.9, 2.0, 2.1];
-
-const TREND_PRIVATE = [58, 64, 70, 74, 78, 81, 83, 84.5];
-const TREND_PUBLIC  = [50, 56, 62, 66, 70, 73, 77, 80];
-const Q_LABELS      = ['Q1','Q2','Q3','Q4'];
-
-const GRADE_DIST = [
-  { label: 'A', value: 28, color: '#10B981' },
-  { label: 'B', value: 35, color: '#0EA5E9' },
-  { label: 'C', value: 22, color: '#F59E0B' },
-  { label: 'D', value: 10, color: '#8B5CF6' },
-  { label: 'F', value:  5, color: '#EF4444' },
-];
-
-const TOP_SCHOOLS = [
-  { rank: 1, name: 'St. Marks Academy', integrity: 98.5, perf: 9.4, trend: 'up',     passRate: 91, attendance: 96, gpa: 3.4, students: 1240, type: 'Private' },
-  { rank: 2, name: 'Northwood High',    integrity: 97.2, perf: 9.1, trend: 'up',     passRate: 88, attendance: 94, gpa: 3.2, students: 980,  type: 'Public'  },
-  { rank: 3, name: 'Riverdale Public',  integrity: 89.4, perf: 8.8, trend: 'stable', passRate: 85, attendance: 92, gpa: 3.0, students: 1540, type: 'Public'  },
-  { rank: 4, name: 'Tech Institute',    integrity: 94.1, perf: 8.5, trend: 'up',     passRate: 83, attendance: 91, gpa: 2.9, students: 760,  type: 'Private' },
-  { rank: 5, name: 'Central Academy',   integrity: 91.8, perf: 8.2, trend: 'down',   passRate: 80, attendance: 89, gpa: 2.8, students: 1120, type: 'Public'  },
-];
 
 /* ── Sparkline ──────────────────────────────────────────────── */
 function Sparkline({ data, color = 'var(--sa-accent)', h = 28 }) {
@@ -41,69 +16,6 @@ function Sparkline({ data, color = 'var(--sa-accent)', h = 28 }) {
     <svg viewBox={`0 0 80 ${h}`} preserveAspectRatio="none" style={{ width: '100%', height: h }}>
       <polyline points={pts} fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
-  );
-}
-
-/* ── SVG Line Chart ─────────────────────────────────────────── */
-function LineChart({ series, xLabels, height = 130 }) {
-  const W = 300, H = height, PAD = 8;
-  const allVals = series.flatMap(s => s.data);
-  const max = Math.max(...allVals), min = Math.min(...allVals), rng = max - min || 1;
-
-  const toXY = (data, i) => [
-    (i / (data.length - 1)) * (W - PAD * 2) + PAD,
-    PAD + (1 - (data[i] - min) / rng) * (H - PAD * 2),
-  ];
-
-  return (
-    <div className="san-chart-wrap">
-      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ width: '100%', height: H }}>
-        <defs>
-          {series.map(s => (
-            <linearGradient key={`g-${s.id}`} id={`g-${s.id}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%"   stopColor={s.color} stopOpacity="0.28"/>
-              <stop offset="100%" stopColor={s.color} stopOpacity="0"/>
-            </linearGradient>
-          ))}
-        </defs>
-        {/* Grid */}
-        {[0, 0.33, 0.67, 1].map((t, i) => (
-          <line key={i} x1={PAD} y1={PAD + t * (H - PAD * 2)} x2={W - PAD} y2={PAD + t * (H - PAD * 2)}
-            stroke="rgba(255,255,255,0.04)" strokeWidth="1"/>
-        ))}
-        {series.map(s => {
-          const pts  = s.data.map((_, i) => toXY(s.data, i));
-          const linePts = pts.map(([x, y]) => `${x},${y}`).join(' ');
-          const areaD   = `M${pts[0][0]},${H} ` + pts.map(([x, y]) => `L${x},${y}`).join(' ') + ` L${pts[pts.length - 1][0]},${H} Z`;
-          return (
-            <g key={s.id}>
-              {!s.dashed && <path d={areaD} fill={`url(#g-${s.id})`}/>}
-              <polyline points={linePts} fill="none" stroke={s.color} strokeWidth={s.dashed ? 1.5 : 2}
-                strokeLinecap="round" strokeLinejoin="round"
-                strokeDasharray={s.dashed ? '5 4' : undefined}/>
-              {/* Last-point dot */}
-              <circle cx={pts[pts.length-1][0]} cy={pts[pts.length-1][1]} r="4"
-                fill={s.color} stroke="var(--sa-card-bg)" strokeWidth="2"/>
-            </g>
-          );
-        })}
-      </svg>
-      {/* X-axis labels: space them across width */}
-      {xLabels && (
-        <div className="san-chart-x">
-          {xLabels.map((l, i) => <span key={i} className="san-chart-xl">{l}</span>)}
-        </div>
-      )}
-      {/* Legend */}
-      <div className="san-legend-row">
-        {series.map(s => (
-          <span key={s.id} className="san-legend-item">
-            <span className="san-legend-dot" style={{ background: s.color, opacity: s.dashed ? 0.6 : 1 }}/>
-            {s.label}
-          </span>
-        ))}
-      </div>
-    </div>
   );
 }
 
@@ -147,12 +59,12 @@ function KpiCard({ label, value, delta, deltaDir = 'up', spark, sparkColor }) {
 
 
 /* ── Compare View ───────────────────────────────────────────── */
-function CompareView({ onBack, schools = TOP_SCHOOLS }) {
-  const list = schools.length >= 2 ? schools : TOP_SCHOOLS;
+function CompareView({ onBack, schools = [] }) {
+  const list = schools.length >= 2 ? schools : [];
   const [schoolA, setSchoolA] = React.useState(list[0]?.name || '');
   const [schoolB, setSchoolB] = React.useState(list[1]?.name || '');
-  const a = list.find(s => s.name === schoolA) || list[0] || TOP_SCHOOLS[0];
-  const b = list.find(s => s.name === schoolB) || list[1] || TOP_SCHOOLS[1];
+  const a = list.find(s => s.name === schoolA) || list[0];
+  const b = list.find(s => s.name === schoolB) || list[1];
 
   const metrics = [
     { key: 'integrity',  label: 'Grade Integrity', fmt: v => v + '%'           },
@@ -170,6 +82,15 @@ function CompareView({ onBack, schools = TOP_SCHOOLS }) {
   const ChevDown = () => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, flexShrink: 0 }}><polyline points="6 9 12 15 18 9"/></svg>
   );
+
+  if (list.length < 2) {
+    return (
+      <div className="san-benchmarks">
+        <button className="san-view-all-btn" style={{ marginBottom: 20 }} onClick={onBack}>← Back to Benchmarks</button>
+        <p style={{ color: 'var(--sa-text-3)', fontSize: '0.875rem' }}>At least 2 approved schools are needed for comparison.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="san-benchmarks">
@@ -298,7 +219,7 @@ export default function SABenchmarks() {
         }))
         .sort((a, b) => b.value - a.value)
     : null;
-  const gradeDist = realGradeDist && realGradeDist.length > 0 ? realGradeDist : GRADE_DIST;
+  const gradeDist = realGradeDist && realGradeDist.length > 0 ? realGradeDist : [];
 
   /* Real top schools (ranked by student count) */
   const realTopSchools = schoolStats.slice(0, 5).map((s, i) => ({
@@ -313,7 +234,7 @@ export default function SABenchmarks() {
     students: s.student_count,
     type: 'Public',
   }));
-  const topSchools = realTopSchools.length > 0 ? realTopSchools : TOP_SCHOOLS;
+  const topSchools = realTopSchools;
 
   /* Platform totals */
   const totalStudents  = schoolStats.reduce((n, s) => n + (s.student_count || 0), 0);
@@ -343,27 +264,19 @@ export default function SABenchmarks() {
 
       {/* 2×2 KPI Grid */}
       <div className="san-kpi-2x2">
-        <KpiCard label="Pass Rate"   value={passRatePct != null ? `${passRatePct}%` : '—'} delta={passRatePct != null ? `${passRatePct}% pass` : 'No data'} deltaDir={passRatePct >= 80 ? 'up' : 'down'} spark={PASS_RATE} sparkColor="var(--sa-green)" />
-        <KpiCard label="Avg Score"   value={avgScore != null ? `${avgScore}%` : '—'} delta="System-wide" deltaDir="neutral" spark={GPA_DATA} sparkColor="var(--sa-accent)" />
-        <KpiCard label="Total Grades" value={totalGrades > 0 ? totalGrades.toLocaleString() : '—'} delta={gradeStats ? `${gradeStats.locked_grades} locked` : 'No data'} deltaDir="up" spark={ATTEND} sparkColor="var(--sa-accent)" />
-        <KpiCard label="Schools Live" value={totalSchools > 0 ? totalSchools : '—'} delta={totalStudents > 0 ? `${fmtCount(totalStudents)} students` : 'No data'} deltaDir="up" spark={IMPROVEMENT} sparkColor="var(--sa-green)" />
+        <KpiCard label="Pass Rate"   value={passRatePct != null ? `${passRatePct}%` : '—'} delta={passRatePct != null ? `${passRatePct}% pass` : 'No data'} deltaDir={passRatePct >= 80 ? 'up' : 'down'} />
+        <KpiCard label="Avg Score"   value={avgScore != null ? `${avgScore}%` : '—'} delta="System-wide" deltaDir="neutral" />
+        <KpiCard label="Total Grades" value={totalGrades > 0 ? totalGrades.toLocaleString() : '—'} delta={gradeStats ? `${gradeStats.locked_grades} locked` : 'No data'} deltaDir="up" />
+        <KpiCard label="Schools Live" value={totalSchools > 0 ? totalSchools : '—'} delta={totalStudents > 0 ? `${fmtCount(totalStudents)} students` : 'No data'} deltaDir="up" />
       </div>
 
-      {/* Performance Trend */}
+      {/* Performance Trend — requires historical data not yet available */}
       <div className="san-card">
         <div className="san-card-hdr">
           <div><h3 className="san-card-title">Performance Trend</h3><p className="san-card-sub">Public vs Private Sector</p></div>
-          <button className="san-card-action">Export</button>
         </div>
         <div className="san-card-body">
-          <LineChart
-            series={[
-              { id: 'private', label: 'Private', color: 'var(--sa-accent)',         data: TREND_PRIVATE },
-              { id: 'public',  label: 'Public',  color: 'rgba(148,163,184,0.65)', dashed: true, data: TREND_PUBLIC },
-            ]}
-            xLabels={Q_LABELS}
-            height={130}
-          />
+          <p style={{ color: 'var(--sa-text-3)', fontSize: '0.8125rem', textAlign: 'center', padding: '24px 0' }}>Historical trend data not yet available.</p>
         </div>
       </div>
 
@@ -373,16 +286,21 @@ export default function SABenchmarks() {
           <div><h3 className="san-card-title">Grade Distribution</h3><p className="san-card-sub">System-wide percentage</p></div>
         </div>
         <div className="san-card-body">
-          <BarChart data={gradeDist} height={120} />
-          {/* Grade scale legend */}
-          <div className="san-grade-legend">
-            {gradeDist.map(d => (
-              <span key={d.label} className="san-grade-leg-item">
-                <span style={{ width: 8, height: 8, borderRadius: 2, background: d.color, display: 'inline-block' }}/>
-                {d.label}: {d.value}%
-              </span>
-            ))}
-          </div>
+          {gradeDist.length === 0 ? (
+            <p style={{ color: 'var(--sa-text-3)', fontSize: '0.8125rem', textAlign: 'center', padding: '24px 0' }}>No grade data available yet.</p>
+          ) : (
+            <>
+              <BarChart data={gradeDist} height={120} />
+              <div className="san-grade-legend">
+                {gradeDist.map(d => (
+                  <span key={d.label} className="san-grade-leg-item">
+                    <span style={{ width: 8, height: 8, borderRadius: 2, background: d.color, display: 'inline-block' }}/>
+                    {d.label}: {d.value}%
+                  </span>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -393,6 +311,9 @@ export default function SABenchmarks() {
           <button className="san-card-action" onClick={() => setComparing(true)}>Compare</button>
         </div>
         <div className="san-bench-table">
+          {topSchools.length === 0 ? (
+            <p style={{ color: 'var(--sa-text-3)', fontSize: '0.8125rem', textAlign: 'center', padding: '24px 0' }}>No approved schools on the platform yet.</p>
+          ) : <>
           <div className="san-bench-head">
             <span>School Name</span>
             <span>Integrity</span>
@@ -411,6 +332,7 @@ export default function SABenchmarks() {
               </span>
             </div>
           ))}
+          </>}
         </div>
         <div className="san-card-foot">
           <button className="san-view-all-btn">View All Schools</button>

@@ -8,15 +8,6 @@ const IcRefresh = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColo
 const IcLock    = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>;
 
 /* ---- Helpers ---- */
-const REASONS = [
-  'Incomplete Documentation',
-  'Fraud Risk',
-  'Policy Violation',
-  'Invalid Credentials',
-  'Duplicate Registration',
-];
-const getReason = (school) => REASONS[school.id % REASONS.length];
-
 function fmtDateTime(dateStr) {
   if (!dateStr) return '—';
   return new Date(dateStr).toLocaleDateString('en-GB', {
@@ -31,7 +22,7 @@ function fmtDate(dateStr) {
 }
 
 export default function SARejectionAudit({ school, onBack, onReconsider }) {
-  const reason    = getReason(school);
+  const reason    = school.rejection_reason || '—';
   const adminName = school.admin_full_name || school.principal_name || '—';
   const location  = [school.city, school.country].filter(Boolean).join(', ') || '—';
 

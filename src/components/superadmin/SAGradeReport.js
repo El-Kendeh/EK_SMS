@@ -21,33 +21,6 @@ function buildChartFromAlerts(alerts, days) {
   });
   return counts;
 }
-/* Fallback mock data (used only when no real alerts loaded yet) */
-const CHART_30D_MOCK = [3,5,4,7,9,6,8,5,3,4,7,11,9,6,4,3,5,7,10,14,20,16,11,8,5,3,6,9,7,4];
-const CHART_90D_MOCK = [2,3,4,3,5,4,6,5,4,3,4,7,9,6,4,3,5,7,10,14,20,16,11,8,5,3,6,9,7,4,3,5,4,7,9,6,8,5,3,4,7,11,9,6,4,3,5,7,10,14,20,16,11,8,5,3,6,9,7,4,3,5,4,7,9,6,8,5,3,4,7,11,9,6,4,3,5,7,10,14,20,16,11,8,5,3,6,9,7,4];
-
-/* ---- Schools at risk (most overrides) ---- */
-const TOP_SCHOOLS = [
-  { name: 'MAB Secondary',   count: 42, pct: 85, color: 'var(--sa-red)'    },
-  { name: 'AIC Grammar',     count: 28, pct: 58, color: 'var(--sa-amber)'  },
-  { name: 'Fourah Bay Sec.', count: 19, pct: 40, color: 'var(--sa-accent)' },
-  { name: 'UMU School',      count: 12, pct: 25, color: 'var(--sa-purple)' },
-];
-
-/* ---- Reasons breakdown (for donut) ---- */
-const REASONS = [
-  { label: 'Data Entry Error',  pct: 45, color: 'var(--sa-accent)' },
-  { label: 'Policy Exception',  pct: 25, color: 'var(--sa-red)'    },
-  { label: 'Re-grading Appeal', pct: 30, color: 'var(--sa-amber)'  },
-];
-
-/* ---- Recent audit log rows ---- */
-const RECENT_LOGS = [
-  { id: 'REQ-2026-001', time: '14:30', date: 'Feb 28', school: 'MAB Secondary', subject: 'Mathematics', oldGrade: 'B+', newGrade: 'A-', actor: 'Mr. A. Jalloh', status: 'Verified',  isFlag: false },
-  { id: 'REQ-2026-002', time: '11:15', date: 'Feb 28', school: 'AIC Grammar',   subject: 'Physics 101', oldGrade: 'C',  newGrade: 'B',  actor: 'Mrs. Robinson', status: 'Pending',  isFlag: false },
-  { id: 'REQ-2026-003', time: '08:50', date: 'Feb 27', school: 'UMU School',    subject: 'Biology AP',  oldGrade: 'F',  newGrade: 'A',  actor: 'Mr. S. Kamara', status: 'Flagged',  isFlag: true  },
-  { id: 'REQ-2026-004', time: '16:22', date: 'Feb 26', school: 'MAB Secondary', subject: 'English Lit', oldGrade: 'B',  newGrade: 'B+', actor: 'Ms. Williams',  status: 'Approved', isFlag: false },
-  { id: 'REQ-2026-005', time: '09:42', date: 'Feb 28', school: 'AIC Grammar',   subject: 'Chemistry',   oldGrade: 'A-', newGrade: 'A+', actor: 'Dr. Mansaray',  status: 'Pending',  isFlag: false },
-];
 
 /* ---- Build SVG path from data array ---- */
 function buildAreaPath(data) {
@@ -102,10 +75,9 @@ export default function SAGradeReport({ onViewRequests, onViewDetail }) {
   /* Derive chart arrays from real alert timestamps */
   const chart30Real = useMemo(() => buildChartFromAlerts(alerts, 30),  [alerts]);
   const chart90Real = useMemo(() => buildChartFromAlerts(alerts, 90),  [alerts]);
-  const chartData = alerts.length > 0
-    ? (period === '30D' ? chart30Real : chart90Real)
-    : (period === '30D' ? CHART_30D_MOCK : CHART_90D_MOCK);
-  const { line, area } = buildAreaPath(chartData);
+  const chartData = period === '30D' ? chart30Real : chart90Real;
+  const hasChartData = chartData.some(v => v > 0);
+  const { line, area } = hasChartData ? buildAreaPath(chartData) : { line: '', area: '' };
 
   useEffect(() => {
     ApiClient.get('/api/grade-alerts/').then(data => {
@@ -136,7 +108,7 @@ export default function SAGradeReport({ onViewRequests, onViewDetail }) {
   const topSchoolsData = Object.entries(schoolCountMap)
     .sort((a, b) => b[1] - a[1]).slice(0, 4)
     .map(([name, count], i) => ({ name, count, pct: Math.round(count / maxCount * 100), color: RISK_COLORS[i] }));
-  const displayTopSchools = topSchoolsData.length > 0 ? topSchoolsData : TOP_SCHOOLS;
+  const displayTopSchools = topSchoolsData;
 
   /* ── Reasons breakdown ── */
   const reasonMap = {};
@@ -147,7 +119,7 @@ export default function SAGradeReport({ onViewRequests, onViewDetail }) {
     ? Object.entries(reasonMap).sort((a, b) => b[1] - a[1]).slice(0, 3)
         .map(([label, count], i) => ({ label, pct: Math.round(count / totalWithReason * 100), color: REASON_COLORS[i] }))
     : null;
-  const displayReasons = realReasons || REASONS;
+  const displayReasons = realReasons || [];
 
   /* ── Recent logs from real alerts ── */
   const recentLogs = alerts.length > 0
@@ -164,7 +136,7 @@ export default function SAGradeReport({ onViewRequests, onViewDetail }) {
         isFlag:   a.urgency === 'critical' || a.hashMatch === false,
         _raw:     a,
       }))
-    : RECENT_LOGS;
+    : [];
 
   /* Donut gradient from real reasons */
   const donutGrad = displayReasons.length >= 2
@@ -261,8 +233,11 @@ export default function SAGradeReport({ onViewRequests, onViewDetail }) {
           </div>
         </div>
         <div className="sa-card-body">
+          {!hasChartData && (
+            <p style={{ textAlign: 'center', color: 'var(--sa-text-3)', fontSize: '0.8125rem', padding: '32px 0' }}>No grade modification activity recorded yet.</p>
+          )}
           {/* SVG area chart */}
-          <div style={{ position: 'relative', height: 160, width: '100%', overflow: 'hidden' }}>
+          {hasChartData && <><div style={{ position: 'relative', height: 160, width: '100%', overflow: 'hidden' }}>
             {/* Grid lines */}
             <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', pointerEvents: 'none' }}>
               {[0,1,2,3,4].map(i => (
@@ -322,7 +297,7 @@ export default function SAGradeReport({ onViewRequests, onViewDetail }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.6875rem', color: 'var(--sa-text-2)' }}>
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--sa-red)' }} /> Anomaly Spike
             </div>
-          </div>
+          </div></>}
         </div>
       </div>
 
@@ -335,7 +310,9 @@ export default function SAGradeReport({ onViewRequests, onViewDetail }) {
             <p className="sa-card-title">Top Schools — Manual Overrides</p>
           </div>
           <div className="sa-card-body">
-            {displayTopSchools.map((s, i) => (
+            {displayTopSchools.length === 0 ? (
+              <p style={{ fontSize: '0.8125rem', color: 'var(--sa-text-3)', padding: '8px 0' }}>No schools with grade modifications yet.</p>
+            ) : displayTopSchools.map((s, i) => (
               <div key={i} className="sa-gi-bar-row">
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
                   <span style={{ fontSize: '0.8125rem', color: 'var(--sa-text-2)' }}>{s.name}</span>
@@ -390,7 +367,9 @@ export default function SAGradeReport({ onViewRequests, onViewDetail }) {
             View All <span style={{ width: 14, height: 14, display: 'flex' }}><IcArrow /></span>
           </button>
         </div>
-        <div style={{ overflowX: 'auto' }}>
+        {recentLogs.length === 0 ? (
+          <div style={{ padding: '32px', textAlign: 'center', color: 'var(--sa-text-3)', fontSize: '0.8125rem' }}>No audit log entries yet.</div>
+        ) : <div style={{ overflowX: 'auto' }}>
           <table className="sa-sec-table">
             <thead>
               <tr>
@@ -450,7 +429,7 @@ export default function SAGradeReport({ onViewRequests, onViewDetail }) {
               })}
             </tbody>
           </table>
-        </div>
+        </div>}
       </div>
 
     </div>

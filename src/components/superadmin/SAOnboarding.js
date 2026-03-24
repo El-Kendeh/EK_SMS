@@ -7,70 +7,7 @@ const IcCalendar = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentCol
 const IcGlobe    = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>;
 const IcBack     = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>;
 
-/* ── Mock Data ──────────────────────────────────────────────── */
-const REG_VOL = {
-  labels:      ['Jan','Feb','Mar','Apr','May','Jun'],
-  submissions: [120, 145, 160, 190, 218, 248],
-  approvals:   [100, 125, 140, 165, 188, 210],
-};
-const RISK_DIST = [
-  { label: 'Low',    pct: 60, color: '#10B981' },
-  { label: 'Medium', pct: 25, color: '#F59E0B' },
-  { label: 'High',   pct: 15, color: '#EF4444' },
-];
-const ADMIN_EFF = [
-  { name: 'Sarah J.',   days: 1.2, color: 'var(--sa-accent)' },
-  { name: 'Michael B.', days: 1.8, color: 'var(--sa-accent)' },
-  { name: 'Elena R.',   days: 2.5, color: 'var(--sa-amber)'  },
-];
-const REJECT_REASONS = [
-  { reason: 'Missing Documents', pct: 45, color: 'var(--sa-red)'    },
-  { reason: 'Domain Mismatch',   pct: 30, color: 'var(--sa-amber)'  },
-  { reason: 'Fraudulent Info',   pct: 15, color: 'var(--sa-purple)' },
-  { reason: 'Incomplete Fees',   pct: 10, color: 'var(--sa-text-2)' },
-];
-const REGIONS = [
-  { name: 'West Africa',    count: 412, growth: '+12%', flag: 'WA' },
-  { name: 'East Africa',    count: 285, growth: '+8%',  flag: 'EA' },
-  { name: 'North Africa',   count: 154, growth: '+24%', flag: 'NA' },
-  { name: 'Central Africa', count: 98,  growth: '+6%',  flag: 'CA' },
-  { name: 'Southern Africa',count: 72,  growth: '+19%', flag: 'SA' },
-];
 const REGION_COLORS = ['#10B981','#0EA5E9','#F59E0B','#8B5CF6','#EF4444'];
-
-/* ── Donut Chart ────────────────────────────────────────────── */
-function DonutChart({ segments, size = 130, thickness = 20, center }) {
-  const cx = size / 2, cy = size / 2;
-  const r    = cx - thickness / 2;
-  const circ = 2 * Math.PI * r;
-  let cumPct = 0;
-  return (
-    <svg viewBox={`0 0 ${size} ${size}`} style={{ width: size, height: size, flexShrink: 0 }}>
-      {/* Background track */}
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={thickness}/>
-      {segments.map((seg, i) => {
-        const dash   = (seg.pct / 100) * circ;
-        const offset = -(cumPct / 100) * circ;
-        cumPct += seg.pct;
-        return (
-          <circle key={i} cx={cx} cy={cy} r={r} fill="none"
-            stroke={seg.color} strokeWidth={thickness}
-            strokeDasharray={`${dash} ${circ - dash}`}
-            strokeDashoffset={offset}
-            strokeLinecap="round"
-            style={{ transform: 'rotate(-90deg)', transformOrigin: 'center' }}
-          />
-        );
-      })}
-      {center && (
-        <>
-          <text x={cx} y={cy - 4} textAnchor="middle" fontSize="16" fontWeight="800" fill="#EFF4FF">{center.value}</text>
-          <text x={cx} y={cy + 13} textAnchor="middle" fontSize="9"  fill="#7A8BA8">{center.sub}</text>
-        </>
-      )}
-    </svg>
-  );
-}
 
 /* ── Dual-Series Line Chart ─────────────────────────────────── */
 function DualLineChart({ data, height = 110 }) {
@@ -170,7 +107,7 @@ export default function SAOnboarding({ schools: schoolsProp = [] }) {
 
   /* ── Registration volume by month (submissions) ── */
   const regVolData = useMemo(() => {
-    if (schools.length === 0) return REG_VOL;
+    if (schools.length === 0) return null;
     const monthMap = {};
     schools.forEach(s => {
       if (!s.registration_date) return;
@@ -183,13 +120,13 @@ export default function SAOnboarding({ schools: schoolsProp = [] }) {
     const labels      = Object.keys(monthMap).slice(-6);
     const submissions = labels.map(k => monthMap[k]?.sub || 0);
     const approvals   = labels.map(k => monthMap[k]?.app || 0);
-    return labels.length >= 2 ? { labels, submissions, approvals } : REG_VOL;
+    return labels.length >= 2 ? { labels, submissions, approvals } : null;
   }, [schools]);
 
   /* ── Rejection reasons from real rejection_reason field ── */
   const rejectData = useMemo(() => {
     const rejected = schools.filter(s => !s.is_active && !s.is_approved && s.rejection_reason);
-    if (rejected.length === 0) return REJECT_REASONS;
+    if (rejected.length === 0) return [];
     const reasonMap = {};
     rejected.forEach(s => {
       const r = s.rejection_reason.trim().slice(0, 30) || 'Other';
@@ -276,42 +213,11 @@ export default function SAOnboarding({ schools: schoolsProp = [] }) {
           <button className="san-card-action">View Report</button>
         </div>
         <div className="san-card-body">
-          <DualLineChart data={regVolData} height={110} />
-        </div>
-      </div>
-
-      {/* Risk Distribution */}
-      <div className="san-card">
-        <div className="san-card-hdr">
-          <h3 className="san-card-title">Risk Distribution</h3>
-          <p className="san-card-sub">Application risk scoring</p>
-        </div>
-        <div className="san-card-body">
-          <div className="san-risk-layout">
-            <DonutChart segments={RISK_DIST} size={130} thickness={22} center={{ value: '1.2k', sub: 'Total' }}/>
-            <div className="san-risk-legend">
-              {RISK_DIST.map((r, i) => (
-                <div key={r.label} className="san-risk-item">
-                  <span className="san-legend-dot san-legend-dot--lg" style={{ background: r.color }}/>
-                  <span className="san-risk-label">{r.label}</span>
-                  <span className="san-risk-pct">{r.pct}%</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Admin Efficiency */}
-      <div className="san-card">
-        <div className="san-card-hdr">
-          <div><h3 className="san-card-title">Admin Efficiency</h3><p className="san-card-sub">Average review time per reviewer</p></div>
-        </div>
-        <div className="san-card-body">
-          {ADMIN_EFF.map(a => (
-            <HBar key={a.name} label={a.name} value={a.days} max={3} color={a.color} unit=" days avg"/>
-          ))}
-          <p className="san-hbar-footnote">Target: &lt; 2.0 days avg per reviewer</p>
+          {regVolData ? (
+            <DualLineChart data={regVolData} height={110} />
+          ) : (
+            <p style={{ color: 'var(--sa-text-3)', fontSize: '0.8125rem', textAlign: 'center', padding: '24px 0' }}>No registration data yet.</p>
+          )}
         </div>
       </div>
 
@@ -321,7 +227,9 @@ export default function SAOnboarding({ schools: schoolsProp = [] }) {
           <div><h3 className="san-card-title">Rejection Reasons</h3><p className="san-card-sub">Top causes for application denial</p></div>
         </div>
         <div className="san-card-body">
-          {rejectData.map(r => (
+          {rejectData.length === 0 ? (
+            <p style={{ color: 'var(--sa-text-3)', fontSize: '0.8125rem', textAlign: 'center', padding: '16px 0' }}>No rejection data available yet.</p>
+          ) : rejectData.map(r => (
             <HBar key={r.reason} label={r.reason} value={r.pct} color={r.color}/>
           ))}
         </div>
@@ -335,27 +243,30 @@ export default function SAOnboarding({ schools: schoolsProp = [] }) {
         </div>
         {/* Regional growth bars */}
         <div className="san-card-body">
-          <div className="san-region-chart">
-            {(regionData || REGIONS).map((r, i) => {
-              const list = regionData || REGIONS;
-              const maxCount = list[0].count;
-              return (
-                <div key={r.name} className="san-region-row">
-                  <div className="san-region-flag" style={{ background: REGION_COLORS[i] }}>{r.flag}</div>
-                  <div className="san-region-info">
-                    <div className="san-region-name-row">
-                      <span className="san-region-name">{r.name}</span>
-                      <span className="san-region-growth">{r.growth}</span>
+          {!regionData ? (
+            <p style={{ color: 'var(--sa-text-3)', fontSize: '0.8125rem', textAlign: 'center', padding: '16px 0' }}>No region data available. Add a region field to school records.</p>
+          ) : (
+            <div className="san-region-chart">
+              {regionData.map((r, i) => {
+                const maxCount = regionData[0].count;
+                return (
+                  <div key={r.name} className="san-region-row">
+                    <div className="san-region-flag" style={{ background: REGION_COLORS[i] }}>{r.flag}</div>
+                    <div className="san-region-info">
+                      <div className="san-region-name-row">
+                        <span className="san-region-name">{r.name}</span>
+                        <span className="san-region-growth">{r.growth}</span>
+                      </div>
+                      <div className="san-hbar-track">
+                        <div className="san-hbar-fill" style={{ width: `${(r.count / maxCount) * 100}%`, background: REGION_COLORS[i] }}/>
+                      </div>
                     </div>
-                    <div className="san-hbar-track">
-                      <div className="san-hbar-fill" style={{ width: `${(r.count / maxCount) * 100}%`, background: REGION_COLORS[i] }}/>
-                    </div>
+                    <span className="san-region-count">{r.count}</span>
                   </div>
-                  <span className="san-region-count">{r.count}</span>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 

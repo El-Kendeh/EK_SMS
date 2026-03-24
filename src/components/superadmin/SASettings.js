@@ -4,8 +4,8 @@ import ApiClient from '../../api/client';
 /* ================================================================
    Constants
    ================================================================ */
-const DEFAULT_RECOVERY_CODES = ['8392-1029', '4829-5932', '1029-4820', '5938-1923', '4920-5839', '9201-4829', '5820-1029', '1923-4829'];
-const DEFAULT_TOTP_KEY = 'JKW8-392S-K29S-293S';
+const DEFAULT_RECOVERY_CODES = [];
+const DEFAULT_TOTP_KEY = '';
 const TABS = ['General', 'Security', 'Compliance', 'Backups'];
 
 function calcStrength(pw) {

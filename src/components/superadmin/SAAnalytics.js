@@ -32,22 +32,19 @@ const TIER_BG      = { Enterprise: 'var(--sa-purple-dim)', Pro: 'var(--sa-accent
 const REGIONS      = ['West Africa', 'East Africa', 'North Africa', 'Central Africa', 'Southern Africa'];
 const TIERS        = ['Enterprise', 'Pro', 'Basic'];
 
-/* Deterministic mock overlay — consistent per school */
-function mockOverlay(school) {
-  const s = ((school.id || 1) * 31 + (school.name?.charCodeAt(0) || 7) * 17) & 0xffff;
-  return {
-    tier:       TIERS[s % 3],
-    region:     REGIONS[s % 5],
-    integrity:  (85 + (s % 15)).toFixed(1),
-    perfIndex:  (7.5 + ((s % 20) / 10)).toFixed(1),
-    attendance: (80 + (s % 18)).toFixed(1),
-    grades:     70 + (s % 25),
-    vacancies:  s % 4,
-    students:   800  + ((s * 7)  % 1200),
-    teachers:   40   + ((s * 3)  % 80),
-    lastAudit:  `${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][s % 12]} ${2024 + (s % 2)}`,
-  };
-}
+/* Empty overlay — real values fetched from API where available */
+const NULL_OVERLAY = {
+  tier:       null,
+  region:     null,
+  integrity:  null,
+  perfIndex:  null,
+  attendance: null,
+  grades:     null,
+  vacancies:  null,
+  students:   null,
+  teachers:   null,
+  lastAudit:  null,
+};
 
 /* ── Sparkline ──────────────────────────────────────────────── */
 function Sparkline({ data, color = 'var(--sa-accent)', h = 28 }) {
@@ -99,8 +96,7 @@ function timeAgo(ts) {
 
 function OversightView({ school, onBack, onLoginAs }) {
   const [tab, setTab] = useState('overview');
-  const fallback = useMemo(() => mockOverlay(school), [school]);
-  const [ov, setOv] = useState(fallback);
+  const [ov, setOv] = useState({ ...NULL_OVERLAY });
   const [secAlerts, setSecAlerts] = useState([]);
 
   useEffect(() => {
@@ -175,20 +171,20 @@ function OversightView({ school, onBack, onLoginAs }) {
           <div className="san-perf-grid">
             <div className="san-perf-card">
               <p className="san-perf-lbl">ATTENDANCE</p>
-              <p className="san-perf-val">{ov.attendance}%</p>
-              <p className="san-delta san-delta--up">+2.1%</p>
-              <div className="san-perf-bar"><div style={{ width: `${ov.attendance}%`, background: 'var(--sa-green)' }} /></div>
+              <p className="san-perf-val">{ov.attendance != null ? `${ov.attendance}%` : '—'}</p>
+              {ov.attendance != null && <p className="san-delta san-delta--up">+2.1%</p>}
+              <div className="san-perf-bar"><div style={{ width: `${ov.attendance || 0}%`, background: 'var(--sa-green)' }} /></div>
             </div>
             <div className="san-perf-card">
               <p className="san-perf-lbl">GRADES</p>
-              <p className="san-perf-val">{ov.grades}%</p>
-              <p className="san-delta" style={{ color: 'var(--sa-amber)' }}>Pending</p>
-              <div className="san-perf-bar"><div style={{ width: `${ov.grades}%`, background: 'var(--sa-accent)' }} /></div>
+              <p className="san-perf-val">{ov.grades != null ? `${ov.grades}%` : '—'}</p>
+              {ov.grades != null && <p className="san-delta" style={{ color: 'var(--sa-amber)' }}>Pending</p>}
+              <div className="san-perf-bar"><div style={{ width: `${ov.grades || 0}%`, background: 'var(--sa-accent)' }} /></div>
             </div>
           </div>
           <div className="san-perf-card san-perf-card--wide">
             <p className="san-perf-lbl">TEACHER VACANCIES</p>
-            <p className="san-perf-val san-perf-val--xl">{ov.vacancies} <span style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--sa-text-2)' }}>Positions</span></p>
+            <p className="san-perf-val san-perf-val--xl">{ov.vacancies != null ? ov.vacancies : '—'} <span style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--sa-text-2)' }}>Positions</span></p>
           </div>
           <div className="san-section-hdr" style={{ marginTop: 20 }}><span>Compliance Status</span></div>
           <div className="san-comply-list">
@@ -211,9 +207,9 @@ function OversightView({ school, onBack, onLoginAs }) {
         <div className="san-tab-body">
           <div className="san-section-hdr"><span>Academic Performance</span></div>
           <div className="san-acad-kpis">
-            {[['Pass Rate', `${ov.integrity}%`, 'var(--sa-green)', parseFloat(ov.integrity)],
-              ['Avg GPA',   `${(parseFloat(ov.perfIndex)*0.4).toFixed(1)}`, 'var(--sa-accent)', parseFloat(ov.perfIndex)*10],
-              ['Integrity Index', `${ov.perfIndex}`, 'var(--sa-purple)', parseFloat(ov.perfIndex)*10]].map(([lbl, val, col, pct]) => (
+            {[['Pass Rate', ov.integrity != null ? `${ov.integrity}%` : '—', 'var(--sa-green)', parseFloat(ov.integrity) || 0],
+              ['Avg GPA',   ov.perfIndex != null ? `${(parseFloat(ov.perfIndex)*0.4).toFixed(1)}` : '—', 'var(--sa-accent)', (parseFloat(ov.perfIndex) || 0)*10],
+              ['Integrity Index', ov.perfIndex != null ? `${ov.perfIndex}` : '—', 'var(--sa-purple)', (parseFloat(ov.perfIndex) || 0)*10]].map(([lbl, val, col, pct]) => (
               <div key={lbl} className="san-acad-kpi">
                 <p className="san-acad-kpi-label">{lbl}</p>
                 <p className="san-acad-kpi-value" style={{ color: col }}>{val}</p>
@@ -249,7 +245,7 @@ function OversightView({ school, onBack, onLoginAs }) {
           <ProgressBar label="Backup Coverage"  value={94}  color="var(--sa-accent)" sublabel="94%" />
           <ProgressBar label="Policy Adherence" value={78}  color="var(--sa-amber)"  sublabel="78%" />
           <div className="san-comply-meta">
-            <div className="san-comply-meta-item"><p className="san-comply-meta-lbl">Last Audit</p><p className="san-comply-meta-val">{ov.lastAudit}</p></div>
+            <div className="san-comply-meta-item"><p className="san-comply-meta-lbl">Last Audit</p><p className="san-comply-meta-val">{ov.lastAudit || '—'}</p></div>
             <div className="san-comply-meta-item"><p className="san-comply-meta-lbl">Next Review</p><p className="san-comply-meta-val">Apr 2025</p></div>
           </div>
         </div>
@@ -298,9 +294,8 @@ function OversightView({ school, onBack, onLoginAs }) {
 
 /* ── School Card ────────────────────────────────────────────── */
 function SchoolCard({ school, onView, statsData }) {
-  const ov = useMemo(() => mockOverlay(school), [school]);
-  const students = statsData?.student_count ?? ov.students;
-  const teachers = statsData?.teacher_count ?? ov.teachers;
+  const students = statsData?.student_count ?? null;
+  const teachers = statsData?.teacher_count ?? null;
   return (
     <div className="san-school-card" onClick={() => onView(school)}>
       <div className="san-school-card-top">
@@ -315,12 +310,10 @@ function SchoolCard({ school, onView, statsData }) {
         <span className="san-badge san-badge--status" style={{ color: school.is_approved ? 'var(--sa-green)' : 'var(--sa-amber)', background: school.is_approved ? 'var(--sa-green-dim)' : 'var(--sa-amber-dim)' }}>
           {school.is_approved ? 'ACTIVE' : 'PENDING'}
         </span>
-        <span className="san-badge san-badge--tier" style={{ color: TIER_COLORS[ov.tier], background: TIER_BG[ov.tier] }}>{ov.tier}</span>
       </div>
       <div className="san-school-stats-row">
-        <div className="san-school-stat"><IcUsers /><span>{students.toLocaleString()}</span><span className="san-stat-lbl">Students</span></div>
-        <div className="san-school-stat"><IcBook /><span>{teachers}</span><span className="san-stat-lbl">Teachers</span></div>
-        <div className="san-school-stat"><IcShield /><span style={{ color: 'var(--sa-green)' }}>{ov.integrity}%</span><span className="san-stat-lbl">Integrity</span></div>
+        <div className="san-school-stat"><IcUsers /><span>{students != null ? students.toLocaleString() : '—'}</span><span className="san-stat-lbl">Students</span></div>
+        <div className="san-school-stat"><IcBook /><span>{teachers != null ? teachers : '—'}</span><span className="san-stat-lbl">Teachers</span></div>
       </div>
       <button className="san-card-view-btn">View Details <IcTrend /></button>
     </div>
@@ -645,25 +638,16 @@ export default function SAAnalytics({ schools = [], onLoginAs }) {
   const approved = useMemo(() => schools.filter(s => s.is_approved).length, [schools]);
   const pending  = useMemo(() => schools.filter(s => !s.is_approved).length, [schools]);
   const totalStu = useMemo(() => {
-    const realTotal = Object.values(statsMap).reduce((n, s) => n + (s.student_count || 0), 0);
-    return realTotal > 0 ? realTotal : schools.reduce((n, s) => n + mockOverlay(s).students, 0);
-  }, [schools, statsMap]);
-
-  const tierDist = useMemo(() => {
-    const c = { Enterprise: 0, Pro: 0, Basic: 0 };
-    schools.forEach(s => { const t = mockOverlay(s).tier; c[t]++; });
-    const total = schools.length || 1;
-    return TIERS.map(t => ({ tier: t, pct: Math.round(c[t] / total * 100) }));
-  }, [schools]);
+    return Object.values(statsMap).reduce((n, s) => n + (s.student_count || 0), 0);
+  }, [statsMap]);
 
   const filtered = useMemo(() => {
     let list = schools;
     if (search.trim()) { const q = search.toLowerCase(); list = list.filter(s => s.name?.toLowerCase().includes(q) || s.city?.toLowerCase().includes(q) || s.country?.toLowerCase().includes(q) || s.code?.toLowerCase().includes(q)); }
     if (statusF === 'Active')  list = list.filter(s =>  s.is_approved);
     if (statusF === 'Pending') list = list.filter(s => !s.is_approved);
-    if (tierF   !== 'All')     list = list.filter(s => mockOverlay(s).tier === tierF);
     return list;
-  }, [schools, search, statusF, tierF]);
+  }, [schools, search, statusF]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (view === 'oversight' && selected) {
     return <OversightView school={selected} onBack={() => { setView('directory'); setSelected(null); }} onLoginAs={onLoginAs} />;
@@ -701,17 +685,6 @@ export default function SAAnalytics({ schools = [], onLoginAs }) {
       </div>
 
       {/* Resource Allocation */}
-      <div className="san-card">
-        <div className="san-card-hdr">
-          <h3 className="san-card-title">Resource Allocation</h3>
-          <span className="san-card-meta">Q1 2025</span>
-        </div>
-        <div className="san-card-body san-alloc-body">
-          {tierDist.map(({ tier, pct }) => (
-            <ProgressBar key={tier} label={tier} sublabel={`${pct}%`} value={pct} color={TIER_COLORS[tier]} />
-          ))}
-        </div>
-      </div>
 
       {/* Filter bar */}
       <div className="san-filter-bar">
@@ -720,11 +693,6 @@ export default function SAAnalytics({ schools = [], onLoginAs }) {
           {['All','Active','Pending'].map(s => (
             <button key={s} className={`san-chip${statusF === s ? ' san-chip--on' : ''}`} onClick={() => setStatusF(s)}>{s}</button>
           ))}
-        </div>
-        <div className="san-sel-wrap">
-          <select className="san-sel" value={tierF} onChange={e => setTierF(e.target.value)}>
-            {['All','Enterprise','Pro','Basic'].map(t => <option key={t}>{t}</option>)}
-          </select><IcChevDown />
         </div>
         <div className="san-view-toggle">
           <button className={`san-view-tog${dispMode === 'grid' ? ' active' : ''}`} onClick={() => setDispMode('grid')} aria-label="Grid view"><IcGrid /></button>
@@ -755,15 +723,15 @@ export default function SAAnalytics({ schools = [], onLoginAs }) {
               <thead><tr><th>School</th><th>Region</th><th>Tier</th><th>Integrity</th><th>Status</th><th>Last Audit</th><th></th></tr></thead>
               <tbody>
                 {filtered.map(s => {
-                  const ov = mockOverlay(s);
+                  const sd = statsMap[s.id];
                   return (
                     <tr key={s.id} onClick={() => { setSelected(s); setView('oversight'); }} style={{ cursor: 'pointer' }}>
                       <td><div className="san-tbl-school"><div className="san-tbl-av" style={{ background: avatarColor(s.name) }}>{initials(s.name)}</div><div><p className="san-tbl-name">{s.name}</p><p className="san-tbl-sub">{s.city || '—'}</p></div></div></td>
-                      <td><span className="san-tbl-txt">{ov.region}</span></td>
-                      <td><span className="san-badge san-badge--tier" style={{ color: TIER_COLORS[ov.tier], background: TIER_BG[ov.tier] }}>{ov.tier}</span></td>
-                      <td><span style={{ color: 'var(--sa-green)', fontWeight: 700 }}>{ov.integrity}%</span></td>
+                      <td><span className="san-tbl-txt">{s.country || '—'}</span></td>
+                      <td><span className="san-tbl-txt">—</span></td>
+                      <td><span style={{ color: 'var(--sa-text-2)' }}>—</span></td>
                       <td><span className="san-badge san-badge--status" style={{ color: s.is_approved ? 'var(--sa-green)' : 'var(--sa-amber)', background: s.is_approved ? 'var(--sa-green-dim)' : 'var(--sa-amber-dim)' }}>{s.is_approved ? 'ACTIVE' : 'PENDING'}</span></td>
-                      <td><span className="san-tbl-txt">{ov.lastAudit}</span></td>
+                      <td><span className="san-tbl-txt">{sd ? `${sd.student_count || 0} students` : '—'}</span></td>
                       <td><button className="san-tbl-view-btn" onClick={e => { e.stopPropagation(); setSelected(s); setView('oversight'); }}>View</button></td>
                     </tr>
                   );
