@@ -50,3 +50,5 @@ eksms/logs/
 # Local assets not for version control
 public/docu/
 public/image/adds-on/
+public/school-admin-refrence-UI/
+public/stich-refrence/

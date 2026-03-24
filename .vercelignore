@@ -10,3 +10,9 @@ venv
 .env
 *.pyc
 *.pyo
+
+# Reference/design assets — not needed in production bundle
+public/docu
+public/image/adds-on
+public/school-admin-refrence-UI
+public/stich-refrence
