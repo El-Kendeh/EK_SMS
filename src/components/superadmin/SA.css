@@ -965,6 +965,7 @@
   color: #fff;
   flex-shrink: 0;
   text-transform: uppercase;
+  overflow: hidden;
 }
 
 .sa-app-info { flex: 1; min-width: 0; }
@@ -1016,6 +1017,16 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8125rem;
+}
+
+.sa-app-meta-val svg {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
 }
 
 /* ---- Buttons ---- */
@@ -1224,56 +1235,155 @@
 }
 
 /* ---- Detail sections (review page) ---- */
+/* ============================================================
+   APPLICATION REVIEW — Redesigned
+   ============================================================ */
+
 .sa-review-wrap {
-  max-width: 640px;
+  max-width: 900px;
   margin: 0 auto;
 }
 
-.sa-review-hero {
+/* ── Nav bar ── */
+.sa-review-nav {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  padding: 28px 20px;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+/* ── School identity header card ── */
+.sa-review-id-card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
   background: var(--sa-card-bg);
   border: 1px solid var(--sa-border);
   border-radius: var(--sa-radius);
+  padding: 20px 24px;
   margin-bottom: 16px;
-  position: relative;
 }
 
-.sa-review-avatar {
-  width: 72px;
-  height: 72px;
-  border-radius: 18px;
+.sa-review-id-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  flex: 1;
+  min-width: 0;
+}
+
+.sa-review-id-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.75rem;
+  font-size: 1.05rem;
   font-weight: 800;
   color: #fff;
-  margin-bottom: 12px;
-  position: relative;
+  flex-shrink: 0;
 }
 
-.sa-review-school-name {
-  font-size: 1.25rem;
+.sa-review-id-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.sa-review-id-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 3px;
+}
+
+.sa-review-id-name {
+  font-size: 1.0625rem;
   font-weight: 800;
   color: var(--sa-text);
-  margin: 0 0 4px;
-  text-align: center;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.sa-review-school-type {
+.sa-review-id-sub {
   font-size: 0.8125rem;
   color: var(--sa-text-2);
-  margin: 0;
+  margin: 0 0 8px;
 }
 
+.sa-review-id-code {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--sa-accent);
+  background: var(--sa-accent-dim);
+  border-radius: 6px;
+  padding: 1px 8px;
+}
+
+.sa-review-id-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.sa-review-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--sa-card-bg2);
+  border: 1px solid var(--sa-border);
+  font-size: 0.75rem;
+  color: var(--sa-text-2);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Trust score — desktop right side */
+.sa-review-id-risk {
+  flex-shrink: 0;
+  text-align: right;
+  padding-left: 20px;
+  border-left: 1px solid var(--sa-border);
+}
+
+/* ── Two-column content grid ── */
+.sa-review-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: start;
+  margin-bottom: 0;
+}
+
+.sa-review-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ── Admin row inside section ── */
+.sa-review-admin-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 14px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--sa-border);
+}
+
+/* ── Section card ── */
 .sa-review-section {
   background: var(--sa-card-bg);
   border: 1px solid var(--sa-border);
   border-radius: var(--sa-radius);
-  margin-bottom: 12px;
   overflow: hidden;
 }
 
@@ -1281,31 +1391,38 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 14px 18px;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--sa-border);
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 700;
   color: var(--sa-text);
 }
 
-.sa-review-section-head svg {
-  width: 16px;
-  height: 16px;
-  stroke: var(--sa-accent);
-  fill: none;
+.sa-review-section-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
 }
 
-.sa-review-section-body {
-  padding: 16px 18px;
+.sa-review-section-icon svg {
+  width: 15px;
+  height: 15px;
+  stroke: var(--sa-accent);
+  fill: none;
 }
 
+.sa-review-section-body {
+  padding: 12px 16px;
+}
+
+/* ── Field rows ── */
 .sa-review-field {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 12px;
-  padding: 8px 0;
+  padding: 7px 0;
   border-bottom: 1px solid var(--sa-border);
 }
 
@@ -1315,7 +1432,7 @@
   font-size: 0.8125rem;
   color: var(--sa-text-2);
   font-weight: 500;
-  min-width: 120px;
+  flex-shrink: 0;
 }
 
 .sa-review-field-val {
@@ -1330,7 +1447,10 @@
 .sa-review-field-val--red    { color: var(--sa-red); }
 .sa-review-field-val--amber  { color: var(--sa-amber); }
 
-/* ---- Review action bar ---- */
+/* ── Mobile risk card (hidden on desktop) ── */
+.sa-review-risk-mobile { display: none; }
+
+/* ── Action bar ── */
 .sa-review-actions {
   position: sticky;
   bottom: 0;
@@ -1342,20 +1462,19 @@
   align-items: center;
   justify-content: flex-end;
   flex-wrap: wrap;
-  margin: 0 -24px -24px;
+  margin: 16px -24px -24px;
 }
 
-/* ---- Risk score ---- */
+/* ---- Risk score (used in mobile fallback) ---- */
 .sa-risk-card {
-  padding: 16px 18px;
+  padding: 14px 16px;
   border-radius: var(--sa-radius);
   border: 1px solid var(--sa-border);
-  margin-bottom: 12px;
 }
 
-.sa-risk-card--low    { border-left: 4px solid var(--sa-green); background: var(--sa-card-bg); }
-.sa-risk-card--medium { border-left: 4px solid var(--sa-amber); background: var(--sa-card-bg); }
-.sa-risk-card--high   { border-left: 4px solid var(--sa-red);   background: var(--sa-card-bg); }
+.sa-risk-card--low    { border-left: 3px solid var(--sa-green); background: var(--sa-card-bg); }
+.sa-risk-card--medium { border-left: 3px solid var(--sa-amber); background: var(--sa-card-bg); }
+.sa-risk-card--high   { border-left: 3px solid var(--sa-red);   background: var(--sa-card-bg); }
 
 .sa-risk-label {
   font-size: 0.6875rem;
@@ -1363,11 +1482,11 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--sa-text-2);
-  margin: 0 0 6px;
+  margin: 0 0 4px;
 }
 
 .sa-risk-score {
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   font-weight: 800;
   margin: 0 0 4px;
 }
@@ -1450,8 +1569,37 @@
     grid-template-columns: 1fr;
   }
 
+  /* ── Review — collapse to single column ── */
+  .sa-review-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sa-review-id-card {
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .sa-review-id-risk {
+    border-left: none;
+    border-top: 1px solid var(--sa-border);
+    padding-left: 0;
+    padding-top: 14px;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+  }
+
+  .sa-review-id-risk > div {
+    /* progress bar */
+    width: 100px;
+  }
+
+  .sa-review-risk-mobile { display: block; }
+
   .sa-review-actions {
-    margin: 0 -16px -16px;
+    margin: 16px -16px -16px;
     padding: 12px 16px;
     justify-content: stretch;
   }
@@ -1623,16 +1771,7 @@
   stroke: var(--sa-accent);
 }
 
-/* ============================================================
-   REVIEW HERO inline icon fix
-   ============================================================ */
-.sa-review-hero svg {
-  width: 12px;
-  height: 12px;
-  stroke: currentColor;
-  fill: none;
-  vertical-align: middle;
-}
+/* review hero icon fix removed — no longer needed */
 
 /* ============================================================
    SECURITY & AUDIT — Shared Styles

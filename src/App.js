@@ -58,7 +58,7 @@ const PAGE_TO_PATH = {
   landing:              '/',
   register:             '/register',
   superadmindashboard:  '/superadmin',
-  'sa-dashboard':       '/dashboard',
+  'sa-dashboard':       '/dashboard/school-admin',
 };
 
 const PATH_TO_PAGE = {
@@ -66,7 +66,7 @@ const PATH_TO_PAGE = {
   '/login':       'login',
   '/register':    'register',
   '/superadmin':  'superadmindashboard',
-  '/dashboard':   'sa-dashboard',
+  '/dashboard/school-admin': 'sa-dashboard',
 };
 
 function App() {

@@ -13,6 +13,7 @@ from eksms_core.models import (
     School, SchoolAdmin, GradeChangeAlert, Grade, Student, Teacher,
     SchoolApplicationEvent, ForensicEvent, AlertBroadcast, AdminSetting,
     SecurityLogEntry, AcademicYear, ClassRoom, SystemWideAlert,
+    Subject, Term,
 )
 import datetime
 import uuid
@@ -384,13 +385,14 @@ def api_register(request):
                 school.badge = badge_file
                 school.save()
 
-            # Create Admin User
+            # Create Admin User — inactive until superadmin approves the school
             user = User.objects.create_user(
                 username=data['adminUsername'],
                 email=admin_email,
                 password=data['password'],
                 first_name=data.get('firstName', ''),
-                last_name=data.get('lastName', '')
+                last_name=data.get('lastName', ''),
+                is_active=False,   # activated only upon approval
             )
 
             # Create SchoolAdmin profile
@@ -412,7 +414,7 @@ def api_register(request):
 def api_get_schools(request):
     """Fetch all schools for superadmin dashboard"""
     try:
-        schools = School.objects.all()
+        schools = School.objects.select_related('admin__user').all()
         school_list = []
         for s in schools:
             badge_url = None
@@ -421,6 +423,19 @@ def api_get_schools(request):
                     badge_url = request.build_absolute_uri(s.badge.url)
                 except:
                     badge_url = s.badge.url
+
+            # Pull admin user info from linked SchoolAdmin (OneToOne)
+            try:
+                sa = s.admin
+                sa_user = sa.user if sa else None
+            except Exception:
+                sa = None
+                sa_user = None
+            admin_full_name = (
+                f"{sa_user.first_name} {sa_user.last_name}".strip()
+                if sa_user and (sa_user.first_name or sa_user.last_name)
+                else (sa_user.username if sa_user else s.principal_name or '')
+            )
 
             school_list.append({
                 'id': s.id,
@@ -441,6 +456,11 @@ def api_get_schools(request):
                 'rejection_reason': s.rejection_reason,
                 'approval_date': s.approval_date.isoformat() if s.approval_date else None,
                 'registration_date': s.registration_date.isoformat(),
+                # Admin credentials info (from registration)
+                'admin_username':   sa_user.username   if sa_user else '',
+                'admin_email':      sa_user.email      if sa_user else s.admin_email or '',
+                'admin_full_name':  admin_full_name,
+                'admin_is_active':  sa_user.is_active  if sa_user else False,
             })
         return JsonResponse({'success': True, 'schools': school_list}, status=200)
     except Exception as e:
@@ -472,6 +492,14 @@ def api_approve_school(request):
             event_type = 'APPROVED'
             severity = 'info'
             msg = f"School '{school.name}' approved successfully."
+            # Activate the school admin user so they can log in
+            try:
+                sa = school.admin
+                if sa and sa.user:
+                    sa.user.is_active = True
+                    sa.user.save(update_fields=['is_active'])
+            except Exception:
+                pass
         elif action == 'reject':
             school.is_approved = False
             school.is_active = False
@@ -480,6 +508,14 @@ def api_approve_school(request):
             event_type = 'REJECTED'
             severity = 'medium'
             msg = f"School '{school.name}' rejected."
+            # Keep admin user inactive on rejection
+            try:
+                sa = school.admin
+                if sa and sa.user:
+                    sa.user.is_active = False
+                    sa.user.save(update_fields=['is_active'])
+            except Exception:
+                pass
         elif action == 'request_changes':
             school.is_approved = False
             school.changes_requested = True
@@ -571,27 +607,14 @@ def api_send_otp(request):
         
         # Send email — use Resend in production, fall back to console log in dev
         resend_api_key = getattr(settings, 'RESEND_API_KEY', '')
+        default_from = getattr(settings, 'DEFAULT_FROM_EMAIL', 'EK-SMS <noreply@elkendeh.com>')
         import logging
         logger = logging.getLogger('django')
 
-        if not resend_api_key:
-            # Dev fallback: print OTP to Django terminal
-            logger.warning(
-                f"\n{'='*50}\n"
-                f"  DEV MODE — OTP for {email}: {otp_code}\n"
-                f"  Expires in {expiry_minutes} minutes\n"
-                f"{'='*50}"
-            )
-            # Save record even in dev (email "sent" via terminal)
-            OTPRecord.objects.create(
-                email=email,
-                code_hash=otp_hash,
-                expires_at=expires_at
-            )
-        else:
+        if resend_api_key:
+            # ── Path 1: Resend API ──────────────────────────────────────────
             import resend
             resend.api_key = resend_api_key
-            default_from = getattr(settings, 'DEFAULT_FROM_EMAIL', 'EK-SMS <noreply@elkendeh.com>')
             try:
                 resend.Emails.send({
                     "from": default_from,
@@ -622,18 +645,81 @@ def api_send_otp(request):
                     expires_at=expires_at
                 )
             except Exception as email_error:
-                logger.error(f"Failed to send OTP email to {email}: {str(email_error)}")
+                logger.error(f"Failed to send OTP via Resend to {email}: {str(email_error)}")
                 return JsonResponse({
                     'success': False,
                     'message': 'Failed to send email. Please try again later.'
                 }, status=500)
-        
+
+        else:
+            # ── Path 2: Django SMTP backend (configured via .env) ───────────
+            from django.core.mail import send_mail as django_send_mail
+            from django.conf import settings as djsettings
+
+            smtp_user = getattr(djsettings, 'EMAIL_HOST_USER', '')
+            html_body = f"""
+            <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#f9f9f9;padding:32px;border-radius:8px;">
+              <div style="background:#0b1326;padding:20px 24px;border-radius:6px;margin-bottom:24px;">
+                <h1 style="color:#adc6ff;margin:0;font-size:20px;letter-spacing:1px;">EK-SMS</h1>
+                <p style="color:#4cd7f6;margin:4px 0 0;font-size:13px;">School Management System</p>
+              </div>
+              <h2 style="color:#1a1a2e;margin:0 0 12px;">Email Verification</h2>
+              <p style="color:#444;font-size:14px;line-height:1.6;">
+                Use the code below to verify your email address during registration.
+                It expires in <strong>{expiry_minutes} minutes</strong>.
+              </p>
+              <div style="background:#fff;border:2px solid #adc6ff;border-radius:8px;padding:24px;text-align:center;margin:24px 0;">
+                <span style="font-size:36px;font-weight:900;color:#0b1326;letter-spacing:8px;font-family:monospace;">{otp_code}</span>
+              </div>
+              <p style="color:#888;font-size:12px;">If you didn't request this, ignore this email safely.</p>
+              <hr style="border:none;border-top:1px solid #eee;margin:20px 0;">
+              <p style="color:#aaa;font-size:11px;">EK-SMS · Automated message — do not reply.</p>
+            </div>
+            """
+            text_body = f"Your EK-SMS verification code is: {otp_code}\nExpires in {expiry_minutes} minutes."
+
+            if smtp_user:
+                try:
+                    django_send_mail(
+                        subject='Your EK-SMS Verification Code',
+                        message=text_body,
+                        from_email=default_from,
+                        recipient_list=[email],
+                        html_message=html_body,
+                        fail_silently=False,
+                    )
+                    OTPRecord.objects.create(
+                        email=email,
+                        code_hash=otp_hash,
+                        expires_at=expires_at
+                    )
+                except Exception as smtp_error:
+                    logger.error(f"SMTP OTP send failed for {email}: {smtp_error}")
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'Failed to send verification email. Check email configuration.'
+                    }, status=500)
+            else:
+                # ── Path 3: Dev console fallback (no SMTP configured) ───────
+                logger.warning(
+                    f"\n{'='*55}\n"
+                    f"  OTP for {email}: {otp_code}\n"
+                    f"  Expires in {expiry_minutes} minutes\n"
+                    f"  (Configure EMAIL_HOST_USER in .env to send real emails)\n"
+                    f"{'='*55}"
+                )
+                OTPRecord.objects.create(
+                    email=email,
+                    code_hash=otp_hash,
+                    expires_at=expires_at
+                )
+
         return JsonResponse({
-            'success': True, 
+            'success': True,
             'message': 'Verification code sent to your email.',
-            'expires_in': expiry_minutes * 60  # seconds
+            'expires_in': expiry_minutes * 60
         }, status=200)
-        
+
     except json.JSONDecodeError:
         return JsonResponse({'success': False, 'message': 'Invalid JSON payload.'}, status=400)
     except Exception as e:
@@ -683,57 +769,86 @@ def api_resend_otp(request):
         expiry_minutes = getattr(settings, 'OTP_EXPIRY_MINUTES', 10)
         expires_at = timezone.now() + timezone.timedelta(minutes=expiry_minutes)
         
-        # Send email — use Resend in production, fall back to console log in dev
+        # Send email — use Resend in production, SMTP from .env, or dev console fallback
         resend_api_key = getattr(settings, 'RESEND_API_KEY', '')
+        default_from = getattr(settings, 'DEFAULT_FROM_EMAIL', 'EK-SMS <noreply@elkendeh.com>')
         import logging
         logger = logging.getLogger('django')
 
-        if not resend_api_key:
-            logger.warning(
-                f"\n{'='*50}\n"
-                f"  DEV MODE — Resent OTP for {email}: {otp_code}\n"
-                f"  Expires in {expiry_minutes} minutes\n"
-                f"{'='*50}"
-            )
-            # Invalidate old OTPs and save new record in dev too
-            OTPRecord.objects.filter(email=email, is_used=False).update(is_used=True)
-            OTPRecord.objects.create(email=email, code_hash=otp_hash, expires_at=expires_at)
-        else:
+        html_body = f"""
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#f9f9f9;padding:32px;border-radius:8px;">
+          <div style="background:#0b1326;padding:20px 24px;border-radius:6px;margin-bottom:24px;">
+            <h1 style="color:#adc6ff;margin:0;font-size:20px;letter-spacing:1px;">EK-SMS</h1>
+            <p style="color:#4cd7f6;margin:4px 0 0;font-size:13px;">School Management System</p>
+          </div>
+          <h2 style="color:#1a1a2e;margin:0 0 12px;">New Verification Code</h2>
+          <p style="color:#444;font-size:14px;line-height:1.6;">
+            A new code was requested. Use it to verify your email.
+            It expires in <strong>{expiry_minutes} minutes</strong>.
+          </p>
+          <div style="background:#fff;border:2px solid #adc6ff;border-radius:8px;padding:24px;text-align:center;margin:24px 0;">
+            <span style="font-size:36px;font-weight:900;color:#0b1326;letter-spacing:8px;font-family:monospace;">{otp_code}</span>
+          </div>
+          <p style="color:#888;font-size:12px;">If you didn't request this, ignore this email safely.</p>
+          <hr style="border:none;border-top:1px solid #eee;margin:20px 0;">
+          <p style="color:#aaa;font-size:11px;">EK-SMS · Automated message — do not reply.</p>
+        </div>
+        """
+        text_body = f"Your new EK-SMS verification code is: {otp_code}\nExpires in {expiry_minutes} minutes."
+
+        if resend_api_key:
+            # ── Path 1: Resend API ─────────────────────────────────────────
             import resend
             resend.api_key = resend_api_key
-            default_from = getattr(settings, 'DEFAULT_FROM_EMAIL', 'EK-SMS <noreply@elkendeh.com>')
             try:
                 resend.Emails.send({
                     "from": default_from,
                     "to": [email],
                     "subject": "Your EK-SMS Verification Code (Resent)",
-                    "html": f"""
-                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                        <h2 style="color: #333;">EK-SMS Email Verification</h2>
-                        <p>Hello,</p>
-                        <p>Your new verification code for EK-SMS registration is:</p>
-                        <div style="background-color: #f8f9fa; border: 1px solid #dee2e6; padding: 20px; text-align: center; margin: 20px 0;">
-                            <span style="font-size: 24px; font-weight: bold; color: #007bff; letter-spacing: 2px;">{otp_code}</span>
-                        </div>
-                        <p>This code will expire in {expiry_minutes} minutes.</p>
-                        <p>If you didn't request this code, please ignore this email.</p>
-                        <hr style="border: none; border-top: 1px solid #dee2e6; margin: 20px 0;">
-                        <p style="color: #6c757d; font-size: 12px;">
-                            EK-SMS - School Management System<br>
-                            This is an automated message. Please do not reply.
-                        </p>
-                    </div>
-                    """
+                    "html": html_body,
                 })
-                # Invalidate old and save new AFTER successful send (colleague's improvement)
                 OTPRecord.objects.filter(email=email, is_used=False).update(is_used=True)
                 OTPRecord.objects.create(email=email, code_hash=otp_hash, expires_at=expires_at)
             except Exception as email_error:
-                logger.error(f"Failed to resend OTP email to {email}: {str(email_error)}")
+                logger.error(f"Failed to resend OTP via Resend to {email}: {str(email_error)}")
                 return JsonResponse({
                     'success': False,
                     'message': 'Failed to send email. Please try again later.'
                 }, status=500)
+        else:
+            # ── Path 2: Django SMTP backend (configured via .env) ──────────
+            from django.core.mail import send_mail as django_send_mail
+            smtp_user = getattr(settings, 'EMAIL_HOST_USER', '')
+
+            if smtp_user:
+                try:
+                    django_send_mail(
+                        subject='Your EK-SMS Verification Code (Resent)',
+                        message=text_body,
+                        from_email=default_from,
+                        recipient_list=[email],
+                        html_message=html_body,
+                        fail_silently=False,
+                    )
+                    OTPRecord.objects.filter(email=email, is_used=False).update(is_used=True)
+                    OTPRecord.objects.create(email=email, code_hash=otp_hash, expires_at=expires_at)
+                except Exception as smtp_error:
+                    logger.error(f"SMTP resend OTP failed for {email}: {smtp_error}")
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'Failed to send verification email. Check email configuration.'
+                    }, status=500)
+            else:
+                # ── Path 3: Dev console fallback ───────────────────────────
+                logger.warning(
+                    f"\n{'='*55}\n"
+                    f"  RESENT OTP for {email}: {otp_code}\n"
+                    f"  Expires in {expiry_minutes} minutes\n"
+                    f"  (Configure EMAIL_HOST_USER in .env to send real emails)\n"
+                    f"{'='*55}"
+                )
+                OTPRecord.objects.filter(email=email, is_used=False).update(is_used=True)
+                OTPRecord.objects.create(email=email, code_hash=otp_hash, expires_at=expires_at)
 
 
         # Set cooldown
@@ -1804,3 +1919,489 @@ def api_sa_stats(request):
         })
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+# ─────────────────────────────────────────────────────────────────
+# SCHOOL-ADMIN CRUD helpers
+# ─────────────────────────────────────────────────────────────────
+
+def _get_school_for_admin(request):
+    actor = _get_authed_user(request)
+    if not actor:
+        return None, None, None
+    sa = SchoolAdmin.objects.select_related('school').get(user=actor)
+    return actor, sa, sa.school
+
+
+# ── School info ──────────────────────────────────────────────────
+
+@require_http_methods(["GET"])
+@csrf_exempt
+def api_school_info(request):
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+
+    student_count = Student.objects.filter(school=school, is_active=True).count()
+    teacher_count = Teacher.objects.filter(school=school, is_active=True).count()
+    class_count   = ClassRoom.objects.filter(school=school, is_active=True).count()
+    subject_count = Subject.objects.filter(school=school, is_active=True).count()
+    active_year   = AcademicYear.objects.filter(school=school, is_active=True).first()
+
+    badge_url = ''
+    if school.badge:
+        try:
+            badge_url = request.build_absolute_uri(school.badge.url)
+        except Exception:
+            badge_url = str(school.badge)
+
+    return JsonResponse({
+        'success': True,
+        'id': school.id,
+        'name': school.name,
+        'code': school.code,
+        'email': school.email,
+        'phone': school.phone or '',
+        'address': school.address or '',
+        'city': school.city or '',
+        'country': school.country or '',
+        'badge': badge_url,
+        'is_approved': school.is_approved,
+        'total_students': student_count,
+        'total_teachers': teacher_count,
+        'active_classes': class_count,
+        'subject_count': subject_count,
+        'attendance_rate': 0,
+        'avg_performance': 0,
+        'pending_actions': 0,
+        'fees_collected': 0,
+        'fees_outstanding': 0,
+        'academic_year': active_year.name if active_year else None,
+    })
+
+
+# ── Students ─────────────────────────────────────────────────────
+
+@csrf_exempt
+def api_students(request):
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+
+    if request.method == 'GET':
+        qs = Student.objects.filter(school=school, is_active=True).select_related('user', 'classroom')
+        q  = request.GET.get('q', '').strip()
+        if q:
+            from django.db.models import Q
+            qs = qs.filter(
+                Q(user__first_name__icontains=q) |
+                Q(user__last_name__icontains=q) |
+                Q(admission_number__icontains=q)
+            )
+        data = [{
+            'id': s.id,
+            'admission_number': s.admission_number,
+            'first_name': s.user.first_name,
+            'last_name': s.user.last_name,
+            'full_name': s.user.get_full_name(),
+            'email': s.user.email,
+            'classroom': s.classroom.name if s.classroom else None,
+            'classroom_id': s.classroom_id,
+            'date_of_birth': str(s.date_of_birth) if s.date_of_birth else None,
+            'phone_number': s.phone_number,
+            'admission_date': str(s.admission_date),
+        } for s in qs]
+        return JsonResponse({'success': True, 'students': data, 'count': len(data)})
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+
+        first_name       = body.get('first_name', '').strip()
+        last_name        = body.get('last_name', '').strip()
+        email            = body.get('email', '').strip()
+        admission_number = body.get('admission_number', '').strip()
+        classroom_id     = body.get('classroom_id')
+        date_of_birth    = body.get('date_of_birth') or None
+        phone_number     = body.get('phone_number', '')
+
+        if not first_name or not last_name or not admission_number:
+            return JsonResponse({'success': False, 'message': 'first_name, last_name, and admission_number are required.'}, status=400)
+        if Student.objects.filter(school=school, admission_number=admission_number).exists():
+            return JsonResponse({'success': False, 'message': 'Admission number already exists.'}, status=400)
+
+        username = f"stu_{school.code}_{admission_number}".lower().replace(' ', '_')[:150]
+        if User.objects.filter(username=username).exists():
+            username = f"{username}_{uuid.uuid4().hex[:4]}"
+        user = User.objects.create_user(
+            username=username, email=email,
+            first_name=first_name, last_name=last_name,
+            password=uuid.uuid4().hex,
+        )
+        classroom = None
+        if classroom_id:
+            try:
+                classroom = ClassRoom.objects.get(id=classroom_id, school=school)
+            except ClassRoom.DoesNotExist:
+                pass
+        active_year = AcademicYear.objects.filter(school=school, is_active=True).first()
+        student = Student.objects.create(
+            school=school, user=user, admission_number=admission_number,
+            classroom=classroom, academic_year=active_year,
+            date_of_birth=date_of_birth, phone_number=phone_number,
+        )
+        return JsonResponse({'success': True, 'message': 'Student added.', 'id': student.id,
+                             'full_name': user.get_full_name(), 'admission_number': student.admission_number}, status=201)
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+@csrf_exempt
+def api_student_detail(request, student_id):
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+    try:
+        student = Student.objects.select_related('user', 'classroom').get(id=student_id, school=school)
+    except Student.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Student not found.'}, status=404)
+
+    if request.method == 'GET':
+        return JsonResponse({'success': True, 'id': student.id,
+            'admission_number': student.admission_number,
+            'first_name': student.user.first_name, 'last_name': student.user.last_name,
+            'email': student.user.email, 'classroom': student.classroom.name if student.classroom else None,
+            'classroom_id': student.classroom_id,
+            'date_of_birth': str(student.date_of_birth) if student.date_of_birth else None,
+            'phone_number': student.phone_number, 'admission_date': str(student.admission_date)})
+
+    if request.method == 'PUT':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        u = student.user
+        u.first_name = body.get('first_name', u.first_name)
+        u.last_name  = body.get('last_name', u.last_name)
+        u.email      = body.get('email', u.email)
+        u.save(update_fields=['first_name', 'last_name', 'email'])
+        if 'classroom_id' in body:
+            cid = body['classroom_id']
+            try:
+                student.classroom = ClassRoom.objects.get(id=cid, school=school) if cid else None
+            except ClassRoom.DoesNotExist:
+                pass
+        if 'date_of_birth' in body:
+            student.date_of_birth = body['date_of_birth'] or None
+        if 'phone_number' in body:
+            student.phone_number = body['phone_number']
+        student.save()
+        return JsonResponse({'success': True, 'message': 'Student updated.'})
+
+    if request.method == 'DELETE':
+        student.is_active = False
+        student.save(update_fields=['is_active'])
+        return JsonResponse({'success': True, 'message': 'Student removed.'})
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+# ── Teachers ─────────────────────────────────────────────────────
+
+@csrf_exempt
+def api_teachers(request):
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+
+    if request.method == 'GET':
+        qs = Teacher.objects.filter(school=school, is_active=True).select_related('user')
+        q  = request.GET.get('q', '').strip()
+        if q:
+            from django.db.models import Q
+            qs = qs.filter(
+                Q(user__first_name__icontains=q) |
+                Q(user__last_name__icontains=q) |
+                Q(employee_id__icontains=q)
+            )
+        data = [{
+            'id': t.id, 'employee_id': t.employee_id,
+            'first_name': t.user.first_name, 'last_name': t.user.last_name,
+            'full_name': t.user.get_full_name(), 'email': t.user.email,
+            'phone_number': t.phone_number, 'qualification': t.qualification,
+            'hire_date': str(t.hire_date),
+        } for t in qs]
+        return JsonResponse({'success': True, 'teachers': data, 'count': len(data)})
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        first_name    = body.get('first_name', '').strip()
+        last_name     = body.get('last_name', '').strip()
+        email         = body.get('email', '').strip()
+        employee_id   = body.get('employee_id', '').strip()
+        phone_number  = body.get('phone_number', '')
+        qualification = body.get('qualification', '')
+        if not first_name or not last_name or not employee_id:
+            return JsonResponse({'success': False, 'message': 'first_name, last_name, and employee_id are required.'}, status=400)
+        if Teacher.objects.filter(school=school, employee_id=employee_id).exists():
+            return JsonResponse({'success': False, 'message': 'Employee ID already exists.'}, status=400)
+        username = f"tch_{school.code}_{employee_id}".lower().replace(' ', '_')[:150]
+        if User.objects.filter(username=username).exists():
+            username = f"{username}_{uuid.uuid4().hex[:4]}"
+        user = User.objects.create_user(
+            username=username, email=email,
+            first_name=first_name, last_name=last_name,
+            password=uuid.uuid4().hex,
+        )
+        teacher = Teacher.objects.create(
+            school=school, user=user, employee_id=employee_id,
+            phone_number=phone_number, qualification=qualification,
+        )
+        return JsonResponse({'success': True, 'message': 'Teacher added.', 'id': teacher.id,
+                             'full_name': user.get_full_name(), 'employee_id': teacher.employee_id}, status=201)
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+@csrf_exempt
+def api_teacher_detail(request, teacher_id):
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+    try:
+        teacher = Teacher.objects.select_related('user').get(id=teacher_id, school=school)
+    except Teacher.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Teacher not found.'}, status=404)
+
+    if request.method == 'GET':
+        return JsonResponse({'success': True, 'id': teacher.id, 'employee_id': teacher.employee_id,
+            'first_name': teacher.user.first_name, 'last_name': teacher.user.last_name,
+            'email': teacher.user.email, 'phone_number': teacher.phone_number,
+            'qualification': teacher.qualification, 'hire_date': str(teacher.hire_date)})
+
+    if request.method == 'PUT':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        u = teacher.user
+        u.first_name = body.get('first_name', u.first_name)
+        u.last_name  = body.get('last_name', u.last_name)
+        u.email      = body.get('email', u.email)
+        u.save(update_fields=['first_name', 'last_name', 'email'])
+        teacher.phone_number  = body.get('phone_number', teacher.phone_number)
+        teacher.qualification = body.get('qualification', teacher.qualification)
+        teacher.save()
+        return JsonResponse({'success': True, 'message': 'Teacher updated.'})
+
+    if request.method == 'DELETE':
+        teacher.is_active = False
+        teacher.save(update_fields=['is_active'])
+        return JsonResponse({'success': True, 'message': 'Teacher removed.'})
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+# ── Classes ──────────────────────────────────────────────────────
+
+@csrf_exempt
+def api_classes(request):
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+
+    if request.method == 'GET':
+        qs = ClassRoom.objects.filter(school=school, is_active=True)
+        data = [{
+            'id': c.id, 'name': c.name, 'code': c.code,
+            'form_number': c.form_number, 'capacity': c.capacity,
+            'student_count': c.students.filter(is_active=True).count(),
+        } for c in qs]
+        return JsonResponse({'success': True, 'classes': data, 'count': len(data)})
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        name        = body.get('name', '').strip()
+        code        = body.get('code', '').strip()
+        form_number = body.get('form_number', 1)
+        capacity    = body.get('capacity', 50)
+        if not name or not code:
+            return JsonResponse({'success': False, 'message': 'name and code are required.'}, status=400)
+        if ClassRoom.objects.filter(school=school, code=code).exists():
+            return JsonResponse({'success': False, 'message': 'Class code already exists.'}, status=400)
+        cls = ClassRoom.objects.create(
+            school=school, name=name, code=code,
+            form_number=form_number, capacity=capacity,
+        )
+        return JsonResponse({'success': True, 'message': 'Class created.', 'id': cls.id}, status=201)
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+@csrf_exempt
+def api_class_detail(request, class_id):
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+    try:
+        cls = ClassRoom.objects.get(id=class_id, school=school)
+    except ClassRoom.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Class not found.'}, status=404)
+
+    if request.method == 'GET':
+        return JsonResponse({'success': True, 'id': cls.id, 'name': cls.name, 'code': cls.code,
+            'form_number': cls.form_number, 'capacity': cls.capacity,
+            'student_count': cls.students.filter(is_active=True).count()})
+
+    if request.method == 'PUT':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        cls.name        = body.get('name', cls.name)
+        cls.form_number = body.get('form_number', cls.form_number)
+        cls.capacity    = body.get('capacity', cls.capacity)
+        cls.save()
+        return JsonResponse({'success': True, 'message': 'Class updated.'})
+
+    if request.method == 'DELETE':
+        cls.is_active = False
+        cls.save(update_fields=['is_active'])
+        return JsonResponse({'success': True, 'message': 'Class removed.'})
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+# ── Subjects ─────────────────────────────────────────────────────
+
+@csrf_exempt
+def api_subjects(request):
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+
+    if request.method == 'GET':
+        qs = Subject.objects.filter(school=school, is_active=True)
+        data = [{'id': s.id, 'name': s.name, 'code': s.code, 'description': s.description} for s in qs]
+        return JsonResponse({'success': True, 'subjects': data, 'count': len(data)})
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        name        = body.get('name', '').strip()
+        code        = body.get('code', '').strip()
+        description = body.get('description', '')
+        if not name or not code:
+            return JsonResponse({'success': False, 'message': 'name and code are required.'}, status=400)
+        if Subject.objects.filter(school=school, code=code).exists():
+            return JsonResponse({'success': False, 'message': 'Subject code already exists.'}, status=400)
+        subj = Subject.objects.create(school=school, name=name, code=code, description=description)
+        return JsonResponse({'success': True, 'message': 'Subject created.', 'id': subj.id}, status=201)
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+@csrf_exempt
+def api_subject_detail(request, subject_id):
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+    try:
+        subj = Subject.objects.get(id=subject_id, school=school)
+    except Subject.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Subject not found.'}, status=404)
+
+    if request.method == 'GET':
+        return JsonResponse({'success': True, 'id': subj.id, 'name': subj.name,
+            'code': subj.code, 'description': subj.description})
+
+    if request.method == 'PUT':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        subj.name        = body.get('name', subj.name)
+        subj.description = body.get('description', subj.description)
+        subj.save()
+        return JsonResponse({'success': True, 'message': 'Subject updated.'})
+
+    if request.method == 'DELETE':
+        subj.is_active = False
+        subj.save(update_fields=['is_active'])
+        return JsonResponse({'success': True, 'message': 'Subject removed.'})
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+# ── Academic Years ────────────────────────────────────────────────
+
+@csrf_exempt
+def api_academic_years(request):
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+
+    if request.method == 'GET':
+        qs = AcademicYear.objects.filter(school=school)
+        data = [{'id': y.id, 'name': y.name, 'start_date': str(y.start_date),
+                 'end_date': str(y.end_date), 'is_active': y.is_active} for y in qs]
+        return JsonResponse({'success': True, 'academic_years': data})
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        name       = body.get('name', '').strip()
+        start_date = body.get('start_date', '')
+        end_date   = body.get('end_date', '')
+        if not name:
+            return JsonResponse({'success': False, 'message': 'name is required.'}, status=400)
+        yr = AcademicYear.objects.create(
+            school=school, name=name,
+            start_date=start_date or datetime.date.today(),
+            end_date=end_date or datetime.date.today(),
+        )
+        return JsonResponse({'success': True, 'message': 'Academic year created.', 'id': yr.id}, status=201)
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
