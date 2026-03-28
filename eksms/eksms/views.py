@@ -82,6 +82,60 @@ def _log_security_event(event_type, description, severity='info',
         pass  # Never let audit logging crash the main request
 
 
+def _send_notification_email(subject, to_email, html_content, text_content=None):
+    """
+    Unified helper to send emails via Resend API or SMTP fallback.
+    Returns (success, info_string)
+    """
+    from django.conf import settings
+    from django.core.mail import send_mail
+    import logging
+    logger = logging.getLogger('django')
+
+    resend_api_key = getattr(settings, 'RESEND_API_KEY', None)
+    default_from = getattr(settings, 'DEFAULT_FROM_EMAIL', 'EK-SMS <noreply@elkendeh.com>')
+
+    if resend_api_key:
+        try:
+            import resend
+            resend.api_key = resend_api_key
+            logger.info(f"Sending email to {to_email} via Resend...")
+            resend.Emails.send({
+                "from": default_from,
+                "to": [to_email],
+                "subject": subject,
+                "html": html_content
+            })
+            return True, "Email sent via Resend"
+        except Exception as e:
+            logger.error(f"Resend error: {str(e)}")
+            # Fallback to SMTP on Resend error
+    
+    # Path 2: SMTP
+    try:
+        logger.info(f"Sending email to {to_email} via SMTP...")
+        send_mail(
+            subject=subject,
+            message=text_content or "Please use an HTML-capable email client to view this message.",
+            from_email=default_from,
+            recipient_list=[to_email],
+            html_message=html_content,
+            fail_silently=False,
+        )
+        return True, "Email sent via SMTP"
+    except Exception as e:
+        logger.error(f"SMTP error: {str(e)}")
+        # Path 3: Fallback log
+        logger.warning(
+            f"\n{'='*55}\n"
+            f"  EMAIL FALLBACK: {subject}\n"
+            f"  TO: {to_email}\n"
+            f"  CONTENT: {html_content[:200]}...\n"
+            f"{'='*55}"
+        )
+        return False, str(e)
+
+
 # Serve favicon.jpeg from the public folder
 @cache_page(60 * 60 * 24)  # Cache for 24 hours
 def favicon_view(request):
@@ -527,8 +581,47 @@ def api_approve_school(request):
                 if sa and sa.user:
                     sa.user.is_active = True
                     sa.user.save(update_fields=['is_active'])
-            except Exception:
-                pass
+                    
+                    # ── Send Approval Email ──────────────────────────────────────
+                    admin_email = sa.user.email or school.email
+                    site_url = "https://ek-sms-one.vercel.app/login"
+                    
+                    email_html = f"""
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+                        <div style="background: linear-gradient(90deg, #1e3a8a, #3b82f6); padding: 30px; text-align: center; border-radius: 12px 12px 0 0;">
+                            <h1 style="color: white; margin: 0; font-size: 24px;">School Approved!</h1>
+                        </div>
+                        <div style="padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px; background: #ffffff;">
+                            <h2 style="color: #1e3a8a; margin-top: 0;">Congratulations, {school.name}!</h2>
+                            <p>Your institution registration for <strong>EK-SMS</strong> has been reviewed and successfully approved by our system administrator.</p>
+                            
+                            <p>You can now log in to your School Dashboard to begin setting up your institution, managing staff, and enrolling students.</p>
+                            
+                            <div style="text-align: center; margin: 40px 0;">
+                                <a href="{site_url}" style="background-color: #3b82f6; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+                                    Access Your Dashboard
+                                </a>
+                            </div>
+                            
+                            <p style="font-size: 14px; color: #6b7280;">Your dedicated school code is: <strong>{school.code}</strong></p>
+                            
+                            <hr style="border: none; border-top: 1px solid #f3f4f6; margin: 30px 0;">
+                            
+                            <p style="font-size: 13px; color: #9ca3af;">
+                                Need help getting started? Visit our support portal or reply to this email.<br>
+                                © {datetime.datetime.now().year} EK-SMS - School Management System
+                            </p>
+                        </div>
+                    </div>
+                    """
+                    
+                    _send_notification_email(
+                        subject=f"Approved: Welcome {school.name} to EK-SMS",
+                        to_email=admin_email,
+                        html_content=email_html
+                    )
+            except Exception as e:
+                logger.error(f"Failed to send approval email: {str(e)}")
         elif action == 'reject':
             school.is_approved = False
             school.is_active = False
