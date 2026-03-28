@@ -51,7 +51,16 @@ def _get_authed_user(request):
         return None
     try:
         user_id = int(parts[1])
-        return User.objects.get(id=user_id, is_active=True)
+        u = User.objects.get(id=user_id)
+        if u.is_active:
+            return u
+            
+        # ALLOW login for inactive SchoolAdmins who are pending school approval
+        if hasattr(u, 'school_admin_profile'):
+            if not u.school_admin_profile.school.is_approved:
+                return u
+                
+        return None
     except (ValueError, User.DoesNotExist):
         return None
 
@@ -130,6 +139,26 @@ def api_login(request):
             except (User.DoesNotExist, User.MultipleObjectsReturned):
                 pass
         
+        if user is None:
+            # CHECK if login failed only because user is inactive (pending school admin)
+            try:
+                u = None
+                if '@' in username_or_email:
+                    u = User.objects.get(email=username_or_email)
+                else:
+                    u = User.objects.get(username=username_or_email)
+                
+                # If password is correct AND they are a school admin waiting for approval
+                if u.check_password(password) and hasattr(u, 'school_admin_profile'):
+                    # Only allow login for inactive admins IF their school isn't approved yet
+                    if not u.school_admin_profile.school.is_approved:
+                        user = u
+                    else:
+                        # Otherwise, user is inactive for other reasons (e.g. suspended)
+                        pass
+            except (User.DoesNotExist, User.MultipleObjectsReturned):
+                pass
+
         if user is None:
             _log_security_event(
                 'login_failure',
