@@ -608,15 +608,19 @@ def api_send_otp(request):
         # Send email — use Resend in production, fall back to console log in dev
         resend_api_key = getattr(settings, 'RESEND_API_KEY', '')
         default_from = getattr(settings, 'DEFAULT_FROM_EMAIL', 'EK-SMS <noreply@elkendeh.com>')
+        
         import logging
         logger = logging.getLogger('django')
 
         if resend_api_key:
             # ── Path 1: Resend API ──────────────────────────────────────────
-            import resend
-            resend.api_key = resend_api_key
             try:
-                resend.Emails.send({
+                import resend
+                resend.api_key = resend_api_key
+                
+                logger.info(f"Attempting to send OTP to {email} via Resend API...")
+                
+                resend_response = resend.Emails.send({
                     "from": default_from,
                     "to": [email],
                     "subject": "Your EK-SMS Verification Code",
@@ -636,19 +640,25 @@ def api_send_otp(request):
                             This is an automated message. Please do not reply.
                         </p>
                     </div>
-                    """
+                    """,
+                    "headers": {
+                        "X-Entity-Ref-ID": str(uuid.uuid4())
+                    }
                 })
-                # Save record only AFTER successful send (colleague's improvement)
+                
+                logger.info(f"Resend API successfully accepted email for {email}. Response: {resend_response}")
+
+                # Save record only AFTER successful send
                 OTPRecord.objects.create(
                     email=email,
                     code_hash=otp_hash,
                     expires_at=expires_at
                 )
             except Exception as email_error:
-                logger.error(f"Failed to send OTP via Resend to {email}: {str(email_error)}")
+                logger.error(f"Failed to send OTP via Resend to {email}: {str(email_error)}", exc_info=True)
                 return JsonResponse({
                     'success': False,
-                    'message': 'Failed to send email. Please try again later.'
+                    'message': f'Failed to send email: {str(email_error)}'
                 }, status=500)
 
         else:
@@ -680,6 +690,7 @@ def api_send_otp(request):
 
             if smtp_user:
                 try:
+                    logger.info(f"Attempting to send OTP to {email} via SMTP ({getattr(settings, 'EMAIL_HOST', 'unknown')})...")
                     django_send_mail(
                         subject='Your EK-SMS Verification Code',
                         message=text_body,
@@ -688,24 +699,25 @@ def api_send_otp(request):
                         html_message=html_body,
                         fail_silently=False,
                     )
+                    logger.info(f"SMTP successfully sent email to {email}")
                     OTPRecord.objects.create(
                         email=email,
                         code_hash=otp_hash,
                         expires_at=expires_at
                     )
                 except Exception as smtp_error:
-                    logger.error(f"SMTP OTP send failed for {email}: {smtp_error}")
+                    logger.error(f"SMTP OTP send failed for {email}: {smtp_error}", exc_info=True)
                     return JsonResponse({
                         'success': False,
-                        'message': 'Failed to send verification email. Check email configuration.'
+                        'message': f'Failed to send verification email (SMTP): {str(smtp_error)}'
                     }, status=500)
             else:
                 # ── Path 3: Dev console fallback (no SMTP configured) ───────
                 logger.warning(
                     f"\n{'='*55}\n"
-                    f"  OTP for {email}: {otp_code}\n"
+                    f"  [DEV ONLY] OTP for {email}: {otp_code}\n"
                     f"  Expires in {expiry_minutes} minutes\n"
-                    f"  (Configure EMAIL_HOST_USER in .env to send real emails)\n"
+                    f"  (Configure RESEND_API_KEY or EMAIL_HOST_USER for real mail)\n"
                     f"{'='*55}"
                 )
                 OTPRecord.objects.create(
@@ -798,22 +810,26 @@ def api_resend_otp(request):
 
         if resend_api_key:
             # ── Path 1: Resend API ─────────────────────────────────────────
-            import resend
-            resend.api_key = resend_api_key
             try:
-                resend.Emails.send({
+                import resend
+                resend.api_key = resend_api_key
+                logger.info(f"Attempting to resend OTP to {email} via Resend...")
+                
+                resend_response = resend.Emails.send({
                     "from": default_from,
                     "to": [email],
                     "subject": "Your EK-SMS Verification Code (Resent)",
                     "html": html_body,
                 })
+                logger.info(f"Resend successfully accepted resend-email for {email}: {resend_response}")
+                
                 OTPRecord.objects.filter(email=email, is_used=False).update(is_used=True)
                 OTPRecord.objects.create(email=email, code_hash=otp_hash, expires_at=expires_at)
             except Exception as email_error:
-                logger.error(f"Failed to resend OTP via Resend to {email}: {str(email_error)}")
+                logger.error(f"Failed to resend OTP via Resend to {email}: {str(email_error)}", exc_info=True)
                 return JsonResponse({
                     'success': False,
-                    'message': 'Failed to send email. Please try again later.'
+                    'message': f'Failed to resend email: {str(email_error)}'
                 }, status=500)
         else:
             # ── Path 2: Django SMTP backend (configured via .env) ──────────
