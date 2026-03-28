@@ -408,12 +408,18 @@ def api_register(request):
         from django.db import transaction
         import uuid
         
-        # Determine if data is in a JSON field 'settings' or individual fields
+        # Determine payload source:
+        # 1. Multipart with a 'settings' JSON blob
+        # 2. Multipart with individual fields (badge file present)
+        # 3. application/json body (no badge file — frontend sends raw JSON)
+        content_type = request.content_type or ''
         settings_str = request.POST.get('settings')
         if settings_str:
             data = json.loads(settings_str)
+        elif 'application/json' in content_type:
+            data = json.loads(request.body)
         else:
-            # Fallback to individual fields from POST
+            # Fallback: multipart individual fields
             data = request.POST.dict()
 
         # Handle brand colors (might be JSON string or comma-separated)
