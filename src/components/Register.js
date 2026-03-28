@@ -1066,12 +1066,19 @@ function Register({ onNavigate }) {
       setOtpSent(true);
       setOtpResendTimer(60);
     } catch (err) {
-      if (err.name === 'TimeoutError' || err.name === 'AbortError' || err.message.includes('fetch')) {
+      if (err.status === 429) {
+        // CODE ALREADY SENT: Server has an active OTP but cooldown is on. 
+        // We SHOULD show the input field so they can enter the code already in their inbox.
+        setOtpSent(true);
+        if (err.data?.retry_after) setOtpResendTimer(err.data.retry_after);
+        setOtpError('An OTP has already been sent to your email.');
+      } else if (err.name === 'TimeoutError' || err.name === 'AbortError' || err.message?.includes('fetch')) {
         setOtpError('Email service unavailable. You can skip verification and continue.');
+        setOtpSent(false);
       } else {
         setOtpError(err.message || 'Could not send code. Try again or skip.');
+        setOtpSent(false);
       }
-      setOtpSent(false);
     } finally {
       setOtpLoading(false);
     }

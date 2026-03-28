@@ -751,22 +751,30 @@ def api_send_otp(request):
                 resend_response = resend.Emails.send({
                     "from": default_from,
                     "to": [email],
-                    "subject": "Your EK-SMS Verification Code",
+                    "subject": f"Your PRUH-SMS Verification Code: {otp_code}",
                     "html": f"""
-                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                        <h2 style="color: #333;">EK-SMS Email Verification</h2>
-                        <p>Hello,</p>
-                        <p>Your verification code for EK-SMS registration is:</p>
-                        <div style="background-color: #f8f9fa; border: 1px solid #dee2e6; padding: 20px; text-align: center; margin: 20px 0;">
-                            <span style="font-size: 24px; font-weight: bold; color: #007bff; letter-spacing: 2px;">{otp_code}</span>
-                        </div>
-                        <p>This code will expire in {expiry_minutes} minutes.</p>
-                        <p>If you didn't request this code, please ignore this email.</p>
-                        <hr style="border: none; border-top: 1px solid #dee2e6; margin: 20px 0;">
-                        <p style="color: #6c757d; font-size: 12px;">
-                            EK-SMS - School Management System<br>
-                            This is an automated message. Please do not reply.
+                    <div style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 500px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border: 1px solid #f0f0f0;">
+                      <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 40px 30px; text-align: center;">
+                        <h1 style="color: #6366f1; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.01em;">PRUH-SMS</h1>
+                        <p style="color: #94a3b8; margin: 8px 0 0; font-size: 14px; font-weight: 500;">Elkendeh School Management System</p>
+                      </div>
+                      <div style="padding: 40px 35px; text-align: center;">
+                        <h2 style="color: #1e293b; font-size: 20px; font-weight: 700; margin: 0 0 16px;">Verify Your Email</h2>
+                        <p style="color: #64748b; font-size: 15px; line-height: 1.6; margin: 0 0 32px;">
+                          Use the secure verification code below to complete your registration on the <strong>Elkendeh School Management System</strong>. This code is valid for <strong>{expiry_minutes} minutes</strong>.
                         </p>
+                        <div style="background-color: #f8fafc; border: 2px dashed #e2e8f0; border-radius: 12px; padding: 25px; margin-bottom: 32px;">
+                          <span style="font-size: 42px; font-weight: 800; color: #4f46e5; letter-spacing: 12px; font-family: 'Courier New', Courier, monospace; display: block;">{otp_code}</span>
+                        </div>
+                        <p style="color: #94a3b8; font-size: 13px; margin: 0;">
+                          If you did not request this, please safely ignore this email.
+                        </p>
+                      </div>
+                      <div style="background-color: #f8fafc; padding: 24px 30px; text-align: center; border-top: 1px solid #f1f5f9;">
+                        <p style="color: #64748b; font-size: 12px; margin: 0; font-weight: 500;">
+                          &copy; 2026 PRUH-SMS · Elkendeh School Management System
+                        </p>
+                      </div>
                     </div>
                     """,
                     "headers": {
@@ -796,31 +804,37 @@ def api_send_otp(request):
 
             smtp_user = getattr(djsettings, 'EMAIL_HOST_USER', '')
             html_body = f"""
-            <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#f9f9f9;padding:32px;border-radius:8px;">
-              <div style="background:#0b1326;padding:20px 24px;border-radius:6px;margin-bottom:24px;">
-                <h1 style="color:#adc6ff;margin:0;font-size:20px;letter-spacing:1px;">EK-SMS</h1>
-                <p style="color:#4cd7f6;margin:4px 0 0;font-size:13px;">School Management System</p>
+            <div style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 500px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border: 1px solid #f0f0f0;">
+              <div style="background: linear-gradient(135deg, #0b1326 0%, #16213e 100%); padding: 40px 30px; text-align: center;">
+                <h1 style="color: #adc6ff; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.01em;">PRUH-SMS</h1>
+                <p style="color: #4cd7f6; margin: 4px 0 0; font-size: 14px; font-weight: 500;">Elkendeh School Management System</p>
               </div>
-              <h2 style="color:#1a1a2e;margin:0 0 12px;">Email Verification</h2>
-              <p style="color:#444;font-size:14px;line-height:1.6;">
-                Use the code below to verify your email address during registration.
-                It expires in <strong>{expiry_minutes} minutes</strong>.
-              </p>
-              <div style="background:#fff;border:2px solid #adc6ff;border-radius:8px;padding:24px;text-align:center;margin:24px 0;">
-                <span style="font-size:36px;font-weight:900;color:#0b1326;letter-spacing:8px;font-family:monospace;">{otp_code}</span>
+              <div style="padding: 40px 35px; text-align: center;">
+                <h2 style="color: #1a1a2e; font-size: 20px; font-weight: 700; margin: 0 0 16px;">Email Verification</h2>
+                <p style="color: #444; font-size: 15px; line-height: 1.6; margin: 0 0 32px;">
+                  Use the secure verification code below to verify your email address on the <strong>Elkendeh School Management System</strong>. This code is valid for <strong>{expiry_minutes} minutes</strong>.
+                </p>
+                <div style="background-color: #f0f7ff; border: 2px solid #adc6ff; border-radius: 12px; padding: 25px; margin-bottom: 32px;">
+                  <span style="font-size: 42px; font-weight: 900; color: #0b1326; letter-spacing: 12px; font-family: 'Courier New', Courier, monospace; display: block;">{otp_code}</span>
+                </div>
+                <p style="color: #888; font-size: 13px; margin: 0;">
+                  If you did not request this, please safely ignore this email.
+                </p>
               </div>
-              <p style="color:#888;font-size:12px;">If you didn't request this, ignore this email safely.</p>
-              <hr style="border:none;border-top:1px solid #eee;margin:20px 0;">
-              <p style="color:#aaa;font-size:11px;">EK-SMS · Automated message — do not reply.</p>
+              <div style="background-color: #f9f9f9; padding: 24px 30px; text-align: center; border-top: 1px solid #f1f1f1;">
+                <p style="color: #aaa; font-size: 12px; margin: 0; font-weight: 500;">
+                  &copy; 2026 PRUH-SMS · Elkendeh School Management System
+                </p>
+              </div>
             </div>
             """
-            text_body = f"Your EK-SMS verification code is: {otp_code}\nExpires in {expiry_minutes} minutes."
+            text_body = f"Your PRUH-SMS verification code is: {otp_code}\nExpires in {expiry_minutes} minutes."
 
             if smtp_user:
                 try:
                     logger.info(f"Attempting to send OTP to {email} via SMTP ({getattr(settings, 'EMAIL_HOST', 'unknown')})...")
                     django_send_mail(
-                        subject='Your EK-SMS Verification Code',
+                        subject='Your PRUH-SMS Verification Code',
                         message=text_body,
                         from_email=default_from,
                         recipient_list=[email],
@@ -916,25 +930,31 @@ def api_resend_otp(request):
         logger = logging.getLogger('django')
 
         html_body = f"""
-        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#f9f9f9;padding:32px;border-radius:8px;">
-          <div style="background:#0b1326;padding:20px 24px;border-radius:6px;margin-bottom:24px;">
-            <h1 style="color:#adc6ff;margin:0;font-size:20px;letter-spacing:1px;">EK-SMS</h1>
-            <p style="color:#4cd7f6;margin:4px 0 0;font-size:13px;">School Management System</p>
+        <div style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 500px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border: 1px solid #f0f0f0;">
+          <div style="background: linear-gradient(135deg, #0b1326 0%, #16213e 100%); padding: 40px 30px; text-align: center;">
+            <h1 style="color: #adc6ff; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.01em;">PRUH-SMS</h1>
+            <p style="color: #4cd7f6; margin: 4px 0 0; font-size: 14px; font-weight: 500;">Elkendeh School Management System</p>
           </div>
-          <h2 style="color:#1a1a2e;margin:0 0 12px;">New Verification Code</h2>
-          <p style="color:#444;font-size:14px;line-height:1.6;">
-            A new code was requested. Use it to verify your email.
-            It expires in <strong>{expiry_minutes} minutes</strong>.
-          </p>
-          <div style="background:#fff;border:2px solid #adc6ff;border-radius:8px;padding:24px;text-align:center;margin:24px 0;">
-            <span style="font-size:36px;font-weight:900;color:#0b1326;letter-spacing:8px;font-family:monospace;">{otp_code}</span>
+          <div style="padding: 40px 35px; text-align: center;">
+            <h2 style="color: #1a1a2e; font-size: 20px; font-weight: 700; margin: 0 0 16px;">New Verification Code</h2>
+            <p style="color: #444; font-size: 15px; line-height: 1.6; margin: 0 0 32px;">
+              A new code was requested for your account on the <strong>Elkendeh School Management System</strong>. Use the secure verification code below. This code is valid for <strong>{expiry_minutes} minutes</strong>.
+            </p>
+            <div style="background-color: #f0f7ff; border: 2px solid #adc6ff; border-radius: 12px; padding: 25px; margin-bottom: 32px;">
+              <span style="font-size: 42px; font-weight: 900; color: #0b1326; letter-spacing: 12px; font-family: 'Courier New', Courier, monospace; display: block;">{otp_code}</span>
+            </div>
+            <p style="color: #888; font-size: 13px; margin: 0;">
+              If you did not request this, please safely ignore this email.
+            </p>
           </div>
-          <p style="color:#888;font-size:12px;">If you didn't request this, ignore this email safely.</p>
-          <hr style="border:none;border-top:1px solid #eee;margin:20px 0;">
-          <p style="color:#aaa;font-size:11px;">EK-SMS · Automated message — do not reply.</p>
+          <div style="background-color: #f9f9f9; padding: 24px 30px; text-align: center; border-top: 1px solid #f1f1f1;">
+            <p style="color: #aaa; font-size: 12px; margin: 0; font-weight: 500;">
+              &copy; 2026 PRUH-SMS · Elkendeh School Management System
+            </p>
+          </div>
         </div>
         """
-        text_body = f"Your new EK-SMS verification code is: {otp_code}\nExpires in {expiry_minutes} minutes."
+        text_body = f"Your new PRUH-SMS verification code is: {otp_code}\nExpires in {expiry_minutes} minutes."
 
         if resend_api_key:
             # ── Path 1: Resend API ─────────────────────────────────────────
@@ -946,7 +966,7 @@ def api_resend_otp(request):
                 resend_response = resend.Emails.send({
                     "from": default_from,
                     "to": [email],
-                    "subject": "Your EK-SMS Verification Code (Resent)",
+                    "subject": "Your PRUH-SMS Verification Code (Resent)",
                     "html": html_body,
                 })
                 logger.info(f"Resend successfully accepted resend-email for {email}: {resend_response}")
@@ -967,7 +987,7 @@ def api_resend_otp(request):
             if smtp_user:
                 try:
                     django_send_mail(
-                        subject='Your EK-SMS Verification Code (Resent)',
+                        subject='Your PRUH-SMS Verification Code (Resent)',
                         message=text_body,
                         from_email=default_from,
                         recipient_list=[email],

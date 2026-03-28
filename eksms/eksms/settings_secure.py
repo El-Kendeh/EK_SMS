@@ -166,11 +166,11 @@ CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=False, cast=bool)
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_SECURITY_POLICY = {
     'default-src': ("'self'",),
-    'script-src': ("'self'", "'unsafe-inline'", "https://embed.tawk.to", "https://*.tawk.to", "https://vercel.live", "chrome-extension:"),
+    'script-src': ("'self'", "'unsafe-inline'", "https://embed.tawk.to", "https://*.tawk.to", "https://vercel.live", "https://js.pusher.com", "chrome-extension:"),
     'style-src': ("'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://*.tawk.to"),
     'img-src': ("'self'", 'data:', 'https:'),
     'font-src': ("'self'", "https://fonts.gstatic.com", "https://*.tawk.to"),
-    'connect-src': ("'self'", "https://backend.pruhsms.africa", "https://pruhsms.africa", "http://localhost:8000", "http://web:8000", "https://ek-sms-backend.onrender.com", "https://*.tawk.to", "wss://*.tawk.to", "https://vercel.live", "https://*.vercel.app"),
+    'connect-src': ("'self'", "https://backend.pruhsms.africa", "https://pruhsms.africa", "http://localhost:8000", "http://web:8000", "https://ek-sms-backend.onrender.com", "https://*.tawk.to", "wss://*.tawk.to", "https://*.pusher.com", "wss://*.pusher.com", "https://vercel.live", "https://*.vercel.app"),
     'frame-src': ("https://tawk.to", "https://*.tawk.to", "https://vercel.live"),
 }
 
@@ -311,7 +311,7 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 # In dev (no RESEND_API_KEY set), OTPs print to the Django terminal instead of being sent.
 EMAIL_BACKEND      = config('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
 RESEND_API_KEY     = config('RESEND_API_KEY', default='')
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='EK-SMS <noreply@elkendeh.com>')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='PRUH-SMS <noreply@elkendeh.com>')
 
 # OTP settings
 OTP_EXPIRY_MINUTES = config('OTP_EXPIRY_MINUTES', default=10, cast=int)
