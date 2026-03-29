@@ -4465,6 +4465,7 @@ def api_teacher_me(request):
         'employee_id': teacher.employee_id,
         'qualification': teacher.qualification,
         'hire_date': str(teacher.hire_date),
+        'school_name': school.name if school else '',
         'school': {'id': school.id, 'name': school.name, 'badge': badge_url} if school else None,
         'subjects': subjects,
         'classes': classes,
