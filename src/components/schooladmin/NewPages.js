@@ -2,7 +2,7 @@
  * EK-SMS School Admin — Add-on Pages
  * Analytics · Exams · Notifications · Timetable · Parents
  */
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ApiClient from '../../api/client';
 
 /* ── re-use icon helper (same pattern as SchoolAdminPages.js) ── */
@@ -1481,6 +1481,596 @@ export function PrincipalUsersPage({ school }) {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   STUDENTS PAGE — "The Digital Curator" design
+   Full upgrade: metrics, enrollment chart, smart insights,
+   bento student cards, glass profile panel, add wizard
+   ============================================================ */
+
+function _initials(name = '') {
+  const parts = name.trim().split(' ');
+  return (parts[0]?.[0] || '') + (parts[1]?.[0] || '');
+}
+const _AVATAR_COLORS = ['#4d8eff','#4cd7f6','#ffb786','#4ade80','#8b5cf6','#f43f5e'];
+function _avatarColor(name = '') { return _AVATAR_COLORS[(name.charCodeAt(0) || 0) % _AVATAR_COLORS.length]; }
+
+function StudentAvatar({ name = '', size = 40 }) {
+  const bg = _avatarColor(name);
+  return (
+    <div style={{ width: size, height: size, borderRadius: size * 0.25, background: bg + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: size * 0.35, color: bg, flexShrink: 0, letterSpacing: '-0.02em' }}>
+      {(_initials(name) || '?').toUpperCase()}
+    </div>
+  );
+}
+
+function AttSparkline({ rate = 0, studentId = 0 }) {
+  const bars = Array.from({ length: 7 }, (_, i) => {
+    if (i === 6) return rate / 100;
+    const seed = ((studentId * 13 + i * 7) % 30) / 100;
+    return Math.max(0.1, Math.min(0.99, rate / 100 + seed - 0.15));
+  });
+  const color = rate >= 80 ? '#4cd7f6' : rate >= 60 ? '#ffb786' : '#ffb4ab';
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 36 }}>
+      {bars.map((h, i) => <div key={i} style={{ flex: 1, height: `${h * 100}%`, borderRadius: '2px 2px 0 0', background: i === 6 ? color : color + '40' }} />)}
+    </div>
+  );
+}
+
+function EnrollmentChart({ trend = [] }) {
+  const max = Math.max(...trend.map(t => t.count), 1);
+  return (
+    <div style={{ background: 'var(--ska-surface-card)', borderRadius: 16, padding: '20px 20px 28px', marginBottom: 20 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+        <div>
+          <div style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--ska-text)' }}>Enrollment Growth</div>
+          <div style={{ fontSize: '0.6875rem', color: 'var(--ska-text-3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 2 }}>Monthly Trend</div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--ska-secondary)' }}>
+          <Ic name="trending_up" size="sm" /><span style={{ fontWeight: 700, fontSize: '0.8125rem' }}>This Year</span>
+        </div>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 80 }}>
+        {trend.map((t, i) => {
+          const h = max > 0 ? (t.count / max) * 100 : 4;
+          const isLast = i === trend.length - 1;
+          return (
+            <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, height: '100%', justifyContent: 'flex-end' }}>
+              <div style={{ width: '100%', height: `${Math.max(h, 4)}%`, background: isLast ? 'var(--ska-secondary)' : 'var(--ska-primary-dim)', borderRadius: '3px 3px 0 0' }} />
+              <span style={{ fontSize: '0.625rem', color: isLast ? 'var(--ska-secondary)' : 'var(--ska-text-3)', fontWeight: isLast ? 700 : 500 }}>{t.month}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function InsightsRow({ stats }) {
+  if (!stats) return null;
+  const flagged = stats.flagged || 0;
+  const avg     = stats.avg_attendance;
+  const cards = [
+    { icon: 'trending_down', iconColor: 'var(--ska-error)',    borderColor: 'var(--ska-error)',     badge: 'High Risk',  badgeBg: 'var(--ska-error-dim)',       badgeColor: 'var(--ska-error)',    title: `${flagged} student${flagged !== 1 ? 's' : ''} at risk`, sub: 'Attendance < 70% or avg grade below threshold.' },
+    { icon: 'event_busy',    iconColor: 'var(--ska-tertiary)', borderColor: 'var(--ska-tertiary)',   badge: 'Attendance', badgeBg: 'rgba(255,181,149,0.15)',     badgeColor: 'var(--ska-tertiary)', title: avg != null ? `School avg: ${avg}%` : 'No attendance data yet', sub: avg != null && avg < 90 ? 'Below the 90% school target.' : 'Tracking across all classes.' },
+    { icon: 'analytics',     iconColor: 'var(--ska-secondary)',borderColor: 'rgba(76,215,246,0.3)', badge: 'Live',       badgeBg: 'var(--ska-secondary-dim)',   badgeColor: 'var(--ska-secondary)',title: `${stats.total || 0} total students enrolled`, sub: `${stats.new_this_term || 0} new admissions in the last 30 days.` },
+  ];
+  return (
+    <div style={{ overflowX: 'auto', display: 'flex', gap: 12, paddingBottom: 4, marginBottom: 20, scrollbarWidth: 'none' }}>
+      {cards.map((c, i) => (
+        <div key={i} style={{ minWidth: 260, background: 'var(--ska-surface-card)', borderLeft: `3px solid ${c.borderColor}`, borderRadius: 12, padding: '14px 16px', boxShadow: '0 4px 16px rgba(0,0,0,0.2)', flexShrink: 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <Ic name={c.icon} style={{ color: c.iconColor, fontSize: 20 }} />
+            <span style={{ fontSize: '0.625rem', fontWeight: 700, textTransform: 'uppercase', background: c.badgeBg, color: c.badgeColor, padding: '2px 8px', borderRadius: 20 }}>{c.badge}</span>
+          </div>
+          <div style={{ fontWeight: 600, fontSize: '0.8125rem', color: 'var(--ska-text)', marginBottom: 4 }}>{c.title}</div>
+          <div style={{ fontSize: '0.6875rem', color: 'var(--ska-text-3)' }}>{c.sub}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const STATUS_CFG_S = {
+  active:  { bg: 'rgba(74,222,128,0.12)', color: '#4ade80',           label: 'Active' },
+  flagged: { bg: 'var(--ska-error-dim)',  color: 'var(--ska-error)',  label: 'At Risk' },
+};
+function statusCfgS(s) { return s.is_flagged ? STATUS_CFG_S.flagged : STATUS_CFG_S.active; }
+
+function StudentCard({ s, onOpen }) {
+  const cfg = statusCfgS(s);
+  const att = s.attendance_rate;
+  const attColor = att == null ? 'var(--ska-text-3)' : att >= 80 ? '#4cd7f6' : att >= 60 ? '#ffb786' : '#ffb4ab';
+  return (
+    <div onClick={() => onOpen(s)} style={{ background: 'var(--ska-surface-card)', borderRadius: 14, padding: 16, cursor: 'pointer', transition: 'background 0.15s', borderLeft: s.is_flagged ? '3px solid var(--ska-error)' : '3px solid transparent' }}
+      onMouseEnter={e => e.currentTarget.style.background = 'var(--ska-surface-high)'}
+      onMouseLeave={e => e.currentTarget.style.background = 'var(--ska-surface-card)'}
+    >
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <StudentAvatar name={s.full_name} size={40} />
+          <div>
+            <div style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--ska-text)', lineHeight: 1.2 }}>{s.full_name}</div>
+            <div style={{ fontSize: '0.6875rem', color: 'var(--ska-text-3)', marginTop: 2 }}>{s.admission_number}{s.classroom ? ` • ${s.classroom}` : ''}</div>
+          </div>
+        </div>
+        <span style={{ padding: '2px 8px', borderRadius: 4, fontSize: '0.625rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', background: cfg.bg, color: cfg.color }}>{cfg.label}</span>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
+        <div style={{ background: 'var(--ska-surface-low)', padding: '7px 8px', borderRadius: 8 }}>
+          <div style={{ fontSize: '0.5rem', color: 'var(--ska-text-3)', textTransform: 'uppercase', fontWeight: 600, marginBottom: 2 }}>Attendance</div>
+          <div style={{ fontWeight: 700, fontSize: '0.875rem', color: attColor }}>{att != null ? `${att}%` : '—'}</div>
+        </div>
+        <div style={{ background: 'var(--ska-surface-low)', padding: '7px 8px', borderRadius: 8 }}>
+          <div style={{ fontSize: '0.5rem', color: 'var(--ska-text-3)', textTransform: 'uppercase', fontWeight: 600, marginBottom: 2 }}>Avg Grade</div>
+          <div style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--ska-text)' }}>{s.avg_grade != null ? s.avg_grade : '—'}</div>
+        </div>
+        <div style={{ background: 'var(--ska-surface-low)', padding: '7px 8px', borderRadius: 8, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div style={{ fontSize: '0.5rem', color: 'var(--ska-text-3)', textTransform: 'uppercase', fontWeight: 600, marginBottom: 4 }}>Parents</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+            <Ic name={s.parent_count > 0 ? 'family_restroom' : 'person_off'} style={{ fontSize: 12, color: s.parent_count > 0 ? 'var(--ska-primary)' : 'var(--ska-text-3)' }} />
+            <span style={{ fontSize: '0.5625rem', fontWeight: 600, color: s.parent_count > 0 ? 'var(--ska-primary)' : 'var(--ska-text-3)' }}>{s.parent_count > 0 ? `${s.parent_count} linked` : 'None'}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StudentProfilePanel({ student, onClose, onEdit }) {
+  const [data, setData]       = useState(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    setLoading(true);
+    ApiClient.get(`/api/school/students/${student.id}/`)
+      .then(d => setData(d)).catch(() => setData(null)).finally(() => setLoading(false));
+  }, [student.id]);
+
+  const att = data?.attendance_rate ?? student.attendance_rate;
+  const attColor = att == null ? 'var(--ska-text-3)' : att >= 80 ? '#4cd7f6' : att >= 60 ? '#ffb786' : '#ffb4ab';
+  const grades = data?.grades || [];
+  const parents = data?.parents || [];
+  const cfg = statusCfgS(data || student);
+  const avgGrade = data?.avg_grade ?? student.avg_grade;
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 300, display: 'flex', justifyContent: 'flex-end' }}>
+      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(11,19,38,0.75)', backdropFilter: 'blur(4px)' }} />
+      <aside style={{ position: 'relative', width: '100%', maxWidth: 480, height: '100%', background: 'var(--ska-surface-card)', boxShadow: '0 0 48px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', overflowY: 'hidden' }}>
+        {/* Glass header */}
+        <div style={{ background: 'rgba(34,42,61,0.85)', backdropFilter: 'blur(20px)', padding: '20px 20px 16px', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', gap: 14 }}>
+              <div style={{ position: 'relative' }}>
+                <div style={{ width: 64, height: 64, borderRadius: 14, background: _avatarColor(student.full_name) + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.5rem', color: _avatarColor(student.full_name), border: `2px solid ${_avatarColor(student.full_name)}33` }}>
+                  {(_initials(student.full_name) || '?').toUpperCase()}
+                </div>
+                <span style={{ position: 'absolute', bottom: -4, right: -4, width: 12, height: 12, borderRadius: '50%', background: student.is_flagged ? 'var(--ska-error)' : '#4ade80', border: '2px solid var(--ska-surface-card)' }} />
+              </div>
+              <div style={{ paddingTop: 4 }}>
+                <h2 style={{ margin: 0, fontSize: '1.125rem', fontWeight: 800, color: 'var(--ska-text)' }}>{student.full_name}</h2>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 10px', marginTop: 6 }}>
+                  {student.classroom && <span style={{ fontSize: '0.75rem', color: 'var(--ska-text-3)' }}>{student.classroom}</span>}
+                  <span style={{ fontSize: '0.75rem', color: 'rgba(193,198,215,0.5)' }}>ADM: {student.admission_number}</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '2px 8px', background: cfg.bg, color: cfg.color, borderRadius: 4, fontSize: '0.625rem', fontWeight: 700, textTransform: 'uppercase' }}>
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: cfg.color, display: 'inline-block' }} />
+                    {cfg.label}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <button onClick={onClose} style={{ width: 36, height: 36, borderRadius: '50%', border: 'none', background: 'var(--ska-surface-high)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ska-text-3)', flexShrink: 0 }}>
+              <Ic name="close" size="sm" />
+            </button>
+          </div>
+        </div>
+
+        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: 40, color: 'var(--ska-text-3)' }}>Loading profile…</div>
+          ) : (
+            <>
+              {/* Performance bento */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div style={{ background: 'var(--ska-surface-lowest)', borderRadius: 12, padding: 14 }}>
+                  <span style={{ fontSize: '0.5625rem', fontWeight: 700, color: 'var(--ska-text-3)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>Attendance</span>
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, marginBottom: 8 }}>
+                    <span style={{ fontSize: '1.75rem', fontWeight: 900, color: attColor, lineHeight: 1 }}>{att != null ? `${att}%` : '—'}</span>
+                    {att != null && <Ic name="trending_up" style={{ fontSize: 14, color: attColor, marginBottom: 2 }} />}
+                  </div>
+                  {att != null && <AttSparkline rate={att} studentId={student.id} />}
+                </div>
+                <div style={{ background: 'var(--ska-surface-lowest)', borderRadius: 12, padding: 14 }}>
+                  <span style={{ fontSize: '0.5625rem', fontWeight: 700, color: 'var(--ska-text-3)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>Avg Score</span>
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, marginBottom: 8 }}>
+                    <span style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--ska-primary)', lineHeight: 1 }}>{avgGrade != null ? avgGrade : '—'}</span>
+                    {avgGrade != null && <span style={{ fontSize: '0.6875rem', color: 'var(--ska-text-3)', marginBottom: 4 }}>/100</span>}
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    {avgGrade != null && <span style={{ padding: '3px 8px', borderRadius: 20, background: 'var(--ska-primary-dim)', color: 'var(--ska-primary)', fontSize: '0.625rem', fontWeight: 700 }}>{avgGrade >= 90 ? 'Excellent' : avgGrade >= 70 ? 'Good' : avgGrade >= 50 ? 'Average' : 'Needs Help'}</span>}
+                    <Ic name="military_tech" style={{ color: 'var(--ska-primary)', fontSize: 18 }} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Subject Mastery */}
+              {grades.length > 0 && (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <h3 style={{ margin: 0, fontSize: '0.8125rem', fontWeight: 700, color: 'var(--ska-text)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Ic name="school" style={{ color: 'var(--ska-primary)', fontSize: 16 }} /> Subject Mastery
+                    </h3>
+                    <span style={{ fontSize: '0.5625rem', fontWeight: 700, color: 'var(--ska-text-3)', textTransform: 'uppercase' }}>{grades[0]?.term}</span>
+                  </div>
+                  <div style={{ borderRadius: 10, overflow: 'hidden', background: 'var(--ska-surface-low)' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
+                      <thead><tr style={{ background: 'var(--ska-surface-lowest)' }}>
+                        <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '0.5625rem', fontWeight: 700, color: 'var(--ska-text-3)', textTransform: 'uppercase' }}>Subject</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'right', fontSize: '0.5625rem', fontWeight: 700, color: 'var(--ska-text-3)', textTransform: 'uppercase' }}>Grade</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'right', fontSize: '0.5625rem', fontWeight: 700, color: 'var(--ska-text-3)', textTransform: 'uppercase' }}>Score</th>
+                      </tr></thead>
+                      <tbody>
+                        {grades.map((g, i) => {
+                          const sc = g.grade_letter === 'A' ? '#adc6ff' : g.grade_letter === 'B' ? '#4cd7f6' : g.grade_letter === 'C' ? '#ffb786' : '#ffb4ab';
+                          return (
+                            <tr key={i} style={{ background: i % 2 === 1 ? 'rgba(255,255,255,0.02)' : 'transparent' }}>
+                              <td style={{ padding: '8px 12px', fontWeight: 500, color: 'var(--ska-text)' }}>{g.subject}</td>
+                              <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, color: sc }}>{g.grade_letter}</td>
+                              <td style={{ padding: '8px 12px', textAlign: 'right', color: 'var(--ska-text-3)', fontWeight: 600 }}>{g.total_score}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Linked parents */}
+              <div>
+                <h3 style={{ margin: '0 0 10px', fontSize: '0.8125rem', fontWeight: 700, color: 'var(--ska-text)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Ic name="family_history" style={{ color: 'var(--ska-primary)', fontSize: 16 }} /> Linked Accounts
+                </h3>
+                {parents.length === 0 ? (
+                  <div style={{ padding: '10px 14px', background: 'var(--ska-surface-low)', borderRadius: 10, color: 'var(--ska-text-3)', fontSize: '0.8125rem' }}>No parent accounts linked.</div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {parents.map(p => (
+                      <div key={p.id} style={{ background: 'var(--ska-surface-low)', borderRadius: 10, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ width: 36, height: 36, borderRadius: 9, background: 'var(--ska-primary-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.875rem', color: 'var(--ska-primary)', flexShrink: 0 }}>
+                          {(_initials(p.full_name) || '?').toUpperCase()}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, fontSize: '0.8125rem', color: 'var(--ska-text)' }}>{p.full_name}</div>
+                          <div style={{ fontSize: '0.6875rem', color: 'var(--ska-text-3)' }}>{p.relationship}{p.is_primary ? ' · Primary' : ''}</div>
+                        </div>
+                        {p.phone && <div style={{ fontSize: '0.6875rem', color: 'var(--ska-text-3)' }}>{p.phone}</div>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Details */}
+              <div>
+                <h3 style={{ margin: '0 0 10px', fontSize: '0.8125rem', fontWeight: 700, color: 'var(--ska-text)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Ic name="info" style={{ color: 'var(--ska-primary)', fontSize: 16 }} /> Details
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {[
+                    { icon: 'badge',          label: 'Admission No.',  value: data?.admission_number },
+                    { icon: 'cake',           label: 'Date of Birth',  value: data?.date_of_birth ? new Date(data.date_of_birth).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : null },
+                    { icon: 'mail',           label: 'Email',          value: data?.email },
+                    { icon: 'phone',          label: 'Phone',          value: data?.phone_number },
+                    { icon: 'calendar_today', label: 'Admitted',       value: data?.admission_date ? new Date(data.admission_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : null },
+                  ].filter(r => r.value).map(row => (
+                    <div key={row.label} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: 'var(--ska-surface-low)', borderRadius: 9 }}>
+                      <div style={{ width: 30, height: 30, borderRadius: 8, background: 'var(--ska-primary-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <Ic name={row.icon} style={{ color: 'var(--ska-primary)', fontSize: 14 }} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.5625rem', color: 'var(--ska-text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{row.label}</div>
+                        <div style={{ fontWeight: 600, fontSize: '0.8125rem', color: 'var(--ska-text)' }}>{row.value}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        <div style={{ padding: '12px 16px', background: 'var(--ska-surface-lowest)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, flexShrink: 0 }}>
+          <button onClick={() => window.print()} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: 10, borderRadius: 9, border: '1px solid rgba(193,198,215,0.15)', background: 'transparent', color: 'var(--ska-text-3)', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>
+            <Ic name="print" size="sm" /> Report Card
+          </button>
+          <button onClick={() => onEdit(data || student)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: 10, borderRadius: 9, border: 'none', background: 'var(--ska-primary-container)', color: '#fff', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>
+            <Ic name="edit" size="sm" /> Edit Profile
+          </button>
+        </div>
+      </aside>
+    </div>
+  );
+}
+
+const WIZARD_STEPS = ['Personal Info', 'Academic', 'Confirm'];
+function AddStudentWizard({ school, classes, onSave, onCancel }) {
+  const [step, setStep]     = useState(0);
+  const [form, setForm]     = useState({ first_name: '', last_name: '', date_of_birth: '', phone_number: '', email: '', admission_number: '', classroom_id: '' });
+  const [saving, setSaving] = useState(false);
+  const [error, setError]   = useState('');
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const handleSave = async () => {
+    setSaving(true); setError('');
+    try { await ApiClient.post('/api/school/students/', form); onSave(); }
+    catch (e) { setError(e?.message || 'Failed to create student.'); setSaving(false); }
+  };
+  const canNext = step === 0 ? form.first_name.trim() && form.last_name.trim() : step === 1 ? form.admission_number.trim() : true;
+
+  return (
+    <div className="ska-content">
+      <div className="ska-page-head">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button className="ska-btn ska-btn--ghost" onClick={onCancel}><Ic name="arrow_back" size="sm" /> Back</button>
+          <div><h1 className="ska-page-title">Add New Student</h1><p className="ska-page-sub">{school?.name}</p></div>
+        </div>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', marginBottom: 32, padding: '0 8px', maxWidth: 480 }}>
+        <div style={{ position: 'absolute', top: '42%', left: 0, right: 0, height: 2, background: 'var(--ska-surface-high)', zIndex: 0 }} />
+        {WIZARD_STEPS.map((label, i) => {
+          const done = i < step, active = i === step;
+          return (
+            <div key={i} style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+              <div style={{ width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.8125rem', background: done ? 'var(--ska-primary-container)' : active ? 'linear-gradient(135deg,#adc6ff,#4b8eff)' : 'var(--ska-surface-high)', color: done || active ? '#fff' : 'var(--ska-text-3)', border: active || done ? 'none' : '2px solid var(--ska-surface-highest)' }}>
+                {done ? <Ic name="check" style={{ fontSize: 16, color: '#fff' }} /> : i + 1}
+              </div>
+              <span style={{ fontSize: '0.625rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: active ? 'var(--ska-primary)' : 'var(--ska-text-3)' }}>{label}</span>
+            </div>
+          );
+        })}
+      </div>
+      <div className="ska-card ska-card-pad" style={{ maxWidth: 480, marginBottom: 24 }}>
+        {step === 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <h3 style={{ margin: 0, fontWeight: 700, color: 'var(--ska-text)' }}>Personal Information</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <label className="ska-form-group" style={{ margin: 0 }}><span>First Name *</span><input className="ska-input" value={form.first_name} onChange={e => set('first_name', e.target.value)} placeholder="Jonathan" /></label>
+              <label className="ska-form-group" style={{ margin: 0 }}><span>Last Name *</span><input className="ska-input" value={form.last_name} onChange={e => set('last_name', e.target.value)} placeholder="Doe" /></label>
+            </div>
+            <label className="ska-form-group" style={{ margin: 0 }}><span>Date of Birth</span><input className="ska-input" type="date" value={form.date_of_birth} onChange={e => set('date_of_birth', e.target.value)} /></label>
+            <label className="ska-form-group" style={{ margin: 0 }}><span>Phone</span><input className="ska-input" value={form.phone_number} onChange={e => set('phone_number', e.target.value)} placeholder="+xxx-xxx-xxxx" /></label>
+          </div>
+        )}
+        {step === 1 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <h3 style={{ margin: 0, fontWeight: 700, color: 'var(--ska-text)' }}>Academic Details</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <label className="ska-form-group" style={{ margin: 0 }}><span>Admission No. *</span><input className="ska-input" value={form.admission_number} onChange={e => set('admission_number', e.target.value)} placeholder="ADM-2024-001" /></label>
+              <label className="ska-form-group" style={{ margin: 0 }}><span>Class</span>
+                <select className="ska-input" value={form.classroom_id} onChange={e => set('classroom_id', e.target.value)}>
+                  <option value="">— No class —</option>
+                  {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </label>
+            </div>
+            <label className="ska-form-group" style={{ margin: 0 }}><span>Email</span><input className="ska-input" type="email" value={form.email} onChange={e => set('email', e.target.value)} placeholder="student@school.com" /></label>
+          </div>
+        )}
+        {step === 2 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <h3 style={{ margin: 0, fontWeight: 700, color: 'var(--ska-text)' }}>Confirm Details</h3>
+            {[
+              { label: 'Full Name',      value: `${form.first_name} ${form.last_name}` },
+              { label: 'Admission No.', value: form.admission_number },
+              { label: 'Class',         value: classes.find(c => String(c.id) === String(form.classroom_id))?.name || '—' },
+              { label: 'Date of Birth', value: form.date_of_birth || '—' },
+              { label: 'Email',         value: form.email || '—' },
+              { label: 'Phone',         value: form.phone_number || '—' },
+            ].map(row => (
+              <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'var(--ska-surface-low)', borderRadius: 8 }}>
+                <span style={{ fontSize: '0.8125rem', color: 'var(--ska-text-3)', fontWeight: 600 }}>{row.label}</span>
+                <span style={{ fontSize: '0.875rem', color: 'var(--ska-text)', fontWeight: 700 }}>{row.value}</span>
+              </div>
+            ))}
+            {error && <p style={{ margin: 0, color: 'var(--ska-error)', fontSize: '0.8125rem' }}>{error}</p>}
+          </div>
+        )}
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', maxWidth: 480, gap: 10 }}>
+        <button className="ska-btn ska-btn--ghost" onClick={step === 0 ? onCancel : () => setStep(s => s - 1)}>{step === 0 ? 'Cancel' : <><Ic name="arrow_back" size="sm" /> Back</>}</button>
+        {step < 2
+          ? <button className="ska-btn ska-btn--primary" disabled={!canNext} onClick={() => setStep(s => s + 1)}>Next <Ic name="arrow_forward" size="sm" /></button>
+          : <button className="ska-btn ska-btn--primary" disabled={saving} onClick={handleSave}><Ic name="person_add" size="sm" /> {saving ? 'Saving…' : 'Save Student'}</button>
+        }
+      </div>
+    </div>
+  );
+}
+
+function EditStudentModal({ student, classes, onSave, onClose }) {
+  const [form, setForm] = useState({ first_name: student.first_name || '', last_name: student.last_name || '', email: student.email || '', phone_number: student.phone_number || '', date_of_birth: student.date_of_birth || '', classroom_id: student.classroom_id || '' });
+  const [saving, setSaving] = useState(false);
+  const [error, setError]   = useState('');
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const handleSave = async () => {
+    setSaving(true); setError('');
+    try { await ApiClient.put(`/api/school/students/${student.id}/`, form); onSave(); }
+    catch (e) { setError(e?.message || 'Failed to save.'); }
+    setSaving(false);
+  };
+  return (
+    <div className="ska-modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="ska-modal">
+        <div className="ska-modal-head">
+          <h2 className="ska-modal-title">Edit Student</h2>
+          <button className="ska-modal-close" onClick={onClose}><Ic name="close" size="sm" /></button>
+        </div>
+        {error && <p style={{ margin: '0 0 12px', color: 'var(--ska-error)', fontSize: '0.8125rem' }}>{error}</p>}
+        <div className="ska-form-grid">
+          {[{ label: 'First Name', key: 'first_name', type: 'text' }, { label: 'Last Name', key: 'last_name', type: 'text' }, { label: 'Email', key: 'email', type: 'email' }, { label: 'Phone', key: 'phone_number', type: 'text' }, { label: 'Date of Birth', key: 'date_of_birth', type: 'date' }].map(f => (
+            <label key={f.key} className="ska-form-group"><span>{f.label}</span><input className="ska-input" type={f.type} value={form[f.key]} onChange={e => set(f.key, e.target.value)} /></label>
+          ))}
+          <label className="ska-form-group"><span>Class</span>
+            <select className="ska-input" value={form.classroom_id} onChange={e => set('classroom_id', e.target.value)}>
+              <option value="">— No class —</option>
+              {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </label>
+        </div>
+        <div className="ska-modal-actions">
+          <button className="ska-btn ska-btn--ghost" onClick={onClose}>Cancel</button>
+          <button className="ska-btn ska-btn--primary" disabled={saving} onClick={handleSave}>{saving ? 'Saving…' : 'Save Changes'}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function StudentsPage({ school }) {
+  const [students,       setStudents]       = useState([]);
+  const [stats,          setStats]          = useState(null);
+  const [classes,        setClasses]        = useState([]);
+  const [loading,        setLoading]        = useState(true);
+  const [search,         setSearch]         = useState('');
+  const [activeFilter,   setActiveFilter]   = useState('all');
+  const [subView,        setSubView]        = useState('list');
+  const [profileStudent, setProfileStudent] = useState(null);
+  const [editStudent,    setEditStudent]    = useState(null);
+  const [banner,         setBanner]         = useState(null);
+  const searchTimer = useRef(null);
+
+  const load = useCallback((q = '', filter = 'all') => {
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (q) params.set('q', q);
+    if (filter === 'at_risk') params.set('at_risk', '1');
+    else if (filter !== 'all') params.set('classroom_id', filter);
+    ApiClient.get(`/api/school/students/?${params}`)
+      .then(d => setStudents(d.students || [])).catch(() => setStudents([])).finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    load();
+    ApiClient.get('/api/school/student-stats/').then(d => setStats(d)).catch(() => {});
+    ApiClient.get('/api/school/classes/').then(d => setClasses(d.classes || [])).catch(() => {});
+  }, [load]);
+
+  const handleSearch = e => {
+    const q = e.target.value; setSearch(q);
+    clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => load(q, activeFilter), 350);
+  };
+
+  const handleFilter = f => { setActiveFilter(f); load(search, f); };
+
+  const afterSave = () => {
+    setEditStudent(null); setProfileStudent(null); setSubView('list');
+    setBanner({ type: 'ok', text: 'Student saved.' });
+    load(search, activeFilter);
+    ApiClient.get('/api/school/student-stats/').then(d => setStats(d)).catch(() => {});
+  };
+
+  if (subView === 'add') {
+    return (
+      <AddStudentWizard school={school} classes={classes}
+        onSave={() => { setBanner({ type: 'ok', text: 'Student added.' }); setSubView('list'); load(); ApiClient.get('/api/school/student-stats/').then(d => setStats(d)).catch(() => {}); }}
+        onCancel={() => setSubView('list')}
+      />
+    );
+  }
+
+  const filterChips = [
+    { key: 'all', label: 'All Students' },
+    ...classes.slice(0, 5).map(c => ({ key: String(c.id), label: c.name })),
+    { key: 'at_risk', label: 'At Risk' },
+  ];
+
+  const metricCards = [
+    { icon: 'group',           iconColor: 'var(--ska-primary)',   iconBg: 'var(--ska-primary-dim)',   label: 'Total',          value: stats?.total ?? '—',          extra: null },
+    { icon: 'person_check',    iconColor: 'var(--ska-secondary)', iconBg: 'var(--ska-secondary-dim)', label: 'Active',         value: stats?.active ?? '—',         extra: null },
+    { icon: 'person_add',      iconColor: '#4b8eff',              iconBg: 'rgba(75,142,255,0.12)',    label: 'New This Term',  value: stats?.new_this_term ?? '—',  extra: null },
+    { icon: 'warning',         iconColor: 'var(--ska-error)',     iconBg: 'var(--ska-error-dim)',     label: 'Flagged',        value: stats?.flagged ?? '—',        extra: stats?.flagged > 0 ? 'At Risk' : null, extraColor: 'var(--ska-error)', extraBg: 'var(--ska-error-dim)' },
+    { icon: 'event_available', iconColor: '#4cd7f6',              iconBg: 'rgba(76,215,246,0.12)',    label: 'Avg Attendance', value: stats?.avg_attendance != null ? `${stats.avg_attendance}%` : '—', extra: 'Target 95%', extraColor: '#4cd7f6', extraBg: 'transparent' },
+  ];
+
+  return (
+    <div className="ska-content">
+      <div className="ska-page-head">
+        <div><h1 className="ska-page-title">Students</h1><p className="ska-page-sub">{school?.name}</p></div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="ska-btn ska-btn--ghost"><Ic name="upload_file" size="sm" /> Import</button>
+          <button className="ska-btn ska-btn--primary" onClick={() => setSubView('add')}><Ic name="person_add" size="sm" /> Add Student</button>
+        </div>
+      </div>
+
+      <Banner msg={banner} />
+
+      {/* Metric row */}
+      <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4, marginBottom: 20, scrollbarWidth: 'none' }}>
+        {metricCards.map(m => (
+          <div key={m.label} style={{ flexShrink: 0, minWidth: 148, background: 'var(--ska-surface-card)', borderRadius: 14, padding: '14px 16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: m.iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Ic name={m.icon} style={{ color: m.iconColor, fontSize: 20 }} />
+              </div>
+              {m.extra && <span style={{ fontSize: '0.5625rem', fontWeight: 700, color: m.extraColor, background: m.extraBg, padding: '2px 6px', borderRadius: 20 }}>{m.extra}</span>}
+            </div>
+            <div style={{ fontSize: '0.5rem', color: 'var(--ska-text-3)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 4 }}>{m.label}</div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--ska-text)', lineHeight: 1 }}>{m.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {stats?.monthly_trend && <EnrollmentChart trend={stats.monthly_trend} />}
+      <InsightsRow stats={stats} />
+
+      {/* Search */}
+      <div style={{ position: 'relative', marginBottom: 12 }}>
+        <Ic name="search" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--ska-text-3)', fontSize: 20 }} />
+        <input style={{ width: '100%', boxSizing: 'border-box', background: 'var(--ska-surface-lowest)', border: 'none', borderRadius: 14, padding: '12px 16px 12px 42px', color: 'var(--ska-text)', fontSize: '0.875rem', outline: 'none' }}
+          placeholder="Search by name, ID or class…" value={search} onChange={handleSearch} />
+      </div>
+
+      {/* Filter chips */}
+      <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 8, marginBottom: 16, scrollbarWidth: 'none' }}>
+        {filterChips.map(c => (
+          <button key={c.key} onClick={() => handleFilter(c.key)} style={{ flexShrink: 0, padding: '6px 16px', borderRadius: 20, border: 'none', fontWeight: 600, fontSize: '0.75rem', cursor: 'pointer', background: activeFilter === c.key ? 'var(--ska-primary)' : 'var(--ska-surface-card)', color: activeFilter === c.key ? '#002e6a' : 'var(--ska-text-3)', transition: 'background 0.15s' }}>
+            {c.key === 'at_risk' && <Ic name="warning" style={{ fontSize: 13, marginRight: 4, verticalAlign: 'middle' }} />}
+            {c.label}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--ska-text-2)' }}>{loading ? 'Loading…' : `${students.length} student${students.length !== 1 ? 's' : ''}`}</span>
+        <span style={{ fontSize: '0.625rem', fontWeight: 700, color: 'var(--ska-primary)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Sort: Recent</span>
+      </div>
+
+      {loading ? (
+        <div className="ska-empty"><p className="ska-empty-desc">Loading students…</p></div>
+      ) : students.length === 0 ? (
+        <div className="ska-empty">
+          <Ic name="group" size="xl" style={{ color: 'var(--ska-primary)', marginBottom: 12 }} />
+          <p className="ska-empty-title">No students found</p>
+          <p className="ska-empty-desc">{search ? 'Try a different search term.' : 'Add your first student to get started.'}</p>
+          {!search && <button className="ska-btn ska-btn--primary" style={{ marginTop: 12 }} onClick={() => setSubView('add')}><Ic name="person_add" size="sm" /> Add First Student</button>}
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {students.map(s => <StudentCard key={s.id} s={s} onOpen={s2 => { setProfileStudent(s2); setSubView('profile'); }} />)}
+        </div>
+      )}
+
+      {subView === 'profile' && profileStudent && (
+        <StudentProfilePanel student={profileStudent} onClose={() => { setProfileStudent(null); setSubView('list'); }} onEdit={s => { setEditStudent(s); setSubView('list'); }} />
+      )}
+
+      {editStudent && <EditStudentModal student={editStudent} classes={classes} onSave={afterSave} onClose={() => setEditStudent(null)} />}
     </div>
   );
 }

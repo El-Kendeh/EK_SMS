@@ -9,7 +9,7 @@ import {
 } from './SchoolAdminPages';
 import {
   AnalyticsPage, ExamsPage, NotificationsPage, TimetablePage, ParentsPage,
-  FinanceUsersPage, PrincipalUsersPage,
+  FinanceUsersPage, PrincipalUsersPage, StudentsPage,
 } from './NewPages';
 
 /* ============================================================
@@ -783,9 +783,6 @@ function Modal({ title, onClose, children }) {
   );
 }
 
-/* ============================================================
-   STUDENTS PAGE
-   ============================================================ */
 /* ============================================================
    TEACHERS PAGE
    ============================================================ */

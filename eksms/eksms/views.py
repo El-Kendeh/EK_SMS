@@ -2269,28 +2269,52 @@ def api_students(request):
         return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
 
     if request.method == 'GET':
-        qs = Student.objects.filter(school=school, is_active=True).select_related('user', 'classroom')
-        q  = request.GET.get('q', '').strip()
+        from django.db.models import Q as _Q
+        qs = Student.objects.filter(school=school, is_active=True)\
+            .select_related('user', 'classroom')\
+            .prefetch_related('attendance', 'grades', 'parent_links')
+        q            = request.GET.get('q', '').strip()
+        at_risk      = request.GET.get('at_risk', '')
+        classroom_id = request.GET.get('classroom_id', '')
         if q:
-            from django.db.models import Q
             qs = qs.filter(
-                Q(user__first_name__icontains=q) |
-                Q(user__last_name__icontains=q) |
-                Q(admission_number__icontains=q)
+                _Q(user__first_name__icontains=q) |
+                _Q(user__last_name__icontains=q) |
+                _Q(admission_number__icontains=q)
             )
-        data = [{
-            'id': s.id,
-            'admission_number': s.admission_number,
-            'first_name': s.user.first_name,
-            'last_name': s.user.last_name,
-            'full_name': s.user.get_full_name(),
-            'email': s.user.email,
-            'classroom': s.classroom.name if s.classroom else None,
-            'classroom_id': s.classroom_id,
-            'date_of_birth': str(s.date_of_birth) if s.date_of_birth else None,
-            'phone_number': s.phone_number,
-            'admission_date': str(s.admission_date),
-        } for s in qs]
+        if classroom_id:
+            try:
+                qs = qs.filter(classroom_id=int(classroom_id))
+            except (ValueError, TypeError):
+                pass
+        data = []
+        for s in qs:
+            att_all   = list(s.attendance.all())
+            total_att = len(att_all)
+            present_c = sum(1 for a in att_all if a.status in ('present', 'late', 'excused'))
+            att_rate  = round((present_c / total_att) * 100, 1) if total_att > 0 else None
+            scores    = [float(g.total_score) for g in s.grades.all()]
+            avg_grade = round(sum(scores) / len(scores), 1) if scores else None
+            is_flagged = (att_rate is not None and att_rate < 70) or (avg_grade is not None and avg_grade < 50)
+            data.append({
+                'id':               s.id,
+                'admission_number': s.admission_number,
+                'first_name':       s.user.first_name,
+                'last_name':        s.user.last_name,
+                'full_name':        s.user.get_full_name(),
+                'email':            s.user.email,
+                'classroom':        s.classroom.name if s.classroom else None,
+                'classroom_id':     s.classroom_id,
+                'date_of_birth':    str(s.date_of_birth) if s.date_of_birth else None,
+                'phone_number':     s.phone_number,
+                'admission_date':   str(s.admission_date),
+                'attendance_rate':  att_rate,
+                'avg_grade':        avg_grade,
+                'parent_count':     s.parent_links.count(),
+                'is_flagged':       is_flagged,
+            })
+        if at_risk:
+            data = [d for d in data if d['is_flagged']]
         return JsonResponse({'success': True, 'students': data, 'count': len(data)})
 
     if request.method == 'POST':
@@ -2475,13 +2499,49 @@ def api_student_detail(request, student_id):
         return JsonResponse({'success': False, 'message': 'Student not found.'}, status=404)
 
     if request.method == 'GET':
-        return JsonResponse({'success': True, 'id': student.id,
+        # Attendance rate
+        att_all   = list(student.attendance.all())
+        total_att = len(att_all)
+        present_c = sum(1 for a in att_all if a.status in ('present', 'late', 'excused'))
+        att_rate  = round((present_c / total_att) * 100, 1) if total_att > 0 else None
+        # Grades with subject + term
+        grades_data = [{
+            'subject':      g.subject.name,
+            'grade_letter': g.grade_letter,
+            'total_score':  float(g.total_score),
+            'term':         g.term.name,
+        } for g in student.grades.select_related('subject', 'term').order_by('-term__start_date', 'subject__name')]
+        scores    = [g['total_score'] for g in grades_data]
+        avg_grade = round(sum(scores) / len(scores), 1) if scores else None
+        # Parents
+        parents_data = [{
+            'id':           link.parent.id,
+            'full_name':    link.parent.user.get_full_name(),
+            'relationship': link.parent.relationship,
+            'phone':        link.parent.phone_number,
+            'email':        link.parent.user.email,
+            'is_primary':   link.is_primary_contact,
+        } for link in student.parent_links.select_related('parent__user').order_by('-is_primary_contact')]
+        is_flagged = (att_rate is not None and att_rate < 70) or (avg_grade is not None and avg_grade < 50)
+        return JsonResponse({
+            'success':          True,
+            'id':               student.id,
             'admission_number': student.admission_number,
-            'first_name': student.user.first_name, 'last_name': student.user.last_name,
-            'email': student.user.email, 'classroom': student.classroom.name if student.classroom else None,
-            'classroom_id': student.classroom_id,
-            'date_of_birth': str(student.date_of_birth) if student.date_of_birth else None,
-            'phone_number': student.phone_number, 'admission_date': str(student.admission_date)})
+            'first_name':       student.user.first_name,
+            'last_name':        student.user.last_name,
+            'full_name':        student.user.get_full_name(),
+            'email':            student.user.email,
+            'classroom':        student.classroom.name if student.classroom else None,
+            'classroom_id':     student.classroom_id,
+            'date_of_birth':    str(student.date_of_birth) if student.date_of_birth else None,
+            'phone_number':     student.phone_number,
+            'admission_date':   str(student.admission_date),
+            'attendance_rate':  att_rate,
+            'avg_grade':        avg_grade,
+            'is_flagged':       is_flagged,
+            'grades':           grades_data,
+            'parents':          parents_data,
+        })
 
     if request.method == 'PUT':
         try:
@@ -4181,4 +4241,69 @@ def api_principal_user_toggle(request, uid):
         'is_active': account.is_active,
         'status':    account.account_status,
         'message':   'Principal %s.' % action,
+    })
+
+
+@csrf_exempt
+def api_student_stats(request):
+    """
+    GET /api/school/student-stats/
+    Returns student module metrics: totals, flagged count, avg attendance, 8-month enrollment trend.
+    """
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+    if request.method != 'GET':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+    qs = Student.objects.filter(school=school, is_active=True).prefetch_related('attendance')
+    total = qs.count()
+
+    # Attendance + flagged
+    flagged_count = 0
+    att_rates = []
+    for s in qs:
+        att_all   = list(s.attendance.all())
+        total_att = len(att_all)
+        if total_att > 0:
+            present_c = sum(1 for a in att_all if a.status in ('present', 'late', 'excused'))
+            rate = round((present_c / total_att) * 100, 1)
+            att_rates.append(rate)
+            if rate < 70:
+                flagged_count += 1
+
+    avg_attendance = round(sum(att_rates) / len(att_rates), 1) if att_rates else None
+
+    # New this term: admitted in last 30 days
+    thirty_days_ago = timezone.now().date() - datetime.timedelta(days=30)
+    new_this_term   = qs.filter(admission_date__gte=thirty_days_ago).count()
+
+    # Monthly enrollment trend: last 8 months
+    today = timezone.now().date()
+    monthly_trend = []
+    for i in range(7, -1, -1):
+        pivot       = today.replace(day=1) - datetime.timedelta(days=(i * 28))
+        month_start = pivot.replace(day=1)
+        if month_start.month == 12:
+            month_end = month_start.replace(year=month_start.year + 1, month=1, day=1)
+        else:
+            month_end = month_start.replace(month=month_start.month + 1, day=1)
+        count = Student.objects.filter(
+            school=school,
+            admission_date__gte=month_start,
+            admission_date__lt=month_end
+        ).count()
+        monthly_trend.append({'month': month_start.strftime('%b'), 'count': count})
+
+    return JsonResponse({
+        'success':       True,
+        'total':         total,
+        'active':        total,
+        'new_this_term': new_this_term,
+        'flagged':       flagged_count,
+        'avg_attendance': avg_attendance,
+        'monthly_trend': monthly_trend,
     })
