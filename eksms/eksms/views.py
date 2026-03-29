@@ -2612,22 +2612,41 @@ def api_teachers(request):
         return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
 
     if request.method == 'GET':
-        qs = Teacher.objects.filter(school=school, is_active=True).select_related('user')
-        q  = request.GET.get('q', '').strip()
+        from django.db.models import Q, Count
+        qs = Teacher.objects.filter(school=school, is_active=True)\
+            .select_related('user')\
+            .prefetch_related('subject_classes__subject', 'subject_classes__classroom')
+        q = request.GET.get('q', '').strip()
         if q:
-            from django.db.models import Q
             qs = qs.filter(
                 Q(user__first_name__icontains=q) |
                 Q(user__last_name__icontains=q) |
                 Q(employee_id__icontains=q)
             )
-        data = [{
-            'id': t.id, 'employee_id': t.employee_id,
-            'first_name': t.user.first_name, 'last_name': t.user.last_name,
-            'full_name': t.user.get_full_name(), 'email': t.user.email,
-            'phone_number': t.phone_number, 'qualification': t.qualification,
-            'hire_date': str(t.hire_date),
-        } for t in qs]
+        overloaded_filter = request.GET.get('overloaded', '')
+        data = []
+        for t in qs:
+            active_tscs = [tsc for tsc in t.subject_classes.all() if tsc.is_active]
+            periods     = len(active_tscs)
+            subjects    = list({tsc.subject.name for tsc in active_tscs})
+            classes     = list({tsc.classroom.name for tsc in active_tscs})
+            student_cnt = sum(
+                tsc.classroom.students.filter(is_active=True).count()
+                for tsc in active_tscs
+            )
+            is_overloaded = periods > 20
+            if overloaded_filter == '1' and not is_overloaded:
+                continue
+            data.append({
+                'id': t.id, 'employee_id': t.employee_id,
+                'first_name': t.user.first_name, 'last_name': t.user.last_name,
+                'full_name': t.user.get_full_name(), 'email': t.user.email,
+                'phone_number': t.phone_number, 'qualification': t.qualification,
+                'hire_date': str(t.hire_date),
+                'subjects': subjects, 'classes': classes,
+                'periods_per_week': periods, 'student_count': student_cnt,
+                'is_overloaded': is_overloaded,
+            })
         return JsonResponse({'success': True, 'teachers': data, 'count': len(data)})
 
     if request.method == 'POST':
@@ -2677,10 +2696,23 @@ def api_teacher_detail(request, teacher_id):
         return JsonResponse({'success': False, 'message': 'Teacher not found.'}, status=404)
 
     if request.method == 'GET':
-        return JsonResponse({'success': True, 'id': teacher.id, 'employee_id': teacher.employee_id,
+        tscs = teacher.subject_classes.select_related('subject', 'classroom').filter(is_active=True)
+        periods   = tscs.count()
+        subjects  = list({tsc.subject.name for tsc in tscs})
+        classes   = [{'name': tsc.classroom.name, 'subject': tsc.subject.name,
+                       'student_count': tsc.classroom.students.filter(is_active=True).count()}
+                     for tsc in tscs]
+        student_count = sum(c['student_count'] for c in classes)
+        return JsonResponse({'success': True, 'id': teacher.id,
+            'employee_id': teacher.employee_id,
             'first_name': teacher.user.first_name, 'last_name': teacher.user.last_name,
+            'full_name': teacher.user.get_full_name(),
             'email': teacher.user.email, 'phone_number': teacher.phone_number,
-            'qualification': teacher.qualification, 'hire_date': str(teacher.hire_date)})
+            'qualification': teacher.qualification, 'hire_date': str(teacher.hire_date),
+            'subjects': subjects, 'classes': classes,
+            'periods_per_week': periods, 'student_count': student_count,
+            'is_overloaded': periods > 20,
+        })
 
     if request.method == 'PUT':
         try:
@@ -4305,5 +4337,64 @@ def api_student_stats(request):
         'new_this_term': new_this_term,
         'flagged':       flagged_count,
         'avg_attendance': avg_attendance,
+        'monthly_trend': monthly_trend,
+    })
+
+
+# ── Teacher Stats ─────────────────────────────────────────────────────
+
+@csrf_exempt
+def api_teacher_stats(request):
+    """Workforce analytics header stats + overloaded list."""
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+    if request.method != 'GET':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+    teachers = Teacher.objects.filter(school=school, is_active=True)\
+        .prefetch_related('subject_classes')
+
+    total   = teachers.count()
+    periods_list = []
+    overloaded_list = []
+    for t in teachers:
+        p = t.subject_classes.filter(is_active=True).count()
+        periods_list.append(p)
+        if p > 20:
+            overloaded_list.append({
+                'id': t.id,
+                'full_name': t.user.get_full_name(),
+                'periods': p,
+            })
+
+    avg_periods  = round(sum(periods_list) / len(periods_list), 1) if periods_list else 0
+    overloaded   = len(overloaded_list)
+
+    # Monthly hire trend: last 6 months
+    today = timezone.now().date()
+    monthly_trend = []
+    for i in range(5, -1, -1):
+        pivot = today.replace(day=1) - datetime.timedelta(days=(i * 28))
+        month_start = pivot.replace(day=1)
+        if month_start.month == 12:
+            month_end = month_start.replace(year=month_start.year + 1, month=1, day=1)
+        else:
+            month_end = month_start.replace(month=month_start.month + 1, day=1)
+        count = Teacher.objects.filter(
+            school=school, hire_date__gte=month_start, hire_date__lt=month_end
+        ).count()
+        monthly_trend.append({'month': month_start.strftime('%b'), 'count': count})
+
+    return JsonResponse({
+        'success': True,
+        'total': total,
+        'active': total,
+        'overloaded': overloaded,
+        'avg_periods': avg_periods,
+        'overloaded_list': overloaded_list,
         'monthly_trend': monthly_trend,
     })

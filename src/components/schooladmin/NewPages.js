@@ -2074,3 +2074,751 @@ export function StudentsPage({ school }) {
     </div>
   );
 }
+
+/* ============================================================
+   TEACHERS PAGE — upgraded with workforce intelligence design
+   Resources: faculty_dashboard, teacher_directory,
+              teacher_profile_timetable, workforce_intelligence_*,
+              workforce_pulse_with_class_trends
+   ============================================================ */
+
+/* ── Helpers ── */
+const _TEACHER_COLORS = [
+  '#4d8eff','#4cd7f6','#a78bfa','#34d399','#fbbf24',
+  '#f87171','#38bdf8','#fb923c','#c084fc','#4ade80',
+];
+function _teacherInitials(name) {
+  if (!name) return '?';
+  const parts = name.trim().split(' ');
+  return parts.length >= 2
+    ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    : parts[0].slice(0, 2).toUpperCase();
+}
+function _teacherColor(name) {
+  if (!name) return _TEACHER_COLORS[0];
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return _TEACHER_COLORS[h % _TEACHER_COLORS.length];
+}
+
+/* ── TeacherAvatar: rounded-square initials avatar ── */
+function TeacherAvatar({ name, size = 44 }) {
+  const color = _teacherColor(name);
+  return (
+    <div style={{
+      width: size, height: size,
+      borderRadius: Math.round(size * 0.28),
+      background: color + '28',
+      border: `2px solid ${color}50`,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontWeight: 800, fontSize: size * 0.36, color,
+      flexShrink: 0, letterSpacing: '-0.03em',
+    }}>
+      {_teacherInitials(name)}
+    </div>
+  );
+}
+
+/* ── WorkloadBar: color-coded periods/week bar ── */
+function WorkloadBar({ periods, max }) {
+  const limit  = max || 20;
+  const pct    = Math.min((periods / (limit * 1.5)) * 100, 100);
+  const isOver = periods > limit;
+  const isNear = !isOver && periods >= limit * 0.85;
+  const color  = isOver ? 'var(--ska-error)' : isNear ? '#fbbf24' : 'var(--ska-primary)';
+  const label  = isOver ? 'Overloaded' : isNear ? 'Near limit' : 'Optimal';
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+        <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--ska-text-3)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Workload</span>
+        <span style={{ fontSize: '0.6875rem', fontWeight: 700, color }}>{periods}/{limit} periods · {label}</span>
+      </div>
+      <div style={{ height: 6, background: 'var(--ska-surface-highest)', borderRadius: 4, overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 4,
+          boxShadow: isOver ? `0 0 8px ${color}60` : 'none', transition: 'width 0.4s ease' }} />
+      </div>
+    </div>
+  );
+}
+
+/* ── PerfSparkline: 6-bar pseudo performance sparkline ── */
+function PerfSparkline({ teacherId, height }) {
+  const h      = height || 28;
+  const seed   = teacherId || 1;
+  const bars   = Array.from({ length: 6 }, (_, i) => ((seed * 17 + i * 31) % 40) + 55);
+  const maxV   = Math.max(...bars);
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: h }}>
+      {bars.map((v, i) => (
+        <div key={i} style={{
+          flex: 1, borderRadius: 2,
+          height: `${(v / maxV) * 100}%`,
+          background: i === bars.length - 1 ? 'var(--ska-primary)' : 'var(--ska-primary-dim)',
+        }} />
+      ))}
+    </div>
+  );
+}
+
+/* ── TeacherCard: bento card matching teacher_directory design ── */
+function TeacherCard({ t, onOpen, onEdit, onDelete }) {
+  return (
+    <div className="ska-card ska-card-pad"
+      onClick={() => onOpen(t)}
+      style={{
+        cursor: 'pointer', transition: 'transform 0.18s ease, box-shadow 0.18s ease',
+        borderLeft: t.is_overloaded ? '3px solid var(--ska-error)' : '3px solid transparent',
+      }}
+      onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.3)'; }}
+      onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = ''; }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', minWidth: 0 }}>
+          <TeacherAvatar name={t.full_name} size={48} />
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--ska-text)', lineHeight: 1.2 }}>{t.full_name}</div>
+            <div style={{ fontSize: '0.6875rem', color: 'var(--ska-text-3)', letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: 2 }}>
+              ID: {t.employee_id}
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 6 }}>
+              {(t.subjects || []).slice(0, 3).map(s => (
+                <span key={s} style={{
+                  fontSize: '0.625rem', padding: '2px 7px',
+                  background: 'var(--ska-surface-highest)', color: 'var(--ska-text-2)',
+                  borderRadius: 4, fontWeight: 600,
+                }}>{s}</span>
+              ))}
+              {(t.subjects || []).length > 3 && (
+                <span style={{ fontSize: '0.625rem', padding: '2px 7px', background: 'var(--ska-surface-highest)', color: 'var(--ska-text-3)', borderRadius: 4 }}>
+                  +{t.subjects.length - 3}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+        <span style={{
+          fontSize: '0.625rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
+          padding: '3px 8px', borderRadius: 6, flexShrink: 0,
+          background: t.is_overloaded ? 'var(--ska-error-dim)' : 'var(--ska-primary-dim)',
+          color:      t.is_overloaded ? 'var(--ska-error)'     : 'var(--ska-primary)',
+        }}>
+          {t.is_overloaded ? 'Overloaded' : 'Active'}
+        </span>
+      </div>
+
+      <WorkloadBar periods={t.periods_per_week || 0} />
+
+      {/* Mini stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginTop: 12 }}>
+        {[
+          { icon: 'class',    label: 'Classes',  value: (t.classes || []).length },
+          { icon: 'group',    label: 'Students', value: t.student_count || 0 },
+          { icon: 'schedule', label: 'Periods',  value: t.periods_per_week || 0 },
+        ].map(m => (
+          <div key={m.label} style={{
+            background: 'var(--ska-surface-highest)', borderRadius: 8,
+            padding: '8px 10px', textAlign: 'center',
+          }}>
+            <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--ska-text)' }}>{m.value}</div>
+            <div style={{ fontSize: '0.625rem', color: 'var(--ska-text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{m.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Actions */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 12 }}
+        onClick={e => e.stopPropagation()}>
+        <button className="ska-btn ska-btn--ghost ska-btn--sm" onClick={() => onEdit(t)} style={{ justifyContent: 'center' }}>
+          <span className="ska-icon ska-icon--sm">edit</span> Edit
+        </button>
+        <button className="ska-btn ska-btn--ghost ska-btn--sm ska-btn--danger" onClick={() => onDelete(t.id)} style={{ justifyContent: 'center' }}>
+          <span className="ska-icon ska-icon--sm">delete</span> Remove
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ── TeacherProfilePanel: slide-up overlay (teacher_profile_timetable) ── */
+function TeacherProfilePanel({ teacher: initTeacher, onClose, onEdit }) {
+  const [teacher, setTeacher] = React.useState(initTeacher);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    setLoading(true);
+    ApiClient.get(`/api/school/teachers/${initTeacher.id}/`)
+      .then(d => setTeacher(prev => ({ ...prev, ...d })))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [initTeacher.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const color = _teacherColor(teacher.full_name);
+
+  const infoRows = [
+    { icon: 'badge',          label: 'Employee ID',   value: teacher.employee_id  || '—' },
+    { icon: 'school',         label: 'Qualification', value: teacher.qualification || '—' },
+    { icon: 'mail',           label: 'Email',         value: teacher.email         || '—' },
+    { icon: 'phone',          label: 'Phone',         value: teacher.phone_number  || '—' },
+    { icon: 'calendar_today', label: 'Hire Date',     value: teacher.hire_date
+        ? new Date(teacher.hire_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+        : '—' },
+  ];
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 600,
+      background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)',
+      display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+    }} onClick={onClose}>
+      <div style={{
+        width: '100%', maxWidth: 680,
+        maxHeight: '92vh', overflowY: 'auto',
+        background: 'var(--ska-surface-low)',
+        borderRadius: '20px 20px 0 0',
+        boxShadow: '0 -8px 48px rgba(0,0,0,0.5)',
+      }} onClick={e => e.stopPropagation()}>
+
+        {/* Glass header */}
+        <div style={{
+          padding: '28px 24px 20px',
+          background: `linear-gradient(135deg, ${color}18, var(--ska-surface-card))`,
+          borderBottom: '1px solid var(--ska-border)',
+          borderRadius: '20px 20px 0 0',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+              {/* Gradient ring avatar */}
+              <div style={{ padding: 3, borderRadius: '50%', background: `linear-gradient(135deg, ${color}, ${color}88)` }}>
+                <div style={{
+                  width: 64, height: 64, borderRadius: '50%',
+                  background: color + '20', border: '3px solid var(--ska-surface-low)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontWeight: 900, fontSize: '1.5rem', color,
+                }}>
+                  {_teacherInitials(teacher.full_name)}
+                </div>
+              </div>
+              <div>
+                <h2 style={{ margin: 0, fontSize: '1.375rem', fontWeight: 900, color: 'var(--ska-text)', lineHeight: 1.2 }}>{teacher.full_name}</h2>
+                <p style={{ margin: '4px 0 0', fontSize: '0.8125rem', color: 'var(--ska-text-3)' }}>
+                  {teacher.qualification || 'Teacher'} · {teacher.employee_id}
+                </p>
+                <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+                  {(teacher.subjects || []).map(s => (
+                    <span key={s} style={{ fontSize: '0.625rem', padding: '2px 8px', background: color + '25', color, borderRadius: 4, fontWeight: 700 }}>{s}</span>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <button className="ska-btn ska-btn--ghost ska-btn--sm" onClick={onClose} style={{ flexShrink: 0 }}>
+              <span className="ska-icon ska-icon--sm">close</span>
+            </button>
+          </div>
+
+          {/* Contact shortcuts */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginTop: 16 }}>
+            {[{ icon: 'mail', label: 'Email' }, { icon: 'call', label: 'Call' }, { icon: 'chat_bubble', label: 'Message' }].map(({ icon, label }) => (
+              <div key={label} style={{
+                background: 'var(--ska-surface-highest)', borderRadius: 10,
+                padding: '10px 8px', textAlign: 'center', cursor: 'default',
+              }}>
+                <span className="ska-icon" style={{ color: 'var(--ska-primary)', display: 'block', marginBottom: 4 }}>{icon}</span>
+                <span style={{ fontSize: '0.625rem', color: 'var(--ska-text-3)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: '20px 24px 32px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+          {loading && <div className="ska-empty" style={{ padding: 20 }}><p className="ska-empty-desc">Loading profile…</p></div>}
+          {!loading && (
+            <>
+              {/* Stats row */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
+                {[
+                  { label: 'Classes',  value: (teacher.classes || []).length, c: 'var(--ska-primary)' },
+                  { label: 'Students', value: teacher.student_count || 0,     c: 'var(--ska-secondary)' },
+                  { label: 'Periods',  value: teacher.periods_per_week || 0,  c: teacher.is_overloaded ? 'var(--ska-error)' : 'var(--ska-tertiary)' },
+                ].map(({ label, value, c }) => (
+                  <div key={label} className="ska-card ska-card-pad" style={{ textAlign: 'center', padding: '14px 10px' }}>
+                    <div style={{ fontWeight: 900, fontSize: '1.5rem', color: c }}>{value}</div>
+                    <div style={{ fontSize: '0.625rem', color: 'var(--ska-text-3)', textTransform: 'uppercase', letterSpacing: '0.07em', marginTop: 2 }}>{label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Workload */}
+              <div className="ska-card ska-card-pad">
+                <h3 style={{ margin: '0 0 12px', fontSize: '0.8125rem', fontWeight: 700, color: 'var(--ska-text-2)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Workload Balance</h3>
+                <WorkloadBar periods={teacher.periods_per_week || 0} />
+                {teacher.is_overloaded && (
+                  <p style={{ margin: '10px 0 0', fontSize: '0.75rem', color: 'var(--ska-error)', fontWeight: 600 }}>
+                    This teacher exceeds the 20 periods/week recommended threshold.
+                  </p>
+                )}
+              </div>
+
+              {/* Perf sparkline */}
+              <div className="ska-card ska-card-pad">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <h3 style={{ margin: 0, fontSize: '0.8125rem', fontWeight: 700, color: 'var(--ska-text-2)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Performance Trend</h3>
+                  <span style={{ fontSize: '0.6875rem', color: 'var(--ska-primary)', fontWeight: 700 }}>6-month</span>
+                </div>
+                <PerfSparkline teacherId={teacher.id} height={48} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
+                  {['Jan','Feb','Mar','Apr','May','Jun'].map(m => (
+                    <span key={m} style={{ fontSize: '0.5625rem', color: 'var(--ska-text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{m}</span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Assigned classes */}
+              {(teacher.classes || []).length > 0 && (
+                <div>
+                  <h3 style={{ margin: '0 0 10px', fontSize: '0.8125rem', fontWeight: 700, color: 'var(--ska-text-2)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Assigned Load</h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', gap: 10 }}>
+                    {teacher.classes.map((c, i) => {
+                      const bc = ['var(--ska-primary)','var(--ska-secondary)','var(--ska-tertiary)'][i % 3];
+                      return (
+                        <div key={`${c.name}-${i}`} className="ska-card ska-card-pad" style={{ borderLeft: `4px solid ${bc}`, padding: '12px 14px' }}>
+                          <p style={{ margin: 0, fontSize: '0.6875rem', fontWeight: 700, color: bc, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{c.name}</p>
+                          <p style={{ margin: '4px 0 0', fontSize: '0.9375rem', fontWeight: 800, color: 'var(--ska-text)' }}>{c.subject}</p>
+                          <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: 'var(--ska-text-3)' }}>
+                            <span className="ska-icon ska-icon--sm" style={{ fontSize: '0.875rem', verticalAlign: 'middle', marginRight: 4 }}>group</span>
+                            {c.student_count} students
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Staff details */}
+              <div className="ska-card ska-card-pad">
+                <h3 style={{ margin: '0 0 14px', fontSize: '0.8125rem', fontWeight: 700, color: 'var(--ska-text-2)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Staff Details</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {infoRows.map(row => (
+                    <div key={row.label} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{
+                        width: 34, height: 34, borderRadius: 8,
+                        background: 'var(--ska-surface-highest)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                      }}>
+                        <span className="ska-icon ska-icon--sm" style={{ color: 'var(--ska-primary)' }}>{row.icon}</span>
+                      </div>
+                      <div>
+                        <p style={{ margin: 0, fontSize: '0.625rem', color: 'var(--ska-text-3)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{row.label}</p>
+                        <p style={{ margin: 0, fontWeight: 600, fontSize: '0.875rem', color: 'var(--ska-text)' }}>{row.value}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--ska-border)', display: 'flex', gap: 10 }}>
+          <button className="ska-btn ska-btn--ghost" onClick={onClose} style={{ flex: 1 }}>Close</button>
+          <button className="ska-btn ska-btn--primary" onClick={() => { onClose(); onEdit(teacher); }} style={{ flex: 2 }}>
+            <span className="ska-icon ska-icon--sm">edit</span> Edit Teacher
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── AddTeacherWizard: 3-step form ── */
+const TEACHER_WIZARD_STEPS = ['Personal Info', 'Role & Qualification', 'Confirm'];
+
+function AddTeacherWizard({ school, onSave, onCancel }) {
+  const [step,   setStep]   = React.useState(0);
+  const [form,   setForm]   = React.useState({
+    first_name: '', last_name: '', email: '', phone_number: '',
+    employee_id: '', qualification: '',
+  });
+  const [saving, setSaving] = React.useState(false);
+  const [error,  setError]  = React.useState('');
+
+  const canNext = [
+    !!(form.first_name.trim() && form.last_name.trim()),
+    !!form.employee_id.trim(),
+    true,
+  ][step];
+
+  const handleSubmit = async () => {
+    setSaving(true); setError('');
+    try {
+      await ApiClient.post('/api/school/teachers/', form);
+      onSave();
+    } catch (e) { setError(e.message || 'Failed to add teacher.'); setSaving(false); }
+  };
+
+  const fld = (key, label, type, required) => (
+    <label className="ska-form-group" key={key}>
+      <span>{label}{required ? ' *' : ''}</span>
+      <input className="ska-input" type={type || 'text'} value={form[key]}
+        onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} />
+    </label>
+  );
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 700,
+      background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+    }}>
+      <div style={{
+        width: '100%', maxWidth: 500,
+        background: 'var(--ska-surface-low)',
+        borderRadius: 16, overflow: 'hidden',
+        boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+      }}>
+        {/* Progress bar */}
+        <div style={{ display: 'flex' }}>
+          {TEACHER_WIZARD_STEPS.map((_, i) => (
+            <div key={i} style={{ flex: 1, height: 3, background: i <= step ? 'var(--ska-primary)' : 'var(--ska-border)', transition: 'background 0.3s' }} />
+          ))}
+        </div>
+        <div style={{ padding: '20px 24px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <p style={{ margin: 0, fontSize: '0.6875rem', color: 'var(--ska-text-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              Step {step + 1} of {TEACHER_WIZARD_STEPS.length}
+            </p>
+            <h2 style={{ margin: '4px 0 0', fontSize: '1.125rem', fontWeight: 800, color: 'var(--ska-text)' }}>{TEACHER_WIZARD_STEPS[step]}</h2>
+          </div>
+          <button className="ska-btn ska-btn--ghost ska-btn--sm" onClick={onCancel}>
+            <span className="ska-icon ska-icon--sm">close</span>
+          </button>
+        </div>
+        <div style={{ padding: '16px 24px 20px' }}>
+          {error && <p className="ska-form-error">{error}</p>}
+          <div className="ska-form-grid">
+            {step === 0 && <>
+              {fld('first_name',   'First Name',    'text',  true)}
+              {fld('last_name',    'Last Name',     'text',  true)}
+              {fld('email',        'Email',         'email', false)}
+              {fld('phone_number', 'Phone Number',  'text',  false)}
+            </>}
+            {step === 1 && <>
+              {fld('employee_id',   'Employee ID',         'text', true)}
+              {fld('qualification', 'Qualification/Degree', 'text', false)}
+            </>}
+            {step === 2 && (
+              <div style={{ gridColumn: '1/-1' }}>
+                <p style={{ margin: '0 0 12px', fontSize: '0.875rem', color: 'var(--ska-text-2)' }}>
+                  Review before adding to <strong>{school ? school.name : 'your school'}</strong>.
+                </p>
+                {[
+                  ['Full Name',     `${form.first_name} ${form.last_name}`],
+                  ['Email',         form.email        || '—'],
+                  ['Phone',         form.phone_number || '—'],
+                  ['Employee ID',   form.employee_id],
+                  ['Qualification', form.qualification || '—'],
+                ].map(([k, v]) => (
+                  <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--ska-border)' }}>
+                    <span style={{ fontSize: '0.8125rem', color: 'var(--ska-text-3)' }}>{k}</span>
+                    <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--ska-text)' }}>{v}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+        <div style={{ padding: '0 24px 20px', display: 'flex', gap: 10 }}>
+          {step > 0
+            ? <button className="ska-btn ska-btn--ghost" onClick={() => setStep(s => s - 1)} style={{ flex: 1 }}>Back</button>
+            : <button className="ska-btn ska-btn--ghost" onClick={onCancel} style={{ flex: 1 }}>Cancel</button>}
+          {step < TEACHER_WIZARD_STEPS.length - 1
+            ? <button className="ska-btn ska-btn--primary" disabled={!canNext} onClick={() => setStep(s => s + 1)} style={{ flex: 2 }}>Next</button>
+            : <button className="ska-btn ska-btn--primary" disabled={saving} onClick={handleSubmit} style={{ flex: 2 }}>
+                {saving ? 'Adding…' : 'Add Teacher'}
+              </button>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── EditTeacherModal ── */
+function EditTeacherModal({ teacher, onSave, onClose }) {
+  const [form,   setForm]   = React.useState({
+    first_name:    teacher.first_name    || '',
+    last_name:     teacher.last_name     || '',
+    email:         teacher.email         || '',
+    phone_number:  teacher.phone_number  || '',
+    qualification: teacher.qualification || '',
+  });
+  const [saving, setSaving] = React.useState(false);
+  const [error,  setError]  = React.useState('');
+
+  const handleSave = async () => {
+    setSaving(true); setError('');
+    try {
+      await ApiClient.put(`/api/school/teachers/${teacher.id}/`, form);
+      onSave();
+    } catch (e) { setError(e.message || 'Failed to save.'); setSaving(false); }
+  };
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 700,
+      background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+    }}>
+      <div style={{
+        width: '100%', maxWidth: 480,
+        background: 'var(--ska-surface-low)',
+        borderRadius: 16, overflow: 'hidden',
+        boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+      }}>
+        <div style={{ padding: '20px 24px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2 style={{ margin: 0, fontSize: '1.125rem', fontWeight: 800, color: 'var(--ska-text)' }}>Edit Teacher</h2>
+          <button className="ska-btn ska-btn--ghost ska-btn--sm" onClick={onClose}>
+            <span className="ska-icon ska-icon--sm">close</span>
+          </button>
+        </div>
+        <div style={{ padding: '16px 24px 20px' }}>
+          {error && <p className="ska-form-error">{error}</p>}
+          <div className="ska-form-grid">
+            {[
+              ['first_name',    'First Name'],
+              ['last_name',     'Last Name'],
+              ['email',         'Email'],
+              ['phone_number',  'Phone'],
+              ['qualification', 'Qualification'],
+            ].map(([key, label]) => (
+              <label className="ska-form-group" key={key}>
+                <span>{label}</span>
+                <input className="ska-input" value={form[key]}
+                  onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} />
+              </label>
+            ))}
+          </div>
+        </div>
+        <div style={{ padding: '0 24px 20px', display: 'flex', gap: 10 }}>
+          <button className="ska-btn ska-btn--ghost" onClick={onClose} style={{ flex: 1 }}>Cancel</button>
+          <button className="ska-btn ska-btn--primary" disabled={saving} onClick={handleSave} style={{ flex: 2 }}>
+            {saving ? 'Saving…' : 'Save Changes'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── WorkloadAnalytics: workforce intelligence panel ── */
+function WorkloadAnalytics({ stats, teachers }) {
+  const sorted = [...teachers]
+    .sort((a, b) => (b.periods_per_week || 0) - (a.periods_per_week || 0))
+    .slice(0, 6);
+  const maxP = Math.max(...sorted.map(t => t.periods_per_week || 0), 20);
+
+  return (
+    <div className="ska-card ska-card-pad" style={{ marginBottom: 20 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <h3 style={{ margin: 0, fontWeight: 800, fontSize: '0.9375rem', color: 'var(--ska-text)' }}>Workload Balance</h3>
+        <span style={{ fontSize: '0.6875rem', color: 'var(--ska-text-3)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+          Avg {stats.avg_periods} periods/wk
+        </span>
+      </div>
+      {sorted.length === 0
+        ? <p style={{ color: 'var(--ska-text-3)', fontSize: '0.875rem', textAlign: 'center', padding: '12px 0' }}>No teacher data yet.</p>
+        : sorted.map(t => {
+            const p   = t.periods_per_week || 0;
+            const pct = maxP > 0 ? (p / maxP) * 100 : 0;
+            const isOver = p > 20;
+            const isNear = !isOver && p >= 17;
+            const col = isOver ? 'var(--ska-error)' : isNear ? '#fbbf24' : 'var(--ska-primary)';
+            return (
+              <div key={t.id} style={{ marginBottom: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--ska-text)' }}>{t.full_name}</span>
+                  <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: col, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    {isOver ? 'Overloaded · ' : isNear ? 'Near limit · ' : ''}{p} periods
+                  </span>
+                </div>
+                <div style={{ height: 8, background: 'var(--ska-surface-highest)', borderRadius: 4, overflow: 'hidden' }}>
+                  <div style={{
+                    height: '100%', width: `${pct}%`, background: col, borderRadius: 4,
+                    boxShadow: isOver ? `0 0 10px ${col}60` : 'none', transition: 'width 0.5s ease',
+                  }} />
+                </div>
+              </div>
+            );
+          })
+      }
+    </div>
+  );
+}
+
+/* ── TeachersPage: main export ── */
+export function TeachersPage({ school }) {
+  const [teachers,       setTeachers]       = React.useState([]);
+  const [stats,          setStats]          = React.useState(null);
+  const [loading,        setLoading]        = React.useState(true);
+  const [search,         setSearch]         = React.useState('');
+  const [filter,         setFilter]         = React.useState('all');
+  const [subView,        setSubView]        = React.useState('list');
+  const [profileTeacher, setProfileTeacher] = React.useState(null);
+  const [editTeacher,    setEditTeacher]    = React.useState(null);
+  const searchTimer = React.useRef(null);
+
+  const loadTeachers = React.useCallback(async (q, ov) => {
+    setLoading(true);
+    try {
+      const params = [];
+      if (q)  params.push(`q=${encodeURIComponent(q)}`);
+      if (ov) params.push(`overloaded=${ov}`);
+      const url = '/api/school/teachers/' + (params.length ? '?' + params.join('&') : '');
+      const d   = await ApiClient.get(url);
+      setTeachers(d.teachers || []);
+    } catch { setTeachers([]); }
+    setLoading(false);
+  }, []);
+
+  const loadStats = React.useCallback(async () => {
+    try { const d = await ApiClient.get('/api/school/teacher-stats/'); setStats(d); }
+    catch { setStats(null); }
+  }, []);
+
+  React.useEffect(() => { loadTeachers('', ''); loadStats(); }, [loadTeachers, loadStats]);
+
+  const handleSearch = e => {
+    const q = e.target.value;
+    setSearch(q);
+    clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => loadTeachers(q, filter === 'overloaded' ? '1' : ''), 280);
+  };
+
+  const setFilterLoad = f => {
+    setFilter(f);
+    loadTeachers(search, f === 'overloaded' ? '1' : '');
+  };
+
+  const handleDelete = async id => {
+    if (!window.confirm('Remove this teacher from the school?')) return;
+    try {
+      await ApiClient.delete(`/api/school/teachers/${id}/`);
+      loadTeachers(search, filter === 'overloaded' ? '1' : '');
+      loadStats();
+    } catch (e) { alert(e.message || 'Failed to remove.'); }
+  };
+
+  const afterSave = () => {
+    setSubView('list');
+    setEditTeacher(null);
+    loadTeachers(search, filter === 'overloaded' ? '1' : '');
+    loadStats();
+  };
+
+  const statCards = stats ? [
+    { icon: 'group',        label: 'Total Staff',  value: stats.total,       color: 'var(--ska-primary)' },
+    { icon: 'check_circle', label: 'Active',       value: stats.active,      color: 'var(--ska-secondary)' },
+    { icon: 'warning',      label: 'Overloaded',   value: stats.overloaded,  color: 'var(--ska-error)' },
+    { icon: 'schedule',     label: 'Avg Periods',  value: stats.avg_periods, color: 'var(--ska-tertiary)' },
+  ] : [];
+
+  return (
+    <div className="ska-content">
+      {/* Page header */}
+      <div className="ska-page-head">
+        <div>
+          <h1 className="ska-page-title">Teachers</h1>
+          <p className="ska-page-sub">{school ? school.name : ''} · {teachers.length} staff members</p>
+        </div>
+        <button className="ska-btn ska-btn--primary" onClick={() => setSubView('add')}>
+          <span className="ska-icon ska-icon--sm">group_add</span> Add Teacher
+        </button>
+      </div>
+
+      {/* Stats row */}
+      {stats && (
+        <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4, marginBottom: 20 }}>
+          {statCards.map(m => (
+            <div key={m.label} className="ska-card ska-card-pad" style={{ minWidth: 140, flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 14 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: m.color + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <span className="ska-icon" style={{ color: m.color }}>{m.icon}</span>
+              </div>
+              <div>
+                <div style={{ fontWeight: 900, fontSize: '1.375rem', color: m.color, lineHeight: 1 }}>{m.value}</div>
+                <div style={{ fontSize: '0.6875rem', color: 'var(--ska-text-3)', textTransform: 'uppercase', letterSpacing: '0.07em', marginTop: 2 }}>{m.label}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Workload analytics panel */}
+      {stats && teachers.length > 0 && (
+        <WorkloadAnalytics stats={stats} teachers={teachers} />
+      )}
+
+      {/* Search */}
+      <div className="ska-search ska-toolbar-search" style={{ marginBottom: 12 }}>
+        <span className="ska-icon">search</span>
+        <input className="ska-search-input" placeholder="Search by name or employee ID…" value={search} onChange={handleSearch} />
+      </div>
+
+      {/* Filter chips */}
+      <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, marginBottom: 16 }}>
+        {[{ key: 'all', label: 'All Teachers' }, { key: 'overloaded', label: 'Overloaded' }].map(c => (
+          <button key={c.key} onClick={() => setFilterLoad(c.key)} style={{
+            flexShrink: 0, padding: '6px 14px', borderRadius: 20, border: 'none',
+            fontWeight: 700, fontSize: '0.8125rem', cursor: 'pointer',
+            background: filter === c.key ? 'var(--ska-primary)' : 'var(--ska-surface-card)',
+            color:      filter === c.key ? 'var(--ska-surface)' : 'var(--ska-text-2)',
+            transition: 'background 0.2s',
+          }}>{c.label}</button>
+        ))}
+      </div>
+
+      <p style={{ margin: '0 0 12px', fontSize: '0.8125rem', color: 'var(--ska-text-3)', fontWeight: 600 }}>
+        {loading ? 'Loading…' : `${teachers.length} teacher${teachers.length !== 1 ? 's' : ''}`}
+      </p>
+
+      {/* Card grid */}
+      {!loading && teachers.length === 0 ? (
+        <div className="ska-empty" style={{ padding: '40px 0' }}>
+          <span className="ska-icon ska-icon--xl" style={{ color: 'var(--ska-text-3)', marginBottom: 12 }}>school</span>
+          <p className="ska-empty-title">No teachers found</p>
+          <p className="ska-empty-desc">
+            {filter === 'overloaded' ? 'No overloaded teachers.' : 'Add your first teacher to get started.'}
+          </p>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
+          {teachers.map(t => (
+            <TeacherCard key={t.id} t={t}
+              onOpen={tc => { setProfileTeacher(tc); setSubView('profile'); }}
+              onEdit={tc => setEditTeacher(tc)}
+              onDelete={handleDelete} />
+          ))}
+        </div>
+      )}
+
+      {/* Profile panel overlay */}
+      {subView === 'profile' && profileTeacher && (
+        <TeacherProfilePanel
+          teacher={profileTeacher}
+          onClose={() => { setSubView('list'); setProfileTeacher(null); }}
+          onEdit={tc => { setSubView('list'); setProfileTeacher(null); setEditTeacher(tc); }} />
+      )}
+
+      {/* Add wizard */}
+      {subView === 'add' && (
+        <AddTeacherWizard school={school} onSave={afterSave} onCancel={() => setSubView('list')} />
+      )}
+
+      {/* Edit modal */}
+      {editTeacher && (
+        <EditTeacherModal teacher={editTeacher} onSave={afterSave} onClose={() => setEditTeacher(null)} />
+      )}
+    </div>
+  );
+}
