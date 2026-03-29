@@ -2615,7 +2615,11 @@ def api_teachers(request):
         from django.db.models import Q, Count
         qs = Teacher.objects.filter(school=school, is_active=True)\
             .select_related('user')\
-            .prefetch_related('subject_classes__subject', 'subject_classes__classroom')
+            .prefetch_related(
+                'subject_classes__subject',
+                'subject_classes__classroom',
+                'subject_classes__classroom__students',
+            )
         q = request.GET.get('q', '').strip()
         if q:
             qs = qs.filter(
@@ -4356,6 +4360,7 @@ def api_teacher_stats(request):
         return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
 
     teachers = Teacher.objects.filter(school=school, is_active=True)\
+        .select_related('user')\
         .prefetch_related('subject_classes')
 
     total   = teachers.count()
