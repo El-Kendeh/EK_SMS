@@ -1810,14 +1810,27 @@ function _studentAvatarLetters(first, last) {
 }
 
 function AddStudentWizard({ school, classes, onSave, onCancel }) {
-  const [step,   setStep]   = useState(0);
-  const [saving, setSaving] = useState(false);
-  const [error,  setError]  = useState('');
-  const [form,   setForm]   = useState({
+  const [step,           setStep]          = useState(0);
+  const [saving,         setSaving]        = useState(false);
+  const [error,          setError]         = useState('');
+  const [form,           setForm]          = useState({
     first_name: '', last_name: '', gender: '', date_of_birth: '',
     phone_number: '', email: '', admission_number: '', classroom_id: '',
   });
+  const [profileImage,   setProfileImage]  = useState(null);   // File object
+  const [profilePreview, setProfilePreview] = useState('');    // data-URL for display
+  const studentImgRef = React.useRef(null);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const handleImageChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { setError('Photo must be under 5 MB.'); return; }
+    setProfileImage(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setProfilePreview(ev.target.result);
+    reader.readAsDataURL(file);
+  };
 
   const canNext = step === 0
     ? !!(form.first_name.trim() && form.last_name.trim())
@@ -1826,8 +1839,13 @@ function AddStudentWizard({ school, classes, onSave, onCancel }) {
 
   const handleSave = async () => {
     setSaving(true); setError('');
-    try { await ApiClient.post('/api/school/students/', form); onSave(); }
-    catch (e) { setError(e?.message || 'Failed to enroll student.'); setSaving(false); }
+    try {
+      const fd = new FormData();
+      Object.entries(form).forEach(([k, v]) => { if (v !== '') fd.append(k, v); });
+      if (profileImage) fd.append('passport_picture', profileImage);
+      await ApiClient.post('/api/school/students/', fd);
+      onSave();
+    } catch (e) { setError(e?.message || 'Failed to enroll student.'); setSaving(false); }
   };
 
   const avatarLetters = _studentAvatarLetters(form.first_name, form.last_name);
@@ -1872,9 +1890,13 @@ function AddStudentWizard({ school, classes, onSave, onCancel }) {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: '1.5rem', fontWeight: 800, color: '#fff',
               boxShadow: '0 4px 16px rgba(75,142,255,0.35)', position: 'relative',
+              overflow: 'hidden',
             }}>
-              {avatarLetters}
-              {form.gender && (
+              {profilePreview
+                ? <img src={profilePreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                : avatarLetters
+              }
+              {form.gender && !profilePreview && (
                 <span style={{
                   position: 'absolute', bottom: 0, right: 0,
                   width: 22, height: 22, borderRadius: '50%',
@@ -1963,6 +1985,50 @@ function AddStudentWizard({ school, classes, onSave, onCancel }) {
 
             {step === 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                {/* Photo upload */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                  <input type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} ref={studentImgRef} onChange={handleImageChange} />
+                  <div
+                    onClick={() => studentImgRef.current?.click()}
+                    style={{
+                      width: 72, height: 72, borderRadius: '50%', flexShrink: 0,
+                      background: profilePreview ? 'transparent' : 'var(--ska-surface-high)',
+                      border: `2px dashed ${profilePreview ? 'var(--ska-primary)' : 'var(--ska-surface-highest)'}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer', overflow: 'hidden', position: 'relative',
+                      transition: 'border-color 0.2s',
+                    }}
+                  >
+                    {profilePreview
+                      ? <img src={profilePreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : <span className="material-symbols-rounded" style={{ fontSize: 28, color: 'var(--ska-text-3)' }}>add_a_photo</span>
+                    }
+                    {profilePreview && (
+                      <div style={{
+                        position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        opacity: 0, transition: 'opacity 0.2s',
+                      }} className="student-photo-overlay">
+                        <span className="material-symbols-rounded" style={{ fontSize: 22, color: '#fff' }}>photo_camera</span>
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--ska-text)' }}>
+                      {profilePreview ? 'Photo uploaded' : 'Upload photo'}
+                    </span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--ska-text-3)', lineHeight: 1.4 }}>
+                      JPG, PNG or WebP · max 5 MB
+                    </span>
+                    {profilePreview && (
+                      <button type="button" onClick={() => { setProfileImage(null); setProfilePreview(''); }} style={{
+                        background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                        fontSize: '0.75rem', color: 'var(--ska-error)', fontWeight: 600, textAlign: 'left',
+                      }}>Remove</button>
+                    )}
+                  </div>
+                </div>
+                <style>{`.student-photo-overlay { opacity: 0 !important; } .student-photo-overlay:hover { opacity: 1 !important; }`}</style>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                   <label className="ska-form-group" style={{ margin: 0 }}>
                     <span>First Name <span style={{ color: 'var(--ska-error)' }}>*</span></span>
@@ -2070,7 +2136,13 @@ function AddStudentWizard({ school, classes, onSave, onCancel }) {
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontWeight: 800, fontSize: '1.25rem', color: '#fff',
                       boxShadow: '0 4px 12px rgba(75,142,255,0.3)',
-                    }}>{avatarLetters}</div>
+                      overflow: 'hidden', flexShrink: 0,
+                    }}>
+                      {profilePreview
+                        ? <img src={profilePreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : avatarLetters
+                      }
+                    </div>
                     <div>
                       <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--ska-text)', lineHeight: 1.2 }}>{displayName}</div>
                       {currentClass && <div style={{ fontSize: '0.75rem', color: 'var(--ska-primary)', fontWeight: 600, marginTop: 3 }}>Class {currentClass}</div>}
@@ -2681,14 +2753,27 @@ function _teacherAvatarLetters(first, last) {
 }
 
 function AddTeacherWizard({ school, onSave, onCancel }) {
-  const [step,     setStep]     = React.useState(0);
-  const [form,     setForm]     = React.useState({
+  const [step,            setStep]           = React.useState(0);
+  const [form,            setForm]           = React.useState({
     first_name: '', last_name: '', email: '', phone_number: '',
     password: '', employee_id: '', qualification: '',
   });
-  const [showPass, setShowPass] = React.useState(false);
-  const [saving,   setSaving]   = React.useState(false);
-  const [error,    setError]    = React.useState('');
+  const [showPass,        setShowPass]       = React.useState(false);
+  const [saving,          setSaving]         = React.useState(false);
+  const [error,           setError]          = React.useState('');
+  const [profileImage,    setProfileImage]   = React.useState(null);
+  const [profilePreview,  setProfilePreview] = React.useState('');
+  const teacherImgRef = React.useRef(null);
+
+  const handleTeacherImageChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { setError('Photo must be under 5 MB.'); return; }
+    setProfileImage(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setProfilePreview(ev.target.result);
+    reader.readAsDataURL(file);
+  };
 
   const pw = _pwStrength(form.password);
   const avatarLetters = _teacherAvatarLetters(form.first_name, form.last_name);
@@ -2703,7 +2788,10 @@ function AddTeacherWizard({ school, onSave, onCancel }) {
   const handleSubmit = async () => {
     setSaving(true); setError('');
     try {
-      await ApiClient.post('/api/school/teachers/', form);
+      const fd = new FormData();
+      Object.entries(form).forEach(([k, v]) => { if (v !== '') fd.append(k, v); });
+      if (profileImage) fd.append('profile_picture', profileImage);
+      await ApiClient.post('/api/school/teachers/', fd);
       onSave();
     } catch (e) { setError(e.message || 'Failed to add teacher.'); setSaving(false); }
   };
@@ -2781,9 +2869,12 @@ function AddTeacherWizard({ school, onSave, onCancel }) {
               fontFamily: 'Manrope, sans-serif', letterSpacing: '-0.03em',
               border: '2px solid rgba(173,198,255,0.25)',
               boxShadow: '0 8px 24px rgba(77,142,255,0.25)',
-              marginBottom: 12, flexShrink: 0,
+              marginBottom: 12, flexShrink: 0, overflow: 'hidden',
             }}>
-              {avatarLetters}
+              {profilePreview
+                ? <img src={profilePreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : avatarLetters
+              }
             </div>
             <div style={{ textAlign: 'center' }}>
               <p style={{ margin: 0, fontFamily: 'Manrope, sans-serif', fontSize: '0.9375rem', fontWeight: 800, color: 'var(--ska-text)', lineHeight: 1.2 }}>
@@ -2903,9 +2994,40 @@ function AddTeacherWizard({ school, onSave, onCancel }) {
             {/* STEP 0 — Personal Info */}
             {step === 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <p style={{ margin: '0 0 16px', fontSize: '0.8125rem', color: 'var(--ska-text-3)' }}>
+                <p style={{ margin: '0 0 12px', fontSize: '0.8125rem', color: 'var(--ska-text-3)' }}>
                   Enter the teacher's personal and contact details.
                 </p>
+                {/* Photo upload */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 10 }}>
+                  <input type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} ref={teacherImgRef} onChange={handleTeacherImageChange} />
+                  <div
+                    onClick={() => teacherImgRef.current?.click()}
+                    style={{
+                      width: 68, height: 68, borderRadius: 14, flexShrink: 0,
+                      background: profilePreview ? 'transparent' : 'var(--ska-surface-high)',
+                      border: `2px dashed ${profilePreview ? 'var(--ska-primary)' : 'var(--ska-border)'}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer', overflow: 'hidden', transition: 'border-color 0.2s',
+                    }}
+                  >
+                    {profilePreview
+                      ? <img src={profilePreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : <span className="ska-icon" style={{ fontSize: 28, color: 'var(--ska-text-3)' }}>add_a_photo</span>
+                    }
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--ska-text)' }}>
+                      {profilePreview ? 'Photo uploaded' : 'Upload profile photo'}
+                    </span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--ska-text-3)' }}>JPG, PNG or WebP · max 5 MB</span>
+                    {profilePreview && (
+                      <button type="button" onClick={() => { setProfileImage(null); setProfilePreview(''); }} style={{
+                        background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                        fontSize: '0.75rem', color: 'var(--ska-error)', fontWeight: 600, textAlign: 'left',
+                      }}>Remove</button>
+                    )}
+                  </div>
+                </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <Fld fkey="first_name" label="First Name" required placeholder="e.g. Abubakarr" />
                   <Fld fkey="last_name"  label="Last Name"  required placeholder="e.g. Kamara" />
@@ -3016,8 +3138,12 @@ function AddTeacherWizard({ school, onSave, onCancel }) {
                       fontSize: '1.25rem', fontWeight: 900, color: '#fff',
                       fontFamily: 'Manrope, sans-serif', letterSpacing: '-0.02em',
                       border: '1.5px solid rgba(173,198,255,0.25)',
+                      overflow: 'hidden',
                     }}>
-                      {avatarLetters}
+                      {profilePreview
+                        ? <img src={profilePreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : avatarLetters
+                      }
                     </div>
                     <div>
                       <p style={{ margin: 0, fontFamily: 'Manrope, sans-serif', fontSize: '1rem', fontWeight: 800, color: 'var(--ska-text)', lineHeight: 1.2 }}>

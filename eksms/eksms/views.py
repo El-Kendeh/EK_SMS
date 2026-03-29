@@ -2327,7 +2327,8 @@ def api_students(request):
         classroom_id     = body.get('classroom_id')
         date_of_birth    = body.get('date_of_birth') or None
         phone_number     = body.get('phone_number', '')
-        profile_photo    = request.FILES.get('profile_photo')
+        gender           = body.get('gender', '')
+        passport_picture = request.FILES.get('passport_picture')
 
         father_name      = body.get('father_name', '').strip()
         father_email     = body.get('father_email', '').strip()
@@ -2375,7 +2376,8 @@ def api_students(request):
             school=school, user=student_user, admission_number=admission_number,
             classroom=classroom, academic_year=active_year,
             date_of_birth=date_of_birth, phone_number=phone_number,
-            passport_picture=profile_photo if profile_photo else None,
+            gender=gender,
+            passport_picture=passport_picture if passport_picture else None,
         )
 
         def _create_parent(name, email, phone, occupation, username, password, relationship, is_primary):
@@ -2654,17 +2656,14 @@ def api_teachers(request):
         return JsonResponse({'success': True, 'teachers': data, 'count': len(data)})
 
     if request.method == 'POST':
-        try:
-            body = json.loads(request.body)
-        except json.JSONDecodeError:
-            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
-        first_name    = body.get('first_name', '').strip()
-        last_name     = body.get('last_name', '').strip()
-        email         = body.get('email', '').strip()
-        employee_id   = body.get('employee_id', '').strip()
-        phone_number  = body.get('phone_number', '')
-        qualification = body.get('qualification', '')
-        password      = body.get('password', '').strip()
+        first_name      = request.POST.get('first_name', '').strip()
+        last_name       = request.POST.get('last_name', '').strip()
+        email           = request.POST.get('email', '').strip()
+        employee_id     = request.POST.get('employee_id', '').strip()
+        phone_number    = request.POST.get('phone_number', '')
+        qualification   = request.POST.get('qualification', '')
+        password        = request.POST.get('password', '').strip()
+        profile_picture = request.FILES.get('profile_picture')
         if not first_name or not last_name or not employee_id:
             return JsonResponse({'success': False, 'message': 'first_name, last_name, and employee_id are required.'}, status=400)
         if not password:
@@ -2682,6 +2681,7 @@ def api_teachers(request):
         teacher = Teacher.objects.create(
             school=school, user=user, employee_id=employee_id,
             phone_number=phone_number, qualification=qualification,
+            **(({'profile_picture': profile_picture}) if profile_picture else {}),
         )
         return JsonResponse({
             'success': True, 'message': 'Teacher added.',
