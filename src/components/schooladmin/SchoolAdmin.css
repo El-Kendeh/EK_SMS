@@ -100,13 +100,10 @@
   top: 0;
   left: 0;
   z-index: 200;
-  overflow-y: auto;
-  overflow-x: hidden;
-  scrollbar-width: none;
+  overflow: hidden;
   flex-shrink: 0;
   transition: transform 0.25s ease;
 }
-.ska-sidebar::-webkit-scrollbar { display: none; }
 
 .ska-sidebar-head {
   padding: 28px 24px 20px;
@@ -152,7 +149,22 @@
 }
 
 /* ---- Nav ---- */
-.ska-nav { flex: 1; padding: 12px 12px; display: flex; flex-direction: column; gap: 2px; }
+.ska-nav {
+  flex: 1;
+  min-height: 0;
+  padding: 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.14) transparent;
+}
+.ska-nav::-webkit-scrollbar { width: 4px; }
+.ska-nav::-webkit-scrollbar-track { background: transparent; }
+.ska-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.14); border-radius: 4px; }
+.ska-nav::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.26); }
 .ska-nav-section { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--ska-border); display: flex; flex-direction: column; gap: 2px; }
 .ska-nav-section-label {
   font-size: 0.6rem;
@@ -212,12 +224,13 @@
 
 /* ---- Sidebar footer ---- */
 .ska-sidebar-footer {
-  padding: 16px;
+  padding: 12px 16px;
   border-top: 1px solid var(--ska-border);
   background: var(--ska-surface-lowest);
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  flex-shrink: 0;
 }
 
 .ska-sidebar-footer-avatar {
@@ -250,6 +263,31 @@
   text-transform: uppercase;
   letter-spacing: 0.07em;
 }
+
+/* Logout button in sidebar footer */
+.ska-logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--ska-error-dim);
+  border: 1px solid rgba(255,180,171,0.22);
+  border-radius: var(--ska-radius-sm);
+  color: var(--ska-error);
+  font-family: var(--ska-font-headline);
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s;
+}
+.ska-logout-btn:hover {
+  background: rgba(255,180,171,0.22);
+  border-color: rgba(255,180,171,0.35);
+}
+.ska-logout-btn .ska-icon { font-size: 15px; }
 
 /* ---- Topbar ---- */
 .ska-topbar {

@@ -13,7 +13,10 @@ from eksms_core.models import (
     School, SchoolAdmin, GradeChangeAlert, Grade, Student, Teacher,
     Parent, ParentStudent, SchoolApplicationEvent, ForensicEvent, AlertBroadcast, AdminSetting,
     SecurityLogEntry, AcademicYear, ClassRoom, SystemWideAlert,
-    Subject, Term,
+    Subject, Term, Attendance, FeeRecord, Expense, Message,
+    Parent, ParentStudent, TeacherSubjectClass,
+    Exam, ExamResult, Notification, NotificationRead, TimetableSlot,
+    SchoolStaffAccount,
 )
 import datetime
 import re
@@ -262,15 +265,29 @@ def api_login(request):
         elif user.is_staff:
             role = 'admin'
         
-        # If user has no recognized role and isn't staff/superuser, block (optional, but safer)
+        # If user has no recognized role and isn't staff/superuser, block
         if role == 'user' and not user.is_staff and not user.is_superuser:
             return JsonResponse({
                 'success': False,
                 'message': 'Your account does not have access to this system.'
             }, status=403)
-        
-        # Generate a simple token (in production, use Django REST Framework Token or JWT)
-        # Using a more standard-looking token format
+
+        # School admin: explicitly verify school approval status
+        if role == 'school_admin':
+            try:
+                school = user.school_admin_profile.school
+                if not school.is_approved or not school.is_active:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'Your school application has not been approved yet. You will receive access once a superadmin reviews your application.'
+                    }, status=403)
+            except Exception:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'School profile not found. Please contact support.'
+                }, status=403)
+
+        # Generate token
         token = f"token_{user.id}_{user.username.replace(' ', '_')}"
         
         # Determine redirect URL based on role
@@ -749,11 +766,12 @@ def api_send_otp(request):
         ).first()
         
         if existing_otp:
+            # OTP already sent and still valid — treat as success so the input box shows
             return JsonResponse({
-                'success': False, 
-                'message': 'An OTP has already been sent. Please check your email or wait before requesting another.',
-                'retry_after': 60
-            }, status=429)
+                'success': True,
+                'message': 'A verification code was already sent. Please check your email.',
+                'already_sent': True,
+            }, status=200)
         
         # 3. Generate 6-digit OTP
         otp_code = str(secrets.randbelow(900000) + 100000)
@@ -1389,7 +1407,7 @@ def api_get_grade_alerts(request):
                 }.get(a.status, 'Pending'),
                 'triggered_at': a.triggered_at.isoformat(),
                 # Frontend RequestCard fields
-                'student': student.full_name if student else 'Unknown Student',
+                'student': student.user.get_full_name() if student else 'Unknown Student',
                 'school': school.name if school else 'Unknown School',
                 'term': str(grade.term) if grade and grade.term else '—',
                 'subject': str(grade.subject) if grade and grade.subject else '—',
@@ -2189,6 +2207,23 @@ def api_school_profile_full(request):
     subject_count = Subject.objects.filter(school=school, is_active=True).count()
     active_year   = AcademicYear.objects.filter(school=school, is_active=True).first()
 
+    # Live attendance rate — today's records for this school
+    today = timezone.now().date()
+    today_att = Attendance.objects.filter(school=school, date=today)
+    total_att = today_att.count()
+    present_att = today_att.filter(status__in=['present', 'late']).count()
+    attendance_rate = round(present_att / total_att * 100) if total_att else 0
+
+    # Average grade performance across all grades in the school
+    from django.db.models import Avg
+    avg_perf_qs = Grade.objects.filter(student__school=school).aggregate(avg=Avg('total_score'))
+    avg_performance = round(float(avg_perf_qs['avg'] or 0), 1)
+
+    # Finance stats
+    from django.db.models import Sum
+    fees_collected  = float(FeeRecord.objects.filter(school=school, status__in=['paid','partial']).aggregate(s=Sum('amount_paid'))['s'] or 0)
+    fees_outstanding = float(FeeRecord.objects.filter(school=school, status__in=['pending','partial','overdue']).aggregate(s=Sum('amount') - Sum('amount_paid'))['s'] or 0)
+
     badge_url = ''
     if school.badge:
         try:
@@ -2212,11 +2247,11 @@ def api_school_profile_full(request):
         'total_teachers': teacher_count,
         'active_classes': class_count,
         'subject_count': subject_count,
-        'attendance_rate': 0,
-        'avg_performance': 0,
+        'attendance_rate': attendance_rate,
+        'avg_performance': avg_performance,
         'pending_actions': 0,
-        'fees_collected': 0,
-        'fees_outstanding': 0,
+        'fees_collected': fees_collected,
+        'fees_outstanding': max(fees_outstanding, 0),
         'academic_year': active_year.name if active_year else None,
         'brand_colors': school.brand_colors,
     })
@@ -2793,3 +2828,1240 @@ def api_academic_years(request):
         return JsonResponse({'success': True, 'message': 'Academic year created.', 'id': yr.id}, status=201)
 
     return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+# ─────────────────────────────────────────────────────────────────
+# TERMS
+# ─────────────────────────────────────────────────────────────────
+
+@require_http_methods(["GET"])
+@csrf_exempt
+def api_terms(request):
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+    active_year = AcademicYear.objects.filter(school=school, is_active=True).first()
+    if not active_year:
+        return JsonResponse({'success': True, 'terms': []})
+    terms = Term.objects.filter(academic_year=active_year).order_by('name')
+    data = [{'id': t.id, 'name': t.get_name_display(), 'is_active': t.is_active} for t in terms]
+    return JsonResponse({'success': True, 'terms': data})
+
+
+# ─────────────────────────────────────────────────────────────────
+# GRADES CRUD  (bulk upsert per class + subject + term)
+# ─────────────────────────────────────────────────────────────────
+
+@csrf_exempt
+def api_grades(request):
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+
+    if request.method == 'GET':
+        class_id   = request.GET.get('class_id')
+        subject_id = request.GET.get('subject_id')
+        term_id    = request.GET.get('term_id')
+        if not class_id or not subject_id or not term_id:
+            return JsonResponse({'success': False, 'message': 'class_id, subject_id, term_id required.'}, status=400)
+        qs = Grade.objects.filter(
+            student__school=school, student__classroom_id=class_id,
+            subject_id=subject_id, term_id=term_id,
+        ).select_related('student__user')
+        data = [{
+            'student_id': g.student_id,
+            'ca':         float(g.continuous_assessment),
+            'midterm':    float(g.mid_term_exam),
+            'final':      float(g.final_exam),
+            'total':      float(g.total_score),
+            'letter':     g.grade_letter,
+            'is_locked':  g.is_locked,
+        } for g in qs]
+        return JsonResponse({'success': True, 'grades': data})
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        subject_id = body.get('subject_id')
+        term_id    = body.get('term_id')
+        entries    = body.get('grades', [])   # [{student_id, ca, midterm, final}]
+        if not subject_id or not term_id:
+            return JsonResponse({'success': False, 'message': 'subject_id and term_id required.'}, status=400)
+        try:
+            subject = Subject.objects.get(id=subject_id, school=school)
+            term    = Term.objects.get(id=term_id)
+        except (Subject.DoesNotExist, Term.DoesNotExist):
+            return JsonResponse({'success': False, 'message': 'Subject or term not found.'}, status=404)
+        saved = 0
+        for entry in entries:
+            sid = entry.get('student_id')
+            try:
+                student = Student.objects.get(id=sid, school=school)
+            except Student.DoesNotExist:
+                continue
+            grade, _ = Grade.objects.get_or_create(
+                student=student, subject=subject, term=term,
+                defaults={'teacher': None},
+            )
+            if grade.is_locked:
+                continue
+            grade.continuous_assessment = min(float(entry.get('ca') or 0), 20)
+            grade.mid_term_exam         = min(float(entry.get('midterm') or 0), 30)
+            grade.final_exam            = min(float(entry.get('final') or 0), 50)
+            grade.save()
+            saved += 1
+        return JsonResponse({'success': True, 'message': f'{saved} grade(s) saved.'})
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+# ─────────────────────────────────────────────────────────────────
+# ATTENDANCE
+# ─────────────────────────────────────────────────────────────────
+
+@csrf_exempt
+def api_attendance(request):
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+
+    if request.method == 'GET':
+        class_id = request.GET.get('class_id')
+        date_str = request.GET.get('date')
+        if not class_id or not date_str:
+            return JsonResponse({'success': False, 'message': 'class_id and date required.'}, status=400)
+        qs = Attendance.objects.filter(school=school, classroom_id=class_id, date=date_str)
+        data = {str(a.student_id): a.status for a in qs}
+        return JsonResponse({'success': True, 'attendance': data})
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        class_id = body.get('class_id')
+        date_str = body.get('date')
+        records  = body.get('records', {})  # {student_id: status}
+        if not class_id or not date_str:
+            return JsonResponse({'success': False, 'message': 'class_id and date required.'}, status=400)
+        try:
+            classroom = ClassRoom.objects.get(id=class_id, school=school)
+        except ClassRoom.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Class not found.'}, status=404)
+        saved = 0
+        for sid, status in records.items():
+            if status not in ('present', 'absent', 'late', 'excused'):
+                continue
+            try:
+                student = Student.objects.get(id=int(sid), school=school)
+            except (Student.DoesNotExist, ValueError):
+                continue
+            Attendance.objects.update_or_create(
+                student=student, date=date_str,
+                defaults={'school': school, 'classroom': classroom, 'status': status, 'recorded_by': actor},
+            )
+            saved += 1
+        return JsonResponse({'success': True, 'message': f'{saved} record(s) saved.'})
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+@require_http_methods(["GET"])
+@csrf_exempt
+def api_attendance_stats(request):
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+
+    today = datetime.date.today()
+    total_students = Student.objects.filter(school=school, is_active=True).count()
+    today_records  = Attendance.objects.filter(school=school, date=today)
+    present_count  = today_records.filter(status='present').count()
+    absent_count   = today_records.filter(status='absent').count()
+    late_count     = today_records.filter(status='late').count()
+
+    classes = ClassRoom.objects.filter(school=school)
+    class_stats = []
+    for cls in classes:
+        cls_students = Student.objects.filter(school=school, classroom=cls, is_active=True).count()
+        cls_present  = today_records.filter(classroom=cls, status='present').count()
+        class_stats.append({
+            'class_id':   cls.id,
+            'class_name': cls.name,
+            'total':      cls_students,
+            'present':    cls_present,
+            'absent':     max(cls_students - cls_present, 0),
+        })
+
+    rate = round((present_count / total_students * 100), 1) if total_students else 0
+    return JsonResponse({
+        'success': True,
+        'date':    str(today),
+        'total':   total_students,
+        'present': present_count,
+        'absent':  absent_count,
+        'late':    late_count,
+        'rate':    rate,
+        'classes': class_stats,
+    })
+
+
+# ─────────────────────────────────────────────────────────────────
+# FINANCE
+# ─────────────────────────────────────────────────────────────────
+
+@csrf_exempt
+def api_finance_stats(request):
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+
+    from django.db.models import Sum
+    fee_qs = FeeRecord.objects.filter(school=school)
+    total_fees   = fee_qs.aggregate(t=Sum('amount'))['t'] or 0
+    collected    = fee_qs.aggregate(c=Sum('amount_paid'))['c'] or 0
+    outstanding  = total_fees - collected
+    collection_rate = round((float(collected) / float(total_fees) * 100), 1) if total_fees else 0
+
+    expense_qs     = Expense.objects.filter(school=school)
+    total_expenses = expense_qs.aggregate(t=Sum('amount'))['t'] or 0
+
+    classes = ClassRoom.objects.filter(school=school)
+    class_fees = []
+    for cls in classes:
+        cls_student_ids = Student.objects.filter(school=school, classroom=cls).values_list('id', flat=True)
+        cls_fees_qs = fee_qs.filter(student_id__in=cls_student_ids)
+        cls_total   = cls_fees_qs.aggregate(t=Sum('amount'))['t'] or 0
+        cls_paid    = cls_fees_qs.aggregate(c=Sum('amount_paid'))['c'] or 0
+        class_fees.append({
+            'class_name':  cls.name,
+            'total':       float(cls_total),
+            'collected':   float(cls_paid),
+            'outstanding': float(cls_total - cls_paid),
+        })
+
+    expense_dist = list(
+        expense_qs.values('category').annotate(total=Sum('amount')).order_by('-total')
+    )
+
+    return JsonResponse({
+        'success':         True,
+        'collected':       float(collected),
+        'outstanding':     float(outstanding),
+        'total_expenses':  float(total_expenses),
+        'collection_rate': collection_rate,
+        'class_fees':      class_fees,
+        'expense_distribution': [
+            {'category': e['category'], 'amount': float(e['total'])}
+            for e in expense_dist
+        ],
+    })
+
+
+@csrf_exempt
+def api_finance_fees(request):
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+
+    if request.method == 'GET':
+        status_filter = request.GET.get('status')
+        qs = FeeRecord.objects.filter(school=school).select_related('student', 'term')
+        if status_filter:
+            qs = qs.filter(status=status_filter)
+        data = [{
+            'id':           f.id,
+            'student_id':   f.student_id,
+            'student_name': f.student.user.get_full_name() if f.student else '',
+            'term':         f.term.name if f.term else '',
+            'description':  f.description,
+            'amount':       float(f.amount),
+            'amount_paid':  float(f.amount_paid),
+            'balance':      float(f.balance),
+            'status':       f.status,
+            'due_date':     str(f.due_date) if f.due_date else None,
+        } for f in qs.order_by('-id')[:200]]
+        return JsonResponse({'success': True, 'fees': data})
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        try:
+            student = Student.objects.get(id=body.get('student_id'), school=school)
+        except Student.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Student not found.'}, status=404)
+        term = None
+        if body.get('term_id'):
+            try:
+                term = Term.objects.get(id=body['term_id'])
+            except Term.DoesNotExist:
+                pass
+        fee = FeeRecord.objects.create(
+            school=school,
+            student=student,
+            term=term,
+            description=body.get('description', 'School Fee'),
+            amount=float(body.get('amount', 0)),
+            amount_paid=float(body.get('amount_paid', 0)),
+            due_date=body.get('due_date') or None,
+        )
+        return JsonResponse({'success': True, 'id': fee.id, 'message': 'Fee record created.'})
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+@csrf_exempt
+def api_finance_fee_detail(request, fee_id):
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+
+    try:
+        fee = FeeRecord.objects.get(id=fee_id, school=school)
+    except FeeRecord.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Fee record not found.'}, status=404)
+
+    if request.method == 'PUT':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        if 'amount_paid' in body:
+            fee.amount_paid = min(float(body['amount_paid']), float(fee.amount))
+            if fee.amount_paid >= float(fee.amount):
+                fee.status    = 'paid'
+                fee.paid_date = datetime.date.today()
+            elif fee.amount_paid > 0:
+                fee.status = 'partial'
+            else:
+                fee.status = 'unpaid'
+            fee.save()
+        return JsonResponse({
+            'success': True,
+            'message': 'Fee updated.',
+            'balance': float(fee.balance),
+            'status':  fee.status,
+        })
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+@csrf_exempt
+def api_finance_expenses(request):
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+
+    if request.method == 'GET':
+        qs = Expense.objects.filter(school=school).order_by('-date')[:200]
+        data = [{
+            'id':       e.id,
+            'title':    e.title,
+            'amount':   float(e.amount),
+            'category': e.category,
+            'date':     str(e.date),
+        } for e in qs]
+        return JsonResponse({'success': True, 'expenses': data})
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        exp = Expense.objects.create(
+            school=school,
+            title=body.get('title', ''),
+            amount=float(body.get('amount', 0)),
+            category=body.get('category', 'other'),
+            date=body.get('date') or datetime.date.today(),
+        )
+        return JsonResponse({'success': True, 'id': exp.id, 'message': 'Expense recorded.'})
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+# ─────────────────────────────────────────────────────────────────
+# MESSAGES
+# ─────────────────────────────────────────────────────────────────
+
+@csrf_exempt
+def api_school_messages(request):
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+
+    if request.method == 'GET':
+        role_filter = request.GET.get('role')
+        qs = Message.objects.filter(school=school).select_related('sender')
+        if role_filter:
+            qs = qs.filter(recipient_role=role_filter)
+        data = [{
+            'id':             m.id,
+            'sender_name':    (m.sender.get_full_name() or m.sender.username) if m.sender else 'System',
+            'recipient_role': m.recipient_role,
+            'subject':        m.subject,
+            'body':           m.body,
+            'created_at':     m.created_at.isoformat(),
+            'is_broadcast':   m.is_broadcast,
+        } for m in qs.order_by('-id')[:100]]
+        return JsonResponse({'success': True, 'messages': data})
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        msg = Message.objects.create(
+            school=school,
+            sender=actor,
+            recipient_role=body.get('recipient_role', 'all'),
+            subject=body.get('subject', ''),
+            body=body.get('body', ''),
+            is_broadcast=body.get('is_broadcast', True),
+        )
+        return JsonResponse({'success': True, 'id': msg.id, 'message': 'Message sent.'})
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+# =================================================================
+# ANALYTICS
+# =================================================================
+
+@csrf_exempt
+def api_analytics(request):
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+
+    from django.db.models import Avg
+    from datetime import timedelta
+
+    total_students = Student.objects.filter(school=school, is_active=True).count()
+    total_teachers = Teacher.objects.filter(school=school, is_active=True).count()
+    total_classes  = ClassRoom.objects.filter(school=school, is_active=True).count()
+    avg_grade_val  = Grade.objects.filter(student__school=school).aggregate(a=Avg('total_score'))['a']
+    avg_grade      = round(float(avg_grade_val), 1) if avg_grade_val else 0
+
+    today         = datetime.date.today()
+    today_present = Attendance.objects.filter(school=school, date=today, status='present').count()
+    att_rate      = round(today_present / total_students * 100, 1) if total_students else 0
+
+    att_trend = []
+    for i in range(7):
+        d    = today - timedelta(days=6 - i)
+        pres = Attendance.objects.filter(school=school, date=d, status='present').count()
+        rate = round(pres / total_students * 100, 1) if total_students else 0
+        att_trend.append({'date': str(d), 'present': pres, 'rate': rate})
+
+    grade_by_class = []
+    for cls in ClassRoom.objects.filter(school=school, is_active=True):
+        avg = Grade.objects.filter(student__school=school, student__classroom=cls).aggregate(a=Avg('total_score'))['a']
+        grade_by_class.append({'class_name': cls.name, 'avg': round(float(avg), 1) if avg else 0})
+
+    at_risk = []
+    for stu in Student.objects.filter(school=school, is_active=True).select_related('user', 'classroom')[:100]:
+        avg_val    = Grade.objects.filter(student=stu).aggregate(a=Avg('total_score'))['a']
+        avg_val    = round(float(avg_val), 1) if avg_val else None
+        att_total  = Attendance.objects.filter(student=stu).count()
+        att_pres   = Attendance.objects.filter(student=stu, status='present').count()
+        att_r      = round(att_pres / att_total * 100, 1) if att_total else 100
+        reasons    = []
+        if avg_val is not None and avg_val < 50:
+            reasons.append('Low grade avg (%s)' % avg_val)
+        if att_total > 0 and att_r < 75:
+            reasons.append('Low attendance (%s%%)' % att_r)
+        if reasons:
+            at_risk.append({
+                'id':        stu.id,
+                'name':      stu.user.get_full_name(),
+                'class':     stu.classroom.name if stu.classroom else '-',
+                'avg_grade': avg_val,
+                'att_rate':  att_r,
+                'reasons':   reasons,
+            })
+
+    return JsonResponse({
+        'success': True,
+        'overview': {
+            'total_students': total_students,
+            'total_teachers': total_teachers,
+            'total_classes':  total_classes,
+            'avg_grade':      avg_grade,
+            'att_rate':       att_rate,
+        },
+        'att_trend':      att_trend,
+        'grade_by_class': grade_by_class,
+        'at_risk':        at_risk[:20],
+    })
+
+
+# =================================================================
+# EXAMS
+# =================================================================
+
+@csrf_exempt
+def api_exams(request):
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+
+    if request.method == 'GET':
+        qs = Exam.objects.filter(school=school, is_active=True).select_related('classroom', 'subject', 'term')
+        data = [{
+            'id':           e.id,
+            'name':         e.name,
+            'exam_type':    e.exam_type,
+            'classroom':    e.classroom.name,
+            'classroom_id': e.classroom.id,
+            'subject':      e.subject.name,
+            'subject_id':   e.subject.id,
+            'term':         e.term.name if e.term else None,
+            'term_id':      e.term.id   if e.term else None,
+            'total_marks':  float(e.total_marks),
+            'date':         str(e.date),
+            'result_count': e.results.count(),
+        } for e in qs.order_by('-date')[:200]]
+        return JsonResponse({'success': True, 'exams': data})
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        try:
+            classroom = ClassRoom.objects.get(id=body.get('classroom_id'), school=school)
+            subject   = Subject.objects.get(id=body.get('subject_id'), school=school)
+        except (ClassRoom.DoesNotExist, Subject.DoesNotExist):
+            return JsonResponse({'success': False, 'message': 'Class or subject not found.'}, status=404)
+        term = None
+        if body.get('term_id'):
+            try:
+                term = Term.objects.get(id=body['term_id'])
+            except Term.DoesNotExist:
+                pass
+        exam = Exam.objects.create(
+            school=school, classroom=classroom, subject=subject, term=term,
+            name=body.get('name', 'Exam'),
+            exam_type=body.get('exam_type', 'final'),
+            total_marks=float(body.get('total_marks', 100)),
+            date=body.get('date') or datetime.date.today(),
+            created_by=actor,
+        )
+        return JsonResponse({'success': True, 'id': exam.id, 'message': 'Exam created.'}, status=201)
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+@csrf_exempt
+def api_exam_detail(request, exam_id):
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+    try:
+        exam = Exam.objects.get(id=exam_id, school=school)
+    except Exam.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Exam not found.'}, status=404)
+
+    if request.method == 'DELETE':
+        exam.is_active = False
+        exam.save()
+        return JsonResponse({'success': True, 'message': 'Exam deleted.'})
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+@csrf_exempt
+def api_exam_results(request, exam_id):
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+    try:
+        exam = Exam.objects.get(id=exam_id, school=school)
+    except Exam.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Exam not found.'}, status=404)
+
+    if request.method == 'GET':
+        students    = Student.objects.filter(school=school, classroom=exam.classroom, is_active=True)
+        results_map = {r.student_id: r for r in ExamResult.objects.filter(exam=exam)}
+        data = [{
+            'student_id':   s.id,
+            'student_name': s.user.get_full_name(),
+            'marks':        float(results_map[s.id].marks_obtained) if s.id in results_map else None,
+            'grade_letter': results_map[s.id].grade_letter if s.id in results_map else None,
+            'remarks':      results_map[s.id].remarks      if s.id in results_map else '',
+        } for s in students]
+        return JsonResponse({'success': True, 'exam': {
+            'id': exam.id, 'name': exam.name,
+            'total_marks': float(exam.total_marks),
+            'subject':     exam.subject.name,
+            'classroom':   exam.classroom.name,
+        }, 'results': data})
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        entries = body.get('results', [])
+        saved = 0
+        for entry in entries:
+            sid   = entry.get('student_id')
+            marks = entry.get('marks')
+            if marks is None:
+                continue
+            try:
+                student = Student.objects.get(id=sid, school=school)
+            except Student.DoesNotExist:
+                continue
+            ExamResult.objects.update_or_create(
+                exam=exam, student=student,
+                defaults={
+                    'marks_obtained': float(marks),
+                    'remarks':        entry.get('remarks', ''),
+                    'graded_by':      actor,
+                },
+            )
+            saved += 1
+        return JsonResponse({'success': True, 'message': '%d result(s) saved.' % saved})
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+# =================================================================
+# NOTIFICATIONS
+# =================================================================
+
+@csrf_exempt
+def api_notifications(request):
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+
+    if request.method == 'GET':
+        qs = Notification.objects.filter(school=school, is_active=True).order_by('-created_at')[:100]
+        read_ids = set(NotificationRead.objects.filter(
+            notification__in=qs, user=actor
+        ).values_list('notification_id', flat=True))
+        data = [{
+            'id':             n.id,
+            'title':          n.title,
+            'body':           n.body,
+            'notif_type':     n.notif_type,
+            'recipient_role': n.recipient_role,
+            'sender_name':    (n.sender.get_full_name() or n.sender.username) if n.sender else 'System',
+            'created_at':     n.created_at.isoformat(),
+            'is_read':        n.id in read_ids,
+        } for n in qs]
+        return JsonResponse({'success': True, 'notifications': data})
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        notif = Notification.objects.create(
+            school=school,
+            title=body.get('title', ''),
+            body=body.get('body', ''),
+            notif_type=body.get('notif_type', 'info'),
+            recipient_role=body.get('recipient_role', 'all'),
+            sender=actor,
+        )
+        return JsonResponse({'success': True, 'id': notif.id, 'message': 'Notification sent.'}, status=201)
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+@csrf_exempt
+def api_notification_read(request, notif_id):
+    actor = _get_authed_user(request)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+    try:
+        notif = Notification.objects.get(id=notif_id)
+    except Notification.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Not found.'}, status=404)
+    NotificationRead.objects.get_or_create(notification=notif, user=actor)
+    return JsonResponse({'success': True, 'message': 'Marked as read.'})
+
+
+# =================================================================
+# TIMETABLE
+# =================================================================
+
+@csrf_exempt
+def api_timetable(request):
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+
+    DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+
+    if request.method == 'GET':
+        class_id   = request.GET.get('class_id')
+        teacher_id = request.GET.get('teacher_id')
+        qs = TimetableSlot.objects.filter(school=school).select_related(
+            'classroom', 'subject', 'teacher__user'
+        )
+        if class_id:
+            qs = qs.filter(classroom_id=class_id)
+        if teacher_id:
+            qs = qs.filter(teacher_id=teacher_id)
+        data = [{
+            'id':           s.id,
+            'classroom':    s.classroom.name,
+            'classroom_id': s.classroom.id,
+            'subject':      s.subject.name,
+            'subject_id':   s.subject.id,
+            'teacher':      s.teacher.user.get_full_name() if s.teacher else None,
+            'teacher_id':   s.teacher.id if s.teacher else None,
+            'day':          s.day_of_week,
+            'day_name':     DAY_NAMES[s.day_of_week],
+            'period':       s.period_number,
+        } for s in qs.order_by('classroom', 'day_of_week', 'period_number')]
+        return JsonResponse({'success': True, 'slots': data})
+
+    if request.method == 'DELETE':
+        deleted, _ = TimetableSlot.objects.filter(school=school).delete()
+        return JsonResponse({'success': True, 'message': '%d slot(s) cleared.' % deleted})
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+@csrf_exempt
+def api_timetable_generate(request):
+    """
+    Optimized hybrid timetable generator.
+
+    Algorithm (3 phases):
+      1. Sort sessions by constraint difficulty (busiest teacher first).
+      2. Greedy placement using period-major slot order (spreads sessions
+         evenly across days rather than bunching on Monday).
+      3. Repair phase: for each session the greedy couldn't place, attempt
+         a single-step swap — unplace a blocking session, check if the
+         target slot is now free, find a new home for the blocker; if
+         successful both sessions get placed, otherwise restore state.
+
+    Constraints enforced:
+      - No class double-booked in any slot
+      - No teacher double-booked in any slot
+      - Teacher daily load cap (configurable, default 5)
+      - Same subject may not appear twice in the same class on the same day
+      - Nominated break periods are left empty
+
+    Request body (all optional):
+      periods_per_day     int  (1-12, default 8)
+      max_teacher_per_day int  (1-periods_per_day, default 5)
+      break_periods       list of 1-indexed period numbers to leave empty
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+
+    try:
+        body = json.loads(request.body) if request.body else {}
+    except json.JSONDecodeError:
+        body = {}
+
+    from collections import Counter, defaultdict
+
+    periods_per_day     = max(1, min(int(body.get('periods_per_day', 8)), 12))
+    max_teacher_per_day = max(1, min(int(body.get('max_teacher_per_day', 5)), periods_per_day))
+    _bp_raw             = body.get('break_periods') or []
+    break_periods       = set(
+        int(b) for b in _bp_raw
+        if str(b).lstrip('-').isdigit() and 1 <= int(b) <= periods_per_day
+    )
+    DAYS    = 5
+    PERIODS = [p for p in range(1, periods_per_day + 1) if p not in break_periods]
+
+    # ── 1. Clear existing timetable ───────────────────────────────
+    TimetableSlot.objects.filter(school=school).delete()
+
+    # ── 2. Build raw assignment list ──────────────────────────────
+    tsc_qs = TeacherSubjectClass.objects.filter(
+        classroom__school=school, is_active=True
+    ).select_related('teacher__user', 'subject', 'classroom')
+
+    raw = list(tsc_qs)
+
+    if not raw:
+        # Fallback: all subjects × all classes, teachers distributed round-robin
+        classes  = list(ClassRoom.objects.filter(school=school, is_active=True))
+        subjects = list(Subject.objects.filter(school=school, is_active=True))
+        teachers = list(Teacher.objects.filter(school=school, is_active=True))
+
+        class _Assign:
+            __slots__ = ('teacher', 'subject', 'classroom')
+            def __init__(self, t, s, c):
+                self.teacher   = t
+                self.subject   = s
+                self.classroom = c
+
+        for cls in classes:
+            for idx, subj in enumerate(subjects):
+                t = teachers[idx % len(teachers)] if teachers else None
+                raw.append(_Assign(t, subj, cls))
+
+    # ── 3. Expand into sessions (distribute periods-per-week) ─────
+    cls_assignments = defaultdict(list)
+    for ta in raw:
+        cls_assignments[ta.classroom.id].append(ta)
+
+    active_per_week = DAYS * len(PERIODS)   # total non-break slots per class/week
+    sessions = []
+    for cls_id, tas in cls_assignments.items():
+        n    = len(tas)
+        each = max(1, active_per_week // n)
+        for ta in tas:
+            for _ in range(each):
+                tid = ta.teacher.id if ta.teacher else None
+                sessions.append({
+                    'classroom':  ta.classroom,
+                    'subject':    ta.subject,
+                    'teacher':    ta.teacher,
+                    'cls_id':     ta.classroom.id,
+                    'subj_id':    ta.subject.id,
+                    'teacher_id': tid,
+                })
+
+    # ── 4. Sort: most-constrained (busiest) teacher first ─────────
+    # A teacher appearing in the most sessions is the hardest to schedule;
+    # placing those sessions first reduces downstream conflicts.
+    teacher_session_count = Counter(
+        s['teacher_id'] for s in sessions if s['teacher_id'] is not None
+    )
+    sessions.sort(
+        key=lambda s: -(teacher_session_count.get(s['teacher_id'], 0)
+                        if s['teacher_id'] is not None else 0)
+    )
+
+    # ── 5. Slot order: period-major ────────────────────────────────
+    # (P1,Mon)(P1,Tue)…(P1,Fri)(P2,Mon)… ensures sessions are spread
+    # across all five days before a second period on any day is used.
+    SLOT_ORDER = [(day, period) for period in PERIODS for day in range(DAYS)]
+
+    # ── 6. Mutable state ─────────────────────────────────────────
+    grid            = {}   # (cls_id, day, period)    → session dict
+    teacher_grid    = {}   # (teacher_id, day, period) → True
+    teacher_slot_map = {}  # (teacher_id, day, period) → (cls_id, day, period)
+    teacher_day_ct  = {}   # (teacher_id, day)         → int
+    subj_day_set    = {}   # (cls_id, day)             → set of subj_ids
+
+    def _is_free(s, day, period):
+        cid = s['cls_id']
+        tid = s['teacher_id']
+        sid = s['subj_id']
+        if (cid, day, period) in grid:
+            return False
+        if tid is not None and (tid, day, period) in teacher_grid:
+            return False
+        if tid is not None and teacher_day_ct.get((tid, day), 0) >= max_teacher_per_day:
+            return False
+        if sid in subj_day_set.get((cid, day), set()):
+            return False
+        return True
+
+    def _place(s, day, period):
+        cid = s['cls_id']
+        tid = s['teacher_id']
+        sid = s['subj_id']
+        grid[(cid, day, period)] = s
+        if tid is not None:
+            teacher_grid[(tid, day, period)]   = True
+            teacher_slot_map[(tid, day, period)] = (cid, day, period)
+            teacher_day_ct[(tid, day)]           = teacher_day_ct.get((tid, day), 0) + 1
+        subj_day_set.setdefault((cid, day), set()).add(sid)
+
+    def _unplace(s, day, period):
+        cid = s['cls_id']
+        tid = s['teacher_id']
+        sid = s['subj_id']
+        grid.pop((cid, day, period), None)
+        if tid is not None:
+            teacher_grid.pop((tid, day, period), None)
+            teacher_slot_map.pop((tid, day, period), None)
+            key = (tid, day)
+            teacher_day_ct[key] = max(0, teacher_day_ct.get(key, 0) - 1)
+        if (cid, day) in subj_day_set:
+            subj_day_set[(cid, day)].discard(sid)
+
+    # ── 7. Phase 1: Greedy placement ─────────────────────────────
+    unplaced = []
+    for s in sessions:
+        placed = False
+        for day, period in SLOT_ORDER:
+            if _is_free(s, day, period):
+                _place(s, day, period)
+                placed = True
+                break
+        if not placed:
+            unplaced.append(s)
+
+    # ── 8. Phase 2: Swap-based repair ────────────────────────────
+    # For each unplaced session, look for a slot occupied by a single
+    # blocking session that can itself be moved to a different slot.
+    repaired = 0
+    for s in unplaced:
+        cid = s['cls_id']
+        tid = s['teacher_id']
+        placed = False
+
+        for day, period in SLOT_ORDER:
+            # Identify the blocker (class-occupancy has priority; teacher second)
+            blocker = None
+            if (cid, day, period) in grid:
+                blocker = grid[(cid, day, period)]
+            elif tid is not None and (tid, day, period) in teacher_grid:
+                gkey = teacher_slot_map.get((tid, day, period))
+                if gkey:
+                    blocker = grid.get(gkey)
+
+            if blocker is None:
+                continue
+
+            # Temporarily remove the blocker and check if s can now go here
+            _unplace(blocker, day, period)
+            if _is_free(s, day, period):
+                # Place s FIRST so its teacher's daily count is already
+                # reflected when we search for a new slot for the blocker.
+                # This prevents a shared teacher being placed twice on the
+                # same day if the blocker's new slot happens to be that day.
+                _place(s, day, period)
+                moved = False
+                for d2, p2 in SLOT_ORDER:
+                    if (d2, p2) != (day, period) and _is_free(blocker, d2, p2):
+                        _place(blocker, d2, p2)
+                        repaired += 1
+                        moved = True
+                        break
+                if moved:
+                    placed = True
+                    break
+                else:
+                    # Couldn't relocate blocker — undo s and restore blocker
+                    _unplace(s, day, period)
+                    _place(blocker, day, period)
+            else:
+                # Even without the blocker s still can't go here (teacher limit
+                # or another conflict) — restore blocker and try next slot
+                _place(blocker, day, period)
+
+    # ── 9. Persist results ────────────────────────────────────────
+    slots_to_create = [
+        TimetableSlot(
+            school=school,
+            classroom=s['classroom'],
+            subject=s['subject'],
+            teacher=s['teacher'],
+            day_of_week=day,
+            period_number=period,
+        )
+        for ((_cls_id, day, period), s) in grid.items()
+    ]
+
+    TimetableSlot.objects.bulk_create(slots_to_create, ignore_conflicts=True)
+    actual    = TimetableSlot.objects.filter(school=school).count()
+    attempted = len(sessions)
+    skipped   = max(0, len(unplaced) - repaired)
+
+    return JsonResponse({
+        'success':     True,
+        'message':     '%d slot(s) placed, %d repaired by swap, %d skipped.' % (
+                           actual, repaired, skipped),
+        'total_slots': actual,
+        'attempted':   attempted,
+        'repaired':    repaired,
+        'skipped':     skipped,
+    })
+
+
+@csrf_exempt
+def api_timetable_slot(request, slot_id):
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+    try:
+        slot = TimetableSlot.objects.get(id=slot_id, school=school)
+    except TimetableSlot.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Slot not found.'}, status=404)
+
+    if request.method == 'PUT':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        if body.get('teacher_id'):
+            try:
+                slot.teacher = Teacher.objects.get(id=body['teacher_id'], school=school)
+            except Teacher.DoesNotExist:
+                pass
+        if body.get('subject_id'):
+            try:
+                slot.subject = Subject.objects.get(id=body['subject_id'], school=school)
+            except Subject.DoesNotExist:
+                pass
+        slot.save()
+        return JsonResponse({'success': True, 'message': 'Slot updated.'})
+
+    if request.method == 'DELETE':
+        slot.delete()
+        return JsonResponse({'success': True, 'message': 'Slot deleted.'})
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+# =================================================================
+# PARENT MANAGEMENT (school-admin view)
+# =================================================================
+
+@csrf_exempt
+def api_parents(request):
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+
+    if request.method == 'GET':
+        qs = Parent.objects.filter(school=school).select_related('user')
+        data = []
+        for p in qs.order_by('user__last_name')[:200]:
+            children = ParentStudent.objects.filter(parent=p).select_related(
+                'student__user', 'student__classroom'
+            )
+            data.append({
+                'id':           p.id,
+                'name':         p.user.get_full_name() or p.user.username,
+                'email':        p.user.email,
+                'phone':        p.phone_number,
+                'relationship': p.relationship,
+                'children': [{
+                    'id':        ps.student.id,
+                    'name':      ps.student.user.get_full_name(),
+                    'class':     ps.student.classroom.name if ps.student.classroom else '-',
+                    'admission': ps.student.admission_number,
+                } for ps in children],
+            })
+        return JsonResponse({'success': True, 'parents': data})
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+# =================================================================
+# FEE RECEIPT
+# =================================================================
+
+@csrf_exempt
+def api_fee_receipt(request, fee_id):
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+    try:
+        fee = FeeRecord.objects.get(id=fee_id, school=school)
+    except FeeRecord.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Fee record not found.'}, status=404)
+
+    receipt_number = 'RCP-%04d-%06d' % (school.id, fee.id)
+    return JsonResponse({
+        'success': True,
+        'receipt': {
+            'receipt_number': receipt_number,
+            'school_name':    school.name,
+            'student_name':   fee.student.user.get_full_name(),
+            'description':    fee.description,
+            'amount':         float(fee.amount),
+            'amount_paid':    float(fee.amount_paid),
+            'balance':        float(fee.balance),
+            'status':         fee.status,
+            'term':           fee.term.name if fee.term else None,
+            'due_date':       str(fee.due_date) if fee.due_date else None,
+            'paid_date':      str(fee.paid_date) if fee.paid_date else None,
+            'generated_at':   datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),
+        },
+    })
+
+
+# =================================================================
+# FINANCE USERS (School-admin creates/manages ACCOUNTANT staff)
+# =================================================================
+
+@csrf_exempt
+def api_finance_users(request):
+    """
+    GET  → list all finance staff (role=ACCOUNTANT) for this school
+    POST → create a new finance user (User + SchoolStaffAccount)
+    """
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+
+    if request.method == 'GET':
+        accounts = SchoolStaffAccount.objects.filter(
+            school=school, role='ACCOUNTANT'
+        ).select_related('user').order_by('-created_at')
+        data = [{
+            'id':         a.id,
+            'full_name':  a.user.get_full_name() or a.user.username,
+            'email':      a.user.email,
+            'phone':      a.phone_number,
+            'status':     a.account_status,
+            'is_active':  a.is_active,
+            'created_at': a.created_at.strftime('%Y-%m-%d'),
+        } for a in accounts]
+        return JsonResponse({'success': True, 'finance_users': data})
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+
+        email      = (body.get('email') or '').strip().lower()
+        first_name = (body.get('first_name') or '').strip()
+        last_name  = (body.get('last_name') or '').strip()
+        phone      = (body.get('phone') or '').strip()
+        password   = body.get('password') or ''
+
+        if not email or not password:
+            return JsonResponse({'success': False, 'message': 'Email and password are required.'}, status=400)
+        if len(password) < 8:
+            return JsonResponse({'success': False, 'message': 'Password must be at least 8 characters.'}, status=400)
+        if User.objects.filter(email=email).exists():
+            return JsonResponse({'success': False, 'message': 'A user with that email already exists.'}, status=409)
+
+        # Use email as username; ensure username uniqueness
+        username = email
+        if User.objects.filter(username=username).exists():
+            username = email.split('@')[0] + '_' + str(school.id)
+
+        try:
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                password=password,
+                first_name=first_name,
+                last_name=last_name,
+            )
+            account = SchoolStaffAccount.objects.create(
+                user=user,
+                school=school,
+                role='ACCOUNTANT',
+                job_title='Finance Officer',
+                phone_number=phone,
+                is_active=True,
+                account_status='ACTIVE',
+                created_by=actor,
+            )
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=400)
+
+        return JsonResponse({
+            'success': True,
+            'id':      account.id,
+            'message': 'Finance user created successfully.',
+        }, status=201)
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+@csrf_exempt
+def api_finance_user_toggle(request, uid):
+    """
+    PUT /api/school/finance-users/<uid>/
+    Toggles the finance user's active/suspended status.
+    """
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+
+    if request.method != 'PUT':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+    try:
+        account = SchoolStaffAccount.objects.get(id=uid, school=school, role='ACCOUNTANT')
+    except SchoolStaffAccount.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Finance user not found.'}, status=404)
+
+    account.is_active      = not account.is_active
+    account.account_status = 'ACTIVE' if account.is_active else 'SUSPENDED'
+    account.user.is_active = account.is_active
+    account.user.save(update_fields=['is_active'])
+    account.save(update_fields=['is_active', 'account_status'])
+
+    action = 'activated' if account.is_active else 'suspended'
+    return JsonResponse({
+        'success':   True,
+        'is_active': account.is_active,
+        'status':    account.account_status,
+        'message':   'Finance user %s.' % action,
+    })

@@ -1093,4 +1093,254 @@ class SecurityLogEntry(models.Model):
 
     def __str__(self):
         label = self.actor_label or (self.actor.username if self.actor else 'anonymous')
-        return f"{self.get_event_type_display()} by {label} at {self.created_at}"
+        return f"{self.get_event_type_display()} by {label} at {self.created_at}"
+
+
+# ─────────────────────────────────────────────────────────────────
+# ATTENDANCE
+# ─────────────────────────────────────────────────────────────────
+
+class Attendance(models.Model):
+    STATUS_CHOICES = [
+        ('present', 'Present'),
+        ('absent',  'Absent'),
+        ('late',    'Late'),
+        ('excused', 'Excused'),
+    ]
+    school      = models.ForeignKey(School, on_delete=models.CASCADE, related_name='attendance_records')
+    student     = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='attendance')
+    classroom   = models.ForeignKey(ClassRoom, on_delete=models.CASCADE, related_name='attendance_records')
+    date        = models.DateField()
+    status      = models.CharField(max_length=10, choices=STATUS_CHOICES, default='present')
+    recorded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                    related_name='recorded_attendance')
+    notes       = models.TextField(blank=True)
+    created_at  = models.DateTimeField(auto_now_add=True)
+    updated_at  = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('student', 'date')
+        ordering = ['-date', 'classroom', 'student']
+        indexes = [
+            models.Index(fields=['school', 'date']),
+            models.Index(fields=['classroom', 'date']),
+        ]
+
+    def __str__(self):
+        return f"{self.student} — {self.date} — {self.status}"
+
+
+# ─────────────────────────────────────────────────────────────────
+# FINANCE
+# ─────────────────────────────────────────────────────────────────
+
+class FeeRecord(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('partial', 'Partial'),
+        ('paid',    'Paid'),
+        ('overdue', 'Overdue'),
+        ('waived',  'Waived'),
+    ]
+    school       = models.ForeignKey(School, on_delete=models.CASCADE, related_name='fee_records')
+    student      = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='fees')
+    term         = models.ForeignKey(Term, on_delete=models.SET_NULL, null=True, blank=True)
+    description  = models.CharField(max_length=200, default='School Fees')
+    amount       = models.DecimalField(max_digits=10, decimal_places=2)
+    amount_paid  = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    due_date     = models.DateField(null=True, blank=True)
+    paid_date    = models.DateField(null=True, blank=True)
+    status       = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    notes        = models.TextField(blank=True)
+    recorded_by  = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                     related_name='recorded_fees')
+    created_at   = models.DateTimeField(auto_now_add=True)
+    updated_at   = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes  = [models.Index(fields=['school', 'status'])]
+
+    def __str__(self):
+        return f"{self.student} — {self.description} ({self.status})"
+
+    @property
+    def balance(self):
+        return self.amount - self.amount_paid
+
+
+class Expense(models.Model):
+    CATEGORY_CHOICES = [
+        ('salaries',    'Salaries'),
+        ('utilities',   'Utilities'),
+        ('supplies',    'Supplies'),
+        ('maintenance', 'Maintenance'),
+        ('events',      'Events'),
+        ('technology',  'Technology'),
+        ('other',       'Other'),
+    ]
+    school       = models.ForeignKey(School, on_delete=models.CASCADE, related_name='expenses')
+    title        = models.CharField(max_length=200)
+    amount       = models.DecimalField(max_digits=10, decimal_places=2)
+    category     = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='other')
+    date         = models.DateField()
+    description  = models.TextField(blank=True)
+    recorded_by  = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                     related_name='recorded_expenses')
+    created_at   = models.DateTimeField(auto_now_add=True)
+    updated_at   = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-date']
+        indexes  = [models.Index(fields=['school', 'date'])]
+
+    def __str__(self):
+        return f"{self.school} — {self.title} ({self.amount})"
+
+
+# ─────────────────────────────────────────────────────────────────
+# MESSAGING
+# ─────────────────────────────────────────────────────────────────
+
+class Message(models.Model):
+    school         = models.ForeignKey(School, on_delete=models.CASCADE, related_name='messages')
+    sender         = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_school_messages')
+    recipient_role = models.CharField(max_length=20, default='all',
+                                      help_text='all | staff | students | parents')
+    subject        = models.CharField(max_length=200, blank=True)
+    body           = models.TextField()
+    is_broadcast   = models.BooleanField(default=True)
+    created_at     = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes  = [models.Index(fields=['school', '-created_at'])]
+
+    def __str__(self):
+        return f"[{self.recipient_role}] {self.subject or 'No Subject'} — {self.sender}"
+
+# ─────────────────────────────────────────────────────────────────
+# EXAM SYSTEM
+# ─────────────────────────────────────────────────────────────────
+
+class Exam(models.Model):
+    EXAM_TYPES = [
+        ('ca',      'Continuous Assessment'),
+        ('midterm', 'Mid-Term'),
+        ('final',   'Final Exam'),
+        ('mock',    'Mock Exam'),
+        ('quiz',    'Quiz'),
+    ]
+    school      = models.ForeignKey(School, on_delete=models.CASCADE, related_name='exams')
+    classroom   = models.ForeignKey(ClassRoom, on_delete=models.CASCADE, related_name='exams')
+    subject     = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='exams')
+    term        = models.ForeignKey(Term, on_delete=models.SET_NULL, null=True, blank=True, related_name='exams')
+    name        = models.CharField(max_length=200)
+    exam_type   = models.CharField(max_length=10, choices=EXAM_TYPES, default='final')
+    total_marks = models.DecimalField(max_digits=6, decimal_places=2, default=100)
+    date        = models.DateField()
+    is_active   = models.BooleanField(default=True)
+    created_by  = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='created_exams')
+    created_at  = models.DateTimeField(auto_now_add=True)
+    updated_at  = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-date']
+        indexes  = [models.Index(fields=['school', '-date'])]
+
+    def __str__(self):
+        return f"{self.name} — {self.classroom} ({self.subject})"
+
+
+class ExamResult(models.Model):
+    exam            = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name='results')
+    student         = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='exam_results')
+    marks_obtained  = models.DecimalField(max_digits=6, decimal_places=2, default=0)
+    grade_letter    = models.CharField(max_length=2, blank=True)
+    remarks         = models.TextField(blank=True)
+    graded_by       = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='graded_results')
+    created_at      = models.DateTimeField(auto_now_add=True)
+    updated_at      = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('exam', 'student')
+        ordering        = ['student']
+
+    def save(self, *args, **kwargs):
+        if self.exam_id and self.exam.total_marks:
+            pct = float(self.marks_obtained) / float(self.exam.total_marks) * 100
+            self.grade_letter = ('A' if pct >= 80 else 'B' if pct >= 65 else
+                                 'C' if pct >= 50 else 'D' if pct >= 40 else 'F')
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.student} — {self.exam.name}: {self.marks_obtained}/{self.exam.total_marks}"
+
+
+# ─────────────────────────────────────────────────────────────────
+# NOTIFICATION SYSTEM
+# ─────────────────────────────────────────────────────────────────
+
+class Notification(models.Model):
+    TYPE_CHOICES = [
+        ('info',    'Info'),
+        ('success', 'Success'),
+        ('warning', 'Warning'),
+        ('alert',   'Alert'),
+    ]
+    school          = models.ForeignKey(School, on_delete=models.CASCADE, null=True, blank=True, related_name='notifications')
+    title           = models.CharField(max_length=200)
+    body            = models.TextField()
+    notif_type      = models.CharField(max_length=10, choices=TYPE_CHOICES, default='info')
+    recipient_role  = models.CharField(max_length=20, default='all',
+                                       help_text='all | staff | students | parents')
+    sender          = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='sent_notifications')
+    is_active       = models.BooleanField(default=True)
+    created_at      = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes  = [models.Index(fields=['school', '-created_at'])]
+
+    def __str__(self):
+        return f"[{self.notif_type.upper()}] {self.title}"
+
+
+class NotificationRead(models.Model):
+    notification = models.ForeignKey(Notification, on_delete=models.CASCADE, related_name='reads')
+    user         = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notification_reads')
+    read_at      = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('notification', 'user')
+
+    def __str__(self):
+        return f"{self.user} read {self.notification}"
+
+
+# ─────────────────────────────────────────────────────────────────
+# TIMETABLE
+# ─────────────────────────────────────────────────────────────────
+
+class TimetableSlot(models.Model):
+    DAY_CHOICES = [
+        (0, 'Monday'), (1, 'Tuesday'), (2, 'Wednesday'),
+        (3, 'Thursday'), (4, 'Friday'),
+    ]
+    school        = models.ForeignKey(School, on_delete=models.CASCADE, related_name='timetable_slots')
+    academic_year = models.ForeignKey(AcademicYear, on_delete=models.SET_NULL, null=True, blank=True, related_name='timetable_slots')
+    classroom     = models.ForeignKey(ClassRoom, on_delete=models.CASCADE, related_name='timetable_slots')
+    subject       = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='timetable_slots')
+    teacher       = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True, blank=True, related_name='timetable_slots')
+    day_of_week   = models.IntegerField(choices=DAY_CHOICES)
+    period_number = models.IntegerField(help_text='Period 1–8')
+    start_time    = models.TimeField(null=True, blank=True)
+    end_time      = models.TimeField(null=True, blank=True)
+    created_at    = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('classroom', 'day_of_week', 'period_number')
+        ordering        = ['classroom', 'day_of_week', 'period_number']
+
+    def __str__(self):
+        return f"{self.classroom} | Day {self.day_of_week} P{self.period_number} — {self.subject}"

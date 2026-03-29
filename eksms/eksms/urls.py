@@ -28,6 +28,20 @@ from .views import (
     api_classes,  api_class_detail,
     api_subjects, api_subject_detail,
     api_academic_years,
+    # New school-admin modules
+    api_terms,
+    api_grades,
+    api_attendance, api_attendance_stats,
+    api_finance_stats, api_finance_fees, api_finance_fee_detail, api_finance_expenses,
+    api_school_messages,
+    # Add-ons
+    api_analytics,
+    api_exams, api_exam_detail, api_exam_results,
+    api_notifications, api_notification_read,
+    api_timetable, api_timetable_generate, api_timetable_slot,
+    api_parents,
+    api_fee_receipt,
+    api_finance_users, api_finance_user_toggle,
 )
 from .secure_views import csrf_token_view
 from django.conf import settings
@@ -84,6 +98,38 @@ urlpatterns = [
     path('api/school/subjects/',                api_subjects,         name='api_subjects'),
     path('api/school/subjects/<int:subject_id>/', api_subject_detail, name='api_subject_detail'),
     path('api/school/academic-years/',          api_academic_years,   name='api_academic_years'),
+    # Terms / Grades / Attendance
+    path('api/school/terms/',                   api_terms,            name='api_terms'),
+    path('api/school/grades/',                  api_grades,           name='api_grades'),
+    path('api/school/attendance/',              api_attendance,       name='api_attendance'),
+    path('api/school/attendance/stats/',        api_attendance_stats, name='api_attendance_stats'),
+    # Finance
+    path('api/school/finance/stats/',           api_finance_stats,    name='api_finance_stats'),
+    path('api/school/finance/fees/',            api_finance_fees,     name='api_finance_fees'),
+    path('api/school/finance/fees/<int:fee_id>/', api_finance_fee_detail, name='api_finance_fee_detail'),
+    path('api/school/finance/expenses/',        api_finance_expenses, name='api_finance_expenses'),
+    # Messages
+    path('api/school/messages/',                api_school_messages,  name='api_school_messages'),
+    # Analytics
+    path('api/school/analytics/',               api_analytics,        name='api_analytics'),
+    # Exams
+    path('api/school/exams/',                   api_exams,            name='api_exams'),
+    path('api/school/exams/<int:exam_id>/',     api_exam_detail,      name='api_exam_detail'),
+    path('api/school/exams/<int:exam_id>/results/', api_exam_results,  name='api_exam_results'),
+    # Notifications
+    path('api/school/notifications/',           api_notifications,    name='api_notifications'),
+    path('api/school/notifications/<int:notif_id>/read/', api_notification_read, name='api_notification_read'),
+    # Timetable
+    path('api/school/timetable/',               api_timetable,        name='api_timetable'),
+    path('api/school/timetable/generate/',      api_timetable_generate, name='api_timetable_generate'),
+    path('api/school/timetable/<int:slot_id>/', api_timetable_slot,   name='api_timetable_slot'),
+    # Parents
+    path('api/school/parents/',                 api_parents,          name='api_parents'),
+    # Fee receipt
+    path('api/school/finance/fees/<int:fee_id>/receipt/', api_fee_receipt, name='api_fee_receipt'),
+    # Finance users (school admin creates finance staff)
+    path('api/school/finance-users/',           api_finance_users,        name='api_finance_users'),
+    path('api/school/finance-users/<int:uid>/', api_finance_user_toggle,  name='api_finance_user_toggle'),
 
     # Root URL redirects to admin
     path('', RedirectView.as_view(url='admin/', permanent=False)),

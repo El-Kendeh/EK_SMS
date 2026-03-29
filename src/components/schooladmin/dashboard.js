@@ -7,7 +7,10 @@ import {
   ReportsPage, MessagesPage, SecurityPage, SettingsPage,
   SyllabusPage,
 } from './SchoolAdminPages';
-import StudentsPage from './SAstudents';
+import {
+  AnalyticsPage, ExamsPage, NotificationsPage, TimetablePage, ParentsPage,
+  FinanceUsersPage,
+} from './NewPages';
 
 /* ============================================================
    HELPERS
@@ -51,10 +54,16 @@ const NAV_ITEMS = [
   { key: 'syllabus',      icon: 'import_contacts',  label: 'Syllabus' },
   { key: 'grades',        icon: 'grade',            label: 'Grade Management' },
   { key: 'attendance',    icon: 'event_available',  label: 'Attendance' },
-  { key: 'finance',       icon: 'payments',         label: 'Finance' },
+  { key: 'exams',         icon: 'quiz',             label: 'Exams & Results' },
+  { key: 'finance',         icon: 'payments',         label: 'Finance' },
+  { key: 'finance_users',   icon: 'manage_accounts',  label: 'Finance Users' },
+  { key: 'timetable',       icon: 'calendar_today',   label: 'Timetable' },
+  { key: 'analytics',     icon: 'insights',         label: 'Analytics' },
+  { key: 'parents',       icon: 'family_restroom',  label: 'Parents' },
   { key: 'reports',       icon: 'assessment',       label: 'Reports' },
 ];
 const NAV_ITEMS_BOTTOM = [
+  { key: 'notifications', icon: 'notifications',    label: 'Notifications' },
   { key: 'messages',      icon: 'mail',             label: 'Messages',      badge: 3 },
   { key: 'security',      icon: 'security',         label: 'Security Logs' },
   { key: 'settings',      icon: 'settings',         label: 'Settings' },
@@ -154,23 +163,31 @@ function Sidebar({ active, onNav, school, admin, isOpen, onClose, onLogout }) {
         </nav>
 
         {/* Footer */}
-        <div className="ska-sidebar-footer" style={{ cursor: 'pointer' }}
-          onClick={() => { onNav('profile'); onClose(); }}>
-          <div className="ska-sidebar-footer-avatar">
+        <div className="ska-sidebar-footer">
+          <div
+            className="ska-sidebar-footer-avatar"
+            style={{ cursor: 'pointer' }}
+            onClick={() => { onNav('profile'); onClose(); }}
+            title="My Profile"
+          >
             {adminName.charAt(0).toUpperCase()}
           </div>
-          <div className="ska-sidebar-footer-info">
+          <div
+            className="ska-sidebar-footer-info"
+            style={{ cursor: 'pointer' }}
+            onClick={() => { onNav('profile'); onClose(); }}
+          >
             <div className="ska-sidebar-footer-name">{adminName}</div>
             <div className="ska-sidebar-footer-role">School Admin</div>
           </div>
           <button
-            className="ska-topbar-icon-btn"
+            className="ska-logout-btn"
             onClick={e => { e.stopPropagation(); onLogout(); }}
-            title="Logout"
-            aria-label="Logout"
-            style={{ flexShrink: 0 }}
+            title="Sign out"
+            aria-label="Sign out"
           >
-            <Ic name="logout" size="sm" style={{ color: 'var(--ska-text-3)' }} />
+            <Ic name="logout" size="sm" />
+            Out
           </button>
         </div>
       </aside>
@@ -181,7 +198,7 @@ function Sidebar({ active, onNav, school, admin, isOpen, onClose, onLogout }) {
 /* ============================================================
    TOPBAR
    ============================================================ */
-function Topbar({ school, admin, onMenuToggle, onLogout }) {
+function Topbar({ school, admin, onMenuToggle, onLogout, onNav }) {
   const adminName = admin?.full_name || admin?.username || 'Admin';
   const schoolName = school?.name || 'School';
 
@@ -229,12 +246,23 @@ function Topbar({ school, admin, onMenuToggle, onLogout }) {
 
         <div className="ska-topbar-divider" />
 
-        <button className="ska-topbar-profile" onClick={onLogout} title="Logout">
+        {/* Profile — navigates to profile page */}
+        <button className="ska-topbar-profile" onClick={() => onNav && onNav('profile')} title="My Profile">
           <div className="ska-topbar-avatar">
             {adminName.charAt(0).toUpperCase()}
           </div>
           <span className="ska-topbar-profile-name">{adminName}</span>
-          <Ic name="expand_more" size="sm" style={{ color: 'var(--ska-text-3)' }} />
+        </button>
+
+        {/* Logout — dedicated button */}
+        <button
+          className="ska-topbar-icon-btn"
+          onClick={onLogout}
+          title="Sign out"
+          aria-label="Sign out"
+          style={{ color: 'var(--ska-error)' }}
+        >
+          <Ic name="logout" />
         </button>
       </div>
     </header>
@@ -1249,15 +1277,21 @@ function StubPage({ title, icon, description }) {
 }
 
 const SECTION_META = {
-  grades:     { title: 'Grade Management',   icon: 'grade',            description: 'Enter, review, and lock student grades.' },
-  syllabus:   { title: 'Syllabus',           icon: 'import_contacts',  description: 'Manage curriculum topics and learning objectives.' },
-  attendance: { title: 'Attendance',         icon: 'event_available',  description: 'Daily attendance tracking and reports.' },
-  finance:    { title: 'Finance',            icon: 'payments',        description: 'Fee management and financial reports.' },
-  reports:    { title: 'Reports',            icon: 'assessment',      description: 'Generate academic and administrative reports.' },
-  messages:   { title: 'Messages',           icon: 'mail',            description: 'Communication centre and announcements.' },
-  security:   { title: 'Security Logs',      icon: 'security',        description: 'Audit trail and system security events.' },
-  settings:   { title: 'Settings',           icon: 'settings',        description: 'School configuration and preferences.' },
-  profile:    { title: 'My Profile',         icon: 'account_circle',  description: 'Manage your account details and password.' },
+  grades:        { title: 'Grade Management',   icon: 'grade',            description: 'Enter, review, and lock student grades.' },
+  syllabus:      { title: 'Syllabus',           icon: 'import_contacts',  description: 'Manage curriculum topics and learning objectives.' },
+  attendance:    { title: 'Attendance',         icon: 'event_available',  description: 'Daily attendance tracking and reports.' },
+  exams:         { title: 'Exams & Results',    icon: 'quiz',             description: 'Schedule exams and record student results.' },
+  finance:        { title: 'Finance',            icon: 'payments',         description: 'Fee management and financial reports.' },
+  finance_users:  { title: 'Finance Users',      icon: 'manage_accounts',  description: 'Create and manage finance staff accounts.' },
+  timetable:     { title: 'Timetable',          icon: 'calendar_today',   description: 'Auto-generate weekly class schedules.' },
+  analytics:     { title: 'Smart Analytics',    icon: 'insights',         description: 'Performance insights and at-risk detection.' },
+  parents:       { title: 'Parents',            icon: 'family_restroom',  description: 'Parent accounts and student links.' },
+  reports:       { title: 'Reports',            icon: 'assessment',       description: 'Generate academic and administrative reports.' },
+  notifications: { title: 'Notifications',      icon: 'notifications',    description: 'Send announcements to staff, students, and parents.' },
+  messages:      { title: 'Messages',           icon: 'mail',             description: 'Communication centre and announcements.' },
+  security:      { title: 'Security Logs',      icon: 'security',         description: 'Audit trail and system security events.' },
+  settings:      { title: 'Settings',           icon: 'settings',         description: 'School configuration and preferences.' },
+  profile:       { title: 'My Profile',         icon: 'account_circle',   description: 'Manage your account details and password.' },
 };
 
 /* ============================================================
@@ -1752,12 +1786,18 @@ export default function SchoolAdminDashboard({ onNavigate }) {
     />
   );
   else if (activePage === 'syllabus')   pageContent = <SyllabusPage school={school} />;
-  else if (activePage === 'grades')     pageContent = <GradesPage school={school} />;
-  else if (activePage === 'attendance') pageContent = <AttendancePage school={school} />;
-  else if (activePage === 'finance')    pageContent = <FinancePage school={school} />;
-  else if (activePage === 'reports')    pageContent = <ReportsPage school={school} />;
-  else if (activePage === 'messages')   pageContent = <MessagesPage school={school} admin={admin} />;
-  else if (activePage === 'security')   pageContent = <SecurityPage />;
+  else if (activePage === 'grades')        pageContent = <GradesPage school={school} />;
+  else if (activePage === 'attendance')    pageContent = <AttendancePage school={school} />;
+  else if (activePage === 'exams')         pageContent = <ExamsPage school={school} />;
+  else if (activePage === 'finance')        pageContent = <FinancePage school={school} />;
+  else if (activePage === 'finance_users')  pageContent = <FinanceUsersPage school={school} admin={admin} />;
+  else if (activePage === 'timetable')     pageContent = <TimetablePage school={school} />;
+  else if (activePage === 'analytics')     pageContent = <AnalyticsPage school={school} />;
+  else if (activePage === 'parents')       pageContent = <ParentsPage school={school} />;
+  else if (activePage === 'reports')       pageContent = <ReportsPage school={school} />;
+  else if (activePage === 'notifications') pageContent = <NotificationsPage school={school} />;
+  else if (activePage === 'messages')      pageContent = <MessagesPage school={school} admin={admin} />;
+  else if (activePage === 'security')      pageContent = <SecurityPage />;
   else if (activePage === 'settings')   pageContent = (
     <SettingsPage
       school={school}
@@ -1787,6 +1827,7 @@ export default function SchoolAdminDashboard({ onNavigate }) {
           admin={admin}
           onMenuToggle={() => setSidebarOpen(o => !o)}
           onLogout={handleLogout}
+          onNav={setActivePage}
         />
 
         {/* Page content */}

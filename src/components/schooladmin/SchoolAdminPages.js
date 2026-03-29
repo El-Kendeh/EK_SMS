@@ -96,19 +96,23 @@ function TabBar({ tabs, active, onChange }) {
 export function GradesPage({ school }) {
   const [classes,         setClasses]         = useState([]);
   const [subjects,        setSubjects]        = useState([]);
+  const [terms,           setTerms]           = useState([]);
   const [selClass,        setSelClass]        = useState('');
   const [selSubj,         setSelSubj]         = useState('');
+  const [selTerm,         setSelTerm]         = useState('');
   const [students,        setStudents]        = useState([]);
   const [grades,          setGrades]          = useState({});
   const [loading,         setLoading]         = useState(true);
   const [loadingStudents, setLoadingStudents] = useState(false);
   const [saving,          setSaving]          = useState(false);
   const [saved,           setSaved]           = useState(false);
+  const [banner,          setBanner]          = useState(null);
 
   useEffect(() => {
     Promise.all([
       ApiClient.get('/api/school/classes/').then(d => setClasses(d.classes   || [])).catch(() => {}),
       ApiClient.get('/api/school/subjects/').then(d => setSubjects(d.subjects || [])).catch(() => {}),
+      ApiClient.get('/api/school/terms/').then(d => setTerms(d.terms         || [])).catch(() => {}),
     ]).finally(() => setLoading(false));
   }, []);
 
@@ -126,6 +130,20 @@ export function GradesPage({ school }) {
       .finally(() => setLoadingStudents(false));
   }, [selClass]);
 
+  // Load existing saved grades when class+subject+term are all set
+  useEffect(() => {
+    if (!selClass || !selSubj || !selTerm) return;
+    ApiClient.get(`/api/school/grades/?class_id=${selClass}&subject_id=${selSubj}&term_id=${selTerm}`)
+      .then(d => {
+        const map = {};
+        (d.grades || []).forEach(g => {
+          map[g.student_id] = { ca: g.ca, midterm: g.midterm, final: g.final };
+        });
+        setGrades(map);
+      })
+      .catch(() => {});
+  }, [selClass, selSubj, selTerm]);
+
   const setGrade = (sid, field, val) => {
     setSaved(false);
     setGrades(g => ({ ...g, [sid]: { ...(g[sid] || {}), [field]: val } }));
@@ -136,13 +154,27 @@ export function GradesPage({ school }) {
   const letterColor = l => ({ A: 'var(--ska-green)', B: 'var(--ska-secondary)', C: 'var(--ska-primary)', D: 'var(--ska-tertiary)', F: 'var(--ska-error)' })[l];
 
   const handleSave = async () => {
+    if (!selSubj || !selTerm) {
+      setBanner({ type: 'err', text: 'Select a subject and term before saving.' });
+      return;
+    }
     setSaving(true);
-    await new Promise(r => setTimeout(r, 700));
-    setSaved(true);
+    setBanner(null);
+    const entries = students.map(s => {
+      const g = grades[s.id] || {};
+      return { student_id: s.id, ca: parseFloat(g.ca) || 0, midterm: parseFloat(g.midterm) || 0, final: parseFloat(g.final) || 0 };
+    });
+    try {
+      const res = await ApiClient.post('/api/school/grades/', { subject_id: selSubj, term_id: selTerm, grades: entries });
+      setSaved(true);
+      setBanner({ type: 'ok', text: res.message || 'Grades saved.' });
+    } catch (e) {
+      setBanner({ type: 'err', text: e?.message || 'Failed to save grades.' });
+    }
     setSaving(false);
   };
 
-  const ready        = selClass && selSubj;
+  const ready        = selClass && selSubj && selTerm;
   const entered      = Object.values(grades).filter(g => g.ca || g.midterm || g.final);
   const passCount    = entered.filter(g => calcTotal(g) >= 50).length;
   const passRate     = entered.length ? Math.round(passCount / entered.length * 100) : null;
@@ -178,21 +210,30 @@ export function GradesPage({ school }) {
         <StatCard icon="trending_up" iconBg="var(--ska-green-dim)"     iconColor="var(--ska-green)"     label="Pass Rate"      value={passRate !== null ? `${passRate}%` : '—'} sub="≥ 50 points" />
       </div>
 
+      <Banner msg={banner} />
+
       {/* Selectors */}
       <div className="ska-card ska-card-pad" style={{ marginBottom: 20 }}>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          <label className="ska-form-group" style={{ flex: 1, minWidth: 160, margin: 0 }}>
+          <label className="ska-form-group" style={{ flex: 1, minWidth: 140, margin: 0 }}>
             <span>Class</span>
             <select className="ska-input" value={selClass} onChange={e => setSelClass(e.target.value)}>
               <option value="">— Select Class —</option>
               {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </label>
-          <label className="ska-form-group" style={{ flex: 1, minWidth: 160, margin: 0 }}>
+          <label className="ska-form-group" style={{ flex: 1, minWidth: 140, margin: 0 }}>
             <span>Subject</span>
             <select className="ska-input" value={selSubj} onChange={e => setSelSubj(e.target.value)}>
               <option value="">— Select Subject —</option>
               {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+          </label>
+          <label className="ska-form-group" style={{ flex: 1, minWidth: 140, margin: 0 }}>
+            <span>Term</span>
+            <select className="ska-input" value={selTerm} onChange={e => setSelTerm(e.target.value)}>
+              <option value="">— Select Term —</option>
+              {terms.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
           </label>
           <p style={{ margin: '0 0 2px', fontSize: '0.75rem', color: 'var(--ska-text-3)', whiteSpace: 'nowrap', paddingBottom: 6 }}>
@@ -209,8 +250,8 @@ export function GradesPage({ school }) {
           ) : !ready ? (
             <div className="ska-empty" style={{ padding: '48px 24px' }}>
               <Ic name="grade" size="xl" style={{ color: 'var(--ska-primary)', marginBottom: 12 }} />
-              <p className="ska-empty-title">Select a class and subject</p>
-              <p className="ska-empty-desc">Choose a class and subject above to begin entering grades.</p>
+              <p className="ska-empty-title">Select class, subject and term</p>
+              <p className="ska-empty-desc">Choose all three above to begin entering grades.</p>
             </div>
           ) : loadingStudents ? (
             <div className="ska-empty"><p className="ska-empty-desc">Loading students…</p></div>
@@ -341,6 +382,7 @@ export function AttendancePage({ school }) {
   const [loadingStudents, setLoadingStudents] = useState(false);
   const [saving,  setSaving]  = useState(false);
   const [saved,   setSaved]   = useState(false);
+  const [banner,  setBanner]  = useState(null);
 
   useEffect(() => {
     ApiClient.get('/api/school/classes/').then(d => setClasses(d.classes || [])).catch(() => {});
@@ -360,6 +402,16 @@ export function AttendancePage({ school }) {
       .finally(() => setLoadingStudents(false));
   }, [selClass]);
 
+  // Load existing attendance whenever class or date changes
+  useEffect(() => {
+    if (!selClass || !date) return;
+    ApiClient.get(`/api/school/attendance/?class_id=${selClass}&date=${date}`)
+      .then(d => {
+        if (d.attendance) setAttendance(d.attendance);
+      })
+      .catch(() => {});
+  }, [selClass, date]);
+
   const setStatus = (id, status) => setAttendance(a => ({ ...a, [id]: status }));
   const markAll   = (status)    => setAttendance(Object.fromEntries(students.map(s => [s.id, status])));
 
@@ -369,9 +421,20 @@ export function AttendancePage({ school }) {
   const rate    = students.length ? Math.round((present / students.length) * 100) : 0;
 
   const handleSave = async () => {
+    if (!selClass || !date) return;
     setSaving(true);
-    await new Promise(r => setTimeout(r, 700));
-    setSaved(true);
+    setBanner(null);
+    try {
+      const res = await ApiClient.post('/api/school/attendance/', {
+        class_id: selClass,
+        date,
+        records: attendance,
+      });
+      setSaved(true);
+      setBanner({ type: 'ok', text: res.message || 'Attendance saved.' });
+    } catch (e) {
+      setBanner({ type: 'err', text: e?.message || 'Failed to save attendance.' });
+    }
     setSaving(false);
   };
 
@@ -386,6 +449,8 @@ export function AttendancePage({ school }) {
           <p className="ska-page-sub">{school?.name} — Daily attendance tracking</p>
         </div>
       </div>
+
+      <Banner msg={banner} />
 
       {/* Stats */}
       <div className="ska-stat-grid-4">
@@ -507,32 +572,67 @@ export function AttendancePage({ school }) {
    FINANCE PAGE
    ============================================================ */
 export function FinancePage({ school }) {
-  const [classes, setClasses] = useState([]);
-  const [tab, setTab] = useState('overview');
+  const [tab,        setTab]        = useState('overview');
+  const [stats,      setStats]      = useState(null);
+  const [fees,       setFees]       = useState([]);
+  const [expenses,   setExpenses]   = useState([]);
+  const [loading,    setLoading]    = useState(true);
+  const [showPayModal,  setShowPayModal]  = useState(false);
+  const [showExpModal,  setShowExpModal]  = useState(false);
+  const [payFee,     setPayFee]     = useState(null);
+  const [payAmount,  setPayAmount]  = useState('');
+  const [expForm,    setExpForm]    = useState({ title: '', amount: '', category: 'other', date: new Date().toISOString().split('T')[0] });
+  const [saving,     setSaving]     = useState(false);
+  const [banner,     setBanner]     = useState(null);
 
-  useEffect(() => {
-    ApiClient.get('/api/school/classes/').then(d => setClasses(d.classes || [])).catch(() => {});
+  const loadAll = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [st, fe, ex] = await Promise.all([
+        ApiClient.get('/api/school/finance/stats/'),
+        ApiClient.get('/api/school/finance/fees/'),
+        ApiClient.get('/api/school/finance/expenses/'),
+      ]);
+      setStats(st);
+      setFees(fe.fees || []);
+      setExpenses(ex.expenses || []);
+    } catch { /* leave empty */ }
+    setLoading(false);
   }, []);
 
-  /* Deterministic fee % from class id — avoids random re-renders */
-  const feePct = id => ((id * 37 + 13) % 61) + 39;
+  useEffect(() => { loadAll(); }, [loadAll]);
 
-  const TRANSACTIONS = [
-    { name: 'Ismail Rogers',  cls: 'Grade 10A', amount: 450, date: '2026-03-22', status: 'paid' },
-    { name: 'Aisha Kamara',   cls: 'Grade 11B', amount: 450, date: '2026-03-21', status: 'paid' },
-    { name: 'Mohamed Bah',    cls: 'Grade 12A', amount: 450, date: '2026-03-20', status: 'pending' },
-    { name: 'Fatima Koroma',  cls: 'Grade 10B', amount: 450, date: '2026-03-18', status: 'paid' },
-    { name: 'Samuel Johnson', cls: 'Grade 11A', amount: 450, date: '2026-03-15', status: 'paid' },
-  ];
+  const handleRecordPayment = async () => {
+    if (!payFee) return;
+    setSaving(true);
+    try {
+      await ApiClient.put(`/api/school/finance/fees/${payFee.id}/`, { amount_paid: parseFloat(payAmount) || 0 });
+      setBanner({ type: 'ok', text: 'Payment recorded.' });
+      setShowPayModal(false);
+      loadAll();
+    } catch (e) {
+      setBanner({ type: 'err', text: e?.message || 'Failed to record payment.' });
+    }
+    setSaving(false);
+  };
 
-  const EXPENSES = [
-    { label: 'Salaries',    pct: 60, color: 'var(--ska-primary)' },
-    { label: 'Maintenance', pct: 20, color: 'var(--ska-secondary)' },
-    { label: 'Utilities',   pct: 10, color: 'var(--ska-tertiary)' },
-    { label: 'Supplies',    pct: 10, color: 'var(--ska-green)' },
-  ];
+  const handleAddExpense = async () => {
+    setSaving(true);
+    try {
+      await ApiClient.post('/api/school/finance/expenses/', expForm);
+      setBanner({ type: 'ok', text: 'Expense recorded.' });
+      setShowExpModal(false);
+      setExpForm({ title: '', amount: '', category: 'other', date: new Date().toISOString().split('T')[0] });
+      loadAll();
+    } catch (e) {
+      setBanner({ type: 'err', text: e?.message || 'Failed to add expense.' });
+    }
+    setSaving(false);
+  };
 
-  const STATUS_BADGE = { paid: 'ska-badge--green', pending: 'ska-badge--pending', failed: 'ska-badge--error' };
+  const fmt = n => n !== undefined && n !== null ? `$${Number(n).toLocaleString(undefined, { maximumFractionDigits: 0 })}` : '$0';
+  const STATUS_BADGE = { paid: 'ska-badge--green', partial: 'ska-badge--pending', unpaid: 'ska-badge--error' };
+  const CAT_COLORS = ['var(--ska-primary)', 'var(--ska-secondary)', 'var(--ska-tertiary)', 'var(--ska-green)', 'var(--ska-error)'];
 
   return (
     <div className="ska-content">
@@ -542,21 +642,25 @@ export function FinancePage({ school }) {
           <p className="ska-page-sub">{school?.name} — Fee collection and expenses</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="ska-btn ska-btn--ghost"><Ic name="download" size="sm" /> Export</button>
-          <button className="ska-btn ska-btn--primary"><Ic name="add" size="sm" /> Record Payment</button>
+          <button className="ska-btn ska-btn--ghost" onClick={() => setShowExpModal(true)}><Ic name="add" size="sm" /> Add Expense</button>
+          <button className="ska-btn ska-btn--primary" onClick={() => { setPayFee(null); setPayAmount(''); setShowPayModal(true); }}>
+            <Ic name="payments" size="sm" /> Record Payment
+          </button>
         </div>
       </div>
 
+      <Banner msg={banner} />
+
       {/* Stats */}
       <div className="ska-stat-grid-4">
-        <StatCard icon="payments"        iconBg="var(--ska-green-dim)"    iconColor="var(--ska-green)"    label="Total Collected"  value="$0" sub="This term" />
-        <StatCard icon="account_balance" iconBg="var(--ska-error-dim)"    iconColor="var(--ska-error)"    label="Outstanding"      value="$0" sub="Not yet paid" />
-        <StatCard icon="receipt_long"    iconBg="var(--ska-tertiary-dim)" iconColor="var(--ska-tertiary)" label="Total Expenses"   value="$0" sub="This term" />
-        <StatCard icon="percent"         iconBg="var(--ska-primary-dim)"  iconColor="var(--ska-primary)"  label="Collection Rate"  value="—"  sub="Fee recovery" />
+        <StatCard icon="payments"        iconBg="var(--ska-green-dim)"    iconColor="var(--ska-green)"    label="Total Collected"  value={loading ? '…' : fmt(stats?.collected)}       sub="This term" />
+        <StatCard icon="account_balance" iconBg="var(--ska-error-dim)"    iconColor="var(--ska-error)"    label="Outstanding"      value={loading ? '…' : fmt(stats?.outstanding)}     sub="Not yet paid" />
+        <StatCard icon="receipt_long"    iconBg="var(--ska-tertiary-dim)" iconColor="var(--ska-tertiary)" label="Total Expenses"   value={loading ? '…' : fmt(stats?.total_expenses)}  sub="This term" />
+        <StatCard icon="percent"         iconBg="var(--ska-primary-dim)"  iconColor="var(--ska-primary)"  label="Collection Rate"  value={loading ? '…' : stats ? `${stats.collection_rate}%` : '—'} sub="Fee recovery" />
       </div>
 
       <TabBar
-        tabs={[['overview','dashboard','Overview'],['transactions','receipt','Transactions'],['expenses','pie_chart','Expenses']]}
+        tabs={[['overview','dashboard','Overview'],['transactions','receipt','Fee Records'],['expenses','pie_chart','Expenses']]}
         active={tab}
         onChange={setTab}
       />
@@ -566,20 +670,22 @@ export function FinancePage({ school }) {
           <div className="ska-card ska-card-pad">
             <div className="ska-card-head" style={{ marginBottom: 20 }}>
               <h2 className="ska-card-title">Fee Status by Class</h2>
-              <span className="ska-badge ska-badge--cyan">This Term</span>
+              <span className="ska-badge ska-badge--cyan">Live</span>
             </div>
-            {classes.length === 0 ? (
+            {loading ? (
+              <div className="ska-empty" style={{ padding: '24px 0' }}><p className="ska-empty-desc">Loading…</p></div>
+            ) : (stats?.class_fees || []).length === 0 ? (
               <div className="ska-empty" style={{ padding: '24px 0' }}>
-                <p className="ska-empty-desc">No classes found. Add classes first.</p>
+                <p className="ska-empty-desc">No fee records yet. Record student fees to see breakdown.</p>
               </div>
             ) : (
               <div className="ska-progress-list">
-                {classes.map(c => {
-                  const pct = feePct(c.id);
+                {(stats.class_fees || []).map((c, i) => {
+                  const pct = c.total > 0 ? Math.round((c.collected / c.total) * 100) : 0;
                   return (
-                    <div key={c.id}>
+                    <div key={i}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                        <span style={{ fontSize: '0.875rem', color: 'var(--ska-text)', fontWeight: 600 }}>{c.name}</span>
+                        <span style={{ fontSize: '0.875rem', color: 'var(--ska-text)', fontWeight: 600 }}>{c.class_name}</span>
                         <span style={{ fontSize: '0.8125rem', color: 'var(--ska-text-3)' }}>{pct}% collected</span>
                       </div>
                       <div className="ska-progress-track">
@@ -597,17 +703,27 @@ export function FinancePage({ school }) {
 
           <div className="ska-card ska-card-pad">
             <h2 className="ska-card-title" style={{ marginBottom: 20 }}>Expense Distribution</h2>
-            {EXPENSES.map(e => (
-              <div key={e.label} style={{ marginBottom: 14 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--ska-text)' }}>{e.label}</span>
-                  <span style={{ fontSize: '0.8125rem', color: 'var(--ska-text-3)' }}>{e.pct}%</span>
-                </div>
-                <div className="ska-progress-track">
-                  <div className="ska-progress-fill" style={{ width: `${e.pct}%`, background: e.color }} />
-                </div>
+            {(stats?.expense_distribution || []).length === 0 ? (
+              <div className="ska-empty" style={{ padding: '16px 0' }}>
+                <p className="ska-empty-desc">No expenses recorded.</p>
               </div>
-            ))}
+            ) : (
+              (stats.expense_distribution || []).map((e, i) => {
+                const totalExp = stats.expense_distribution.reduce((s, x) => s + x.amount, 0);
+                const pct = totalExp > 0 ? Math.round((e.amount / totalExp) * 100) : 0;
+                return (
+                  <div key={e.category} style={{ marginBottom: 14 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--ska-text)', textTransform: 'capitalize' }}>{e.category}</span>
+                      <span style={{ fontSize: '0.8125rem', color: 'var(--ska-text-3)' }}>{pct}%</span>
+                    </div>
+                    <div className="ska-progress-track">
+                      <div className="ska-progress-fill" style={{ width: `${pct}%`, background: CAT_COLORS[i % CAT_COLORS.length] }} />
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
       )}
@@ -616,38 +732,155 @@ export function FinancePage({ school }) {
         <div className="ska-card" style={{ overflowX: 'auto' }}>
           <div style={{ padding: '20px 20px 0' }}>
             <div className="ska-card-head">
-              <h2 className="ska-card-title">Recent Transactions</h2>
-              <span className="ska-badge ska-badge--cyan">{TRANSACTIONS.length} entries</span>
+              <h2 className="ska-card-title">Fee Records</h2>
+              <span className="ska-badge ska-badge--cyan">{fees.length} entries</span>
             </div>
           </div>
-          <table className="ska-table">
-            <thead>
-              <tr><th>Student</th><th>Class</th><th>Amount</th><th>Date</th><th>Status</th></tr>
-            </thead>
-            <tbody>
-              {TRANSACTIONS.map((t, i) => (
-                <tr key={i}>
-                  <td style={{ fontWeight: 600 }}>{t.name}</td>
-                  <td style={{ color: 'var(--ska-text-3)' }}>{t.cls}</td>
-                  <td style={{ fontWeight: 700, color: 'var(--ska-green)' }}>${t.amount}</td>
-                  <td style={{ color: 'var(--ska-text-3)', fontSize: '0.8125rem' }}>{t.date}</td>
-                  <td><span className={`ska-badge ${STATUS_BADGE[t.status] || 'ska-badge--primary'}`}>{t.status}</span></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {fees.length === 0 ? (
+            <div className="ska-empty">
+              <Ic name="receipt" size="xl" style={{ color: 'var(--ska-text-3)', marginBottom: 12 }} />
+              <p className="ska-empty-title">No fee records yet</p>
+              <p className="ska-empty-desc">Click "Record Payment" to add a fee record.</p>
+            </div>
+          ) : (
+            <table className="ska-table">
+              <thead>
+                <tr><th>Student</th><th>Description</th><th>Amount</th><th>Paid</th><th>Balance</th><th>Status</th><th></th></tr>
+              </thead>
+              <tbody>
+                {fees.map(f => (
+                  <tr key={f.id}>
+                    <td style={{ fontWeight: 600 }}>{f.student_name}</td>
+                    <td style={{ color: 'var(--ska-text-3)', fontSize: '0.8125rem' }}>{f.description}</td>
+                    <td style={{ fontWeight: 700 }}>{fmt(f.amount)}</td>
+                    <td style={{ color: 'var(--ska-green)', fontWeight: 600 }}>{fmt(f.amount_paid)}</td>
+                    <td style={{ color: f.balance > 0 ? 'var(--ska-error)' : 'var(--ska-text-3)' }}>{fmt(f.balance)}</td>
+                    <td><span className={`ska-badge ${STATUS_BADGE[f.status] || 'ska-badge--primary'}`}>{f.status}</span></td>
+                    <td>
+                      {f.status !== 'paid' && (
+                        <button className="ska-btn ska-btn--ghost ska-btn--sm" onClick={() => { setPayFee(f); setPayAmount(String(f.balance)); setShowPayModal(true); }}>
+                          Pay
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       )}
 
       {tab === 'expenses' && (
-        <div className="ska-card">
-          <div className="ska-empty">
-            <Ic name="receipt_long" size="xl" style={{ color: 'var(--ska-primary)', marginBottom: 12 }} />
-            <p className="ska-empty-title">No expenses recorded</p>
-            <p className="ska-empty-desc">Record school expenses to track your spending.</p>
-            <button className="ska-btn ska-btn--primary" style={{ marginTop: 12 }}>
-              <Ic name="add" size="sm" /> Add Expense
-            </button>
+        <div className="ska-card" style={{ overflowX: 'auto' }}>
+          <div style={{ padding: '20px 20px 0' }}>
+            <div className="ska-card-head">
+              <h2 className="ska-card-title">Expenses</h2>
+              <span className="ska-badge ska-badge--cyan">{expenses.length} entries</span>
+            </div>
+          </div>
+          {expenses.length === 0 ? (
+            <div className="ska-empty">
+              <Ic name="receipt_long" size="xl" style={{ color: 'var(--ska-primary)', marginBottom: 12 }} />
+              <p className="ska-empty-title">No expenses recorded</p>
+              <p className="ska-empty-desc">Record school expenses to track your spending.</p>
+              <button className="ska-btn ska-btn--primary" style={{ marginTop: 12 }} onClick={() => setShowExpModal(true)}>
+                <Ic name="add" size="sm" /> Add Expense
+              </button>
+            </div>
+          ) : (
+            <table className="ska-table">
+              <thead>
+                <tr><th>Title</th><th>Category</th><th>Amount</th><th>Date</th></tr>
+              </thead>
+              <tbody>
+                {expenses.map(e => (
+                  <tr key={e.id}>
+                    <td style={{ fontWeight: 600 }}>{e.title}</td>
+                    <td style={{ color: 'var(--ska-text-3)', textTransform: 'capitalize', fontSize: '0.8125rem' }}>{e.category}</td>
+                    <td style={{ fontWeight: 700, color: 'var(--ska-error)' }}>{fmt(e.amount)}</td>
+                    <td style={{ color: 'var(--ska-text-3)', fontSize: '0.8125rem' }}>{e.date}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
+      {/* Record Payment Modal */}
+      {showPayModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div className="ska-card ska-card-pad" style={{ width: '100%', maxWidth: 440 }}>
+            <div className="ska-card-head" style={{ marginBottom: 16 }}>
+              <h2 className="ska-card-title">{payFee ? `Pay — ${payFee.student_name}` : 'Record Payment'}</h2>
+              <button className="ska-btn ska-btn--ghost ska-btn--sm" onClick={() => setShowPayModal(false)}><Ic name="close" size="sm" /></button>
+            </div>
+            {payFee ? (
+              <>
+                <p style={{ margin: '0 0 12px', fontSize: '0.875rem', color: 'var(--ska-text-3)' }}>Balance: <strong style={{ color: 'var(--ska-text)' }}>{fmt(payFee.balance)}</strong></p>
+                <label className="ska-form-group">
+                  <span>Amount Paying</span>
+                  <input className="ska-input" type="number" min="0" max={payFee.balance} value={payAmount}
+                    onChange={e => setPayAmount(e.target.value)} placeholder="Enter amount…" />
+                </label>
+              </>
+            ) : (
+              <p style={{ margin: '0 0 16px', fontSize: '0.875rem', color: 'var(--ska-text-3)' }}>
+                Select a fee record from the Fee Records tab to record a payment.
+              </p>
+            )}
+            <div className="ska-modal-actions">
+              <button className="ska-btn ska-btn--ghost" onClick={() => setShowPayModal(false)}>Cancel</button>
+              {payFee && (
+                <button className="ska-btn ska-btn--primary" onClick={handleRecordPayment} disabled={saving || !payAmount}>
+                  <Ic name="check" size="sm" /> {saving ? 'Saving…' : 'Confirm Payment'}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Expense Modal */}
+      {showExpModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div className="ska-card ska-card-pad" style={{ width: '100%', maxWidth: 440 }}>
+            <div className="ska-card-head" style={{ marginBottom: 16 }}>
+              <h2 className="ska-card-title">Add Expense</h2>
+              <button className="ska-btn ska-btn--ghost ska-btn--sm" onClick={() => setShowExpModal(false)}><Ic name="close" size="sm" /></button>
+            </div>
+            <div className="ska-form-grid" style={{ gridTemplateColumns: '1fr' }}>
+              <label className="ska-form-group">
+                <span>Title</span>
+                <input className="ska-input" placeholder="e.g. Teacher salaries…" value={expForm.title}
+                  onChange={e => setExpForm(f => ({ ...f, title: e.target.value }))} />
+              </label>
+              <label className="ska-form-group">
+                <span>Amount</span>
+                <input className="ska-input" type="number" min="0" placeholder="0.00" value={expForm.amount}
+                  onChange={e => setExpForm(f => ({ ...f, amount: e.target.value }))} />
+              </label>
+              <label className="ska-form-group">
+                <span>Category</span>
+                <select className="ska-input" value={expForm.category} onChange={e => setExpForm(f => ({ ...f, category: e.target.value }))}>
+                  {['salaries','utilities','supplies','maintenance','events','technology','other'].map(c =>
+                    <option key={c} value={c} style={{ textTransform: 'capitalize' }}>{c.charAt(0).toUpperCase()+c.slice(1)}</option>
+                  )}
+                </select>
+              </label>
+              <label className="ska-form-group">
+                <span>Date</span>
+                <input className="ska-input" type="date" value={expForm.date}
+                  onChange={e => setExpForm(f => ({ ...f, date: e.target.value }))} />
+              </label>
+            </div>
+            <div className="ska-modal-actions">
+              <button className="ska-btn ska-btn--ghost" onClick={() => setShowExpModal(false)}>Cancel</button>
+              <button className="ska-btn ska-btn--primary" onClick={handleAddExpense} disabled={saving || !expForm.title || !expForm.amount}>
+                <Ic name="add" size="sm" /> {saving ? 'Saving…' : 'Add Expense'}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -809,9 +1042,8 @@ export function MessagesPage({ school, admin }) {
   const [recipient, setRecipient] = useState('all');
   const [sending,   setSending]   = useState(false);
   const [sent,      setSent]      = useState(false);
-  const [messages,  setMessages]  = useState([
-    { from: 'System', subject: 'Welcome', text: 'Welcome to the EK-SMS messaging centre. Use this page to broadcast announcements to staff, students, and parents.', time: 'Today', tag: 'all', unread: false },
-  ]);
+  const [messages,  setMessages]  = useState([]);
+  const [loading,   setLoading]   = useState(true);
 
   const TABS = [
     ['all',     'all_inbox',       'All'],
@@ -820,22 +1052,35 @@ export function MessagesPage({ school, admin }) {
     ['students','school',          'Students'],
   ];
 
+  const loadMessages = useCallback(() => {
+    setLoading(true);
+    ApiClient.get('/api/school/messages/')
+      .then(d => setMessages(d.messages || []))
+      .catch(() => setMessages([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => { loadMessages(); }, [loadMessages]);
+
   const handleSend = async () => {
     if (!msgText.trim() || !subject.trim()) return;
     setSending(true);
-    await new Promise(r => setTimeout(r, 800));
-    const name = admin?.full_name || admin?.username || 'Admin';
-    setMessages(m => [{
-      from: name, subject, text: msgText, recipient,
-      time: 'Just now', tag: recipient, unread: false,
-    }, ...m]);
-    setSent(true);
-    setMsgText(''); setSubject('');
+    try {
+      await ApiClient.post('/api/school/messages/', {
+        recipient_role: recipient,
+        subject,
+        body: msgText,
+        is_broadcast: true,
+      });
+      setSent(true);
+      setMsgText(''); setSubject('');
+      loadMessages();
+      setTimeout(() => { setSent(false); setCompose(false); }, 1500);
+    } catch { /* show nothing — keep compose open */ }
     setSending(false);
-    setTimeout(() => { setSent(false); setCompose(false); }, 1500);
   };
 
-  const filtered = messages.filter(m => tab === 'all' || m.tag === tab);
+  const filtered = messages.filter(m => tab === 'all' || m.recipient_role === tab);
 
   return (
     <div className="ska-content">
@@ -894,40 +1139,44 @@ export function MessagesPage({ school, admin }) {
       <TabBar tabs={TABS} active={tab} onChange={setTab} />
 
       <div className="ska-card" style={{ overflow: 'hidden' }}>
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="ska-empty"><p className="ska-empty-desc">Loading messages…</p></div>
+        ) : filtered.length === 0 ? (
           <div className="ska-empty">
             <Ic name="mail" size="xl" style={{ color: 'var(--ska-text-3)', marginBottom: 12 }} />
             <p className="ska-empty-title">No messages in this category</p>
             <p className="ska-empty-desc">Broadcast a message to staff, students, or parents.</p>
           </div>
         ) : (
-          filtered.map((m, i) => (
-            <div key={i} style={{
-              display: 'flex', gap: 14, padding: '16px 20px',
-              borderBottom: i < filtered.length - 1 ? '1px solid var(--ska-border)' : 'none',
-              background: m.unread ? 'var(--ska-surface-high)' : 'transparent',
-            }}>
-              <div style={{
-                width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
-                background: 'var(--ska-primary-dim)', display: 'flex',
-                alignItems: 'center', justifyContent: 'center',
-                fontWeight: 800, color: 'var(--ska-primary)',
+          filtered.map((m, i) => {
+            const fmtDate = ts => { try { return new Date(ts).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); } catch { return ts; } };
+            return (
+              <div key={m.id || i} style={{
+                display: 'flex', gap: 14, padding: '16px 20px',
+                borderBottom: i < filtered.length - 1 ? '1px solid var(--ska-border)' : 'none',
               }}>
-                {m.from?.[0]?.toUpperCase() || '?'}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
-                  <span style={{ fontWeight: 700, fontSize: '0.9375rem', color: 'var(--ska-text)' }}>{m.from}</span>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--ska-text-3)' }}>{m.time}</span>
+                <div style={{
+                  width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
+                  background: 'var(--ska-primary-dim)', display: 'flex',
+                  alignItems: 'center', justifyContent: 'center',
+                  fontWeight: 800, color: 'var(--ska-primary)',
+                }}>
+                  {(m.sender_name || 'S')?.[0]?.toUpperCase()}
                 </div>
-                {m.subject && <p style={{ margin: '0 0 2px', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--ska-text-2)' }}>{m.subject}</p>}
-                <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--ska-text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.text}</p>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.9375rem', color: 'var(--ska-text)' }}>{m.sender_name}</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--ska-text-3)' }}>{fmtDate(m.created_at)}</span>
+                  </div>
+                  {m.subject && <p style={{ margin: '0 0 2px', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--ska-text-2)' }}>{m.subject}</p>}
+                  <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--ska-text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.body}</p>
+                </div>
+                {m.recipient_role && m.recipient_role !== 'system' && (
+                  <span className="ska-badge ska-badge--cyan" style={{ flexShrink: 0, alignSelf: 'center' }}>{m.recipient_role}</span>
+                )}
               </div>
-              {m.tag && m.tag !== 'system' && (
-                <span className="ska-badge ska-badge--cyan" style={{ flexShrink: 0, alignSelf: 'center' }}>{m.tag}</span>
-              )}
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>
