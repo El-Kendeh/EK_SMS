@@ -1797,96 +1797,316 @@ function StudentProfilePanel({ student, onClose, onEdit }) {
   );
 }
 
-const WIZARD_STEPS = ['Personal Info', 'Academic', 'Confirm'];
+const STUDENT_WIZARD_STEPS = [
+  { label: 'Personal Info',    icon: 'person'       },
+  { label: 'Academic Details', icon: 'school'       },
+  { label: 'Review & Enroll',  icon: 'check_circle' },
+];
+
+function _studentAvatarLetters(first, last) {
+  const a = (first || '').trim()[0] || '';
+  const b = (last  || '').trim()[0] || '';
+  return (a + b).toUpperCase() || '?';
+}
+
 function AddStudentWizard({ school, classes, onSave, onCancel }) {
-  const [step, setStep]     = useState(0);
-  const [form, setForm]     = useState({ first_name: '', last_name: '', date_of_birth: '', phone_number: '', email: '', admission_number: '', classroom_id: '' });
+  const [step,   setStep]   = useState(0);
   const [saving, setSaving] = useState(false);
-  const [error, setError]   = useState('');
+  const [error,  setError]  = useState('');
+  const [form,   setForm]   = useState({
+    first_name: '', last_name: '', gender: '', date_of_birth: '',
+    phone_number: '', email: '', admission_number: '', classroom_id: '',
+  });
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const canNext = step === 0
+    ? !!(form.first_name.trim() && form.last_name.trim())
+    : step === 1 ? !!form.admission_number.trim()
+    : true;
 
   const handleSave = async () => {
     setSaving(true); setError('');
     try { await ApiClient.post('/api/school/students/', form); onSave(); }
-    catch (e) { setError(e?.message || 'Failed to create student.'); setSaving(false); }
+    catch (e) { setError(e?.message || 'Failed to enroll student.'); setSaving(false); }
   };
-  const canNext = step === 0 ? form.first_name.trim() && form.last_name.trim() : step === 1 ? form.admission_number.trim() : true;
+
+  const avatarLetters = _studentAvatarLetters(form.first_name, form.last_name);
+  const displayName   = [form.first_name, form.last_name].filter(Boolean).join(' ') || 'New Student';
+  const currentClass  = classes.find(c => String(c.id) === String(form.classroom_id))?.name || '';
+  const filledCount   = [form.first_name, form.last_name, form.gender, form.date_of_birth, form.admission_number, form.classroom_id].filter(Boolean).length;
+  const completionPct = Math.round((filledCount / 6) * 100);
+  const genderIcon    = form.gender === 'M' ? 'male' : form.gender === 'F' ? 'female' : 'person';
 
   return (
-    <div className="ska-content">
-      <div className="ska-page-head">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button className="ska-btn ska-btn--ghost" onClick={onCancel}><Ic name="arrow_back" size="sm" /> Back</button>
-          <div><h1 className="ska-page-title">Add New Student</h1><p className="ska-page-sub">{school?.name}</p></div>
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 1200,
+      background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px',
+    }} onClick={e => e.target === e.currentTarget && onCancel()}>
+      <style>{`@media(max-width:600px){.student-wizard-panel{display:none!important}}`}</style>
+
+      <div style={{
+        background: 'var(--ska-surface)', borderRadius: 20,
+        width: '100%', maxWidth: 760,
+        display: 'flex', overflow: 'hidden',
+        boxShadow: '0 32px 80px rgba(0,0,0,0.5)', maxHeight: '90vh',
+      }}>
+
+        {/* ── Left panel (live preview) ── */}
+        <div className="student-wizard-panel" style={{
+          width: 220, flexShrink: 0,
+          background: 'linear-gradient(160deg,#0d1b3e 0%,#0a1628 100%)',
+          padding: '32px 20px',
+          display: 'flex', flexDirection: 'column', gap: 20,
+          borderRight: '1px solid rgba(173,198,255,0.08)',
+        }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <span style={{ fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(173,198,255,0.5)', fontWeight: 700 }}>Institution</span>
+            <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#adc6ff', lineHeight: 1.3 }}>{school?.name || '—'}</span>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+            <div style={{
+              width: 72, height: 72, borderRadius: '50%',
+              background: 'linear-gradient(135deg,#4b8eff,#adc6ff)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '1.5rem', fontWeight: 800, color: '#fff',
+              boxShadow: '0 4px 16px rgba(75,142,255,0.35)', position: 'relative',
+            }}>
+              {avatarLetters}
+              {form.gender && (
+                <span style={{
+                  position: 'absolute', bottom: 0, right: 0,
+                  width: 22, height: 22, borderRadius: '50%',
+                  background: form.gender === 'M' ? '#4b8eff' : '#e879a0',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  border: '2px solid #0d1b3e',
+                }}>
+                  <span className="material-symbols-rounded" style={{ fontSize: 12, color: '#fff' }}>{genderIcon}</span>
+                </span>
+              )}
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.875rem', lineHeight: 1.3 }}>{displayName}</div>
+              {currentClass && <div style={{ fontSize: '0.6875rem', color: 'rgba(173,198,255,0.65)', marginTop: 3 }}>Class {currentClass}</div>}
+              {form.admission_number && <div style={{ fontSize: '0.6875rem', color: 'rgba(173,198,255,0.45)', marginTop: 2 }}>{form.admission_number}</div>}
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(173,198,255,0.5)', fontWeight: 700 }}>Profile</span>
+              <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#adc6ff' }}>{completionPct}%</span>
+            </div>
+            <div style={{ height: 4, background: 'rgba(255,255,255,0.08)', borderRadius: 4, overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${completionPct}%`, background: 'linear-gradient(90deg,#4b8eff,#adc6ff)', borderRadius: 4, transition: 'width 0.4s ease' }} />
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
+            {STUDENT_WIZARD_STEPS.map((s, i) => {
+              const done   = i < step;
+              const active = i === step;
+              return (
+                <div key={i} style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '8px 10px', borderRadius: 10,
+                  background: active ? 'rgba(75,142,255,0.18)' : 'transparent',
+                  border: active ? '1px solid rgba(75,142,255,0.35)' : '1px solid transparent',
+                  transition: 'all 0.2s',
+                }}>
+                  <span className="material-symbols-rounded" style={{ fontSize: 16, color: done ? '#6ce0b0' : active ? '#adc6ff' : 'rgba(173,198,255,0.3)' }}>{done ? 'check_circle' : s.icon}</span>
+                  <span style={{ fontSize: '0.6875rem', fontWeight: done || active ? 700 : 500, color: done ? '#6ce0b0' : active ? '#adc6ff' : 'rgba(173,198,255,0.3)' }}>{s.label}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          <div style={{ marginTop: 'auto', padding: '10px 12px', borderRadius: 10, background: 'rgba(173,198,255,0.06)', border: '1px solid rgba(173,198,255,0.1)' }}>
+            <span style={{ fontSize: '0.6875rem', color: 'rgba(173,198,255,0.55)', lineHeight: 1.5 }}>
+              Student credentials will be configured by the school administrator after enrolment.
+            </span>
+          </div>
         </div>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', marginBottom: 32, padding: '0 8px', maxWidth: 480 }}>
-        <div style={{ position: 'absolute', top: '42%', left: 0, right: 0, height: 2, background: 'var(--ska-surface-high)', zIndex: 0 }} />
-        {WIZARD_STEPS.map((label, i) => {
-          const done = i < step, active = i === step;
-          return (
-            <div key={i} style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-              <div style={{ width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.8125rem', background: done ? 'var(--ska-primary-container)' : active ? 'linear-gradient(135deg,#adc6ff,#4b8eff)' : 'var(--ska-surface-high)', color: done || active ? '#fff' : 'var(--ska-text-3)', border: active || done ? 'none' : '2px solid var(--ska-surface-highest)' }}>
-                {done ? <Ic name="check" style={{ fontSize: 16, color: '#fff' }} /> : i + 1}
+
+        {/* ── Right panel (form) ── */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+
+          <div style={{
+            padding: '20px 28px 16px',
+            borderBottom: '1px solid var(--ska-surface-high)',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          }}>
+            <div>
+              <div style={{ fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--ska-text-3)', fontWeight: 700, marginBottom: 2 }}>
+                Step {step + 1} of {STUDENT_WIZARD_STEPS.length}
               </div>
-              <span style={{ fontSize: '0.625rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: active ? 'var(--ska-primary)' : 'var(--ska-text-3)' }}>{label}</span>
-            </div>
-          );
-        })}
-      </div>
-      <div className="ska-card ska-card-pad" style={{ maxWidth: 480, marginBottom: 24 }}>
-        {step === 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <h3 style={{ margin: 0, fontWeight: 700, color: 'var(--ska-text)' }}>Personal Information</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <label className="ska-form-group" style={{ margin: 0 }}><span>First Name *</span><input className="ska-input" value={form.first_name} onChange={e => set('first_name', e.target.value)} placeholder="Jonathan" /></label>
-              <label className="ska-form-group" style={{ margin: 0 }}><span>Last Name *</span><input className="ska-input" value={form.last_name} onChange={e => set('last_name', e.target.value)} placeholder="Doe" /></label>
-            </div>
-            <label className="ska-form-group" style={{ margin: 0 }}><span>Date of Birth</span><input className="ska-input" type="date" value={form.date_of_birth} onChange={e => set('date_of_birth', e.target.value)} /></label>
-            <label className="ska-form-group" style={{ margin: 0 }}><span>Phone</span><input className="ska-input" value={form.phone_number} onChange={e => set('phone_number', e.target.value)} placeholder="+xxx-xxx-xxxx" /></label>
-          </div>
-        )}
-        {step === 1 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <h3 style={{ margin: 0, fontWeight: 700, color: 'var(--ska-text)' }}>Academic Details</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <label className="ska-form-group" style={{ margin: 0 }}><span>Admission No. *</span><input className="ska-input" value={form.admission_number} onChange={e => set('admission_number', e.target.value)} placeholder="ADM-2024-001" /></label>
-              <label className="ska-form-group" style={{ margin: 0 }}><span>Class</span>
-                <select className="ska-input" value={form.classroom_id} onChange={e => set('classroom_id', e.target.value)}>
-                  <option value="">— No class —</option>
-                  {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </label>
-            </div>
-            <label className="ska-form-group" style={{ margin: 0 }}><span>Email</span><input className="ska-input" type="email" value={form.email} onChange={e => set('email', e.target.value)} placeholder="student@school.com" /></label>
-          </div>
-        )}
-        {step === 2 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <h3 style={{ margin: 0, fontWeight: 700, color: 'var(--ska-text)' }}>Confirm Details</h3>
-            {[
-              { label: 'Full Name',      value: `${form.first_name} ${form.last_name}` },
-              { label: 'Admission No.', value: form.admission_number },
-              { label: 'Class',         value: classes.find(c => String(c.id) === String(form.classroom_id))?.name || '—' },
-              { label: 'Date of Birth', value: form.date_of_birth || '—' },
-              { label: 'Email',         value: form.email || '—' },
-              { label: 'Phone',         value: form.phone_number || '—' },
-            ].map(row => (
-              <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'var(--ska-surface-low)', borderRadius: 8 }}>
-                <span style={{ fontSize: '0.8125rem', color: 'var(--ska-text-3)', fontWeight: 600 }}>{row.label}</span>
-                <span style={{ fontSize: '0.875rem', color: 'var(--ska-text)', fontWeight: 700 }}>{row.value}</span>
+              <div style={{ fontSize: '1.0625rem', fontWeight: 800, color: 'var(--ska-text)' }}>
+                {STUDENT_WIZARD_STEPS[step].label}
               </div>
-            ))}
-            {error && <p style={{ margin: 0, color: 'var(--ska-error)', fontSize: '0.8125rem' }}>{error}</p>}
+            </div>
+            <button onClick={onCancel} style={{
+              background: 'var(--ska-surface-high)', border: 'none', borderRadius: 8,
+              width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', color: 'var(--ska-text-3)',
+            }}><Ic name="close" size="sm" /></button>
           </div>
-        )}
-      </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', maxWidth: 480, gap: 10 }}>
-        <button className="ska-btn ska-btn--ghost" onClick={step === 0 ? onCancel : () => setStep(s => s - 1)}>{step === 0 ? 'Cancel' : <><Ic name="arrow_back" size="sm" /> Back</>}</button>
-        {step < 2
-          ? <button className="ska-btn ska-btn--primary" disabled={!canNext} onClick={() => setStep(s => s + 1)}>Next <Ic name="arrow_forward" size="sm" /></button>
-          : <button className="ska-btn ska-btn--primary" disabled={saving} onClick={handleSave}><Ic name="person_add" size="sm" /> {saving ? 'Saving…' : 'Save Student'}</button>
-        }
+
+          <div style={{ height: 3, background: 'var(--ska-surface-high)' }}>
+            <div style={{
+              height: '100%', width: `${((step + 1) / STUDENT_WIZARD_STEPS.length) * 100}%`,
+              background: 'linear-gradient(90deg,#4b8eff,#adc6ff)', transition: 'width 0.4s ease',
+            }} />
+          </div>
+
+          <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
+
+            {step === 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                  <label className="ska-form-group" style={{ margin: 0 }}>
+                    <span>First Name <span style={{ color: 'var(--ska-error)' }}>*</span></span>
+                    <input className="ska-input" value={form.first_name} onChange={e => set('first_name', e.target.value)} placeholder="e.g. Amara" autoFocus />
+                  </label>
+                  <label className="ska-form-group" style={{ margin: 0 }}>
+                    <span>Last Name <span style={{ color: 'var(--ska-error)' }}>*</span></span>
+                    <input className="ska-input" value={form.last_name} onChange={e => set('last_name', e.target.value)} placeholder="e.g. Kamara" />
+                  </label>
+                </div>
+                <div className="ska-form-group" style={{ margin: 0 }}>
+                  <span>Gender</span>
+                  <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
+                    {[{ value: 'M', label: 'Male', icon: 'male' }, { value: 'F', label: 'Female', icon: 'female' }].map(opt => (
+                      <button key={opt.value} type="button" onClick={() => set('gender', form.gender === opt.value ? '' : opt.value)} style={{
+                        flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                        padding: '10px 14px', borderRadius: 10, cursor: 'pointer', fontWeight: 700, fontSize: '0.875rem',
+                        transition: 'all 0.15s',
+                        background: form.gender === opt.value ? (opt.value === 'M' ? 'rgba(75,142,255,0.18)' : 'rgba(232,121,160,0.18)') : 'var(--ska-surface-low)',
+                        border: form.gender === opt.value ? `2px solid ${opt.value === 'M' ? '#4b8eff' : '#e879a0'}` : '2px solid var(--ska-surface-high)',
+                        color: form.gender === opt.value ? (opt.value === 'M' ? '#4b8eff' : '#e879a0') : 'var(--ska-text-3)',
+                      }}>
+                        <span className="material-symbols-rounded" style={{ fontSize: 18 }}>{opt.icon}</span>
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <label className="ska-form-group" style={{ margin: 0 }}>
+                  <span>Date of Birth</span>
+                  <input className="ska-input" type="date" value={form.date_of_birth} onChange={e => set('date_of_birth', e.target.value)} />
+                </label>
+                <label className="ska-form-group" style={{ margin: 0 }}>
+                  <span>Phone Number</span>
+                  <input className="ska-input" value={form.phone_number} onChange={e => set('phone_number', e.target.value)} placeholder="+232-xx-xxx-xxx" />
+                </label>
+              </div>
+            )}
+
+            {step === 1 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                  <label className="ska-form-group" style={{ margin: 0 }}>
+                    <span>Admission No. <span style={{ color: 'var(--ska-error)' }}>*</span></span>
+                    <input className="ska-input" value={form.admission_number} onChange={e => set('admission_number', e.target.value)} placeholder="ADM-2024-001" autoFocus />
+                  </label>
+                  <label className="ska-form-group" style={{ margin: 0 }}>
+                    <span>Class</span>
+                    <select className="ska-input" value={form.classroom_id} onChange={e => set('classroom_id', e.target.value)}>
+                      <option value="">— Assign later —</option>
+                      {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  </label>
+                </div>
+                <label className="ska-form-group" style={{ margin: 0 }}>
+                  <span>Email Address</span>
+                  <input className="ska-input" type="email" value={form.email} onChange={e => set('email', e.target.value)} placeholder="student@school.com" />
+                </label>
+                {(form.admission_number || form.classroom_id) && (
+                  <div style={{
+                    padding: '14px 16px', borderRadius: 12,
+                    background: 'var(--ska-surface-low)', border: '1px solid var(--ska-surface-high)',
+                    display: 'flex', flexDirection: 'column', gap: 8,
+                  }}>
+                    <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--ska-primary)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Enrolment Preview</span>
+                    <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+                      <div style={{
+                        width: 40, height: 40, borderRadius: '50%',
+                        background: 'linear-gradient(135deg,#4b8eff,#adc6ff)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontWeight: 800, fontSize: '0.875rem', color: '#fff',
+                      }}>{avatarLetters}</div>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--ska-text)' }}>{displayName}</div>
+                        {form.admission_number && <div style={{ fontSize: '0.75rem', color: 'var(--ska-text-3)' }}>{form.admission_number}</div>}
+                        {currentClass && <div style={{ fontSize: '0.75rem', color: 'var(--ska-primary)', fontWeight: 600 }}>Class {currentClass}</div>}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {step === 2 && (() => {
+              const rows = [
+                { icon: 'person',  label: 'Full Name',     value: displayName },
+                { icon: form.gender === 'M' ? 'male' : form.gender === 'F' ? 'female' : 'wc', label: 'Gender', value: form.gender === 'M' ? 'Male' : form.gender === 'F' ? 'Female' : '—' },
+                { icon: 'badge',   label: 'Admission No.', value: form.admission_number || '—' },
+                { icon: 'school',  label: 'Class',         value: currentClass || '—' },
+                { icon: 'cake',    label: 'Date of Birth', value: form.date_of_birth || '—' },
+                { icon: 'mail',    label: 'Email',         value: form.email || '—' },
+                { icon: 'phone',   label: 'Phone',         value: form.phone_number || '—' },
+              ];
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div style={{
+                    padding: '20px', borderRadius: 14,
+                    background: 'linear-gradient(135deg,rgba(75,142,255,0.12) 0%,rgba(173,198,255,0.06) 100%)',
+                    border: '1px solid rgba(75,142,255,0.2)',
+                    display: 'flex', alignItems: 'center', gap: 16, marginBottom: 8,
+                  }}>
+                    <div style={{
+                      width: 56, height: 56, borderRadius: '50%',
+                      background: 'linear-gradient(135deg,#4b8eff,#adc6ff)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontWeight: 800, fontSize: '1.25rem', color: '#fff',
+                      boxShadow: '0 4px 12px rgba(75,142,255,0.3)',
+                    }}>{avatarLetters}</div>
+                    <div>
+                      <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--ska-text)', lineHeight: 1.2 }}>{displayName}</div>
+                      {currentClass && <div style={{ fontSize: '0.75rem', color: 'var(--ska-primary)', fontWeight: 600, marginTop: 3 }}>Class {currentClass}</div>}
+                      <div style={{ fontSize: '0.6875rem', color: 'var(--ska-text-3)', marginTop: 2 }}>{school?.name || ''}</div>
+                    </div>
+                  </div>
+                  {rows.map(row => (
+                    <div key={row.label} style={{
+                      display: 'flex', alignItems: 'center', gap: 10,
+                      padding: '10px 14px', background: 'var(--ska-surface-low)',
+                      borderRadius: 10, border: '1px solid var(--ska-surface-high)',
+                    }}>
+                      <span className="material-symbols-rounded" style={{ fontSize: 16, color: 'var(--ska-text-3)', flexShrink: 0 }}>{row.icon}</span>
+                      <span style={{ fontSize: '0.8125rem', color: 'var(--ska-text-3)', fontWeight: 600, minWidth: 110 }}>{row.label}</span>
+                      <span style={{ fontSize: '0.875rem', color: 'var(--ska-text)', fontWeight: 700, marginLeft: 'auto', textAlign: 'right' }}>{row.value}</span>
+                    </div>
+                  ))}
+                  {error && <p style={{ margin: '4px 0 0', color: 'var(--ska-error)', fontSize: '0.8125rem' }}>{error}</p>}
+                </div>
+              );
+            })()}
+          </div>
+
+          <div style={{
+            padding: '16px 28px', borderTop: '1px solid var(--ska-surface-high)',
+            display: 'flex', justifyContent: 'space-between', gap: 10,
+          }}>
+            <button className="ska-btn ska-btn--ghost" onClick={step === 0 ? onCancel : () => setStep(s => s - 1)}>
+              {step === 0 ? 'Cancel' : <><Ic name="arrow_back" size="sm" /> Back</>}
+            </button>
+            {step < STUDENT_WIZARD_STEPS.length - 1
+              ? <button className="ska-btn ska-btn--primary" disabled={!canNext} onClick={() => setStep(s => s + 1)}>Next <Ic name="arrow_forward" size="sm" /></button>
+              : <button className="ska-btn ska-btn--primary" disabled={saving || !canNext} onClick={handleSave}><Ic name="person_add" size="sm" /> {saving ? 'Enrolling…' : 'Enroll Student'}</button>
+            }
+          </div>
+        </div>
       </div>
     </div>
   );
