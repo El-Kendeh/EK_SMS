@@ -1248,3 +1248,239 @@ export function FinanceUsersPage({ school }) {
     </div>
   );
 }
+
+/* ============================================================
+   PRINCIPAL USERS PAGE
+   School admin creates and manages PRINCIPAL staff accounts
+   ============================================================ */
+export function PrincipalUsersPage({ school }) {
+  const [users,     setUsers]     = useState([]);
+  const [loading,   setLoading]   = useState(true);
+  const [banner,    setBanner]    = useState(null);
+  const [showForm,  setShowForm]  = useState(false);
+  const [saving,    setSaving]    = useState(false);
+  const [showPass,  setShowPass]  = useState(false);
+  const [form,      setForm]      = useState({
+    first_name: '', last_name: '', email: '', phone: '', password: '',
+  });
+
+  const load = useCallback(() => {
+    setLoading(true);
+    ApiClient.get('/api/school/principal-users/')
+      .then(d => setUsers(d.principal_users || []))
+      .catch(() => setUsers([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const resetForm = () => setForm({ first_name: '', last_name: '', email: '', phone: '', password: '' });
+
+  const handleCreate = async e => {
+    e.preventDefault();
+    if (!form.email || !form.password) {
+      setBanner({ type: 'err', text: 'Email and password are required.' });
+      return;
+    }
+    if (form.password.length < 8) {
+      setBanner({ type: 'err', text: 'Password must be at least 8 characters.' });
+      return;
+    }
+    setSaving(true);
+    try {
+      await ApiClient.post('/api/school/principal-users/', form);
+      setBanner({ type: 'ok', text: 'Principal created successfully.' });
+      resetForm();
+      setShowForm(false);
+      load();
+    } catch (err) {
+      setBanner({ type: 'err', text: err?.message || 'Failed to create principal.' });
+    }
+    setSaving(false);
+  };
+
+  const handleToggle = async (uid) => {
+    try {
+      const res = await ApiClient.put(`/api/school/principal-users/${uid}/`, {});
+      setBanner({ type: 'ok', text: res.message });
+      load();
+    } catch {
+      setBanner({ type: 'err', text: 'Failed to update status.' });
+    }
+  };
+
+  const STATUS_STYLE = {
+    ACTIVE:     { bg: 'var(--ska-green-dim)',    color: 'var(--ska-green)' },
+    SUSPENDED:  { bg: 'var(--ska-error-dim)',    color: 'var(--ska-error)' },
+    PENDING:    { bg: 'var(--ska-tertiary-dim)', color: 'var(--ska-tertiary)' },
+    TERMINATED: { bg: 'rgba(255,255,255,0.06)',  color: 'var(--ska-text-3)' },
+  };
+
+  return (
+    <div className="ska-content">
+      <div className="ska-page-head">
+        <div>
+          <h1 className="ska-page-title">Principal</h1>
+          <p className="ska-page-sub">{school?.name} — Principal accounts</p>
+        </div>
+        <button
+          className={`ska-btn ${showForm ? 'ska-btn--ghost' : 'ska-btn--primary'}`}
+          onClick={() => { setShowForm(f => !f); setBanner(null); }}
+        >
+          <Ic name={showForm ? 'close' : 'person_add'} size="sm" />
+          {showForm ? 'Cancel' : 'Add Principal'}
+        </button>
+      </div>
+
+      <Banner msg={banner} />
+
+      {/* Stats */}
+      <div className="ska-metrics">
+        <StatCard icon="school"       iconBg="var(--ska-primary-dim)"  iconColor="var(--ska-primary)"
+          label="Total Principals"  value={loading ? '…' : users.length} />
+        <StatCard icon="check_circle" iconBg="var(--ska-green-dim)"    iconColor="var(--ska-green)"
+          label="Active"            value={loading ? '…' : users.filter(u => u.is_active).length} />
+        <StatCard icon="block"        iconBg="var(--ska-error-dim)"    iconColor="var(--ska-error)"
+          label="Suspended"         value={loading ? '…' : users.filter(u => !u.is_active).length} />
+      </div>
+
+      {/* Create form */}
+      {showForm && (
+        <div className="ska-card ska-card-pad" style={{ marginBottom: 24 }}>
+          <h3 style={{ margin: '0 0 16px', fontSize: '0.9375rem', fontWeight: 700, color: 'var(--ska-text)', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Ic name="person_add" size="sm" /> New Principal
+          </h3>
+          <form onSubmit={handleCreate}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12, marginBottom: 16 }}>
+              <label className="ska-form-group" style={{ margin: 0 }}>
+                <span>First Name</span>
+                <input className="ska-input" value={form.first_name}
+                  onChange={e => setForm(f => ({ ...f, first_name: e.target.value }))}
+                  placeholder="First name" />
+              </label>
+              <label className="ska-form-group" style={{ margin: 0 }}>
+                <span>Last Name</span>
+                <input className="ska-input" value={form.last_name}
+                  onChange={e => setForm(f => ({ ...f, last_name: e.target.value }))}
+                  placeholder="Last name" />
+              </label>
+              <label className="ska-form-group" style={{ margin: 0 }}>
+                <span>Email <span style={{ color: 'var(--ska-error)' }}>*</span></span>
+                <input className="ska-input" type="email" required value={form.email}
+                  onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                  placeholder="principal@school.com" />
+              </label>
+              <label className="ska-form-group" style={{ margin: 0 }}>
+                <span>Phone</span>
+                <input className="ska-input" value={form.phone}
+                  onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+                  placeholder="+xxx-xxx-xxxx" />
+              </label>
+              <label className="ska-form-group" style={{ margin: 0, gridColumn: '1 / -1' }}>
+                <span>Password <span style={{ color: 'var(--ska-error)' }}>*</span></span>
+                <div style={{ position: 'relative' }}>
+                  <input className="ska-input" type={showPass ? 'text' : 'password'} required
+                    value={form.password}
+                    onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                    placeholder="Min. 8 characters"
+                    style={{ paddingRight: 44 }} />
+                  <button type="button"
+                    onClick={() => setShowPass(p => !p)}
+                    style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+                             background: 'none', border: 'none', cursor: 'pointer',
+                             color: 'var(--ska-text-3)', padding: 0, lineHeight: 1 }}>
+                    <Ic name={showPass ? 'visibility_off' : 'visibility'} size="sm" />
+                  </button>
+                </div>
+              </label>
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button type="button" className="ska-btn ska-btn--ghost"
+                onClick={() => { setShowForm(false); resetForm(); }}>Cancel</button>
+              <button type="submit" className="ska-btn ska-btn--primary" disabled={saving}>
+                <Ic name="person_add" size="sm" /> {saving ? 'Creating…' : 'Create Principal'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Users table */}
+      <div className="ska-card">
+        {loading ? (
+          <div className="ska-empty"><p className="ska-empty-desc">Loading principals…</p></div>
+        ) : users.length === 0 ? (
+          <div className="ska-empty">
+            <Ic name="school" size="xl" style={{ color: 'var(--ska-primary)', marginBottom: 12 }} />
+            <p className="ska-empty-title">No principals yet</p>
+            <p className="ska-empty-desc">
+              Create a principal account to grant school leadership access.
+            </p>
+            <button className="ska-btn ska-btn--primary" style={{ marginTop: 12 }}
+              onClick={() => setShowForm(true)}>
+              <Ic name="person_add" size="sm" /> Add Principal
+            </button>
+          </div>
+        ) : (
+          <div className="ska-table-wrap">
+            <table className="ska-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Phone</th>
+                  <th>Status</th>
+                  <th>Since</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map(u => {
+                  const st = STATUS_STYLE[u.status] || STATUS_STYLE.PENDING;
+                  return (
+                    <tr key={u.id}>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <div style={{
+                            width: 32, height: 32, borderRadius: '50%',
+                            background: 'var(--ska-primary-dim)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: '0.8125rem', fontWeight: 700, color: 'var(--ska-primary)',
+                            flexShrink: 0,
+                          }}>
+                            {u.full_name?.[0]?.toUpperCase() || '?'}
+                          </div>
+                          <span style={{ fontWeight: 600 }}>{u.full_name}</span>
+                        </div>
+                      </td>
+                      <td style={{ color: 'var(--ska-text-3)', fontSize: '0.8125rem' }}>{u.email}</td>
+                      <td style={{ color: 'var(--ska-text-3)', fontSize: '0.8125rem' }}>{u.phone || '—'}</td>
+                      <td>
+                        <span style={{
+                          display: 'inline-block', padding: '3px 10px', borderRadius: 20,
+                          fontSize: '0.75rem', fontWeight: 700,
+                          background: st.bg, color: st.color,
+                        }}>
+                          {u.status}
+                        </span>
+                      </td>
+                      <td style={{ color: 'var(--ska-text-3)', fontSize: '0.8125rem' }}>{u.created_at}</td>
+                      <td>
+                        <button
+                          className={`ska-btn ska-btn--sm ${u.is_active ? 'ska-btn--danger' : 'ska-btn--approve'}`}
+                          onClick={() => handleToggle(u.id)}
+                        >
+                          {u.is_active ? 'Suspend' : 'Activate'}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

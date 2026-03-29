@@ -9,7 +9,7 @@ import {
 } from './SchoolAdminPages';
 import {
   AnalyticsPage, ExamsPage, NotificationsPage, TimetablePage, ParentsPage,
-  FinanceUsersPage,
+  FinanceUsersPage, PrincipalUsersPage,
 } from './NewPages';
 
 /* ============================================================
@@ -57,6 +57,7 @@ const NAV_ITEMS = [
   { key: 'exams',         icon: 'quiz',             label: 'Exams & Results' },
   { key: 'finance',         icon: 'payments',         label: 'Finance' },
   { key: 'finance_users',   icon: 'manage_accounts',  label: 'Finance Users' },
+  { key: 'principal',       icon: 'school',           label: 'Principal' },
   { key: 'timetable',       icon: 'calendar_today',   label: 'Timetable' },
   { key: 'analytics',     icon: 'insights',         label: 'Analytics' },
   { key: 'parents',       icon: 'family_restroom',  label: 'Parents' },
@@ -1344,6 +1345,7 @@ const SECTION_META = {
   exams:         { title: 'Exams & Results',    icon: 'quiz',             description: 'Schedule exams and record student results.' },
   finance:        { title: 'Finance',            icon: 'payments',         description: 'Fee management and financial reports.' },
   finance_users:  { title: 'Finance Users',      icon: 'manage_accounts',  description: 'Create and manage finance staff accounts.' },
+  principal:      { title: 'Principal',          icon: 'school',           description: 'Create and manage principal accounts.' },
   timetable:     { title: 'Timetable',          icon: 'calendar_today',   description: 'Auto-generate weekly class schedules.' },
   analytics:     { title: 'Smart Analytics',    icon: 'insights',         description: 'Performance insights and at-risk detection.' },
   parents:       { title: 'Parents',            icon: 'family_restroom',  description: 'Parent accounts and student links.' },
@@ -1852,6 +1854,7 @@ export default function SchoolAdminDashboard({ onNavigate }) {
   else if (activePage === 'exams')         pageContent = <ExamsPage school={school} />;
   else if (activePage === 'finance')        pageContent = <FinancePage school={school} />;
   else if (activePage === 'finance_users')  pageContent = <FinanceUsersPage school={school} admin={admin} />;
+  else if (activePage === 'principal')      pageContent = <PrincipalUsersPage school={school} admin={admin} />;
   else if (activePage === 'timetable')     pageContent = <TimetablePage school={school} />;
   else if (activePage === 'analytics')     pageContent = <AnalyticsPage school={school} />;
   else if (activePage === 'parents')       pageContent = <ParentsPage school={school} />;

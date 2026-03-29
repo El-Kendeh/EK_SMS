@@ -4065,3 +4065,120 @@ def api_finance_user_toggle(request, uid):
         'status':    account.account_status,
         'message':   'Finance user %s.' % action,
     })
+
+
+@csrf_exempt
+def api_principal_users(request):
+    """
+    GET  → list all principal accounts (role=PRINCIPAL) for this school
+    POST → create a new principal (User + SchoolStaffAccount)
+    """
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+
+    if request.method == 'GET':
+        accounts = SchoolStaffAccount.objects.filter(
+            school=school, role='PRINCIPAL'
+        ).select_related('user').order_by('-created_at')
+        data = [{
+            'id':         a.id,
+            'full_name':  a.user.get_full_name() or a.user.username,
+            'email':      a.user.email,
+            'phone':      a.phone_number,
+            'status':     a.account_status,
+            'is_active':  a.is_active,
+            'created_at': a.created_at.strftime('%Y-%m-%d'),
+        } for a in accounts]
+        return JsonResponse({'success': True, 'principal_users': data})
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+
+        email      = (body.get('email') or '').strip().lower()
+        first_name = (body.get('first_name') or '').strip()
+        last_name  = (body.get('last_name') or '').strip()
+        phone      = (body.get('phone') or '').strip()
+        password   = body.get('password') or ''
+
+        if not email or not password:
+            return JsonResponse({'success': False, 'message': 'Email and password are required.'}, status=400)
+        if len(password) < 8:
+            return JsonResponse({'success': False, 'message': 'Password must be at least 8 characters.'}, status=400)
+        if User.objects.filter(email=email).exists():
+            return JsonResponse({'success': False, 'message': 'A user with that email already exists.'}, status=409)
+
+        username = email
+        if User.objects.filter(username=username).exists():
+            username = email.split('@')[0] + '_' + str(school.id)
+
+        try:
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                password=password,
+                first_name=first_name,
+                last_name=last_name,
+            )
+            account = SchoolStaffAccount.objects.create(
+                user=user,
+                school=school,
+                role='PRINCIPAL',
+                job_title='Principal',
+                phone_number=phone,
+                is_active=True,
+                account_status='ACTIVE',
+                created_by=actor,
+            )
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=400)
+
+        return JsonResponse({
+            'success': True,
+            'id':      account.id,
+            'message': 'Principal created successfully.',
+        }, status=201)
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+@csrf_exempt
+def api_principal_user_toggle(request, uid):
+    """
+    PUT /api/school/principal-users/<uid>/
+    Toggles the principal's active/suspended status.
+    """
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+
+    if request.method != 'PUT':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+    try:
+        account = SchoolStaffAccount.objects.get(id=uid, school=school, role='PRINCIPAL')
+    except SchoolStaffAccount.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Principal not found.'}, status=404)
+
+    account.is_active      = not account.is_active
+    account.account_status = 'ACTIVE' if account.is_active else 'SUSPENDED'
+    account.user.is_active = account.is_active
+    account.user.save(update_fields=['is_active'])
+    account.save(update_fields=['is_active', 'account_status'])
+
+    action = 'activated' if account.is_active else 'suspended'
+    return JsonResponse({
+        'success':   True,
+        'is_active': account.is_active,
+        'status':    account.account_status,
+        'message':   'Principal %s.' % action,
+    })

@@ -752,6 +752,7 @@ class SchoolStaffAccount(models.Model):
         ('PARENT', 'Parent/Guardian'),
         ('STAFF', 'Administrative Staff'),
         ('ACCOUNTANT', 'Accountant'),
+        ('PRINCIPAL', 'Principal'),
         ('REGISTRAR', 'Registrar'),
         ('LIBRARIAN', 'Librarian'),
         ('COUNSELOR', 'Counselor'),

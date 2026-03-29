@@ -42,6 +42,7 @@ from .views import (
     api_parents,
     api_fee_receipt,
     api_finance_users, api_finance_user_toggle,
+    api_principal_users, api_principal_user_toggle,
 )
 from .secure_views import csrf_token_view
 from django.conf import settings
@@ -130,6 +131,9 @@ urlpatterns = [
     # Finance users (school admin creates finance staff)
     path('api/school/finance-users/',           api_finance_users,        name='api_finance_users'),
     path('api/school/finance-users/<int:uid>/', api_finance_user_toggle,  name='api_finance_user_toggle'),
+    # Principal users (school admin creates principal accounts)
+    path('api/school/principal-users/',           api_principal_users,        name='api_principal_users'),
+    path('api/school/principal-users/<int:uid>/', api_principal_user_toggle,  name='api_principal_user_toggle'),
 
     # Root URL redirects to admin
     path('', RedirectView.as_view(url='admin/', permanent=False)),
