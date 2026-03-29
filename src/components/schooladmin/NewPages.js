@@ -2433,8 +2433,32 @@ function TeacherProfilePanel({ teacher: initTeacher, onClose, onEdit }) {
   );
 }
 
-/* ── AddTeacherWizard: 3-step form ── */
-const TEACHER_WIZARD_STEPS = ['Personal Info', 'Role & Qualification', 'Confirm'];
+/* ── AddTeacherWizard: redesigned split-panel registration ── */
+const TEACHER_WIZARD_STEPS = [
+  { label: 'Personal Info',   icon: 'person'      },
+  { label: 'Account & Role',  icon: 'badge'        },
+  { label: 'Review & Create', icon: 'check_circle' },
+];
+
+function _pwStrength(pw) {
+  if (!pw) return { score: 0, label: '', color: 'transparent' };
+  let s = 0;
+  if (pw.length >= 8)             s++;
+  if (pw.length >= 12)            s++;
+  if (/[A-Z]/.test(pw))          s++;
+  if (/[0-9]/.test(pw))          s++;
+  if (/[^A-Za-z0-9]/.test(pw))   s++;
+  if (s <= 1) return { score: s, label: 'Weak',   color: 'var(--ska-error)' };
+  if (s <= 3) return { score: s, label: 'Fair',   color: '#f9bc60' };
+  if (s <= 4) return { score: s, label: 'Good',   color: '#6ce0b0' };
+  return              { score: s, label: 'Strong', color: 'var(--ska-primary)' };
+}
+
+function _teacherAvatarLetters(first, last) {
+  const a = (first || '').trim()[0] || '';
+  const b = (last  || '').trim()[0] || '';
+  return (a + b).toUpperCase() || '?';
+}
 
 function AddTeacherWizard({ school, onSave, onCancel }) {
   const [step,     setStep]     = React.useState(0);
@@ -2445,6 +2469,10 @@ function AddTeacherWizard({ school, onSave, onCancel }) {
   const [showPass, setShowPass] = React.useState(false);
   const [saving,   setSaving]   = React.useState(false);
   const [error,    setError]    = React.useState('');
+
+  const pw = _pwStrength(form.password);
+  const avatarLetters = _teacherAvatarLetters(form.first_name, form.last_name);
+  const displayName   = [form.first_name, form.last_name].filter(Boolean).join(' ') || 'New Teacher';
 
   const canNext = [
     !!(form.first_name.trim() && form.last_name.trim() && form.email.trim() && form.password.length >= 8),
@@ -2460,105 +2488,388 @@ function AddTeacherWizard({ school, onSave, onCancel }) {
     } catch (e) { setError(e.message || 'Failed to add teacher.'); setSaving(false); }
   };
 
-  const fld = (key, label, type, required) => (
-    <label className="ska-form-group" key={key}>
-      <span>{label}{required ? <span style={{ color: 'var(--ska-error)' }}> *</span> : ''}</span>
-      <input className="ska-input" type={type || 'text'} value={form[key]}
-        onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} />
+  /* ── field helper ── */
+  const Fld = ({ fkey, label, type = 'text', required = false, full = false, placeholder = '' }) => (
+    <label style={{ display: 'flex', flexDirection: 'column', gap: 5, gridColumn: full ? '1/-1' : undefined }}>
+      <span style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ska-text-3)' }}>
+        {label}{required && <span style={{ color: 'var(--ska-error)', marginLeft: 2 }}>*</span>}
+      </span>
+      <input
+        className="ska-input"
+        type={type}
+        value={form[fkey]}
+        placeholder={placeholder}
+        onChange={e => setForm(f => ({ ...f, [fkey]: e.target.value }))}
+      />
     </label>
   );
+
+  /* ── review row ── */
+  const ReviewRow = ({ label, value, icon }) => (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 12,
+      padding: '10px 14px', borderRadius: 8,
+      background: 'var(--ska-surface-high)',
+      marginBottom: 6,
+    }}>
+      <span className="ska-icon ska-icon--sm" style={{ color: 'var(--ska-text-3)', flexShrink: 0 }}>{icon}</span>
+      <span style={{ fontSize: '0.8125rem', color: 'var(--ska-text-3)', minWidth: 96 }}>{label}</span>
+      <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--ska-text)', marginLeft: 'auto', textAlign: 'right', wordBreak: 'break-all' }}>{value}</span>
+    </div>
+  );
+
+  /* ── completion percentage for left panel ── */
+  const filledFields = [form.first_name, form.last_name, form.email, form.password, form.employee_id, form.qualification].filter(Boolean).length;
+  const completionPct = Math.round((filledFields / 6) * 100);
 
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 700,
-      background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)',
+      background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(6px)',
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
     }}>
       <div style={{
-        width: '100%', maxWidth: 500,
-        background: 'var(--ska-surface-low)',
-        borderRadius: 16, overflow: 'hidden',
-        boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+        width: '100%', maxWidth: 760,
+        display: 'flex', borderRadius: 20, overflow: 'hidden',
+        boxShadow: '0 32px 80px rgba(0,0,0,0.6)',
+        maxHeight: '95vh',
       }}>
-        {/* Progress bar */}
-        <div style={{ display: 'flex' }}>
-          {TEACHER_WIZARD_STEPS.map((_, i) => (
-            <div key={i} style={{ flex: 1, height: 3, background: i <= step ? 'var(--ska-primary)' : 'var(--ska-border)', transition: 'background 0.3s' }} />
-          ))}
-        </div>
-        <div style={{ padding: '20px 24px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <p style={{ margin: 0, fontSize: '0.6875rem', color: 'var(--ska-text-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              Step {step + 1} of {TEACHER_WIZARD_STEPS.length}
+
+        {/* ── LEFT PREVIEW PANEL ── */}
+        <div style={{
+          width: 240, flexShrink: 0,
+          background: 'linear-gradient(160deg, #1a2540 0%, #0e1728 60%, #060e1c 100%)',
+          display: 'flex', flexDirection: 'column',
+          padding: '28px 20px',
+          borderRight: '1px solid rgba(173,198,255,0.08)',
+        }} className="teacher-wizard-panel">
+          {/* School label */}
+          <div style={{ marginBottom: 28 }}>
+            <p style={{ margin: 0, fontSize: '0.625rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--ska-text-3)' }}>
+              {school ? school.name : 'Your School'}
             </p>
-            <h2 style={{ margin: '4px 0 0', fontSize: '1.125rem', fontWeight: 800, color: 'var(--ska-text)' }}>{TEACHER_WIZARD_STEPS[step]}</h2>
+            <p style={{ margin: '3px 0 0', fontSize: '0.6875rem', color: 'var(--ska-primary)', fontWeight: 600 }}>New Teacher Registration</p>
           </div>
-          <button className="ska-btn ska-btn--ghost ska-btn--sm" onClick={onCancel}>
-            <span className="ska-icon ska-icon--sm">close</span>
-          </button>
-        </div>
-        <div style={{ padding: '16px 24px 20px' }}>
-          {error && <p className="ska-form-error">{error}</p>}
-          <div className="ska-form-grid">
-            {step === 0 && <>
-              {fld('first_name',   'First Name',   'text',  true)}
-              {fld('last_name',    'Last Name',    'text',  true)}
-              {fld('email',        'Email',        'email', true)}
-              {fld('phone_number', 'Phone Number', 'text',  false)}
-              <label className="ska-form-group" style={{ gridColumn: '1/-1' }}>
-                <span>Login Password <span style={{ color: 'var(--ska-error)' }}>*</span></span>
-                <div style={{ position: 'relative' }}>
-                  <input className="ska-input" type={showPass ? 'text' : 'password'}
-                    value={form.password} placeholder="Min 8 characters"
-                    onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-                    style={{ paddingRight: 40 }} />
-                  <button type="button" onClick={() => setShowPass(p => !p)}
-                    style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ska-text-3)', display: 'flex' }}>
-                    <span className="ska-icon ska-icon--sm">{showPass ? 'visibility_off' : 'visibility'}</span>
-                  </button>
-                </div>
-                {form.password.length > 0 && form.password.length < 8 && (
-                  <span style={{ fontSize: '0.75rem', color: 'var(--ska-error)' }}>Password must be at least 8 characters</span>
-                )}
-              </label>
-            </>}
-            {step === 1 && <>
-              {fld('employee_id',   'Employee ID',          'text', true)}
-              {fld('qualification', 'Qualification/Degree', 'text', false)}
-            </>}
-            {step === 2 && (
-              <div style={{ gridColumn: '1/-1' }}>
-                <p style={{ margin: '0 0 12px', fontSize: '0.875rem', color: 'var(--ska-text-2)' }}>
-                  Review before adding to <strong>{school ? school.name : 'your school'}</strong>.
+
+          {/* Avatar */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 20 }}>
+            <div style={{
+              width: 80, height: 80, borderRadius: 20,
+              background: 'linear-gradient(135deg, var(--ska-primary-container), rgba(77,142,255,0.4))',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '1.75rem', fontWeight: 900, color: '#fff',
+              fontFamily: 'Manrope, sans-serif', letterSpacing: '-0.03em',
+              border: '2px solid rgba(173,198,255,0.25)',
+              boxShadow: '0 8px 24px rgba(77,142,255,0.25)',
+              marginBottom: 12, flexShrink: 0,
+            }}>
+              {avatarLetters}
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ margin: 0, fontFamily: 'Manrope, sans-serif', fontSize: '0.9375rem', fontWeight: 800, color: 'var(--ska-text)', lineHeight: 1.2 }}>
+                {displayName}
+              </p>
+              {form.employee_id && (
+                <p style={{ margin: '4px 0 0', fontSize: '0.6875rem', color: 'var(--ska-text-3)', fontWeight: 600, letterSpacing: '0.06em' }}>
+                  ID: {form.employee_id}
                 </p>
-                {[
-                  ['Full Name',     `${form.first_name} ${form.last_name}`],
-                  ['Email',         form.email        || '—'],
-                  ['Phone',         form.phone_number || '—'],
-                  ['Employee ID',   form.employee_id],
-                  ['Qualification', form.qualification || '—'],
-                  ['Password',      '••••••••'],
-                ].map(([k, v]) => (
-                  <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--ska-border)' }}>
-                    <span style={{ fontSize: '0.8125rem', color: 'var(--ska-text-3)' }}>{k}</span>
-                    <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--ska-text)' }}>{v}</span>
+              )}
+              {form.qualification && (
+                <div style={{
+                  marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 4,
+                  padding: '3px 10px', borderRadius: 99,
+                  background: 'rgba(173,198,255,0.1)', border: '1px solid rgba(173,198,255,0.15)',
+                }}>
+                  <span style={{ fontSize: '0.6875rem', color: 'var(--ska-primary)' }}>{form.qualification}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Profile completion */}
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+              <span style={{ fontSize: '0.6875rem', color: 'var(--ska-text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Profile</span>
+              <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--ska-primary)' }}>{completionPct}%</span>
+            </div>
+            <div style={{ height: 4, borderRadius: 99, background: 'rgba(173,198,255,0.1)', overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${completionPct}%`, borderRadius: 99, background: 'var(--ska-primary)', transition: 'width 0.4s ease' }} />
+            </div>
+          </div>
+
+          {/* Step tracker */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {TEACHER_WIZARD_STEPS.map((s, i) => (
+              <div key={i} style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '8px 10px', borderRadius: 8,
+                background: i === step ? 'rgba(173,198,255,0.1)' : 'transparent',
+                border: i === step ? '1px solid rgba(173,198,255,0.2)' : '1px solid transparent',
+                transition: 'all 0.3s',
+              }}>
+                <div style={{
+                  width: 24, height: 24, borderRadius: 6, flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: i < step ? 'var(--ska-primary-container)' : i === step ? 'rgba(173,198,255,0.15)' : 'transparent',
+                  border: i < step ? 'none' : `1px solid ${i === step ? 'rgba(173,198,255,0.4)' : 'rgba(173,198,255,0.12)'}`,
+                }}>
+                  {i < step
+                    ? <span className="ska-icon" style={{ fontSize: 14, color: '#fff' }}>check</span>
+                    : <span className="ska-icon" style={{ fontSize: 14, color: i === step ? 'var(--ska-primary)' : 'var(--ska-text-3)' }}>{s.icon}</span>
+                  }
+                </div>
+                <span style={{ fontSize: '0.8125rem', fontWeight: i === step ? 700 : 500, color: i === step ? 'var(--ska-text)' : 'var(--ska-text-3)' }}>
+                  {s.label}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Info note at bottom */}
+          <div style={{ marginTop: 'auto', paddingTop: 20 }}>
+            <div style={{ padding: '10px 12px', borderRadius: 8, background: 'rgba(173,198,255,0.06)', border: '1px solid rgba(173,198,255,0.1)' }}>
+              <p style={{ margin: 0, fontSize: '0.6875rem', color: 'var(--ska-text-3)', lineHeight: 1.5 }}>
+                The teacher will use their email &amp; password to log in to their personal dashboard.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* ── RIGHT FORM PANEL ── */}
+        <div style={{
+          flex: 1, background: 'var(--ska-surface-low)',
+          display: 'flex', flexDirection: 'column',
+          overflow: 'hidden',
+        }}>
+          {/* Header */}
+          <div style={{
+            padding: '20px 24px 16px',
+            borderBottom: '1px solid var(--ska-border)',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          }}>
+            <div>
+              <p style={{ margin: 0, fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--ska-text-3)' }}>
+                Step {step + 1} of {TEACHER_WIZARD_STEPS.length}
+              </p>
+              <h2 style={{ margin: '3px 0 0', fontFamily: 'Manrope, sans-serif', fontSize: '1.1875rem', fontWeight: 800, color: 'var(--ska-text)' }}>
+                {TEACHER_WIZARD_STEPS[step].label}
+              </h2>
+            </div>
+            <button className="ska-btn ska-btn--ghost ska-btn--sm" onClick={onCancel} style={{ borderRadius: 8 }}>
+              <span className="ska-icon ska-icon--sm">close</span>
+            </button>
+          </div>
+
+          {/* Progress bar */}
+          <div style={{ height: 2, display: 'flex', background: 'var(--ska-border)' }}>
+            <div style={{
+              width: `${((step + 1) / TEACHER_WIZARD_STEPS.length) * 100}%`,
+              background: 'var(--ska-primary)', transition: 'width 0.4s ease',
+            }} />
+          </div>
+
+          {/* Form Body */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '22px 24px 8px' }}>
+            {error && (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px',
+                borderRadius: 8, background: 'var(--ska-error-dim)', border: '1px solid rgba(255,180,171,0.25)',
+                marginBottom: 16, fontSize: '0.875rem', color: 'var(--ska-error)',
+              }}>
+                <span className="ska-icon ska-icon--sm">error</span>{error}
+              </div>
+            )}
+
+            {/* STEP 0 — Personal Info */}
+            {step === 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <p style={{ margin: '0 0 16px', fontSize: '0.8125rem', color: 'var(--ska-text-3)' }}>
+                  Enter the teacher's personal and contact details.
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <Fld fkey="first_name" label="First Name" required placeholder="e.g. Abubakarr" />
+                  <Fld fkey="last_name"  label="Last Name"  required placeholder="e.g. Kamara" />
+                  <Fld fkey="email"      label="Email Address" type="email" required full placeholder="teacher@school.com" />
+                  <Fld fkey="phone_number" label="Phone Number" placeholder="+232 76 000 000" />
+                  <div style={{ gridColumn: '1/-1', height: 1, background: 'var(--ska-border)', margin: '4px 0' }} />
+                  {/* Password full-width with strength meter */}
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: 5, gridColumn: '1/-1' }}>
+                    <span style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ska-text-3)' }}>
+                      Login Password <span style={{ color: 'var(--ska-error)' }}>*</span>
+                    </span>
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        className="ska-input"
+                        type={showPass ? 'text' : 'password'}
+                        value={form.password}
+                        placeholder="Create a secure password (min 8 chars)"
+                        onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                        style={{ paddingRight: 44 }}
+                      />
+                      <button type="button" onClick={() => setShowPass(p => !p)}
+                        style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ska-text-3)', display: 'flex', padding: 0 }}>
+                        <span className="ska-icon ska-icon--sm">{showPass ? 'visibility_off' : 'visibility'}</span>
+                      </button>
+                    </div>
+                    {/* Strength meter */}
+                    {form.password.length > 0 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginTop: 4 }}>
+                        <div style={{ display: 'flex', gap: 3 }}>
+                          {[1,2,3,4,5].map(i => (
+                            <div key={i} style={{
+                              flex: 1, height: 3, borderRadius: 99,
+                              background: i <= pw.score ? pw.color : 'var(--ska-surface-highest)',
+                              transition: 'background 0.3s',
+                            }} />
+                          ))}
+                        </div>
+                        <span style={{ fontSize: '0.75rem', color: pw.color, fontWeight: 600 }}>
+                          {pw.label} password
+                          {pw.score < 3 && <span style={{ color: 'var(--ska-text-3)', fontWeight: 400 }}> — add uppercase, numbers &amp; symbols</span>}
+                        </span>
+                      </div>
+                    )}
+                  </label>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 1 — Account & Role */}
+            {step === 1 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <p style={{ margin: '0 0 16px', fontSize: '0.8125rem', color: 'var(--ska-text-3)' }}>
+                  Assign a staff ID and professional details for this teacher.
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <Fld fkey="employee_id"   label="Employee ID"          required placeholder="e.g. T-0042" />
+                  <Fld fkey="qualification" label="Qualification / Degree" placeholder="e.g. B.Sc. Mathematics" />
+                </div>
+
+                {/* Login credentials summary */}
+                <div style={{
+                  marginTop: 8, padding: '14px 16px', borderRadius: 10,
+                  background: 'rgba(173,198,255,0.05)', border: '1px solid rgba(173,198,255,0.12)',
+                }}>
+                  <p style={{ margin: '0 0 10px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--ska-text-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    Login Credentials Preview
+                  </p>
+                  {[
+                    ['Email',    form.email    || '—', 'email'],
+                    ['Password', form.password ? '••••••••' : '—', 'lock'],
+                  ].map(([k, v, ic]) => (
+                    <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', borderBottom: '1px solid var(--ska-border)' }}>
+                      <span className="ska-icon ska-icon--sm" style={{ color: 'var(--ska-text-3)' }}>{ic}</span>
+                      <span style={{ fontSize: '0.8125rem', color: 'var(--ska-text-3)', minWidth: 70 }}>{k}</span>
+                      <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--ska-text)', marginLeft: 'auto' }}>{v}</span>
+                    </div>
+                  ))}
+                  <p style={{ margin: '10px 0 0', fontSize: '0.75rem', color: 'var(--ska-text-3)' }}>
+                    Share these credentials with the teacher so they can log in.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 2 — Review & Create */}
+            {step === 2 && (
+              <div>
+                <p style={{ margin: '0 0 16px', fontSize: '0.8125rem', color: 'var(--ska-text-3)' }}>
+                  Review all details before creating the account for{' '}
+                  <strong style={{ color: 'var(--ska-text)' }}>{school ? school.name : 'your school'}</strong>.
+                </p>
+
+                {/* Teacher ID Card */}
+                <div style={{
+                  borderRadius: 12, overflow: 'hidden', marginBottom: 16,
+                  border: '1px solid rgba(173,198,255,0.15)',
+                }}>
+                  {/* Card header */}
+                  <div style={{
+                    padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14,
+                    background: 'linear-gradient(135deg, #1a2540, #111928)',
+                    borderBottom: '1px solid rgba(173,198,255,0.1)',
+                  }}>
+                    <div style={{
+                      width: 52, height: 52, borderRadius: 12, flexShrink: 0,
+                      background: 'linear-gradient(135deg, var(--ska-primary-container), rgba(77,142,255,0.4))',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '1.25rem', fontWeight: 900, color: '#fff',
+                      fontFamily: 'Manrope, sans-serif', letterSpacing: '-0.02em',
+                      border: '1.5px solid rgba(173,198,255,0.25)',
+                    }}>
+                      {avatarLetters}
+                    </div>
+                    <div>
+                      <p style={{ margin: 0, fontFamily: 'Manrope, sans-serif', fontSize: '1rem', fontWeight: 800, color: 'var(--ska-text)', lineHeight: 1.2 }}>
+                        {displayName}
+                      </p>
+                      <p style={{ margin: '3px 0 0', fontSize: '0.75rem', color: 'var(--ska-primary)', fontWeight: 600 }}>
+                        {form.qualification || 'Teacher'}
+                      </p>
+                    </div>
+                    <div style={{
+                      marginLeft: 'auto', padding: '4px 10px', borderRadius: 99,
+                      background: 'rgba(173,198,255,0.1)', border: '1px solid rgba(173,198,255,0.2)',
+                    }}>
+                      <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--ska-primary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Staff</span>
+                    </div>
                   </div>
-                ))}
+                  {/* Card details */}
+                  <div style={{ padding: '12px 16px', background: 'var(--ska-surface-card)' }}>
+                    <ReviewRow label="Email"         value={form.email         || '—'} icon="email"  />
+                    <ReviewRow label="Phone"         value={form.phone_number  || '—'} icon="call"   />
+                    <ReviewRow label="Employee ID"   value={form.employee_id   || '—'} icon="badge"  />
+                    <ReviewRow label="Qualification" value={form.qualification || '—'} icon="school" />
+                    <ReviewRow label="Password"      value="••••••••"                  icon="lock"   />
+                  </div>
+                </div>
+
+                <div style={{
+                  display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 14px',
+                  borderRadius: 8, background: 'rgba(173,198,255,0.06)', border: '1px solid rgba(173,198,255,0.12)',
+                }}>
+                  <span className="ska-icon ska-icon--sm" style={{ color: 'var(--ska-primary)', marginTop: 1 }}>info</span>
+                  <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--ska-text-3)', lineHeight: 1.5 }}>
+                    Once created, the teacher can log in at <strong style={{ color: 'var(--ska-text)' }}>the school portal</strong> using their email and password.
+                  </p>
+                </div>
               </div>
             )}
           </div>
-        </div>
-        <div style={{ padding: '0 24px 20px', display: 'flex', gap: 10 }}>
-          {step > 0
-            ? <button className="ska-btn ska-btn--ghost" onClick={() => setStep(s => s - 1)} style={{ flex: 1 }}>Back</button>
-            : <button className="ska-btn ska-btn--ghost" onClick={onCancel} style={{ flex: 1 }}>Cancel</button>}
-          {step < TEACHER_WIZARD_STEPS.length - 1
-            ? <button className="ska-btn ska-btn--primary" disabled={!canNext} onClick={() => setStep(s => s + 1)} style={{ flex: 2 }}>Next</button>
-            : <button className="ska-btn ska-btn--primary" disabled={saving} onClick={handleSubmit} style={{ flex: 2 }}>
-                {saving ? 'Adding…' : 'Add Teacher'}
-              </button>}
+
+          {/* Footer */}
+          <div style={{
+            padding: '14px 24px 20px',
+            borderTop: '1px solid var(--ska-border)',
+            display: 'flex', gap: 10,
+          }}>
+            {step > 0
+              ? <button className="ska-btn ska-btn--ghost" onClick={() => setStep(s => s - 1)} style={{ flex: 1 }}>
+                  <span className="ska-icon ska-icon--sm">arrow_back</span>Back
+                </button>
+              : <button className="ska-btn ska-btn--ghost" onClick={onCancel} style={{ flex: 1 }}>Cancel</button>
+            }
+            {step < TEACHER_WIZARD_STEPS.length - 1
+              ? <button className="ska-btn ska-btn--primary" disabled={!canNext} onClick={() => setStep(s => s + 1)} style={{ flex: 2 }}>
+                  Continue<span className="ska-icon ska-icon--sm">arrow_forward</span>
+                </button>
+              : <button className="ska-btn ska-btn--primary" disabled={saving || !canNext} onClick={handleSubmit} style={{ flex: 2 }}>
+                  {saving
+                    ? <><span className="ska-icon ska-icon--sm">hourglass_empty</span>Creating account…</>
+                    : <><span className="ska-icon ska-icon--sm">person_add</span>Create Teacher Account</>
+                  }
+                </button>
+            }
+          </div>
         </div>
       </div>
+
+      {/* Mobile panel hide style */}
+      <style>{`
+        @media (max-width: 600px) {
+          .teacher-wizard-panel { display: none !important; }
+        }
+      `}</style>
     </div>
   );
 }
