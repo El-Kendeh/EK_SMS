@@ -7,6 +7,7 @@ import ParentDashboard from './components/parents/dashboard';
 import Landing from './components/Landing';
 import Register from './components/Register';
 import SchoolAdminDashboard from './components/schooladmin/dashboard';
+import TeacherDashboard from './components/teacher/TeacherDashboard';
 
 /* ── Impersonation banner (shown when a superadmin is viewing as a school admin) ── */
 function ImpersonationBanner() {
@@ -60,6 +61,7 @@ const PAGE_TO_PATH = {
   register:             '/register',
   superadmindashboard:  '/superadmin',
   'sa-dashboard':       '/dashboard/school-admin',
+  'teacher-dashboard':  '/dashboard/teacher',
   parentdashboard:      '/parent',
 };
 
@@ -69,6 +71,7 @@ const PATH_TO_PAGE = {
   '/register':    'register',
   '/superadmin':  'superadmindashboard',
   '/dashboard/school-admin': 'sa-dashboard',
+  '/dashboard/teacher':      'teacher-dashboard',
   '/parent':      'parentdashboard',
 };
 
@@ -108,6 +111,8 @@ function App() {
           setCurrentPage('superadmindashboard');
         } else if (user.role === 'school_admin') {
           setCurrentPage('sa-dashboard');
+        } else if (user.role === 'teacher') {
+          setCurrentPage('teacher-dashboard');
         } else if (user.role === 'parent') {
           setCurrentPage('parentdashboard');
         } else {
@@ -140,6 +145,8 @@ function App() {
             setCurrentPage('superadmindashboard');
           } else if (user.role === 'school_admin') {
             setCurrentPage('sa-dashboard');
+          } else if (user.role === 'teacher') {
+            setCurrentPage('teacher-dashboard');
           } else if (user.role === 'parent') {
             setCurrentPage('parentdashboard');
           } else {
@@ -177,12 +184,13 @@ function App() {
         {currentPage === 'login' && <Login onNavigate={setCurrentPage} />}
         {currentPage === 'superadmindashboard' && <SuperadminDashboard onNavigate={setCurrentPage} />}
         {currentPage === 'sa-dashboard' && <SchoolAdminDashboard onNavigate={setCurrentPage} />}
+        {currentPage === 'teacher-dashboard' && <TeacherDashboard onNavigate={setCurrentPage} />}
         {currentPage === 'parentdashboard' && <ParentDashboard onNavigate={setCurrentPage} />}
         {(currentPage === 'home' || currentPage === 'landing') && <Landing onNavigate={setCurrentPage} />}
         {currentPage === 'register' && <Register onNavigate={setCurrentPage} />}
 
         {/* Fallback for unknown pages */}
-        {!['login', 'superadmindashboard', 'sa-dashboard', 'home', 'landing', 'register'].includes(currentPage) && (
+        {!['login', 'superadmindashboard', 'sa-dashboard', 'teacher-dashboard', 'parentdashboard', 'home', 'landing', 'register'].includes(currentPage) && (
           <Login onNavigate={setCurrentPage} />
         )}
       </div>

@@ -153,6 +153,8 @@ function Login({ onNavigate }) {
           onNavigate('superadmindashboard');
         } else if (user.role === 'school_admin') {
           onNavigate('sa-dashboard');
+        } else if (user.role === 'teacher') {
+          onNavigate('teacher-dashboard');
         } else if (user.role === 'parent') {
           onNavigate('parentdashboard');
         } else {

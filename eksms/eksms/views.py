@@ -2664,8 +2664,11 @@ def api_teachers(request):
         employee_id   = body.get('employee_id', '').strip()
         phone_number  = body.get('phone_number', '')
         qualification = body.get('qualification', '')
+        password      = body.get('password', '').strip()
         if not first_name or not last_name or not employee_id:
             return JsonResponse({'success': False, 'message': 'first_name, last_name, and employee_id are required.'}, status=400)
+        if not password:
+            return JsonResponse({'success': False, 'message': 'password is required so the teacher can log in.'}, status=400)
         if Teacher.objects.filter(school=school, employee_id=employee_id).exists():
             return JsonResponse({'success': False, 'message': 'Employee ID already exists.'}, status=400)
         username = f"tch_{school.code}_{employee_id}".lower().replace(' ', '_')[:150]
@@ -2674,14 +2677,19 @@ def api_teachers(request):
         user = User.objects.create_user(
             username=username, email=email,
             first_name=first_name, last_name=last_name,
-            password=uuid.uuid4().hex,
+            password=password,
         )
         teacher = Teacher.objects.create(
             school=school, user=user, employee_id=employee_id,
             phone_number=phone_number, qualification=qualification,
         )
-        return JsonResponse({'success': True, 'message': 'Teacher added.', 'id': teacher.id,
-                             'full_name': user.get_full_name(), 'employee_id': teacher.employee_id}, status=201)
+        return JsonResponse({
+            'success': True, 'message': 'Teacher added.',
+            'id': teacher.id, 'full_name': user.get_full_name(),
+            'employee_id': teacher.employee_id,
+            'login_email': email or username,
+            'login_username': username,
+        }, status=201)
 
     return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
 
@@ -4403,3 +4411,315 @@ def api_teacher_stats(request):
         'overloaded_list': overloaded_list,
         'monthly_trend': monthly_trend,
     })
+
+
+# ══════════════════════════════════════════════════════════════
+# TEACHER PORTAL ENDPOINTS
+# ══════════════════════════════════════════════════════════════
+
+def _get_teacher_profile(request):
+    """Returns (user, teacher) for authenticated teacher requests, or (None, None)."""
+    user = _get_authed_user(request)
+    if not user:
+        return None, None
+    try:
+        return user, user.teacher_profile
+    except Exception:
+        return None, None
+
+
+@csrf_exempt
+def api_teacher_me(request):
+    """Teacher profile + school + assigned classes/subjects."""
+    if request.method != 'GET':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+    user, teacher = _get_teacher_profile(request)
+    if not teacher:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+
+    school = teacher.school
+    tscs = teacher.subject_classes.select_related('subject', 'classroom').filter(is_active=True)
+    classes = [{
+        'id': tsc.classroom.id,
+        'name': tsc.classroom.name,
+        'subject': tsc.subject.name,
+        'subject_id': tsc.subject.id,
+        'student_count': tsc.classroom.students.filter(is_active=True).count(),
+    } for tsc in tscs]
+    subjects = list({tsc.subject.name for tsc in tscs})
+
+    badge_url = None
+    if school and school.badge:
+        try:
+            badge_url = request.build_absolute_uri(school.badge.url)
+        except Exception:
+            badge_url = None
+
+    return JsonResponse({'success': True, 'teacher': {
+        'id': teacher.id,
+        'full_name': user.get_full_name(),
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+        'email': user.email,
+        'phone_number': teacher.phone_number,
+        'employee_id': teacher.employee_id,
+        'qualification': teacher.qualification,
+        'hire_date': str(teacher.hire_date),
+        'school': {'id': school.id, 'name': school.name, 'badge': badge_url} if school else None,
+        'subjects': subjects,
+        'classes': classes,
+        'total_students': sum(c['student_count'] for c in classes),
+        'periods_per_week': len(classes),
+    }})
+
+
+@csrf_exempt
+def api_teacher_classes(request):
+    """List all classes + subjects assigned to this teacher."""
+    if request.method != 'GET':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+    user, teacher = _get_teacher_profile(request)
+    if not teacher:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+
+    tscs = teacher.subject_classes.select_related('subject', 'classroom').filter(is_active=True)
+    classes = []
+    seen = set()
+    for tsc in tscs:
+        key = (tsc.classroom.id, tsc.subject.id)
+        if key in seen:
+            continue
+        seen.add(key)
+        students = list(tsc.classroom.students.filter(is_active=True).select_related('user').values(
+            'id', 'admission_number', 'user__first_name', 'user__last_name', 'user__email'
+        ))
+        classes.append({
+            'classroom_id': tsc.classroom.id,
+            'classroom_name': tsc.classroom.name,
+            'subject_id': tsc.subject.id,
+            'subject_name': tsc.subject.name,
+            'student_count': len(students),
+        })
+    return JsonResponse({'success': True, 'classes': classes})
+
+
+@csrf_exempt
+def api_teacher_students(request):
+    """All students in this teacher's classes, optionally filtered by classroom."""
+    if request.method != 'GET':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+    user, teacher = _get_teacher_profile(request)
+    if not teacher:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+
+    classroom_id = request.GET.get('classroom_id')
+    tscs = teacher.subject_classes.select_related('subject', 'classroom').filter(is_active=True)
+    if classroom_id:
+        tscs = tscs.filter(classroom__id=classroom_id)
+
+    seen_students = set()
+    students_out = []
+    for tsc in tscs:
+        for s in tsc.classroom.students.filter(is_active=True).select_related('user'):
+            if s.id in seen_students:
+                continue
+            seen_students.add(s.id)
+            students_out.append({
+                'id': s.id,
+                'full_name': s.user.get_full_name(),
+                'admission_number': s.admission_number,
+                'classroom': tsc.classroom.name,
+                'classroom_id': tsc.classroom.id,
+                'email': s.user.email,
+            })
+
+    students_out.sort(key=lambda x: x['full_name'])
+    return JsonResponse({'success': True, 'students': students_out, 'count': len(students_out)})
+
+
+@csrf_exempt
+def api_teacher_attendance(request):
+    """GET: fetch attendance for a class+date. POST: bulk save attendance records."""
+    from eksms_core.models import Attendance
+    user, teacher = _get_teacher_profile(request)
+    if not teacher:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+
+    if request.method == 'GET':
+        classroom_id = request.GET.get('classroom_id')
+        date_str     = request.GET.get('date', str(timezone.now().date()))
+        if not classroom_id:
+            return JsonResponse({'success': False, 'message': 'classroom_id required.'}, status=400)
+        records = Attendance.objects.filter(
+            classroom_id=classroom_id, date=date_str
+        ).select_related('student__user')
+        data = [{
+            'student_id': r.student.id,
+            'full_name':  r.student.user.get_full_name(),
+            'status': r.status,
+            'notes': r.notes,
+        } for r in records]
+        return JsonResponse({'success': True, 'date': date_str, 'records': data})
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        classroom_id = body.get('classroom_id')
+        date_str     = body.get('date', str(timezone.now().date()))
+        records      = body.get('records', [])
+        if not classroom_id or not records:
+            return JsonResponse({'success': False, 'message': 'classroom_id and records required.'}, status=400)
+
+        # Verify teacher is assigned to this classroom
+        if not teacher.subject_classes.filter(classroom_id=classroom_id, is_active=True).exists():
+            return JsonResponse({'success': False, 'message': 'Not assigned to this classroom.'}, status=403)
+
+        try:
+            classroom = ClassRoom.objects.get(id=classroom_id)
+        except ClassRoom.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Classroom not found.'}, status=404)
+
+        saved = 0
+        for rec in records:
+            student_id = rec.get('student_id')
+            status     = rec.get('status', 'present')
+            notes      = rec.get('notes', '')
+            if status not in ('present', 'absent', 'late', 'excused'):
+                continue
+            try:
+                from eksms_core.models import Student as StudentModel
+                student = StudentModel.objects.get(id=student_id, classroom=classroom)
+                Attendance.objects.update_or_create(
+                    student=student, date=date_str,
+                    defaults={
+                        'classroom': classroom,
+                        'school': teacher.school,
+                        'status': status,
+                        'notes': notes,
+                        'recorded_by': user,
+                    }
+                )
+                saved += 1
+            except Exception:
+                continue
+        return JsonResponse({'success': True, 'saved': saved})
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+@csrf_exempt
+def api_teacher_gradebook(request):
+    """GET: list students + their grades for a class+subject. POST: save/update a grade."""
+    from eksms_core.models import Grade, Term, AcademicYear
+    user, teacher = _get_teacher_profile(request)
+    if not teacher:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+
+    if request.method == 'GET':
+        classroom_id = request.GET.get('classroom_id')
+        subject_id   = request.GET.get('subject_id')
+        if not classroom_id or not subject_id:
+            return JsonResponse({'success': False, 'message': 'classroom_id and subject_id required.'}, status=400)
+
+        # Verify assignment
+        if not teacher.subject_classes.filter(classroom_id=classroom_id, subject_id=subject_id, is_active=True).exists():
+            return JsonResponse({'success': False, 'message': 'Not assigned to this class/subject.'}, status=403)
+
+        students = list(
+            ClassRoom.objects.get(id=classroom_id).students.filter(is_active=True).select_related('user')
+        )
+        # Get latest active term
+        active_term = Term.objects.filter(
+            academic_year__school=teacher.school, is_active=True
+        ).order_by('-start_date').first()
+
+        out = []
+        for s in students:
+            grade = None
+            if active_term:
+                grade = Grade.objects.filter(
+                    student=s, subject_id=subject_id, term=active_term
+                ).first()
+            out.append({
+                'student_id': s.id,
+                'full_name': s.user.get_full_name(),
+                'admission_number': s.admission_number,
+                'grade': {
+                    'id': grade.id if grade else None,
+                    'ca': float(grade.continuous_assessment) if grade else 0,
+                    'mid_term': float(grade.mid_term_exam) if grade else 0,
+                    'final': float(grade.final_exam) if grade else 0,
+                    'total': float(grade.total_score) if grade else 0,
+                    'letter': grade.grade_letter if grade else '—',
+                    'is_locked': grade.is_locked if grade else False,
+                } if grade else None,
+            })
+        out.sort(key=lambda x: x['full_name'])
+        return JsonResponse({'success': True, 'students': out,
+                             'term': active_term.name if active_term else None})
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        from eksms_core.models import Grade, Term, Student as StudentModel
+        student_id   = body.get('student_id')
+        subject_id   = body.get('subject_id')
+        classroom_id = body.get('classroom_id')
+        ca           = float(body.get('ca', 0))
+        mid_term     = float(body.get('mid_term', 0))
+        final        = float(body.get('final', 0))
+
+        if not teacher.subject_classes.filter(classroom_id=classroom_id, subject_id=subject_id, is_active=True).exists():
+            return JsonResponse({'success': False, 'message': 'Not assigned to this class/subject.'}, status=403)
+
+        active_term = Term.objects.filter(
+            academic_year__school=teacher.school, is_active=True
+        ).order_by('-start_date').first()
+        if not active_term:
+            return JsonResponse({'success': False, 'message': 'No active term found.'}, status=400)
+
+        try:
+            student = StudentModel.objects.get(id=student_id, school=teacher.school)
+        except StudentModel.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Student not found.'}, status=404)
+
+        grade, _ = Grade.objects.update_or_create(
+            student=student, subject_id=subject_id, term=active_term,
+            defaults={
+                'teacher': teacher,
+                'continuous_assessment': min(max(ca, 0), 20),
+                'mid_term_exam': min(max(mid_term, 0), 30),
+                'final_exam': min(max(final, 0), 50),
+            }
+        )
+        return JsonResponse({'success': True, 'grade_id': grade.id,
+                             'total': float(grade.total_score), 'letter': grade.grade_letter})
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+@csrf_exempt
+def api_teacher_change_password(request):
+    """POST: teacher changes their own password."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+    user, teacher = _get_teacher_profile(request)
+    if not teacher:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    try:
+        body = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+    current  = body.get('current_password', '')
+    new_pass = body.get('new_password', '').strip()
+    if not user.check_password(current):
+        return JsonResponse({'success': False, 'message': 'Current password is incorrect.'}, status=400)
+    if len(new_pass) < 6:
+        return JsonResponse({'success': False, 'message': 'New password must be at least 6 characters.'}, status=400)
+    user.set_password(new_pass)
+    user.save()
+    return JsonResponse({'success': True, 'message': 'Password updated successfully.'})

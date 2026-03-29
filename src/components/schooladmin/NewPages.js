@@ -2437,16 +2437,17 @@ function TeacherProfilePanel({ teacher: initTeacher, onClose, onEdit }) {
 const TEACHER_WIZARD_STEPS = ['Personal Info', 'Role & Qualification', 'Confirm'];
 
 function AddTeacherWizard({ school, onSave, onCancel }) {
-  const [step,   setStep]   = React.useState(0);
-  const [form,   setForm]   = React.useState({
+  const [step,     setStep]     = React.useState(0);
+  const [form,     setForm]     = React.useState({
     first_name: '', last_name: '', email: '', phone_number: '',
-    employee_id: '', qualification: '',
+    password: '', employee_id: '', qualification: '',
   });
-  const [saving, setSaving] = React.useState(false);
-  const [error,  setError]  = React.useState('');
+  const [showPass, setShowPass] = React.useState(false);
+  const [saving,   setSaving]   = React.useState(false);
+  const [error,    setError]    = React.useState('');
 
   const canNext = [
-    !!(form.first_name.trim() && form.last_name.trim()),
+    !!(form.first_name.trim() && form.last_name.trim() && form.email.trim() && form.password.length >= 8),
     !!form.employee_id.trim(),
     true,
   ][step];
@@ -2461,7 +2462,7 @@ function AddTeacherWizard({ school, onSave, onCancel }) {
 
   const fld = (key, label, type, required) => (
     <label className="ska-form-group" key={key}>
-      <span>{label}{required ? ' *' : ''}</span>
+      <span>{label}{required ? <span style={{ color: 'var(--ska-error)' }}> *</span> : ''}</span>
       <input className="ska-input" type={type || 'text'} value={form[key]}
         onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} />
     </label>
@@ -2500,13 +2501,29 @@ function AddTeacherWizard({ school, onSave, onCancel }) {
           {error && <p className="ska-form-error">{error}</p>}
           <div className="ska-form-grid">
             {step === 0 && <>
-              {fld('first_name',   'First Name',    'text',  true)}
-              {fld('last_name',    'Last Name',     'text',  true)}
-              {fld('email',        'Email',         'email', false)}
-              {fld('phone_number', 'Phone Number',  'text',  false)}
+              {fld('first_name',   'First Name',   'text',  true)}
+              {fld('last_name',    'Last Name',    'text',  true)}
+              {fld('email',        'Email',        'email', true)}
+              {fld('phone_number', 'Phone Number', 'text',  false)}
+              <label className="ska-form-group" style={{ gridColumn: '1/-1' }}>
+                <span>Login Password <span style={{ color: 'var(--ska-error)' }}>*</span></span>
+                <div style={{ position: 'relative' }}>
+                  <input className="ska-input" type={showPass ? 'text' : 'password'}
+                    value={form.password} placeholder="Min 8 characters"
+                    onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                    style={{ paddingRight: 40 }} />
+                  <button type="button" onClick={() => setShowPass(p => !p)}
+                    style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ska-text-3)', display: 'flex' }}>
+                    <span className="ska-icon ska-icon--sm">{showPass ? 'visibility_off' : 'visibility'}</span>
+                  </button>
+                </div>
+                {form.password.length > 0 && form.password.length < 8 && (
+                  <span style={{ fontSize: '0.75rem', color: 'var(--ska-error)' }}>Password must be at least 8 characters</span>
+                )}
+              </label>
             </>}
             {step === 1 && <>
-              {fld('employee_id',   'Employee ID',         'text', true)}
+              {fld('employee_id',   'Employee ID',          'text', true)}
               {fld('qualification', 'Qualification/Degree', 'text', false)}
             </>}
             {step === 2 && (
@@ -2520,6 +2537,7 @@ function AddTeacherWizard({ school, onSave, onCancel }) {
                   ['Phone',         form.phone_number || '—'],
                   ['Employee ID',   form.employee_id],
                   ['Qualification', form.qualification || '—'],
+                  ['Password',      '••••••••'],
                 ].map(([k, v]) => (
                   <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--ska-border)' }}>
                     <span style={{ fontSize: '0.8125rem', color: 'var(--ska-text-3)' }}>{k}</span>

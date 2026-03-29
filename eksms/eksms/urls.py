@@ -45,6 +45,9 @@ from .views import (
     api_principal_users, api_principal_user_toggle,
     api_student_stats,
     api_teacher_stats,
+    # Teacher portal
+    api_teacher_me, api_teacher_classes, api_teacher_students,
+    api_teacher_attendance, api_teacher_gradebook, api_teacher_change_password,
 )
 from .secure_views import csrf_token_view
 from django.conf import settings
@@ -140,6 +143,13 @@ urlpatterns = [
     path('api/school/student-stats/',             api_student_stats,          name='api_student_stats'),
     # Teacher module stats
     path('api/school/teacher-stats/',             api_teacher_stats,          name='api_teacher_stats'),
+    # Teacher portal (teacher-facing endpoints)
+    path('api/teacher/me/',              api_teacher_me,              name='api_teacher_me'),
+    path('api/teacher/classes/',         api_teacher_classes,         name='api_teacher_classes'),
+    path('api/teacher/students/',        api_teacher_students,        name='api_teacher_students'),
+    path('api/teacher/attendance/',      api_teacher_attendance,      name='api_teacher_attendance'),
+    path('api/teacher/gradebook/',       api_teacher_gradebook,       name='api_teacher_gradebook'),
+    path('api/teacher/change-password/', api_teacher_change_password, name='api_teacher_change_password'),
 
     # Root URL redirects to admin
     path('', RedirectView.as_view(url='admin/', permanent=False)),
