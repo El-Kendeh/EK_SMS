@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import './SchoolAdmin.css';
 import SECURITY_CONFIG from '../../config/security';
 import ApiClient from '../../api/client';
@@ -199,13 +199,31 @@ function Sidebar({ active, onNav, school, admin, isOpen, onClose, onLogout }) {
    TOPBAR
    ============================================================ */
 function Topbar({ school, admin, onMenuToggle, onLogout, onNav }) {
-  const adminName = admin?.full_name || admin?.username || 'Admin';
+  const adminName  = admin?.full_name || admin?.username || 'Admin';
+  const adminEmail = admin?.email || '';
   const schoolName = school?.name || 'School';
+
+  const [dropOpen, setDropOpen] = useState(false);
+  const dropRef = useRef(null);
+
+  /* Close dropdown when clicking outside */
+  useEffect(() => {
+    if (!dropOpen) return;
+    function handleOutside(e) {
+      if (dropRef.current && !dropRef.current.contains(e.target)) {
+        setDropOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, [dropOpen]);
+
+  const go = (page) => { setDropOpen(false); onNav && onNav(page); };
+  const handleLogout = () => { setDropOpen(false); onLogout(); };
 
   return (
     <header className="ska-topbar">
       <div className="ska-topbar-left">
-        {/* Hamburger — mobile only */}
         <button
           className="ska-topbar-icon-btn"
           id="ska-hamburger"
@@ -246,24 +264,67 @@ function Topbar({ school, admin, onMenuToggle, onLogout, onNav }) {
 
         <div className="ska-topbar-divider" />
 
-        {/* Profile — navigates to profile page */}
-        <button className="ska-topbar-profile" onClick={() => onNav && onNav('profile')} title="My Profile">
-          <div className="ska-topbar-avatar">
-            {adminName.charAt(0).toUpperCase()}
-          </div>
-          <span className="ska-topbar-profile-name">{adminName}</span>
-        </button>
+        {/* Profile dropdown trigger */}
+        <div className="ska-profile-dropdown" ref={dropRef}>
+          <button
+            className={`ska-topbar-profile${dropOpen ? ' active' : ''}`}
+            onClick={() => setDropOpen(o => !o)}
+            aria-haspopup="true"
+            aria-expanded={dropOpen}
+            title="Account menu"
+          >
+            <div className="ska-topbar-avatar">
+              {adminName.charAt(0).toUpperCase()}
+            </div>
+            <span className="ska-topbar-profile-name">{adminName}</span>
+            <Ic name={dropOpen ? 'expand_less' : 'expand_more'} size="sm"
+              style={{ color: 'var(--ska-text-3)', fontSize: 18, marginLeft: 2 }} />
+          </button>
 
-        {/* Logout — dedicated button */}
-        <button
-          className="ska-topbar-icon-btn"
-          onClick={onLogout}
-          title="Sign out"
-          aria-label="Sign out"
-          style={{ color: 'var(--ska-error)' }}
-        >
-          <Ic name="logout" />
-        </button>
+          {/* Dropdown panel */}
+          {dropOpen && (
+            <div className="ska-profile-drop-panel" role="menu">
+              {/* Identity header */}
+              <div className="ska-profile-drop-head">
+                <div className="ska-profile-drop-avatar">
+                  {adminName.charAt(0).toUpperCase()}
+                </div>
+                <div className="ska-profile-drop-info">
+                  <div className="ska-profile-drop-name">{adminName}</div>
+                  {adminEmail && (
+                    <div className="ska-profile-drop-email">{adminEmail}</div>
+                  )}
+                  <span className="ska-badge" style={{ marginTop: 4, fontSize: '0.6rem', padding: '2px 7px', background: 'var(--ska-primary-dim)', color: 'var(--ska-primary)' }}>
+                    School Admin
+                  </span>
+                </div>
+              </div>
+
+              <div className="ska-profile-drop-divider" />
+
+              {/* Menu items */}
+              <button className="ska-profile-drop-item" role="menuitem" onClick={() => go('profile')}>
+                <Ic name="account_circle" size="sm" />
+                View Profile
+              </button>
+              <button className="ska-profile-drop-item" role="menuitem" onClick={() => go('settings')}>
+                <Ic name="settings" size="sm" />
+                Settings
+              </button>
+              <button className="ska-profile-drop-item" role="menuitem" onClick={() => go('security')}>
+                <Ic name="security" size="sm" />
+                Security Logs
+              </button>
+
+              <div className="ska-profile-drop-divider" />
+
+              <button className="ska-profile-drop-item ska-profile-drop-item--danger" role="menuitem" onClick={handleLogout}>
+                <Ic name="logout" size="sm" />
+                Sign Out
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );
