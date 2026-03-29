@@ -4526,12 +4526,15 @@ def api_teacher_students(request):
                 continue
             seen_students.add(s.id)
             students_out.append({
-                'id': s.id,
-                'full_name': s.user.get_full_name(),
+                'id':               s.id,
+                'first_name':       s.user.first_name,
+                'last_name':        s.user.last_name,
+                'full_name':        s.user.get_full_name(),
+                'student_id':       s.admission_number,
                 'admission_number': s.admission_number,
-                'classroom': tsc.classroom.name,
-                'classroom_id': tsc.classroom.id,
-                'email': s.user.email,
+                'classroom':        tsc.classroom.name,
+                'classroom_id':     tsc.classroom.id,
+                'email':            s.user.email,
             })
 
     students_out.sort(key=lambda x: x['full_name'])
@@ -4636,29 +4639,31 @@ def api_teacher_gradebook(request):
             academic_year__school=teacher.school, is_active=True
         ).order_by('-start_date').first()
 
-        out = []
+        out_students = []
+        out_entries  = []
         for s in students:
             grade = None
             if active_term:
                 grade = Grade.objects.filter(
                     student=s, subject_id=subject_id, term=active_term
                 ).first()
-            out.append({
-                'student_id': s.id,
-                'full_name': s.user.get_full_name(),
-                'admission_number': s.admission_number,
-                'grade': {
-                    'id': grade.id if grade else None,
-                    'ca': float(grade.continuous_assessment) if grade else 0,
-                    'mid_term': float(grade.mid_term_exam) if grade else 0,
-                    'final': float(grade.final_exam) if grade else 0,
-                    'total': float(grade.total_score) if grade else 0,
-                    'letter': grade.grade_letter if grade else '—',
-                    'is_locked': grade.is_locked if grade else False,
-                } if grade else None,
+            out_students.append({
+                'id':         s.id,
+                'first_name': s.user.first_name,
+                'last_name':  s.user.last_name,
+                'student_id': s.admission_number,
             })
-        out.sort(key=lambda x: x['full_name'])
-        return JsonResponse({'success': True, 'students': out,
+            out_entries.append({
+                'student_id': s.id,
+                'ca':         float(grade.continuous_assessment) if grade else '',
+                'midterm':    float(grade.mid_term_exam)         if grade else '',
+                'final_exam': float(grade.final_exam)            if grade else '',
+                'is_locked':  grade.is_locked if grade else False,
+            })
+        out_students.sort(key=lambda x: (x['last_name'], x['first_name']))
+        out_entries.sort(key=lambda x: x['student_id'])
+        return JsonResponse({'success': True, 'students': out_students,
+                             'entries': out_entries,
                              'term': active_term.name if active_term else None})
 
     if request.method == 'POST':
@@ -4667,12 +4672,9 @@ def api_teacher_gradebook(request):
         except json.JSONDecodeError:
             return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
         from eksms_core.models import Grade, Term, Student as StudentModel
-        student_id   = body.get('student_id')
+
         subject_id   = body.get('subject_id')
         classroom_id = body.get('classroom_id')
-        ca           = float(body.get('ca', 0))
-        mid_term     = float(body.get('mid_term', 0))
-        final        = float(body.get('final', 0))
 
         if not teacher.subject_classes.filter(classroom_id=classroom_id, subject_id=subject_id, is_active=True).exists():
             return JsonResponse({'success': False, 'message': 'Not assigned to this class/subject.'}, status=403)
@@ -4683,22 +4685,32 @@ def api_teacher_gradebook(request):
         if not active_term:
             return JsonResponse({'success': False, 'message': 'No active term found.'}, status=400)
 
-        try:
-            student = StudentModel.objects.get(id=student_id, school=teacher.school)
-        except StudentModel.DoesNotExist:
-            return JsonResponse({'success': False, 'message': 'Student not found.'}, status=404)
+        # Bulk entries format: {"classroom_id":…, "subject_id":…, "entries":[{student_id, ca, midterm, final_exam}]}
+        entries = body.get('entries', [])
+        if not entries:
+            return JsonResponse({'success': False, 'message': 'entries list is required.'}, status=400)
 
-        grade, _ = Grade.objects.update_or_create(
-            student=student, subject_id=subject_id, term=active_term,
-            defaults={
-                'teacher': teacher,
-                'continuous_assessment': min(max(ca, 0), 20),
-                'mid_term_exam': min(max(mid_term, 0), 30),
-                'final_exam': min(max(final, 0), 50),
-            }
-        )
-        return JsonResponse({'success': True, 'grade_id': grade.id,
-                             'total': float(grade.total_score), 'letter': grade.grade_letter})
+        saved = 0
+        for entry in entries:
+            student_id = entry.get('student_id')
+            ca       = float(entry.get('ca')         or 0)
+            mid_term = float(entry.get('midterm')     or 0)
+            final    = float(entry.get('final_exam')  or 0)
+            try:
+                student = StudentModel.objects.get(id=student_id, school=teacher.school)
+                Grade.objects.update_or_create(
+                    student=student, subject_id=subject_id, term=active_term,
+                    defaults={
+                        'teacher': teacher,
+                        'continuous_assessment': min(max(ca, 0), 20),
+                        'mid_term_exam': min(max(mid_term, 0), 30),
+                        'final_exam': min(max(final, 0), 50),
+                    }
+                )
+                saved += 1
+            except Exception:
+                continue
+        return JsonResponse({'success': True, 'saved': saved})
 
     return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
 

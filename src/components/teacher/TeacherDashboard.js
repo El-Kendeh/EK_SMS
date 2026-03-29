@@ -9,8 +9,8 @@ const scoreClass = s => s >= 70 ? 'td-score--high' : s >= 50 ? 'td-score--mid' :
 const gradeMax = { ca: 20, midterm: 30, final_exam: 50 };
 
 /* ── Icon component ── */
-function Ic({ n, size = '' }) {
-  return <span className={`td-icon${size ? ` td-icon--${size}` : ''}`}>{n}</span>;
+function Ic({ n, size = '', ...rest }) {
+  return <span className={`td-icon${size ? ` td-icon--${size}` : ''}`} {...rest}>{n}</span>;
 }
 
 /* ── Sidebar Nav ── */
