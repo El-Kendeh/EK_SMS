@@ -1819,6 +1819,7 @@ function AddStudentWizard({ school, classes, onSave, onCancel }) {
   });
   const [profileImage,   setProfileImage]  = useState(null);   // File object
   const [profilePreview, setProfilePreview] = useState('');    // data-URL for display
+  const [photoHover,     setPhotoHover]     = useState(false);
   const studentImgRef = React.useRef(null);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -1826,6 +1827,7 @@ function AddStudentWizard({ school, classes, onSave, onCancel }) {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) { setError('Photo must be under 5 MB.'); return; }
+    setError('');
     setProfileImage(file);
     const reader = new FileReader();
     reader.onload = (ev) => setProfilePreview(ev.target.result);
@@ -1851,8 +1853,8 @@ function AddStudentWizard({ school, classes, onSave, onCancel }) {
   const avatarLetters = _studentAvatarLetters(form.first_name, form.last_name);
   const displayName   = [form.first_name, form.last_name].filter(Boolean).join(' ') || 'New Student';
   const currentClass  = classes.find(c => String(c.id) === String(form.classroom_id))?.name || '';
-  const filledCount   = [form.first_name, form.last_name, form.gender, form.date_of_birth, form.admission_number, form.classroom_id].filter(Boolean).length;
-  const completionPct = Math.round((filledCount / 6) * 100);
+  const filledCount   = [form.first_name, form.last_name, form.gender, form.date_of_birth, form.admission_number, form.classroom_id, profileImage].filter(Boolean).length;
+  const completionPct = Math.round((filledCount / 7) * 100);
   const genderIcon    = form.gender === 'M' ? 'male' : form.gender === 'F' ? 'female' : 'person';
 
   return (
@@ -1990,6 +1992,8 @@ function AddStudentWizard({ school, classes, onSave, onCancel }) {
                   <input type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} ref={studentImgRef} onChange={handleImageChange} />
                   <div
                     onClick={() => studentImgRef.current?.click()}
+                    onMouseEnter={() => setPhotoHover(true)}
+                    onMouseLeave={() => setPhotoHover(false)}
                     style={{
                       width: 72, height: 72, borderRadius: '50%', flexShrink: 0,
                       background: profilePreview ? 'transparent' : 'var(--ska-surface-high)',
@@ -2007,8 +2011,8 @@ function AddStudentWizard({ school, classes, onSave, onCancel }) {
                       <div style={{
                         position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        opacity: 0, transition: 'opacity 0.2s',
-                      }} className="student-photo-overlay">
+                        opacity: photoHover ? 1 : 0, transition: 'opacity 0.2s',
+                      }}>
                         <span className="material-symbols-rounded" style={{ fontSize: 22, color: '#fff' }}>photo_camera</span>
                       </div>
                     )}
@@ -2028,7 +2032,6 @@ function AddStudentWizard({ school, classes, onSave, onCancel }) {
                     )}
                   </div>
                 </div>
-                <style>{`.student-photo-overlay { opacity: 0 !important; } .student-photo-overlay:hover { opacity: 1 !important; }`}</style>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                   <label className="ska-form-group" style={{ margin: 0 }}>
                     <span>First Name <span style={{ color: 'var(--ska-error)' }}>*</span></span>
@@ -2100,7 +2103,13 @@ function AddStudentWizard({ school, classes, onSave, onCancel }) {
                         background: 'linear-gradient(135deg,#4b8eff,#adc6ff)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontWeight: 800, fontSize: '0.875rem', color: '#fff',
-                      }}>{avatarLetters}</div>
+                        overflow: 'hidden', flexShrink: 0,
+                      }}>
+                        {profilePreview
+                          ? <img src={profilePreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          : avatarLetters
+                        }
+                      </div>
                       <div>
                         <div style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--ska-text)' }}>{displayName}</div>
                         {form.admission_number && <div style={{ fontSize: '0.75rem', color: 'var(--ska-text-3)' }}>{form.admission_number}</div>}
@@ -2763,12 +2772,14 @@ function AddTeacherWizard({ school, onSave, onCancel }) {
   const [error,           setError]          = React.useState('');
   const [profileImage,    setProfileImage]   = React.useState(null);
   const [profilePreview,  setProfilePreview] = React.useState('');
+  const [photoHover,      setPhotoHover]     = React.useState(false);
   const teacherImgRef = React.useRef(null);
 
   const handleTeacherImageChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) { setError('Photo must be under 5 MB.'); return; }
+    setError('');
     setProfileImage(file);
     const reader = new FileReader();
     reader.onload = (ev) => setProfilePreview(ev.target.result);
@@ -2827,8 +2838,8 @@ function AddTeacherWizard({ school, onSave, onCancel }) {
   );
 
   /* ── completion percentage for left panel ── */
-  const filledFields = [form.first_name, form.last_name, form.email, form.password, form.employee_id, form.qualification].filter(Boolean).length;
-  const completionPct = Math.round((filledFields / 6) * 100);
+  const filledFields = [form.first_name, form.last_name, form.email, form.password, form.employee_id, form.qualification, profileImage].filter(Boolean).length;
+  const completionPct = Math.round((filledFields / 7) * 100);
 
   return (
     <div style={{
@@ -3002,18 +3013,30 @@ function AddTeacherWizard({ school, onSave, onCancel }) {
                   <input type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} ref={teacherImgRef} onChange={handleTeacherImageChange} />
                   <div
                     onClick={() => teacherImgRef.current?.click()}
+                    onMouseEnter={() => setPhotoHover(true)}
+                    onMouseLeave={() => setPhotoHover(false)}
                     style={{
                       width: 68, height: 68, borderRadius: 14, flexShrink: 0,
                       background: profilePreview ? 'transparent' : 'var(--ska-surface-high)',
                       border: `2px dashed ${profilePreview ? 'var(--ska-primary)' : 'var(--ska-border)'}`,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      cursor: 'pointer', overflow: 'hidden', transition: 'border-color 0.2s',
+                      cursor: 'pointer', overflow: 'hidden', position: 'relative',
+                      transition: 'border-color 0.2s',
                     }}
                   >
                     {profilePreview
                       ? <img src={profilePreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       : <span className="ska-icon" style={{ fontSize: 28, color: 'var(--ska-text-3)' }}>add_a_photo</span>
                     }
+                    {profilePreview && (
+                      <div style={{
+                        position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        opacity: photoHover ? 1 : 0, transition: 'opacity 0.2s',
+                      }}>
+                        <span className="ska-icon" style={{ fontSize: 22, color: '#fff' }}>photo_camera</span>
+                      </div>
+                    )}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                     <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--ska-text)' }}>
