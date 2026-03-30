@@ -2025,7 +2025,7 @@ function AddStudentWizard({ school, classes, onSave, onCancel }) {
                       JPG, PNG or WebP · max 5 MB
                     </span>
                     {profilePreview && (
-                      <button type="button" onClick={() => { setProfileImage(null); setProfilePreview(''); }} style={{
+                      <button type="button" onClick={() => { setProfileImage(null); setProfilePreview(''); setPhotoHover(false); }} style={{
                         background: 'none', border: 'none', cursor: 'pointer', padding: 0,
                         fontSize: '0.75rem', color: 'var(--ska-error)', fontWeight: 600, textAlign: 'left',
                       }}>Remove</button>
@@ -2734,6 +2734,41 @@ function TeacherProfilePanel({ teacher: initTeacher, onClose, onEdit }) {
   );
 }
 
+/* ── Shared field + review helpers for AddTeacherWizard ── */
+/* Defined at module level so React sees a stable component reference
+   across renders — prevents input remounting on every keystroke.       */
+function TeacherFld({ fkey, label, type = 'text', required = false, full = false, placeholder = '', form, setForm }) {
+  return (
+    <label style={{ display: 'flex', flexDirection: 'column', gap: 5, gridColumn: full ? '1/-1' : undefined }}>
+      <span style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ska-text-3)' }}>
+        {label}{required && <span style={{ color: 'var(--ska-error)', marginLeft: 2 }}>*</span>}
+      </span>
+      <input
+        className="ska-input"
+        type={type}
+        value={form[fkey]}
+        placeholder={placeholder}
+        onChange={e => setForm(f => ({ ...f, [fkey]: e.target.value }))}
+      />
+    </label>
+  );
+}
+
+function TeacherReviewRow({ label, value, icon }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 12,
+      padding: '10px 14px', borderRadius: 8,
+      background: 'var(--ska-surface-high)',
+      marginBottom: 6,
+    }}>
+      <span className="ska-icon ska-icon--sm" style={{ color: 'var(--ska-text-3)', flexShrink: 0 }}>{icon}</span>
+      <span style={{ fontSize: '0.8125rem', color: 'var(--ska-text-3)', minWidth: 96 }}>{label}</span>
+      <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--ska-text)', marginLeft: 'auto', textAlign: 'right', wordBreak: 'break-all' }}>{value}</span>
+    </div>
+  );
+}
+
 /* ── AddTeacherWizard: redesigned split-panel registration ── */
 const TEACHER_WIZARD_STEPS = [
   { label: 'Personal Info',   icon: 'person'      },
@@ -2806,36 +2841,6 @@ function AddTeacherWizard({ school, onSave, onCancel }) {
       onSave();
     } catch (e) { setError(e.message || 'Failed to add teacher.'); setSaving(false); }
   };
-
-  /* ── field helper ── */
-  const Fld = ({ fkey, label, type = 'text', required = false, full = false, placeholder = '' }) => (
-    <label style={{ display: 'flex', flexDirection: 'column', gap: 5, gridColumn: full ? '1/-1' : undefined }}>
-      <span style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ska-text-3)' }}>
-        {label}{required && <span style={{ color: 'var(--ska-error)', marginLeft: 2 }}>*</span>}
-      </span>
-      <input
-        className="ska-input"
-        type={type}
-        value={form[fkey]}
-        placeholder={placeholder}
-        onChange={e => setForm(f => ({ ...f, [fkey]: e.target.value }))}
-      />
-    </label>
-  );
-
-  /* ── review row ── */
-  const ReviewRow = ({ label, value, icon }) => (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: 12,
-      padding: '10px 14px', borderRadius: 8,
-      background: 'var(--ska-surface-high)',
-      marginBottom: 6,
-    }}>
-      <span className="ska-icon ska-icon--sm" style={{ color: 'var(--ska-text-3)', flexShrink: 0 }}>{icon}</span>
-      <span style={{ fontSize: '0.8125rem', color: 'var(--ska-text-3)', minWidth: 96 }}>{label}</span>
-      <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--ska-text)', marginLeft: 'auto', textAlign: 'right', wordBreak: 'break-all' }}>{value}</span>
-    </div>
-  );
 
   /* ── completion percentage for left panel ── */
   const filledFields = [form.first_name, form.last_name, form.email, form.password, form.employee_id, form.qualification, profileImage].filter(Boolean).length;
@@ -3044,7 +3049,7 @@ function AddTeacherWizard({ school, onSave, onCancel }) {
                     </span>
                     <span style={{ fontSize: '0.75rem', color: 'var(--ska-text-3)' }}>JPG, PNG or WebP · max 5 MB</span>
                     {profilePreview && (
-                      <button type="button" onClick={() => { setProfileImage(null); setProfilePreview(''); }} style={{
+                      <button type="button" onClick={() => { setProfileImage(null); setProfilePreview(''); setPhotoHover(false); }} style={{
                         background: 'none', border: 'none', cursor: 'pointer', padding: 0,
                         fontSize: '0.75rem', color: 'var(--ska-error)', fontWeight: 600, textAlign: 'left',
                       }}>Remove</button>
@@ -3052,10 +3057,10 @@ function AddTeacherWizard({ school, onSave, onCancel }) {
                   </div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  <Fld fkey="first_name" label="First Name" required placeholder="e.g. Abubakarr" />
-                  <Fld fkey="last_name"  label="Last Name"  required placeholder="e.g. Kamara" />
-                  <Fld fkey="email"      label="Email Address" type="email" required full placeholder="teacher@school.com" />
-                  <Fld fkey="phone_number" label="Phone Number" placeholder="+232 76 000 000" />
+                  <TeacherFld fkey="first_name" label="First Name" required placeholder="e.g. Abubakarr" form={form} setForm={setForm} />
+                  <TeacherFld fkey="last_name"  label="Last Name"  required placeholder="e.g. Kamara" form={form} setForm={setForm} />
+                  <TeacherFld fkey="email"      label="Email Address" type="email" required full placeholder="teacher@school.com" form={form} setForm={setForm} />
+                  <TeacherFld fkey="phone_number" label="Phone Number" placeholder="+232 76 000 000" form={form} setForm={setForm} />
                   <div style={{ gridColumn: '1/-1', height: 1, background: 'var(--ska-border)', margin: '4px 0' }} />
                   {/* Password full-width with strength meter */}
                   <label style={{ display: 'flex', flexDirection: 'column', gap: 5, gridColumn: '1/-1' }}>
@@ -3106,8 +3111,8 @@ function AddTeacherWizard({ school, onSave, onCancel }) {
                   Assign a staff ID and professional details for this teacher.
                 </p>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  <Fld fkey="employee_id"   label="Employee ID"          required placeholder="e.g. T-0042" />
-                  <Fld fkey="qualification" label="Qualification / Degree" placeholder="e.g. B.Sc. Mathematics" />
+                  <TeacherFld fkey="employee_id"   label="Employee ID"          required placeholder="e.g. T-0042" form={form} setForm={setForm} />
+                  <TeacherFld fkey="qualification" label="Qualification / Degree" placeholder="e.g. B.Sc. Mathematics" form={form} setForm={setForm} />
                 </div>
 
                 {/* Login credentials summary */}
@@ -3185,11 +3190,11 @@ function AddTeacherWizard({ school, onSave, onCancel }) {
                   </div>
                   {/* Card details */}
                   <div style={{ padding: '12px 16px', background: 'var(--ska-surface-card)' }}>
-                    <ReviewRow label="Email"         value={form.email         || '—'} icon="email"  />
-                    <ReviewRow label="Phone"         value={form.phone_number  || '—'} icon="call"   />
-                    <ReviewRow label="Employee ID"   value={form.employee_id   || '—'} icon="badge"  />
-                    <ReviewRow label="Qualification" value={form.qualification || '—'} icon="school" />
-                    <ReviewRow label="Password"      value="••••••••"                  icon="lock"   />
+                    <TeacherReviewRow label="Email"         value={form.email         || '—'} icon="email"  />
+                    <TeacherReviewRow label="Phone"         value={form.phone_number  || '—'} icon="call"   />
+                    <TeacherReviewRow label="Employee ID"   value={form.employee_id   || '—'} icon="badge"  />
+                    <TeacherReviewRow label="Qualification" value={form.qualification || '—'} icon="school" />
+                    <TeacherReviewRow label="Password"      value="••••••••"                  icon="lock"   />
                   </div>
                 </div>
 
