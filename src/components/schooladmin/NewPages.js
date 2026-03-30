@@ -3250,65 +3250,197 @@ function AddTeacherWizard({ school, onSave, onCancel }) {
 
 /* ── EditTeacherModal ── */
 function EditTeacherModal({ teacher, onSave, onClose }) {
-  const [form,   setForm]   = React.useState({
+  const [form, setForm] = React.useState({
     first_name:    teacher.first_name    || '',
     last_name:     teacher.last_name     || '',
     email:         teacher.email         || '',
     phone_number:  teacher.phone_number  || '',
     qualification: teacher.qualification || '',
   });
-  const [saving, setSaving] = React.useState(false);
-  const [error,  setError]  = React.useState('');
+  const [saving,         setSaving]         = React.useState(false);
+  const [error,          setError]          = React.useState('');
+  const [profileImage,   setProfileImage]   = React.useState(null);
+  const [profilePreview, setProfilePreview] = React.useState(
+    teacher.profile_picture ? teacher.profile_picture : ''
+  );
+  const [photoHover, setPhotoHover]         = React.useState(false);
+  const editImgRef = React.useRef(null);
+
+  const avatarLetters = _teacherAvatarLetters(form.first_name, form.last_name);
+  const displayName   = [form.first_name, form.last_name].filter(Boolean).join(' ') || 'Teacher';
+
+  const handleImageChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { setError('Photo must be under 5 MB.'); return; }
+    setError('');
+    setProfileImage(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setProfilePreview(ev.target.result);
+    reader.readAsDataURL(file);
+  };
 
   const handleSave = async () => {
     setSaving(true); setError('');
     try {
-      await ApiClient.put(`/api/school/teachers/${teacher.id}/`, form);
+      const fd = new FormData();
+      Object.entries(form).forEach(([k, v]) => fd.append(k, v));
+      if (profileImage) fd.append('profile_picture', profileImage);
+      await ApiClient.put(`/api/school/teachers/${teacher.id}/`, fd);
       onSave();
     } catch (e) { setError(e.message || 'Failed to save.'); setSaving(false); }
   };
 
   return (
     <div style={{
-      position: 'fixed', inset: 0, zIndex: 700,
-      background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)',
+      position: 'fixed', inset: 0, zIndex: 1200,
+      background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(6px)',
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
-    }}>
+    }} onClick={e => e.target === e.currentTarget && onClose()}>
       <div style={{
-        width: '100%', maxWidth: 480,
-        background: 'var(--ska-surface-low)',
-        borderRadius: 16, overflow: 'hidden',
-        boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+        width: '100%', maxWidth: 680,
+        display: 'flex', borderRadius: 20, overflow: 'hidden',
+        boxShadow: '0 32px 80px rgba(0,0,0,0.6)', maxHeight: '90vh',
       }}>
-        <div style={{ padding: '20px 24px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ margin: 0, fontSize: '1.125rem', fontWeight: 800, color: 'var(--ska-text)' }}>Edit Teacher</h2>
-          <button className="ska-btn ska-btn--ghost ska-btn--sm" onClick={onClose}>
-            <span className="ska-icon ska-icon--sm">close</span>
-          </button>
-        </div>
-        <div style={{ padding: '16px 24px 20px' }}>
-          {error && <p className="ska-form-error">{error}</p>}
-          <div className="ska-form-grid">
-            {[
-              ['first_name',    'First Name'],
-              ['last_name',     'Last Name'],
-              ['email',         'Email'],
-              ['phone_number',  'Phone'],
-              ['qualification', 'Qualification'],
-            ].map(([key, label]) => (
-              <label className="ska-form-group" key={key}>
-                <span>{label}</span>
-                <input className="ska-input" value={form[key]}
-                  onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} />
-              </label>
-            ))}
+
+        {/* ── Left preview panel ── */}
+        <div className="teacher-wizard-panel" style={{
+          width: 200, flexShrink: 0,
+          background: 'linear-gradient(160deg,#1a2540 0%,#0e1728 60%,#060e1c 100%)',
+          display: 'flex', flexDirection: 'column', padding: '28px 18px',
+          borderRight: '1px solid rgba(173,198,255,0.08)',
+        }}>
+          <p style={{ margin: '0 0 20px', fontSize: '0.625rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--ska-text-3)' }}>
+            Edit Teacher
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+            <div style={{
+              width: 76, height: 76, borderRadius: 18, flexShrink: 0,
+              background: 'linear-gradient(135deg,var(--ska-primary-container),rgba(77,142,255,0.4))',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '1.5rem', fontWeight: 900, color: '#fff',
+              border: '2px solid rgba(173,198,255,0.25)',
+              boxShadow: '0 8px 24px rgba(77,142,255,0.25)',
+              overflow: 'hidden',
+            }}>
+              {profilePreview
+                ? <img src={profilePreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : avatarLetters
+              }
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: 800, color: 'var(--ska-text)', lineHeight: 1.2 }}>{displayName}</p>
+              {form.employee_id && <p style={{ margin: '3px 0 0', fontSize: '0.6875rem', color: 'var(--ska-text-3)', fontWeight: 600 }}>ID: {teacher.employee_id}</p>}
+              {form.qualification && (
+                <div style={{ marginTop: 6, display: 'inline-flex', padding: '2px 8px', borderRadius: 99, background: 'rgba(173,198,255,0.1)', border: '1px solid rgba(173,198,255,0.15)' }}>
+                  <span style={{ fontSize: '0.625rem', color: 'var(--ska-primary)' }}>{form.qualification}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div style={{ padding: '10px 12px', borderRadius: 10, background: 'rgba(173,198,255,0.06)', border: '1px solid rgba(173,198,255,0.1)', marginTop: 'auto' }}>
+            <p style={{ margin: 0, fontSize: '0.6875rem', color: 'var(--ska-text-3)', lineHeight: 1.5 }}>
+              Changes take effect immediately after saving.
+            </p>
           </div>
         </div>
-        <div style={{ padding: '0 24px 20px', display: 'flex', gap: 10 }}>
-          <button className="ska-btn ska-btn--ghost" onClick={onClose} style={{ flex: 1 }}>Cancel</button>
-          <button className="ska-btn ska-btn--primary" disabled={saving} onClick={handleSave} style={{ flex: 2 }}>
-            {saving ? 'Saving…' : 'Save Changes'}
-          </button>
+
+        {/* ── Right form panel ── */}
+        <div style={{ flex: 1, background: 'var(--ska-surface-low)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+
+          {/* Header */}
+          <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid var(--ska-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <p style={{ margin: 0, fontSize: '0.625rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--ska-text-3)' }}>School Admin</p>
+              <h2 style={{ margin: '2px 0 0', fontSize: '1.125rem', fontWeight: 800, color: 'var(--ska-text)' }}>Edit Teacher Profile</h2>
+            </div>
+            <button className="ska-btn ska-btn--ghost ska-btn--sm" onClick={onClose} style={{ borderRadius: 8 }}>
+              <span className="ska-icon ska-icon--sm">close</span>
+            </button>
+          </div>
+
+          {/* Body */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
+            {error && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 8, background: 'var(--ska-error-dim)', border: '1px solid rgba(255,180,171,0.25)', marginBottom: 16, fontSize: '0.875rem', color: 'var(--ska-error)' }}>
+                <span className="ska-icon ska-icon--sm">error</span>{error}
+              </div>
+            )}
+
+            {/* Photo upload */}
+            <input type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} ref={editImgRef} onChange={handleImageChange} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20, padding: '14px 16px', borderRadius: 12, background: 'var(--ska-surface-high)', border: '1px solid var(--ska-border)' }}>
+              <div
+                onClick={() => editImgRef.current?.click()}
+                onMouseEnter={() => setPhotoHover(true)}
+                onMouseLeave={() => setPhotoHover(false)}
+                style={{
+                  width: 56, height: 56, borderRadius: 12, flexShrink: 0,
+                  background: profilePreview ? 'transparent' : 'var(--ska-surface-highest)',
+                  border: `2px dashed ${profilePreview ? 'var(--ska-primary)' : 'var(--ska-border)'}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', overflow: 'hidden', position: 'relative', transition: 'border-color 0.2s',
+                }}
+              >
+                {profilePreview
+                  ? <img src={profilePreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : <span className="ska-icon" style={{ fontSize: 24, color: 'var(--ska-text-3)' }}>add_a_photo</span>
+                }
+                {profilePreview && (
+                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: photoHover ? 1 : 0, transition: 'opacity 0.2s' }}>
+                    <span className="ska-icon" style={{ fontSize: 18, color: '#fff' }}>photo_camera</span>
+                  </div>
+                )}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--ska-text)' }}>
+                  {profilePreview ? 'Profile photo' : 'Upload profile photo'}
+                </span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--ska-text-3)' }}>JPG, PNG or WebP · max 5 MB</span>
+                {profileImage && (
+                  <button type="button" onClick={() => { setProfileImage(null); setProfilePreview(teacher.profile_picture || ''); setPhotoHover(false); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '0.75rem', color: 'var(--ska-error)', fontWeight: 600, textAlign: 'left' }}>
+                    Revert to original
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Fields */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              {[
+                { key: 'first_name',    label: 'First Name',          full: false },
+                { key: 'last_name',     label: 'Last Name',           full: false },
+                { key: 'email',         label: 'Email Address',       full: true,  type: 'email' },
+                { key: 'phone_number',  label: 'Phone Number',        full: false },
+                { key: 'qualification', label: 'Qualification',       full: false },
+              ].map(({ key, label, full, type = 'text' }) => (
+                <label key={key} className="ska-form-group" style={{ margin: 0, gridColumn: full ? '1/-1' : undefined }}>
+                  <span>{label}</span>
+                  <input className="ska-input" type={type} value={form[key]}
+                    onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} />
+                </label>
+              ))}
+            </div>
+
+            {/* Employee ID (read-only) */}
+            <div style={{ marginTop: 14, padding: '10px 14px', borderRadius: 10, background: 'var(--ska-surface-high)', border: '1px solid var(--ska-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.8125rem', color: 'var(--ska-text-3)', fontWeight: 600 }}>Employee ID</span>
+              <span style={{ fontSize: '0.875rem', color: 'var(--ska-text)', fontWeight: 700 }}>{teacher.employee_id || '—'}</span>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div style={{ padding: '14px 24px 20px', borderTop: '1px solid var(--ska-border)', display: 'flex', gap: 10 }}>
+            <button className="ska-btn ska-btn--ghost" onClick={onClose} style={{ flex: 1 }}>Cancel</button>
+            <button className="ska-btn ska-btn--primary" disabled={saving} onClick={handleSave} style={{ flex: 2 }}>
+              {saving
+                ? <><span className="ska-icon ska-icon--sm">hourglass_empty</span>Saving…</>
+                : <><span className="ska-icon ska-icon--sm">save</span>Save Changes</>
+              }
+            </button>
+          </div>
         </div>
       </div>
     </div>

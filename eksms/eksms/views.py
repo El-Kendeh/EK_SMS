@@ -2643,12 +2643,14 @@ def api_teachers(request):
             is_overloaded = periods > 20
             if overloaded_filter == '1' and not is_overloaded:
                 continue
+            pic_url = request.build_absolute_uri(t.profile_picture.url) if t.profile_picture else ''
             data.append({
                 'id': t.id, 'employee_id': t.employee_id,
                 'first_name': t.user.first_name, 'last_name': t.user.last_name,
                 'full_name': t.user.get_full_name(), 'email': t.user.email,
                 'phone_number': t.phone_number, 'qualification': t.qualification,
                 'hire_date': str(t.hire_date),
+                'profile_picture': pic_url,
                 'subjects': subjects, 'classes': classes,
                 'periods_per_week': periods, 'student_count': student_cnt,
                 'is_overloaded': is_overloaded,
@@ -2715,29 +2717,39 @@ def api_teacher_detail(request, teacher_id):
                        'student_count': tsc.classroom.students.filter(is_active=True).count()}
                      for tsc in tscs]
         student_count = sum(c['student_count'] for c in classes)
+        pic_url = request.build_absolute_uri(teacher.profile_picture.url) if teacher.profile_picture else ''
         return JsonResponse({'success': True, 'id': teacher.id,
             'employee_id': teacher.employee_id,
             'first_name': teacher.user.first_name, 'last_name': teacher.user.last_name,
             'full_name': teacher.user.get_full_name(),
             'email': teacher.user.email, 'phone_number': teacher.phone_number,
             'qualification': teacher.qualification, 'hire_date': str(teacher.hire_date),
+            'profile_picture': pic_url,
             'subjects': subjects, 'classes': classes,
             'periods_per_week': periods, 'student_count': student_count,
             'is_overloaded': periods > 20,
         })
 
     if request.method == 'PUT':
-        try:
-            body = json.loads(request.body)
-        except json.JSONDecodeError:
-            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        # Accept both multipart (with file) and JSON (without file)
+        if request.content_type and 'multipart' in request.content_type:
+            data = request.POST
+            profile_picture = request.FILES.get('profile_picture')
+        else:
+            try:
+                data = json.loads(request.body)
+            except json.JSONDecodeError:
+                return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+            profile_picture = None
         u = teacher.user
-        u.first_name = body.get('first_name', u.first_name)
-        u.last_name  = body.get('last_name', u.last_name)
-        u.email      = body.get('email', u.email)
+        u.first_name = data.get('first_name', u.first_name)
+        u.last_name  = data.get('last_name', u.last_name)
+        u.email      = data.get('email', u.email)
         u.save(update_fields=['first_name', 'last_name', 'email'])
-        teacher.phone_number  = body.get('phone_number', teacher.phone_number)
-        teacher.qualification = body.get('qualification', teacher.qualification)
+        teacher.phone_number  = data.get('phone_number', teacher.phone_number)
+        teacher.qualification = data.get('qualification', teacher.qualification)
+        if profile_picture:
+            teacher.profile_picture = profile_picture
         teacher.save()
         return JsonResponse({'success': True, 'message': 'Teacher updated.'})
 
