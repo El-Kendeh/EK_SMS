@@ -2296,12 +2296,15 @@ def api_students(request):
             scores    = [float(g.total_score) for g in s.grades.all()]
             avg_grade = round(sum(scores) / len(scores), 1) if scores else None
             is_flagged = (att_rate is not None and att_rate < 70) or (avg_grade is not None and avg_grade < 50)
+            stu_pic = request.build_absolute_uri(s.passport_picture.url) if s.passport_picture else ''
             data.append({
                 'id':               s.id,
                 'admission_number': s.admission_number,
                 'first_name':       s.user.first_name,
                 'last_name':        s.user.last_name,
                 'full_name':        s.user.get_full_name(),
+                'passport_picture': stu_pic,
+                'gender':           s.gender,
                 'email':            s.user.email,
                 'classroom':        s.classroom.name if s.classroom else None,
                 'classroom_id':     s.classroom_id,
@@ -2525,6 +2528,7 @@ def api_student_detail(request, student_id):
             'is_primary':   link.is_primary_contact,
         } for link in student.parent_links.select_related('parent__user').order_by('-is_primary_contact')]
         is_flagged = (att_rate is not None and att_rate < 70) or (avg_grade is not None and avg_grade < 50)
+        stu_pic_url = request.build_absolute_uri(student.passport_picture.url) if student.passport_picture else ''
         return JsonResponse({
             'success':          True,
             'id':               student.id,
@@ -2537,6 +2541,8 @@ def api_student_detail(request, student_id):
             'classroom_id':     student.classroom_id,
             'date_of_birth':    str(student.date_of_birth) if student.date_of_birth else None,
             'phone_number':     student.phone_number,
+            'gender':           student.gender,
+            'passport_picture': stu_pic_url,
             'admission_date':   str(student.admission_date),
             'attendance_rate':  att_rate,
             'avg_grade':        avg_grade,
@@ -2546,25 +2552,35 @@ def api_student_detail(request, student_id):
         })
 
     if request.method == 'PUT':
-        try:
-            body = json.loads(request.body)
-        except json.JSONDecodeError:
-            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        # Accept both multipart (with file) and JSON (without file)
+        if request.content_type and 'multipart' in request.content_type:
+            data = request.POST
+            passport_picture = request.FILES.get('passport_picture')
+        else:
+            try:
+                data = json.loads(request.body)
+            except json.JSONDecodeError:
+                return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+            passport_picture = None
         u = student.user
-        u.first_name = body.get('first_name', u.first_name)
-        u.last_name  = body.get('last_name', u.last_name)
-        u.email      = body.get('email', u.email)
+        u.first_name = data.get('first_name', u.first_name)
+        u.last_name  = data.get('last_name', u.last_name)
+        u.email      = data.get('email', u.email)
         u.save(update_fields=['first_name', 'last_name', 'email'])
-        if 'classroom_id' in body:
-            cid = body['classroom_id']
+        if 'classroom_id' in data:
+            cid = data['classroom_id']
             try:
                 student.classroom = ClassRoom.objects.get(id=cid, school=school) if cid else None
             except ClassRoom.DoesNotExist:
                 pass
-        if 'date_of_birth' in body:
-            student.date_of_birth = body['date_of_birth'] or None
-        if 'phone_number' in body:
-            student.phone_number = body['phone_number']
+        if 'date_of_birth' in data:
+            student.date_of_birth = data['date_of_birth'] or None
+        if 'phone_number' in data:
+            student.phone_number = data['phone_number']
+        if 'gender' in data:
+            student.gender = data['gender']
+        if passport_picture:
+            student.passport_picture = passport_picture
         student.save()
         return JsonResponse({'success': True, 'message': 'Student updated.'})
 

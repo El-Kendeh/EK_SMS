@@ -2194,38 +2194,233 @@ function AddStudentWizard({ school, classes, onSave, onCancel }) {
 }
 
 function EditStudentModal({ student, classes, onSave, onClose }) {
-  const [form, setForm] = useState({ first_name: student.first_name || '', last_name: student.last_name || '', email: student.email || '', phone_number: student.phone_number || '', date_of_birth: student.date_of_birth || '', classroom_id: student.classroom_id || '' });
-  const [saving, setSaving] = useState(false);
-  const [error, setError]   = useState('');
+  const [form, setForm] = useState({
+    first_name:    student.first_name    || '',
+    last_name:     student.last_name     || '',
+    gender:        student.gender        || '',
+    email:         student.email         || '',
+    phone_number:  student.phone_number  || '',
+    date_of_birth: student.date_of_birth || '',
+    classroom_id:  student.classroom_id  || '',
+  });
+  const [saving,         setSaving]         = useState(false);
+  const [error,          setError]          = useState('');
+  const [profileImage,   setProfileImage]   = useState(null);
+  const [profilePreview, setProfilePreview] = useState(student.passport_picture || '');
+  const [photoHover,     setPhotoHover]     = useState(false);
+  const editImgRef = React.useRef(null);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const avatarLetters = _studentAvatarLetters(form.first_name, form.last_name);
+  const displayName   = [form.first_name, form.last_name].filter(Boolean).join(' ') || 'Student';
+  const currentClass  = classes.find(c => String(c.id) === String(form.classroom_id))?.name || '';
+  const genderIcon    = form.gender === 'M' ? 'male' : form.gender === 'F' ? 'female' : 'person';
+
+  const handleImageChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { setError('Photo must be under 5 MB.'); return; }
+    setError('');
+    setProfileImage(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setProfilePreview(ev.target.result);
+    reader.readAsDataURL(file);
+  };
+
   const handleSave = async () => {
     setSaving(true); setError('');
-    try { await ApiClient.put(`/api/school/students/${student.id}/`, form); onSave(); }
-    catch (e) { setError(e?.message || 'Failed to save.'); }
-    setSaving(false);
+    try {
+      const fd = new FormData();
+      Object.entries(form).forEach(([k, v]) => fd.append(k, v));
+      if (profileImage) fd.append('passport_picture', profileImage);
+      await ApiClient.put(`/api/school/students/${student.id}/`, fd);
+      onSave();
+    } catch (e) { setError(e?.message || 'Failed to save.'); setSaving(false); }
   };
+
   return (
-    <div className="ska-modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="ska-modal">
-        <div className="ska-modal-head">
-          <h2 className="ska-modal-title">Edit Student</h2>
-          <button className="ska-modal-close" onClick={onClose}><Ic name="close" size="sm" /></button>
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 1200,
+      background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(6px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+    }} onClick={e => e.target === e.currentTarget && onClose()}>
+      <div style={{
+        width: '100%', maxWidth: 700,
+        display: 'flex', borderRadius: 20, overflow: 'hidden',
+        boxShadow: '0 32px 80px rgba(0,0,0,0.6)', maxHeight: '92vh',
+      }}>
+
+        {/* ── Left preview panel ── */}
+        <div className="student-wizard-panel" style={{
+          width: 200, flexShrink: 0,
+          background: 'linear-gradient(160deg,#0d1b3e 0%,#0a1628 100%)',
+          display: 'flex', flexDirection: 'column', padding: '28px 18px',
+          borderRight: '1px solid rgba(173,198,255,0.08)',
+        }}>
+          <p style={{ margin: '0 0 20px', fontSize: '0.625rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(173,198,255,0.5)' }}>
+            Edit Student
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+            <div style={{
+              width: 72, height: 72, borderRadius: '50%', flexShrink: 0,
+              background: 'linear-gradient(135deg,#4b8eff,#adc6ff)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '1.5rem', fontWeight: 800, color: '#fff',
+              boxShadow: '0 4px 16px rgba(75,142,255,0.35)',
+              overflow: 'hidden', position: 'relative',
+            }}>
+              {profilePreview
+                ? <img src={profilePreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : avatarLetters
+              }
+              {form.gender && !profilePreview && (
+                <span style={{ position: 'absolute', bottom: 0, right: 0, width: 22, height: 22, borderRadius: '50%', background: form.gender === 'M' ? '#4b8eff' : '#e879a0', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #0d1b3e' }}>
+                  <span className="material-symbols-rounded" style={{ fontSize: 12, color: '#fff' }}>{genderIcon}</span>
+                </span>
+              )}
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.875rem', lineHeight: 1.3 }}>{displayName}</div>
+              {currentClass && <div style={{ fontSize: '0.6875rem', color: 'rgba(173,198,255,0.65)', marginTop: 3 }}>Class {currentClass}</div>}
+              {student.admission_number && <div style={{ fontSize: '0.6875rem', color: 'rgba(173,198,255,0.45)', marginTop: 2 }}>{student.admission_number}</div>}
+            </div>
+          </div>
+          <div style={{ padding: '10px 12px', borderRadius: 10, background: 'rgba(173,198,255,0.06)', border: '1px solid rgba(173,198,255,0.1)', marginTop: 'auto' }}>
+            <span style={{ fontSize: '0.6875rem', color: 'rgba(173,198,255,0.55)', lineHeight: 1.5 }}>Changes take effect immediately after saving.</span>
+          </div>
         </div>
-        {error && <p style={{ margin: '0 0 12px', color: 'var(--ska-error)', fontSize: '0.8125rem' }}>{error}</p>}
-        <div className="ska-form-grid">
-          {[{ label: 'First Name', key: 'first_name', type: 'text' }, { label: 'Last Name', key: 'last_name', type: 'text' }, { label: 'Email', key: 'email', type: 'email' }, { label: 'Phone', key: 'phone_number', type: 'text' }, { label: 'Date of Birth', key: 'date_of_birth', type: 'date' }].map(f => (
-            <label key={f.key} className="ska-form-group"><span>{f.label}</span><input className="ska-input" type={f.type} value={form[f.key]} onChange={e => set(f.key, e.target.value)} /></label>
-          ))}
-          <label className="ska-form-group"><span>Class</span>
-            <select className="ska-input" value={form.classroom_id} onChange={e => set('classroom_id', e.target.value)}>
-              <option value="">— No class —</option>
-              {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </label>
-        </div>
-        <div className="ska-modal-actions">
-          <button className="ska-btn ska-btn--ghost" onClick={onClose}>Cancel</button>
-          <button className="ska-btn ska-btn--primary" disabled={saving} onClick={handleSave}>{saving ? 'Saving…' : 'Save Changes'}</button>
+
+        {/* ── Right form panel ── */}
+        <div style={{ flex: 1, background: 'var(--ska-surface-low)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+
+          {/* Header */}
+          <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid var(--ska-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <p style={{ margin: 0, fontSize: '0.625rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--ska-text-3)' }}>School Admin</p>
+              <h2 style={{ margin: '2px 0 0', fontSize: '1.125rem', fontWeight: 800, color: 'var(--ska-text)' }}>Edit Student Profile</h2>
+            </div>
+            <button className="ska-btn ska-btn--ghost ska-btn--sm" onClick={onClose} style={{ borderRadius: 8 }}>
+              <span className="ska-icon ska-icon--sm">close</span>
+            </button>
+          </div>
+
+          {/* Body */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
+            {error && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 8, background: 'var(--ska-error-dim)', border: '1px solid rgba(255,180,171,0.25)', marginBottom: 16, fontSize: '0.875rem', color: 'var(--ska-error)' }}>
+                <span className="ska-icon ska-icon--sm">error</span>{error}
+              </div>
+            )}
+
+            {/* Photo upload */}
+            <input type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} ref={editImgRef} onChange={handleImageChange} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20, padding: '14px 16px', borderRadius: 12, background: 'var(--ska-surface-high)', border: '1px solid var(--ska-border)' }}>
+              <div
+                onClick={() => editImgRef.current?.click()}
+                onMouseEnter={() => setPhotoHover(true)}
+                onMouseLeave={() => setPhotoHover(false)}
+                style={{
+                  width: 56, height: 56, borderRadius: '50%', flexShrink: 0,
+                  background: profilePreview ? 'transparent' : 'var(--ska-surface-highest)',
+                  border: `2px dashed ${profilePreview ? 'var(--ska-primary)' : 'var(--ska-border)'}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', overflow: 'hidden', position: 'relative', transition: 'border-color 0.2s',
+                }}
+              >
+                {profilePreview
+                  ? <img src={profilePreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : <span className="material-symbols-rounded" style={{ fontSize: 24, color: 'var(--ska-text-3)' }}>add_a_photo</span>
+                }
+                {profilePreview && (
+                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: photoHover ? 1 : 0, transition: 'opacity 0.2s' }}>
+                    <span className="material-symbols-rounded" style={{ fontSize: 18, color: '#fff' }}>photo_camera</span>
+                  </div>
+                )}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--ska-text)' }}>
+                  {profilePreview ? 'Profile photo' : 'Upload photo'}
+                </span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--ska-text-3)' }}>JPG, PNG or WebP · max 5 MB</span>
+                {profileImage && (
+                  <button type="button" onClick={() => { setProfileImage(null); setProfilePreview(student.passport_picture || ''); setPhotoHover(false); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '0.75rem', color: 'var(--ska-error)', fontWeight: 600, textAlign: 'left' }}>
+                    Revert to original
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Name + gender */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+              <label className="ska-form-group" style={{ margin: 0 }}>
+                <span>First Name</span>
+                <input className="ska-input" value={form.first_name} onChange={e => set('first_name', e.target.value)} />
+              </label>
+              <label className="ska-form-group" style={{ margin: 0 }}>
+                <span>Last Name</span>
+                <input className="ska-input" value={form.last_name} onChange={e => set('last_name', e.target.value)} />
+              </label>
+            </div>
+
+            {/* Gender */}
+            <div className="ska-form-group" style={{ margin: '0 0 14px' }}>
+              <span>Gender</span>
+              <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
+                {[{ value: 'M', label: 'Male', icon: 'male' }, { value: 'F', label: 'Female', icon: 'female' }].map(opt => (
+                  <button key={opt.value} type="button" onClick={() => set('gender', form.gender === opt.value ? '' : opt.value)} style={{
+                    flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    padding: '9px 12px', borderRadius: 10, cursor: 'pointer', fontWeight: 700, fontSize: '0.875rem',
+                    background: form.gender === opt.value ? (opt.value === 'M' ? 'rgba(75,142,255,0.18)' : 'rgba(232,121,160,0.18)') : 'var(--ska-surface-high)',
+                    border: form.gender === opt.value ? `2px solid ${opt.value === 'M' ? '#4b8eff' : '#e879a0'}` : '2px solid var(--ska-border)',
+                    color: form.gender === opt.value ? (opt.value === 'M' ? '#4b8eff' : '#e879a0') : 'var(--ska-text-3)',
+                    transition: 'all 0.15s',
+                  }}>
+                    <span className="material-symbols-rounded" style={{ fontSize: 16 }}>{opt.icon}</span>{opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Remaining fields */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <label className="ska-form-group" style={{ margin: 0, gridColumn: '1/-1' }}>
+                <span>Email Address</span>
+                <input className="ska-input" type="email" value={form.email} onChange={e => set('email', e.target.value)} />
+              </label>
+              <label className="ska-form-group" style={{ margin: 0 }}>
+                <span>Phone Number</span>
+                <input className="ska-input" value={form.phone_number} onChange={e => set('phone_number', e.target.value)} />
+              </label>
+              <label className="ska-form-group" style={{ margin: 0 }}>
+                <span>Date of Birth</span>
+                <input className="ska-input" type="date" value={form.date_of_birth} onChange={e => set('date_of_birth', e.target.value)} />
+              </label>
+              <label className="ska-form-group" style={{ margin: 0, gridColumn: '1/-1' }}>
+                <span>Class</span>
+                <select className="ska-input" value={form.classroom_id} onChange={e => set('classroom_id', e.target.value)}>
+                  <option value="">— No class —</option>
+                  {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </label>
+            </div>
+
+            {/* Admission No. read-only */}
+            <div style={{ marginTop: 14, padding: '10px 14px', borderRadius: 10, background: 'var(--ska-surface-high)', border: '1px solid var(--ska-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.8125rem', color: 'var(--ska-text-3)', fontWeight: 600 }}>Admission No.</span>
+              <span style={{ fontSize: '0.875rem', color: 'var(--ska-text)', fontWeight: 700 }}>{student.admission_number || '—'}</span>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div style={{ padding: '14px 24px 20px', borderTop: '1px solid var(--ska-border)', display: 'flex', gap: 10 }}>
+            <button className="ska-btn ska-btn--ghost" onClick={onClose} style={{ flex: 1 }}>Cancel</button>
+            <button className="ska-btn ska-btn--primary" disabled={saving} onClick={handleSave} style={{ flex: 2 }}>
+              {saving
+                ? <><span className="material-symbols-rounded" style={{ fontSize: 16 }}>hourglass_empty</span>Saving…</>
+                : <><span className="material-symbols-rounded" style={{ fontSize: 16 }}>save</span>Save Changes</>
+              }
+            </button>
+          </div>
         </div>
       </div>
     </div>
