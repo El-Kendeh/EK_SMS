@@ -103,6 +103,10 @@ function Login({ onNavigate }) {
           onNavigate('superadmindashboard');
         } else if (user.role === 'school_admin') {
           onNavigate('sa-dashboard');
+        } else if (user.role === 'teacher') {
+          onNavigate('teacher-dashboard');
+        } else if (user.role === 'student') {
+          onNavigate('student-dashboard');
         } else if (user.role === 'parent') {
           onNavigate('parentdashboard');
         } else {
@@ -155,6 +159,8 @@ function Login({ onNavigate }) {
           onNavigate('sa-dashboard');
         } else if (user.role === 'teacher') {
           onNavigate('teacher-dashboard');
+        } else if (user.role === 'student') {
+          onNavigate('student-dashboard');
         } else if (user.role === 'parent') {
           onNavigate('parentdashboard');
         } else {

@@ -1813,6 +1813,7 @@ function AddStudentWizard({ school, classes, onSave, onCancel }) {
   const [step,           setStep]          = useState(0);
   const [saving,         setSaving]        = useState(false);
   const [error,          setError]         = useState('');
+  const [credentials,    setCredentials]   = useState(null);  // { username, password }
   const [form,           setForm]          = useState({
     first_name: '', last_name: '', gender: '', date_of_birth: '',
     phone_number: '', email: '', admission_number: '', classroom_id: '',
@@ -1845,8 +1846,9 @@ function AddStudentWizard({ school, classes, onSave, onCancel }) {
       const fd = new FormData();
       Object.entries(form).forEach(([k, v]) => { if (v !== '') fd.append(k, v); });
       if (profileImage) fd.append('passport_picture', profileImage);
-      await ApiClient.post('/api/school/students/', fd);
-      onSave();
+      const res = await ApiClient.post('/api/school/students/', fd);
+      if (res.credentials) setCredentials(res.credentials);
+      else onSave();
     } catch (e) { setError(e?.message || 'Failed to enroll student.'); setSaving(false); }
   };
 
@@ -1856,6 +1858,38 @@ function AddStudentWizard({ school, classes, onSave, onCancel }) {
   const filledCount   = [form.first_name, form.last_name, form.gender, form.date_of_birth, form.admission_number, form.classroom_id, profileImage].filter(Boolean).length;
   const completionPct = Math.round((filledCount / 7) * 100);
   const genderIcon    = form.gender === 'M' ? 'male' : form.gender === 'F' ? 'female' : 'person';
+
+  if (credentials) {
+    return (
+      <div style={{ position: 'fixed', inset: 0, zIndex: 1200, background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+        <div style={{ width: '100%', maxWidth: 440, background: 'var(--ska-surface-low)', borderRadius: 20, padding: '32px 28px', boxShadow: '0 32px 80px rgba(0,0,0,0.6)', display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 60, height: 60, borderRadius: '50%', background: 'rgba(75,142,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span className="material-symbols-rounded" style={{ fontSize: 32, color: '#4b8eff' }}>how_to_reg</span>
+            </div>
+            <h2 style={{ margin: 0, fontWeight: 800, fontSize: '1.25rem', color: 'var(--ska-text)', textAlign: 'center' }}>Student Enrolled!</h2>
+            <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--ska-text-3)', textAlign: 'center' }}>Share these login credentials with the student.</p>
+          </div>
+          <div style={{ background: 'var(--ska-surface-high)', borderRadius: 14, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 14, border: '1px solid var(--ska-border)' }}>
+            <div>
+              <div style={{ fontSize: '0.625rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--ska-text-3)', marginBottom: 4 }}>Username</div>
+              <div style={{ fontFamily: 'monospace', fontSize: '0.9375rem', fontWeight: 700, color: '#4b8eff', background: 'rgba(75,142,255,0.08)', padding: '8px 12px', borderRadius: 8, letterSpacing: '0.05em' }}>{credentials.username}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: '0.625rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--ska-text-3)', marginBottom: 4 }}>Default Password</div>
+              <div style={{ fontFamily: 'monospace', fontSize: '0.9375rem', fontWeight: 700, color: '#4cd7f6', background: 'rgba(76,215,246,0.08)', padding: '8px 12px', borderRadius: 8, letterSpacing: '0.05em' }}>{credentials.password}</div>
+            </div>
+          </div>
+          <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--ska-text-3)', textAlign: 'center', lineHeight: 1.5 }}>
+            The default password is the admission number. The student can change it after first login.
+          </p>
+          <button className="ska-btn ska-btn--primary" onClick={onSave} style={{ width: '100%' }}>
+            <span className="material-symbols-rounded" style={{ fontSize: 16 }}>check</span>Done
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{

@@ -313,6 +313,24 @@ def api_login(request):
                 'brand_colors': s.brand_colors,
                 'is_approved': s.is_approved
             }
+        elif role == 'student':
+            redirect_url = '/dashboard/student'
+            try:
+                s = user.student_profile.school
+                badge_url = None
+                if s and s.badge:
+                    try:
+                        badge_url = request.build_absolute_uri(s.badge.url)
+                    except Exception:
+                        badge_url = None
+                school_data = {
+                    'id': s.id,
+                    'name': s.name,
+                    'badge': badge_url,
+                } if s else None
+            except Exception:
+                school_data = None
+
         elif role == 'teacher':
             redirect_url = '/teacher/dashboard'
             s = user.teacher_profile.school
@@ -2364,7 +2382,7 @@ def api_students(request):
         student_user = User.objects.create_user(
             username=student_username, email=email,
             first_name=first_name, last_name=last_name,
-            password=uuid.uuid4().hex,
+            password=admission_number,
         )
 
         classroom = None
@@ -4764,3 +4782,272 @@ def api_teacher_change_password(request):
     user.set_password(new_pass)
     user.save()
     return JsonResponse({'success': True, 'message': 'Password updated successfully.'})
+
+
+# ── Student portal ────────────────────────────────────────────────
+
+def _get_student_profile(request):
+    user = _get_authed_user(request)
+    if not user:
+        return None, None
+    try:
+        return user, user.student_profile
+    except Exception:
+        return None, None
+
+
+@csrf_exempt
+def api_student_me(request):
+    if request.method != 'GET':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+    user, student = _get_student_profile(request)
+    if not student:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+
+    school = student.school
+    att_all   = list(student.attendance.all())
+    total_att = len(att_all)
+    present_c = sum(1 for a in att_all if a.status in ('present', 'late', 'excused'))
+    absent_c  = sum(1 for a in att_all if a.status == 'absent')
+    late_c    = sum(1 for a in att_all if a.status == 'late')
+    att_rate  = round((present_c / total_att) * 100, 1) if total_att > 0 else None
+
+    grades_qs   = list(student.grades.select_related('subject', 'term').all())
+    scores      = [float(g.total_score) for g in grades_qs]
+    avg_score   = round(sum(scores) / len(scores), 1) if scores else None
+    subjects_ct = len(set(g.subject_id for g in grades_qs))
+
+    # upcoming exams (from Exam model, future dates, student's classroom)
+    upcoming_exams = 0
+    try:
+        upcoming_exams = Exam.objects.filter(
+            school=school,
+            exam_date__gte=datetime.date.today(),
+            classroom=student.classroom,
+        ).count()
+    except Exception:
+        pass
+
+    pic_url = ''
+    if student.passport_picture:
+        try:
+            pic_url = request.build_absolute_uri(student.passport_picture.url)
+        except Exception:
+            pass
+
+    badge_url = ''
+    if school and school.badge:
+        try:
+            badge_url = request.build_absolute_uri(school.badge.url)
+        except Exception:
+            pass
+
+    # recent grades (last 5)
+    recent_grades = [{
+        'subject':      g.subject.name,
+        'term':         g.term.name,
+        'grade_letter': g.grade_letter,
+        'total_score':  float(g.total_score),
+        'is_locked':    g.is_locked,
+    } for g in grades_qs[-5:]]
+
+    return JsonResponse({
+        'success': True,
+        'student': {
+            'id':               student.id,
+            'admission_number': student.admission_number,
+            'full_name':        user.get_full_name(),
+            'first_name':       user.first_name,
+            'last_name':        user.last_name,
+            'email':            user.email,
+            'phone_number':     student.phone_number,
+            'date_of_birth':    str(student.date_of_birth) if student.date_of_birth else None,
+            'gender':           student.gender,
+            'passport_picture': pic_url,
+            'classroom':        student.classroom.name if student.classroom else None,
+            'classroom_id':     student.classroom_id,
+            'academic_year':    student.academic_year.name if student.academic_year else None,
+            'school_name':      school.name if school else '',
+            'school_badge':     badge_url,
+            'admission_date':   str(student.admission_date),
+        },
+        'stats': {
+            'attendance_rate': att_rate,
+            'present_days':    present_c,
+            'absent_days':     absent_c,
+            'late_days':       late_c,
+            'total_days':      total_att,
+            'avg_score':       avg_score,
+            'subjects_count':  subjects_ct,
+            'upcoming_exams':  upcoming_exams,
+        },
+        'recent_grades': recent_grades,
+    })
+
+
+@csrf_exempt
+def api_student_grades(request):
+    if request.method != 'GET':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+    user, student = _get_student_profile(request)
+    if not student:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+
+    term_id = request.GET.get('term_id')
+    qs = student.grades.select_related('subject', 'term').order_by('subject__name')
+    if term_id:
+        try:
+            qs = qs.filter(term_id=int(term_id))
+        except (ValueError, TypeError):
+            pass
+
+    grades = [{
+        'id':           g.id,
+        'subject':      g.subject.name,
+        'subject_id':   g.subject_id,
+        'term':         g.term.name,
+        'term_id':      g.term_id,
+        'ca':           float(g.continuous_assessment),
+        'midterm':      float(g.mid_term_exam),
+        'final':        float(g.final_exam),
+        'total_score':  float(g.total_score),
+        'grade_letter': g.grade_letter,
+        'is_locked':    g.is_locked,
+    } for g in qs]
+
+    terms = list(Term.objects.filter(school=student.school).values('id', 'name').order_by('-start_date'))
+
+    scores = [g['total_score'] for g in grades]
+    avg    = round(sum(scores) / len(scores), 1) if scores else None
+
+    return JsonResponse({'success': True, 'grades': grades, 'terms': terms, 'avg_score': avg})
+
+
+@csrf_exempt
+def api_student_attendance(request):
+    if request.method != 'GET':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+    user, student = _get_student_profile(request)
+    if not student:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+
+    att_qs  = list(student.attendance.order_by('-date')[:120])
+    records = [{
+        'id':     a.id,
+        'date':   str(a.date),
+        'status': a.status,
+        'notes':  a.notes or '',
+    } for a in att_qs]
+
+    total   = len(records)
+    present = sum(1 for r in records if r['status'] in ('present', 'late', 'excused'))
+    absent  = sum(1 for r in records if r['status'] == 'absent')
+    late    = sum(1 for r in records if r['status'] == 'late')
+    rate    = round((present / total) * 100, 1) if total > 0 else None
+
+    from collections import defaultdict
+    monthly = defaultdict(lambda: {'present': 0, 'total': 0})
+    for r in records:
+        if r['date']:
+            mk = r['date'][:7]
+            monthly[mk]['total'] += 1
+            if r['status'] in ('present', 'late', 'excused'):
+                monthly[mk]['present'] += 1
+    monthly_trend = [
+        {'month': k, 'rate': round((v['present'] / v['total']) * 100, 1) if v['total'] > 0 else 0}
+        for k, v in sorted(monthly.items())[-6:]
+    ]
+
+    return JsonResponse({
+        'success':       True,
+        'records':       records[:50],
+        'stats':         {'total': total, 'present': present, 'absent': absent, 'late': late, 'rate': rate},
+        'monthly_trend': monthly_trend,
+    })
+
+
+@csrf_exempt
+def api_student_timetable(request):
+    if request.method != 'GET':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+    user, student = _get_student_profile(request)
+    if not student:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+
+    if not student.classroom_id:
+        return JsonResponse({'success': True, 'slots': []})
+
+    slots = TimetableSlot.objects.filter(
+        classroom_id=student.classroom_id
+    ).select_related('subject', 'teacher__user').order_by('day_of_week', 'period_number')
+
+    data = [{
+        'id':           s.id,
+        'day':          s.day_of_week,
+        'period':       s.period_number,
+        'start_time':   str(s.start_time) if s.start_time else '',
+        'end_time':     str(s.end_time)   if s.end_time   else '',
+        'subject':      s.subject.name    if s.subject    else '',
+        'teacher':      s.teacher.user.get_full_name() if (s.teacher and s.teacher.user) else '',
+    } for s in slots]
+
+    return JsonResponse({'success': True, 'slots': data})
+
+
+@csrf_exempt
+def api_student_notifications(request):
+    user, student = _get_student_profile(request)
+    if not student:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+
+    if request.method == 'POST':
+        try:
+            data     = json.loads(request.body)
+            notif_id = data.get('notification_id')
+            NotificationRead.objects.get_or_create(notification_id=notif_id, user=user)
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=400)
+
+    if request.method == 'GET':
+        notifs = Notification.objects.filter(
+            school=student.school, is_active=True,
+        ).filter(recipient_role__in=['all', 'students']).order_by('-created_at')[:50]
+
+        read_ids = set(NotificationRead.objects.filter(user=user).values_list('notification_id', flat=True))
+        data = [{
+            'id':         n.id,
+            'title':      n.title,
+            'body':       n.body,
+            'type':       n.notif_type,
+            'created_at': str(n.created_at),
+            'is_read':    n.id in read_ids,
+        } for n in notifs]
+        unread = sum(1 for d in data if not d['is_read'])
+        return JsonResponse({'success': True, 'notifications': data, 'unread_count': unread})
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+@csrf_exempt
+def api_student_change_password(request):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+    user, student = _get_student_profile(request)
+    if not student:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    try:
+        data         = json.loads(request.body)
+        old_password = data.get('old_password', '')
+        new_password = data.get('new_password', '').strip()
+        if not old_password or not new_password:
+            return JsonResponse({'success': False, 'message': 'Both old and new password required.'}, status=400)
+        if len(new_password) < 6:
+            return JsonResponse({'success': False, 'message': 'New password must be at least 6 characters.'}, status=400)
+        if not user.check_password(old_password):
+            return JsonResponse({'success': False, 'message': 'Old password is incorrect.'}, status=400)
+        user.set_password(new_password)
+        user.save()
+        return JsonResponse({'success': True, 'message': 'Password changed successfully.'})
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
