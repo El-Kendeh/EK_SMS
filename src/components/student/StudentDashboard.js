@@ -40,8 +40,9 @@ function timeToMinutes(timeStr) {
 }
 
 function todayDayIndex() {
-  const d = new Date().getDay(); // 0=Sun
-  return d === 0 ? 0 : d - 1;   // Mon=0 … Fri=4
+  const d = new Date().getDay(); // 0=Sun,1=Mon...6=Sat
+  if (d === 0 || d === 6) return -1; // weekend — no school day is "today"
+  return d - 1;                      // Mon=0 … Fri=4
 }
 
 function currentMinutes() {
@@ -446,7 +447,7 @@ function AttendanceTab() {
    ================================================================ */
 function ScheduleTab() {
   const [slots,   setSlots]   = useState([]);
-  const [selDay,  setSelDay]  = useState(Math.min(todayDayIndex(), 4));
+  const [selDay,  setSelDay]  = useState(Math.max(0, Math.min(todayDayIndex(), 4)));
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -785,7 +786,7 @@ export default function StudentDashboard({ onNavigate }) {
           <button className="sd-icon-btn" onClick={() => setTab('attendance')} title="Attendance">
             <Icon name="event_available" size={22} />
           </button>
-          <button className="sd-icon-btn" onClick={() => setTab('notifications')} title="Notifications" style={{ position: 'relative' }}>
+          <button className="sd-icon-btn" onClick={() => setTab('notifications')} title="Notifications">
             <Icon name="notifications" size={22} />
             {unread > 0 && <span className="sd-notif-badge" />}
           </button>
@@ -820,10 +821,10 @@ export default function StudentDashboard({ onNavigate }) {
       <nav className="sd-bottom-nav">
         {[...TABS, { id: 'notifications', icon: 'notifications', label: 'Alerts' }].map(t => (
           <button key={t.id} className={`sd-nav-btn${tab === t.id ? ' active' : ''}`} onClick={() => setTab(t.id)}>
-            <span className="material-symbols-outlined" style={{ position: 'relative' }}>
-              {t.icon}
+            <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span className="material-symbols-outlined">{t.icon}</span>
               {t.id === 'notifications' && unread > 0 && (
-                <span style={{ position: 'absolute', top: -4, right: -4, width: 8, height: 8, borderRadius: '50%', background: '#5de6ff', border: '2px solid #0b1326' }} />
+                <span style={{ position: 'absolute', top: -2, right: -4, width: 8, height: 8, borderRadius: '50%', background: '#5de6ff', border: '2px solid #0b1326', flexShrink: 0 }} />
               )}
             </span>
             <span className="sd-nav-label">{t.label}</span>

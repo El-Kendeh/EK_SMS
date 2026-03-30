@@ -4822,7 +4822,7 @@ def api_student_me(request):
     try:
         upcoming_exams = Exam.objects.filter(
             school=school,
-            exam_date__gte=datetime.date.today(),
+            date__gte=datetime.date.today(),
             classroom=student.classroom,
         ).count()
     except Exception:
