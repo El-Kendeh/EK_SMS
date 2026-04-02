@@ -2099,9 +2099,12 @@ def _get_school_for_admin(request):
 
 # ── School info ──────────────────────────────────────────────────
 
-@require_http_methods(["GET", "POST", "PATCH"])
 @csrf_exempt
-def api_school_info(request):
+def api_school_profile_full(request):
+    if request.method == 'OPTIONS':
+        return JsonResponse({'status': 'ok'})
+    if request.method not in ['GET', 'POST', 'PATCH']:
+        return JsonResponse({'error': f'Method {request.method} not allowed'}, status=405)
     try:
         actor, sa, school = _get_school_for_admin(request)
     except SchoolAdmin.DoesNotExist:
