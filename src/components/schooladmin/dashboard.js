@@ -1982,6 +1982,32 @@ export default function SchoolAdminDashboard({ onNavigate }) {
   }, [isApproved]);
 
   useEffect(() => { fetchSchool(); }, [fetchSchool]);
+  
+  /* ── Apply brand colors to CSS variables ── */
+  useEffect(() => {
+    if (school?.brand_colors) {
+      const colors = school.brand_colors.split(',').map(c => c.trim()).filter(c => c.startsWith('#'));
+      if (colors.length > 0) {
+        const root = document.documentElement;
+        // Primary
+        root.style.setProperty('--ska-primary', colors[0]);
+        root.style.setProperty('--ska-primary-container', colors[0]);
+        root.style.setProperty('--ska-primary-dim', `${colors[0]}1f`); // 12% opacity (0.12 * 255 = ~31 = 0x1f)
+        
+        // Secondary (optional)
+        if (colors.length > 1) {
+          root.style.setProperty('--ska-secondary', colors[1]);
+          root.style.setProperty('--ska-secondary-dim', `${colors[1]}1f`);
+        }
+        
+        // Tertiary (optional)
+        if (colors.length > 2) {
+          root.style.setProperty('--ska-tertiary', colors[2]);
+          root.style.setProperty('--ska-tertiary-dim', `${colors[2]}1f`);
+        }
+      }
+    }
+  }, [school?.brand_colors]);
 
   /* ── Logout ── */
   function handleLogout() {

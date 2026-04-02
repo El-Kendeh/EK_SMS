@@ -2099,15 +2099,48 @@ def _get_school_for_admin(request):
 
 # ── School info ──────────────────────────────────────────────────
 
-@require_http_methods(["GET"])
+@require_http_methods(["GET", "POST", "PATCH"])
 @csrf_exempt
 def api_school_info(request):
     try:
         actor, sa, school = _get_school_for_admin(request)
-    except SchoolAdmin.DoesNotExist:
+    except Exception:
         return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
     if not actor:
         return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+
+    if request.method in ['POST', 'PATCH']:
+        # Support both FormData and JSON
+        data = request.POST if request.POST else {}
+        if not data and request.body:
+             try: data = json.loads(request.body)
+             except: data = {}
+
+        # Profile fields
+        school.phone = data.get('phone', school.phone)
+        school.address = data.get('address', school.address)
+        school.city = data.get('city', school.city)
+        school.country = data.get('country', school.country)
+        school.brand_colors = data.get('brand_colors', school.brand_colors)
+
+        # File uploads
+        badge = request.FILES.get('badge')
+        if badge:
+            school.badge = badge
+        elif data.get('remove_badge') == 'true':
+            school.badge = None
+
+        school.save()
+        return JsonResponse({
+            'success': True,
+            'message': 'School profile updated successfully.',
+            'school': {
+                'id': school.id,
+                'name': school.name,
+                'brand_colors': school.brand_colors,
+                'badge': request.build_absolute_uri(school.badge.url) if school.badge else None,
+            }
+        })
 
     student_count = Student.objects.filter(school=school, is_active=True).count()
     teacher_count = Teacher.objects.filter(school=school, is_active=True).count()
@@ -2144,6 +2177,7 @@ def api_school_info(request):
         'fees_collected': 0,
         'fees_outstanding': 0,
         'academic_year': active_year.name if active_year else None,
+        'brand_colors': school.brand_colors,
     })
 
 

@@ -1359,3 +1359,34 @@ textarea.ska-input { height: auto; padding: 10px 12px; }
   .ska-stat-grid-4 { grid-template-columns: 1fr !important; gap: 10px !important; }
   .ska-btn { min-height: 44px; font-size: 0.75rem; padding: 0 12px; }
 }
+/* ---- Branding & Customization ---- */
+.brand-color-picker { display: flex; flex-direction: column; gap: 0; }
+.color-input-wrapper { display: flex; flex-direction: column; gap: 0; position: relative; }
+.color-palette-popup {
+  position: absolute; top: 100%; left: 0; right: 0; z-index: 100;
+  background: var(--ska-surface-card); border: 1px solid var(--ska-border);
+  border-radius: 12px; padding: 16px; margin-top: 8px; box-shadow: var(--ska-shadow-card-hover);
+}
+.palette-section-label { font-size: 0.6875rem; font-weight: 700; color: var(--ska-text-3); text-transform: uppercase; margin: 12px 0 6px; letter-spacing: 0.05em; }
+.palette-section-label:first-child { margin-top: 0; }
+.palette-grid { display: grid; gap: 2px; }
+.palette-row { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; }
+.palette-row--std { grid-template-columns: repeat(12, 1fr); }
+.palette-swatch { 
+  width: 100%; aspect-ratio: 1; border-radius: 3px; border: 1px solid rgba(255,255,255,0.1); 
+  cursor: pointer; padding: 0; transition: transform 0.1s; 
+}
+.palette-swatch:hover { transform: scale(1.2); z-index: 2; border-color: #fff; }
+.palette-swatch.selected { border: 2px solid #fff; transform: scale(1.1); position: relative; z-index: 1; }
+.palette-swatch.selected::after {
+  content: '✓'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 10px; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
+.logo-upload { width: 100%; }
+.logo-dropzone {
+  border: 2px dashed var(--ska-border); border-radius: 12px; padding: 32px 16px;
+  text-align: center; cursor: pointer; transition: all 0.2s; background: var(--ska-surface-low);
+}
+.logo-dropzone:hover { border-color: var(--ska-primary); background: var(--ska-primary-dim); }
+.logo-dropzone.active { border-color: var(--ska-primary); background: var(--ska-primary-dim); }

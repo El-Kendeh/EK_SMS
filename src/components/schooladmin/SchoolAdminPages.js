@@ -2,8 +2,9 @@
  * EK-SMS School Admin — Extra Pages
  * Grades · Attendance · Finance · Reports · Messages · Security · Settings
  */
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ApiClient from '../../api/client';
+import { BrandColorPicker, LogoUpload } from '../BrandingComponents';
 
 /* ── Shared icon helper ───────────────────────────────────── */
 const Ic = ({ name, size, className = '', style }) => (
@@ -1095,33 +1096,48 @@ export function SettingsPage({ school: schoolProp, onSchoolUpdate }) {
   const [addingYear, setAddingYear] = useState(false);
   const [savingYear, setSavingYear] = useState(false);
   const [yearForm,   setYearForm]   = useState({ name: '', start_date: '', end_date: '' });
-  const [form, setForm] = useState({ phone: '', address: '', city: '', country: '' });
+  const [form,    setForm]    = useState({ 
+    phone: '', address: '', city: '', country: '', 
+    brand_colors: schoolProp?.brand_colors || '' 
+  });
+  const [badgePreview, setBadgePreview] = useState(schoolProp?.badge || '');
+  const [badgeFile, setBadgeFile] = useState(null);
+  const badgeRef = useRef(null);
 
   useEffect(() => {
     Promise.all([
       ApiClient.get('/api/school/info/').then(d => {
         setSchool(d);
-        setForm({ phone: d.phone || '', address: d.address || '', city: d.city || '', country: d.country || '' });
+        setForm({ 
+          phone: d.phone || '', address: d.address || '', 
+          city: d.city || '', country: d.country || '',
+          brand_colors: d.brand_colors || ''
+        });
+        setBadgePreview(d.badge || '');
       }).catch(() => {}),
       ApiClient.get('/api/school/academic-years/').then(d => setYears(d.academic_years || [])).catch(() => {}),
     ]).finally(() => setLoading(false));
-  }, []);
+  }, [school?.badge, school?.brand_colors]);
 
   const handleSave = async () => {
     setSaving(true); setMsg({ type: '', text: '' });
     try {
-      await ApiClient.patch('/api/admin-settings/', {
-        settings: {
-          school_phone:   form.phone,
-          school_address: form.address,
-          school_city:    form.city,
-          school_country: form.country,
-        },
-      });
+      const payload = new FormData();
+      payload.append('phone', form.phone);
+      payload.append('address', form.address);
+      payload.append('city', form.city);
+      payload.append('country', form.country);
+      payload.append('brand_colors', form.brand_colors);
+      if (badgeFile) {
+        payload.append('badge', badgeFile);
+      }
+
+      const res = await ApiClient.post('/api/school/update/', payload);
       setMsg({ type: 'ok', text: 'Settings saved successfully.' });
-      if (onSchoolUpdate) onSchoolUpdate({ ...school, ...form });
+      if (onSchoolUpdate) onSchoolUpdate(res.school);
+      setSchool(s => ({ ...s, ...res.school }));
     } catch (e) {
-      setMsg({ type: 'err', text: e.message || 'Failed to save settings.' });
+      setMsg({ type: 'error', text: e.message || 'Failed to save settings.' });
     }
     setSaving(false);
   };
@@ -1201,6 +1217,52 @@ export function SettingsPage({ school: schoolProp, onSchoolUpdate }) {
             onClick={handleSave} disabled={saving}>
             {saving ? 'Saving…' : 'Save Changes'}
           </button>
+        </div>
+
+        {/* Branding & Customization */}
+        <div className="ska-card ska-card-pad" style={{ gridColumn: '1 / -1' }}>
+          <div className="ska-card-head" style={{ marginBottom: 20 }}>
+            <h2 className="ska-card-title">Branding & Customization</h2>
+            <Ic name="palette" size="sm" style={{ color: 'var(--ska-secondary)' }} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: 32 }}>
+            <div>
+              <p style={{ margin: '0 0 12px', fontSize: '0.875rem', fontWeight: 600, color: 'var(--ska-text-2)' }}>School Badge</p>
+              <LogoUpload
+                preview={badgePreview}
+                inputRef={badgeRef}
+                onChange={(e) => {
+                  const file = e.target.files[0];
+                  if (file) {
+                    setBadgeFile(file);
+                    setBadgePreview(URL.createObjectURL(file));
+                  }
+                }}
+                onRemove={() => {
+                  setBadgeFile(null);
+                  setBadgePreview('');
+                }}
+              />
+              <p style={{ marginTop: 12, fontSize: '0.75rem', color: 'var(--ska-text-3)', lineHeight: 1.5 }}>
+                Your logo will appear on report cards, certificates, transcripts, and the dashboard sidebar.
+              </p>
+            </div>
+            <div>
+              <p style={{ margin: '0 0 12px', fontSize: '0.875rem', fontWeight: 600, color: 'var(--ska-text-2)' }}>Brand Color Palette</p>
+              <BrandColorPicker
+                value={form.brand_colors ? form.brand_colors.split(',').map(c => c.trim()).filter(Boolean) : []}
+                onChange={(colors) => setForm(f => ({ ...f, brand_colors: colors.join(',') }))}
+              />
+              <p style={{ marginTop: 12, fontSize: '0.75rem', color: 'var(--ska-text-3)', lineHeight: 1.5 }}>
+                Choose your school's official colours to customize the dashboard theme and academic documents.
+              </p>
+            </div>
+          </div>
+          <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid var(--ska-border)', display: 'flex', justifyContent: 'flex-end' }}>
+            <button className="ska-btn ska-btn--primary" onClick={handleSave} disabled={saving}>
+              {saving ? 'Saving…' : 'Update Branding'}
+            </button>
+          </div>
         </div>
 
         {/* Right column */}

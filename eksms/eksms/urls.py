@@ -72,6 +72,7 @@ urlpatterns = [
     path('api/system-alerts/',     api_system_alerts,      name='api_system_alerts'),
     # School-admin CRUD
     path('api/school/info/',                    api_school_info,      name='api_school_info'),
+    path('api/school/update/',                  api_school_info,      name='api_school_update'),
     path('api/school/students/',                api_students,         name='api_students'),
     path('api/school/students/<int:student_id>/', api_student_detail, name='api_student_detail'),
     path('api/school/teachers/',                api_teachers,         name='api_teachers'),

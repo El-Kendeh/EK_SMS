@@ -465,7 +465,7 @@ function PasswordStrength({ password }) {
 /* ================================================================
    Brand Color Picker — input + Choose button reveals palette popup
    ================================================================ */
-function BrandColorPicker({ value, onChange }) {
+export function BrandColorPicker({ value, onChange }) {
   const [colorInput, setColorInput] = useState('');
   const [showPalette, setShowPalette] = useState(false);
   const wrapperRef = useRef(null);
@@ -597,7 +597,7 @@ function BrandColorPicker({ value, onChange }) {
 /* ================================================================
    Logo / Badge Upload
    ================================================================ */
-function LogoUpload({ preview, inputRef, onChange, onRemove }) {
+export function LogoUpload({ preview, inputRef, onChange, onRemove }) {
   const [isDragActive, setIsDragActive] = useState(false);
 
   const handleDragOver = (e) => {
