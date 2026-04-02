@@ -2101,10 +2101,17 @@ def _get_school_for_admin(request):
 
 @csrf_exempt
 def api_school_profile_full(request):
+    print(f"[DEBUG] api_school_profile_full called with method: {request.method}")
     if request.method == 'OPTIONS':
-        return JsonResponse({'status': 'ok'})
+        res = JsonResponse({'status': 'ok'})
+        origin = request.headers.get('Origin', '*')
+        res['Access-Control-Allow-Origin'] = origin
+        res['Access-Control-Allow-Methods'] = 'GET, POST, PATCH, OPTIONS'
+        res['Access-Control-Allow-Headers'] = 'Authorization, Content-Type, X-CSRFToken, X-Requested-With'
+        res['Access-Control-Allow-Credentials'] = 'true'
+        return res
     if request.method not in ['GET', 'POST', 'PATCH']:
-        return JsonResponse({'error': f'Method {request.method} not allowed'}, status=405)
+        return JsonResponse({'message': f'Method {request.method} not allowed'}, status=405)
     try:
         actor, sa, school = _get_school_for_admin(request)
     except SchoolAdmin.DoesNotExist:
