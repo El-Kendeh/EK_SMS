@@ -1132,7 +1132,7 @@ export function SettingsPage({ school: schoolProp, onSchoolUpdate }) {
         payload.append('badge', badgeFile);
       }
 
-      const res = await ApiClient.post('/api/school/update/', payload);
+      const res = await ApiClient.post('/api/school/info/', payload);
       setMsg({ type: 'ok', text: 'Settings saved successfully.' });
       if (onSchoolUpdate) onSchoolUpdate(res.school);
       setSchool(s => ({ ...s, ...res.school }));
@@ -1235,7 +1235,9 @@ export function SettingsPage({ school: schoolProp, onSchoolUpdate }) {
                   const file = e.target.files[0];
                   if (file) {
                     setBadgeFile(file);
-                    setBadgePreview(URL.createObjectURL(file));
+                    const reader = new FileReader();
+                    reader.onload = (re) => setBadgePreview(re.target.result);
+                    reader.readAsDataURL(file);
                   }
                 }}
                 onRemove={() => {

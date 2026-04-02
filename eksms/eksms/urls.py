@@ -99,7 +99,6 @@ admin.site.site_header = "SMS Administration"
 admin.site.site_title = "SMS Admin"
 admin.site.index_title = "Welcome to SMS Administration"
 
-# Serve media files (student passport uploads) during development
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Serve media files
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

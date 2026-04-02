@@ -2104,8 +2104,10 @@ def _get_school_for_admin(request):
 def api_school_info(request):
     try:
         actor, sa, school = _get_school_for_admin(request)
-    except Exception:
-        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Account Error: No school admin profile found for this user.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': f'Server Error: {str(e)}'}, status=500)
     if not actor:
         return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
 
