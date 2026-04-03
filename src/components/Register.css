@@ -2285,43 +2285,96 @@
   /* Show the print-only header */
   .reg-print-header {
     display: flex !important;
+    flex-direction: column;
+    margin-bottom: 28px;
+  }
+  
+  .reg-print-letterhead-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 3px solid #1B3FAF;
+    padding-bottom: 16px;
+    margin-bottom: 20px;
+  }
+
+  .reg-print-logo-wrap {
+    display: flex;
     align-items: center;
     gap: 16px;
-    margin-bottom: 24px;
-    padding-bottom: 16px;
-    border-bottom: 2px solid #1B3FAF;
   }
+
+  .reg-print-brand-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .brand-title {
+    margin: 0;
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #1B3FAF;
+    letter-spacing: -0.01em;
+  }
+
+  .brand-contact {
+    margin: 0;
+    font-size: 0.85rem;
+    color: #475569;
+    font-weight: 500;
+  }
+
+  .reg-print-school-badge {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    padding: 6px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  }
+
   .reg-print-logo {
     width: 64px;
     height: 64px;
-    object-fit: contain;
-    border-radius: 8px;
+    object-fit: cover;
+    border-radius: 6px;
+    display: block;
   }
+
+  .reg-print-title-area {
+    text-align: left;
+  }
+
   .reg-print-title {
-    margin: 0 0 4px;
-    font-size: 1.25rem;
-    font-weight: 800;
+    margin: 0 0 6px;
+    font-size: 1.15rem;
+    font-weight: 700;
     color: #0F172A;
   }
+  
   .reg-print-sub {
     margin: 0;
     font-size: 0.8125rem;
-    color: #475569;
+    color: #64748B;
   }
 
   /* Review sections: clean print style */
-  .review-section { break-inside: avoid; margin-bottom: 16px !important; }
-  .review-section-title { color: #1B3FAF !important; font-size: 0.8rem !important; }
-  .review-rows { border: 1px solid #e2e8f0 !important; border-radius: 8px !important; }
-  .review-row { padding: 8px 14px !important; color: #0F172A !important; font-size: 0.8125rem !important; }
-  .review-row:not(:last-child) { border-bottom: 1px solid #e2e8f0 !important; }
-  .review-label { color: #475569 !important; }
-  .review-value { color: #0F172A !important; }
-  .review-badge { width: 48px; height: 48px; }
+  .review-section { break-inside: avoid; margin-bottom: 22px !important; }
+  .review-section-header { margin-bottom: 8px !important; }
+  .review-section-title { color: #1B3FAF !important; font-size: 1rem !important; font-weight: 700 !important; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; width: 100%; }
+  .review-section-icon { display: none !important; } /* Hide icons in print to look more formal */
+  
+  .review-rows { border: none !important; border-radius: 0 !important; }
+  .review-row { padding: 6px 0 !important; color: #0F172A !important; font-size: 0.875rem !important; display: flex; border-bottom: 1px dashed #cbd5e1 !important; }
+  .review-row:last-child { border-bottom: none !important; }
+  
+  .review-label { color: #475569 !important; font-weight: 600 !important; min-width: 160px; }
+  .review-value { color: #0F172A !important; font-weight: 500; }
+  .review-badge-row { display: none !important; } /* Don't show badge row inside section, handled in header */
 
   /* Page settings */
   @page {
-    margin: 20mm 15mm;
+    margin: 15mm 15mm;
     size: A4;
   }
 }

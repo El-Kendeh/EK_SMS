@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './Register.css';
 import ApiClient from '../api/client';
+import ErrorIcon from './icons/ErrorIcon';
 import PruhLogo from './PruhLogo';
 
 /* ================================================================
@@ -1880,12 +1881,25 @@ function Register({ onNavigate }) {
               </button>
             </div>
 
-            {/* Print-only header — hidden on screen */}
+            {/* Print-only official letterhead — hidden on screen */}
             <div className="reg-print-header">
-              {badgePreview && <img src={badgePreview} alt="School badge" className="reg-print-logo" />}
-              <div>
-                <h1 className="reg-print-title">{form.institutionName || 'Institution Registration'}</h1>
-                <p className="reg-print-sub">EK-SMS Registration Review — {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+              <div className="reg-print-letterhead-top">
+                <div className="reg-print-logo-wrap">
+                  <PruhLogo size={48} showText={false} />
+                  <div className="reg-print-brand-text">
+                    <h2 className="brand-title">PRUH Elkendeh School Management System</h2>
+                    <p className="brand-contact">Email: admin@elkendeh.com &nbsp;&nbsp;|&nbsp;&nbsp; Website: elkendeh.com</p>
+                  </div>
+                </div>
+                {badgePreview && (
+                  <div className="reg-print-school-badge">
+                    <img src={badgePreview} alt="School badge" className="reg-print-logo" />
+                  </div>
+                )}
+              </div>
+              <div className="reg-print-title-area">
+                <h1 className="reg-print-title">Registration Summary: {form.institutionName || 'Institution'}</h1>
+                <p className="reg-print-sub">Generated on {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} at {new Date().toLocaleTimeString('en-GB')}</p>
               </div>
             </div>
 
