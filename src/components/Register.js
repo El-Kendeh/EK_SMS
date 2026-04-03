@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './Register.css';
 import ApiClient from '../api/client';
-import ErrorIcon from './icons/ErrorIcon';
 import PruhLogo from './PruhLogo';
 
 /* ================================================================
