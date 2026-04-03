@@ -1346,7 +1346,7 @@ def api_get_grade_alerts(request):
     """Fetch grade alerts from database — enriched with student/school/grade context"""
     try:
         alerts = GradeChangeAlert.objects.select_related(
-            'grade__student__school', 'grade__classroom', 'triggered_by', 'acknowledged_by'
+            'grade__student__school', 'triggered_by', 'acknowledged_by'
         ).order_by('-triggered_at')[:50]
         alert_list = []
         for a in alerts:
