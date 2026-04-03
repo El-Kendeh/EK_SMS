@@ -550,6 +550,14 @@ def api_get_schools(request):
                 'admin_email':      sa_user.email      if sa_user else s.admin_email or '',
                 'admin_full_name':  admin_full_name,
                 'admin_is_active':  sa_user.is_active  if sa_user else False,
+                # Missing fields for review dashboard
+                'institution_type': s.institution_type,
+                'academic_system':  s.academic_system,
+                'capacity':         s.capacity,
+                'website':          s.website,
+                'motto':            s.motto,
+                'grading_system':   s.grading_system,
+                'established':      s.established,
             })
         return JsonResponse({'success': True, 'schools': school_list}, status=200)
     except Exception as e:

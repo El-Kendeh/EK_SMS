@@ -1,0 +1,2 @@
+  const [schools,         setSchools]         = useState([]);
+      if (data.success) setSchools(data.schools);
