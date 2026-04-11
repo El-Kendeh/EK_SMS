@@ -14,4 +14,3 @@ from django.core.wsgi import get_wsgi_application
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'eksms.settings_secure')
 
 application = get_wsgi_application()
-# Trigger reload: 2026-04-02T06:25:22Z
