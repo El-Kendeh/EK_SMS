@@ -3,6 +3,7 @@ import './App.css';
 import { ThemeProvider } from './context/ThemeContext';
 import Login from './components/login';
 import SuperadminDashboard from './components/superadmin/SuperadminDashboard';
+import ParentDashboard from './components/parents/dashboard';
 import Landing from './components/Landing';
 import Register from './components/Register';
 import SchoolAdminDashboard from './components/schooladmin/dashboard';
@@ -59,6 +60,7 @@ const PAGE_TO_PATH = {
   register:             '/register',
   superadmindashboard:  '/superadmin',
   'sa-dashboard':       '/dashboard/school-admin',
+  parentdashboard:      '/parent',
 };
 
 const PATH_TO_PAGE = {
@@ -67,6 +69,7 @@ const PATH_TO_PAGE = {
   '/register':    'register',
   '/superadmin':  'superadmindashboard',
   '/dashboard/school-admin': 'sa-dashboard',
+  '/parent':      'parentdashboard',
 };
 
 function App() {
@@ -105,6 +108,8 @@ function App() {
           setCurrentPage('superadmindashboard');
         } else if (user.role === 'school_admin') {
           setCurrentPage('sa-dashboard');
+        } else if (user.role === 'parent') {
+          setCurrentPage('parentdashboard');
         } else {
           setCurrentPage('login');
         }
@@ -135,6 +140,8 @@ function App() {
             setCurrentPage('superadmindashboard');
           } else if (user.role === 'school_admin') {
             setCurrentPage('sa-dashboard');
+          } else if (user.role === 'parent') {
+            setCurrentPage('parentdashboard');
           } else {
             setCurrentPage('home');
           }
@@ -170,6 +177,7 @@ function App() {
         {currentPage === 'login' && <Login onNavigate={setCurrentPage} />}
         {currentPage === 'superadmindashboard' && <SuperadminDashboard onNavigate={setCurrentPage} />}
         {currentPage === 'sa-dashboard' && <SchoolAdminDashboard onNavigate={setCurrentPage} />}
+        {currentPage === 'parentdashboard' && <ParentDashboard onNavigate={setCurrentPage} />}
         {(currentPage === 'home' || currentPage === 'landing') && <Landing onNavigate={setCurrentPage} />}
         {currentPage === 'register' && <Register onNavigate={setCurrentPage} />}
 

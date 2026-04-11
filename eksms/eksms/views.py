@@ -11,11 +11,12 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from eksms_core.models import (
     School, SchoolAdmin, GradeChangeAlert, Grade, Student, Teacher,
-    SchoolApplicationEvent, ForensicEvent, AlertBroadcast, AdminSetting,
+    Parent, ParentStudent, SchoolApplicationEvent, ForensicEvent, AlertBroadcast, AdminSetting,
     SecurityLogEntry, AcademicYear, ClassRoom, SystemWideAlert,
     Subject, Term,
 )
 import datetime
+import re
 import uuid
 import json
 import logging
@@ -63,6 +64,26 @@ def _get_authed_user(request):
         return None
     except (ValueError, User.DoesNotExist):
         return None
+
+
+def _parse_bool(value):
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    if isinstance(value, (int, float)):
+        return bool(value)
+    text = str(value).strip().lower()
+    return text in ('1', 'true', 'yes', 'on')
+
+
+def _get_request_data(request):
+    if request.content_type and request.content_type.startswith('multipart/form-data'):
+        return {key: request.POST.get(key) for key in request.POST}
+    try:
+        return json.loads(request.body)
+    except json.JSONDecodeError:
+        return {}
 
 
 def _log_security_event(event_type, description, severity='info',
@@ -2238,10 +2259,7 @@ def api_students(request):
         return JsonResponse({'success': True, 'students': data, 'count': len(data)})
 
     if request.method == 'POST':
-        try:
-            body = json.loads(request.body)
-        except json.JSONDecodeError:
-            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        body = _get_request_data(request)
 
         first_name       = body.get('first_name', '').strip()
         last_name        = body.get('last_name', '').strip()
@@ -2250,34 +2268,160 @@ def api_students(request):
         classroom_id     = body.get('classroom_id')
         date_of_birth    = body.get('date_of_birth') or None
         phone_number     = body.get('phone_number', '')
+        profile_photo    = request.FILES.get('profile_photo')
+
+        father_name      = body.get('father_name', '').strip()
+        father_email     = body.get('father_email', '').strip()
+        father_phone     = body.get('father_phone', '').strip()
+        father_occupation = body.get('father_occupation', '').strip()
+        father_username  = body.get('father_username', '').strip()
+        father_password  = body.get('father_password', '').strip()
+
+        mother_name      = body.get('mother_name', '').strip()
+        mother_email     = body.get('mother_email', '').strip()
+        mother_phone     = body.get('mother_phone', '').strip()
+        mother_occupation = body.get('mother_occupation', '').strip()
+        mother_username  = body.get('mother_username', '').strip()
+        mother_password  = body.get('mother_password', '').strip()
+
+        parent_primary_contact = body.get('parent_primary_contact')
+        try:
+            primary_contact = _parse_bool(parent_primary_contact)
+        except Exception:
+            primary_contact = False
 
         if not first_name or not last_name or not admission_number:
             return JsonResponse({'success': False, 'message': 'first_name, last_name, and admission_number are required.'}, status=400)
         if Student.objects.filter(school=school, admission_number=admission_number).exists():
             return JsonResponse({'success': False, 'message': 'Admission number already exists.'}, status=400)
 
-        username = f"stu_{school.code}_{admission_number}".lower().replace(' ', '_')[:150]
-        if User.objects.filter(username=username).exists():
-            username = f"{username}_{uuid.uuid4().hex[:4]}"
-        user = User.objects.create_user(
-            username=username, email=email,
+        student_username = f"stu_{school.code}_{admission_number}".lower().replace(' ', '_')[:150]
+        if User.objects.filter(username=student_username).exists():
+            student_username = f"{student_username}_{uuid.uuid4().hex[:4]}"
+        student_user = User.objects.create_user(
+            username=student_username, email=email,
             first_name=first_name, last_name=last_name,
             password=uuid.uuid4().hex,
         )
+
         classroom = None
         if classroom_id:
             try:
                 classroom = ClassRoom.objects.get(id=classroom_id, school=school)
             except ClassRoom.DoesNotExist:
                 pass
+
         active_year = AcademicYear.objects.filter(school=school, is_active=True).first()
         student = Student.objects.create(
-            school=school, user=user, admission_number=admission_number,
+            school=school, user=student_user, admission_number=admission_number,
             classroom=classroom, academic_year=active_year,
             date_of_birth=date_of_birth, phone_number=phone_number,
+            passport_picture=profile_photo if profile_photo else None,
         )
-        return JsonResponse({'success': True, 'message': 'Student added.', 'id': student.id,
-                             'full_name': user.get_full_name(), 'admission_number': student.admission_number}, status=201)
+
+        def _create_parent(name, email, phone, occupation, username, password, relationship, is_primary):
+            if not name and not email and not phone and not username:
+                return None
+
+            full_name = name.strip() if name else ''
+            first, last = '', ''
+            if full_name:
+                parts = full_name.split()
+                first = parts[0]
+                last = ' '.join(parts[1:]) if len(parts) > 1 else ''
+
+            if username:
+                username = re.sub(r'[^a-z0-9_]', '_', username.strip().lower())
+            if not username and email:
+                username = re.sub(r'[^a-z0-9_]', '_', email.split('@')[0].strip().lower())
+            if not username:
+                username = f"parent_{school.code}_{admission_number}_{relationship[:3]}".lower()
+                username = re.sub(r'[^a-z0-9_]', '_', username)
+
+            original_username = username
+            counter = 0
+            while User.objects.filter(username=username).exists():
+                counter += 1
+                username = f"{original_username}_{uuid.uuid4().hex[:4]}"
+
+            parent = None
+            if email:
+                existing_user = User.objects.filter(email=email).first()
+                if existing_user and not hasattr(existing_user, 'parent_profile'):
+                    return {'error': f'Email {email} is already used by another account.'}
+                if existing_user and hasattr(existing_user, 'parent_profile'):
+                    user = existing_user
+                    parent = existing_user.parent_profile
+                else:
+                    if not password:
+                        password = uuid.uuid4().hex[:10]
+                    user = User.objects.create_user(
+                        username=username, email=email,
+                        first_name=first, last_name=last,
+                        password=password,
+                    )
+            else:
+                if not password:
+                    password = uuid.uuid4().hex[:10]
+                user = User.objects.create_user(
+                    username=username, email=email or '',
+                    first_name=first, last_name=last,
+                    password=password,
+                )
+
+            if not parent:
+                parent = Parent.objects.create(
+                    school=school,
+                    user=user,
+                    phone_number=phone or '',
+                    relationship=relationship,
+                    occupation=occupation or '',
+                )
+            ParentStudent.objects.create(parent=parent, student=student, is_primary_contact=is_primary)
+
+            if email:
+                subject = 'Your parent login for EK-SMS'
+                html_content = (
+                    f'<p>Hello {user.get_full_name() or "Parent"},</p>'
+                    f'<p>Your child <strong>{student_user.get_full_name()}</strong> has been registered at <strong>{school.name}</strong>.</p>'
+                    f'<p>Use the credentials below to log in to the parent portal:</p>'
+                    f'<ul><li><strong>Username</strong>: {user.username}</li>'
+                    f'<li><strong>Password</strong>: {password}</li></ul>'
+                    f'<p>Login here: <a href="{request.build_absolute_uri("/login")}">{request.build_absolute_uri("/login")}</a></p>'
+                    '<p>Please change your password after first login.</p>'
+                )
+                _send_notification_email(subject, email, html_content)
+
+            return {'username': user.username, 'email': user.email, 'password': password if email else None}
+
+        created_parents = []
+        father_result = _create_parent(
+            father_name, father_email, father_phone, father_occupation,
+            father_username, father_password, 'Father', bool(primary_contact or not mother_name)
+        )
+        if father_result:
+            if isinstance(father_result, dict) and father_result.get('error'):
+                return JsonResponse({'success': False, 'message': father_result['error']}, status=400)
+            created_parents.append({'relationship': 'Father', **father_result})
+
+        mother_result = _create_parent(
+            mother_name, mother_email, mother_phone, mother_occupation,
+            mother_username, mother_password, 'Mother', False if father_result else True
+        )
+        if mother_result:
+            if isinstance(mother_result, dict) and mother_result.get('error'):
+                return JsonResponse({'success': False, 'message': mother_result['error']}, status=400)
+            created_parents.append({'relationship': 'Mother', **mother_result})
+
+        response_data = {
+            'success': True,
+            'message': 'Student added.',
+            'id': student.id,
+            'full_name': student_user.get_full_name(),
+            'admission_number': student.admission_number,
+            'parents': created_parents,
+        }
+        return JsonResponse(response_data, status=201)
 
     return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
 
@@ -2333,6 +2477,32 @@ def api_student_detail(request, student_id):
         return JsonResponse({'success': True, 'message': 'Student removed.'})
 
     return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+@csrf_exempt
+def api_parent_students(request):
+    actor = _get_authed_user(request)
+    if not actor or not hasattr(actor, 'parent_profile'):
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+
+    parent = actor.parent_profile
+    links = ParentStudent.objects.filter(parent=parent, student__is_active=True).select_related('student__user', 'student__classroom')
+
+    children = []
+    for link in links:
+        student = link.student
+        children.append({
+            'id': student.id,
+            'full_name': student.user.get_full_name(),
+            'admission_number': student.admission_number,
+            'classroom': student.classroom.name if student.classroom else None,
+            'date_of_birth': str(student.date_of_birth) if student.date_of_birth else None,
+            'phone_number': student.phone_number,
+            'email': student.user.email,
+            'is_primary_contact': link.is_primary_contact,
+        })
+
+    return JsonResponse({'success': True, 'children': children}, status=200)
 
 
 # ── Teachers ─────────────────────────────────────────────────────
