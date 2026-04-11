@@ -125,14 +125,14 @@ def _send_notification_email(subject, to_email, html_content, text_content=None)
                 "from": default_from,
                 "to": [to_email],
                 "subject": subject,
-                "html": html_content
+                "html": html_content,
             })
             return True, "Email sent via Resend"
         except Exception as e:
             logger.error(f"Resend error: {str(e)}")
-            # Fallback to SMTP on Resend error
-    
-    # Path 2: SMTP
+            logger.warning("Resend email failed; falling back to SMTP.")
+
+    # Path 2: SMTP fallback
     try:
         logger.info(f"Sending email to {to_email} via SMTP...")
         send_mail(
