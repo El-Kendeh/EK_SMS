@@ -243,11 +243,11 @@ function Topbar({ school, admin, onMenuToggle, onLogout, onNav }) {
       </div>
 
       <div className="ska-topbar-right">
-        <button className="ska-topbar-icon-btn" aria-label="Notifications">
+        <button className="ska-topbar-icon-btn" aria-label="Notifications" onClick={() => go('notifications')}>
           <Ic name="notifications" />
           <span className="ska-topbar-notif-dot" />
         </button>
-        <button className="ska-topbar-icon-btn" aria-label="Messages">
+        <button className="ska-topbar-icon-btn" aria-label="Messages" onClick={() => go('messages')}>
           <Ic name="mail" />
         </button>
 
@@ -332,7 +332,7 @@ function Topbar({ school, admin, onMenuToggle, onLogout, onNav }) {
 /* ============================================================
    OVERVIEW PAGE — Main Dashboard Content
    ============================================================ */
-function OverviewPage({ stats, school }) {
+function OverviewPage({ stats, school, onNav, onAddStudent }) {
   const {
     totalStudents = 0, totalTeachers = 0, activeClasses = 0,
     attendanceRate = 0, avgPerformance = 0, pendingActions = 0,
@@ -436,25 +436,28 @@ function OverviewPage({ stats, school }) {
     {
       icon: 'rule', iconBg: 'var(--ska-error-dim)', iconColor: 'var(--ska-error)',
       title: 'Grade Approval Required', sub: 'Mid-term Results: Class 12C',
+      navKey: 'grade_oversight',
     },
     {
       icon: 'assignment_ind', iconBg: 'var(--ska-primary-dim)', iconColor: 'var(--ska-primary)',
       title: 'Teacher Assignment', sub: 'Substitution: Physics Lab',
+      navKey: 'teacher_assign',
     },
     {
       icon: 'person_add', iconBg: 'var(--ska-secondary-dim)', iconColor: 'var(--ska-secondary)',
       title: 'New Student Registration', sub: 'Review: 3 pending applications',
+      navKey: 'students',
     },
   ];
 
   /* Quick actions */
   const QUICK = [
-    { icon: 'person_add',  label: 'Add Student',      variant: '' },
-    { icon: 'group_add',   label: 'Add Teacher',      variant: '--cyan' },
-    { icon: 'add_box',     label: 'Create Class',     variant: '--orange' },
-    { icon: 'book',        label: 'Assign Subject',   variant: '' },
-    { icon: 'analytics',   label: 'Generate Report',  variant: '' },
-    { icon: 'campaign',    label: 'Announcement',     variant: '--cyan' },
+    { icon: 'person_add',  label: 'Add Student',      variant: '',        action: () => onAddStudent?.() },
+    { icon: 'group_add',   label: 'Add Teacher',      variant: '--cyan',  action: () => onNav?.('teachers') },
+    { icon: 'add_box',     label: 'Create Class',     variant: '--orange',action: () => onNav?.('classes') },
+    { icon: 'book',        label: 'Assign Subject',   variant: '',        action: () => onNav?.('subjects') },
+    { icon: 'analytics',   label: 'Generate Report',  variant: '',        action: () => onNav?.('reports') },
+    { icon: 'campaign',    label: 'Announcement',     variant: '--cyan',  action: () => onNav?.('notifications') },
   ];
 
   return (
@@ -654,7 +657,7 @@ function OverviewPage({ stats, school }) {
           <div className="ska-card ska-card-pad">
             <div className="ska-card-head">
               <h2 className="ska-card-title">Recent Activities</h2>
-              <button className="ska-btn ska-btn--ghost ska-btn--sm">View All</button>
+              <button className="ska-btn ska-btn--ghost ska-btn--sm" onClick={() => onNav?.('analytics')}>View All</button>
             </div>
             <div className="ska-activity-list">
               {ACTIVITIES.map((a, i) => (
@@ -695,8 +698,8 @@ function OverviewPage({ stats, school }) {
                     </div>
                   </div>
                   <div className="ska-pending-actions">
-                    <button className="ska-btn ska-btn--ghost ska-btn--sm">Reject</button>
-                    <button className="ska-btn ska-btn--primary ska-btn--sm">Approve</button>
+                    <button className="ska-btn ska-btn--ghost ska-btn--sm" onClick={() => onNav?.(p.navKey)}>Reject</button>
+                    <button className="ska-btn ska-btn--primary ska-btn--sm" onClick={() => onNav?.(p.navKey)}>Approve</button>
                   </div>
                 </div>
               ))}
@@ -713,7 +716,7 @@ function OverviewPage({ stats, school }) {
             </div>
             <div className="ska-quick-grid">
               {QUICK.map((q, i) => (
-                <button key={i} className={`ska-quick-btn${q.variant}`}>
+                <button key={i} className={`ska-quick-btn${q.variant}`} onClick={q.action}>
                   <Ic name={q.icon} className="ska-quick-icon" />
                   <span className="ska-quick-label">{q.label}</span>
                 </button>
@@ -1565,7 +1568,7 @@ export default function SchoolAdminDashboard({ onNavigate }) {
   /* Render current page content */
   const meta = SECTION_META[activePage];
   let pageContent;
-  if (activePage === 'overview')        pageContent = <OverviewPage stats={stats} school={school} />;
+  if (activePage === 'overview')        pageContent = <OverviewPage stats={stats} school={school} onNav={setActivePage} onAddStudent={() => { setActivePage('students'); setStudentAddSignal(s => s + 1); }} />;
   else if (activePage === 'students')   pageContent = <StudentsPage school={school} openAddSignal={studentAddSignal} />;
   else if (activePage === 'teachers')   pageContent = <TeachersPage school={school} />;
   else if (activePage === 'classes')    pageContent = <ClassesPage  school={school} />;
