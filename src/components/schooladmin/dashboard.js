@@ -4,7 +4,7 @@ import SECURITY_CONFIG from '../../config/security';
 import ApiClient from '../../api/client';
 import {
   GradesPage, AttendancePage, FinancePage,
-  ReportsPage, MessagesPage, SecurityPage, SettingsPage,
+  ReportsPage, MessagesPage, SettingsPage,
   SyllabusPage, BursarLedgerPage, BursarAuditPage,
 } from './SchoolAdminPages';
 import {

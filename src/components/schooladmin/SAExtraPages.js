@@ -218,7 +218,7 @@ export function ModRequestsPage() {
    2. GRADING SCHEME CONFIGURATION
    ============================================================ */
 export function GradingSchemePage() {
-  const [scheme, setScheme]   = useState(null);
+  const [, setScheme]   = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving]   = useState(false);
   const [banner, setBanner]   = useState(null);
@@ -1358,7 +1358,7 @@ export function StudentPromotionPage() {
   const [destClass, setDestClass] = useState('');
   const [saving, setSaving]     = useState(false);
   const [banner, setBanner]     = useState(null);
-  const [confirmModal, setConfirmModal] = useState(null);
+  const [, setConfirmModal] = useState(null);
 
   useEffect(() => {
     setLoading(true);
