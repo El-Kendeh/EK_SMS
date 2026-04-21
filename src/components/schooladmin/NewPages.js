@@ -1894,16 +1894,22 @@ function AddStudentWizard({ school, classes, onSave, onCancel }) {
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 1200,
-      background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)',
+      background: 'rgba(0,0,0,0.72)',
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px',
+      animation: 'ska-overlay-in 0.12s ease',
     }} onClick={e => e.target === e.currentTarget && onCancel()}>
-      <style>{`@media(max-width:600px){.student-wizard-panel{display:none!important}}`}</style>
+      <style>{`
+        @media(max-width:600px){.student-wizard-panel{display:none!important}}
+        @keyframes ska-overlay-in{from{opacity:0}to{opacity:1}}
+        @keyframes ska-panel-in{from{opacity:0;transform:scale(0.97) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
+      `}</style>
 
       <div style={{
         background: 'var(--ska-surface)', borderRadius: 20,
         width: '100%', maxWidth: 760,
         display: 'flex', overflow: 'hidden',
         boxShadow: '0 32px 80px rgba(0,0,0,0.5)', maxHeight: '90vh',
+        animation: 'ska-panel-in 0.15s ease',
       }}>
 
         {/* ── Left panel (live preview) ── */}
