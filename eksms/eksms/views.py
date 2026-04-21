@@ -57,6 +57,16 @@ def _compute_grade_hash(grade):
     return hashlib.sha256(payload.encode()).hexdigest()
 
 
+def _safe_evidence_url(request, mod_request):
+    """Return absolute URL for evidence_file, or None if missing/unreadable."""
+    try:
+        if mod_request.evidence_file:
+            return request.build_absolute_uri(mod_request.evidence_file.url)
+    except Exception:
+        pass
+    return None
+
+
 def _write_grade_audit(grade, action, actor, request=None, old_values=None, new_values=None, reason=''):
     """Create an immutable GradeAuditLog entry with hash chaining."""
     record_hash = _compute_grade_hash(grade)
@@ -6259,7 +6269,7 @@ def api_school_mod_requests(request):
         'review_reason':  r.review_reason,
         'created_at':     str(r.created_at),
         'reviewed_at':    str(r.reviewed_at) if r.reviewed_at else None,
-        'evidence_url':   request.build_absolute_uri(r.evidence_file.url) if r.evidence_file else None,
+        'evidence_url':   _safe_evidence_url(request, r),
     } for r in reqs]
     return JsonResponse({'success': True, 'requests': data})
 
@@ -7507,6 +7517,13 @@ def api_bulk_import(request):
                 errors.append({'row': i, 'error': f'Email {email} already in use.'})
                 continue
             try:
+                # Use provided admission_number or generate a unique one
+                adm_no = (row.get('admission_number') or row.get('adm_no') or '').strip()
+                if not adm_no:
+                    adm_no = f"STU-{school.code.upper()}-{get_random_string(6).upper()}"
+                # Ensure uniqueness within school
+                while Student.objects.filter(school=school, admission_number=adm_no).exists():
+                    adm_no = f"STU-{school.code.upper()}-{get_random_string(6).upper()}"
                 pwd = get_random_string(10)
                 u   = User.objects.create_user(
                     username=email, email=email,
@@ -7516,7 +7533,8 @@ def api_bulk_import(request):
                 classroom = ClassRoom.objects.filter(school=school, name__iexact=classroom_name).first() if classroom_name else None
                 Student.objects.create(
                     user=u, school=school, classroom=classroom,
-                    academic_year=active_year, must_change_password=True,
+                    academic_year=active_year, admission_number=adm_no,
+                    must_change_password=True,
                 )
                 created += 1
             except Exception as exc:
@@ -7540,12 +7558,18 @@ def api_bulk_import(request):
                 errors.append({'row': i, 'error': f'Email {email} already in use.'})
                 continue
             try:
+                # Use provided employee_id or generate a unique one
+                emp_id = (row.get('employee_id') or row.get('emp_id') or '').strip()
+                if not emp_id:
+                    emp_id = f"TCH-{school.code.upper()}-{get_random_string(6).upper()}"
+                while Teacher.objects.filter(school=school, employee_id=emp_id).exists():
+                    emp_id = f"TCH-{school.code.upper()}-{get_random_string(6).upper()}"
                 pwd = get_random_string(10)
                 u   = User.objects.create_user(
                     username=email, email=email,
                     first_name=first, last_name=last, password=pwd,
                 )
-                Teacher.objects.create(user=u, school=school)
+                Teacher.objects.create(user=u, school=school, employee_id=emp_id)
                 created += 1
             except Exception as exc:
                 errors.append({'row': i, 'error': str(exc)})
