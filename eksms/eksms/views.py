@@ -7319,14 +7319,12 @@ def api_close_term(request):
     if request.method != 'POST':
         return JsonResponse({'success': False, 'message': 'POST required.'}, status=405)
 
-    token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
-    user  = _get_user_from_token(token)
-    if not user:
+    try:
+        user, sa, school = _get_school_for_admin(request)
+    except Exception:
         return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
-
-    school = _get_school_for_user(user)
-    if not school:
-        return JsonResponse({'success': False, 'message': 'School not found.'}, status=404)
+    if not user or not school:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
 
     try:
         body    = json.loads(request.body)
@@ -7370,7 +7368,7 @@ def api_student_transcript(request):
         return JsonResponse({'success': False, 'message': 'GET required.'}, status=405)
 
     token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
-    user  = _get_user_from_token(token)
+    user  = _validate_token(token)
     if not user:
         return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
 
@@ -7429,14 +7427,12 @@ def api_bulk_import(request):
     if request.method != 'POST':
         return JsonResponse({'success': False, 'message': 'POST required.'}, status=405)
 
-    token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
-    user  = _get_user_from_token(token)
-    if not user:
+    try:
+        user, sa, school = _get_school_for_admin(request)
+    except Exception:
         return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
-
-    school = _get_school_for_user(user)
-    if not school:
-        return JsonResponse({'success': False, 'message': 'School not found.'}, status=404)
+    if not user or not school:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
 
     import_type = request.GET.get('type', '').lower()
     if import_type not in ('students', 'teachers', 'subjects', 'classrooms'):

@@ -231,7 +231,6 @@ export function ModRequestsPage() {
    2. GRADING SCHEME CONFIGURATION
    ============================================================ */
 export function GradingSchemePage() {
-  const [, setScheme]   = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving]   = useState(false);
   const [banner, setBanner]   = useState(null);
@@ -241,7 +240,6 @@ export function GradingSchemePage() {
   useEffect(() => {
     ApiClient.get('/api/school/grading-scheme/')
       .then(d => {
-        setScheme(d.scheme);
         setPassMark(d.scheme?.pass_mark ?? 50);
         setBoundaries(d.scheme?.boundaries ?? []);
       })
