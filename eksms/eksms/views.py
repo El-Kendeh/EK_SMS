@@ -7278,3 +7278,254 @@ def api_student_2fa_setup(request):
 
     return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Close Term
+# POST /api/school/close-term/
+# Body: { "term_id": <int> }
+# Locks all unlocked grades for the term, closes grade entry, sets status=closed
+# ─────────────────────────────────────────────────────────────────────────────
+@csrf_exempt
+def api_close_term(request):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'POST required.'}, status=405)
+
+    token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
+    user  = _get_user_from_token(token)
+    if not user:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+
+    school = _get_school_for_user(user)
+    if not school:
+        return JsonResponse({'success': False, 'message': 'School not found.'}, status=404)
+
+    try:
+        body    = json.loads(request.body)
+        term_id = int(body.get('term_id', 0))
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'success': False, 'message': 'Invalid request body.'}, status=400)
+
+    try:
+        term = Term.objects.get(id=term_id, academic_year__school=school)
+    except Term.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Term not found.'}, status=404)
+
+    if term.status == 'closed':
+        return JsonResponse({'success': False, 'message': 'Term is already closed.'}, status=400)
+
+    unlocked = Grade.objects.filter(term=term, is_locked=False)
+    locked_count = unlocked.count()
+    unlocked.update(is_locked=True)
+
+    term.grade_entry_open = False
+    term.status = 'closed'
+    term.save(update_fields=['grade_entry_open', 'status'])
+
+    return JsonResponse({
+        'success':      True,
+        'message':      f'Term "{term.name}" closed. {locked_count} grade(s) locked.',
+        'term_id':      term.id,
+        'term_name':    term.name,
+        'locked_count': locked_count,
+    })
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Student Transcript
+# GET /api/student/transcript/
+# Returns cumulative grade data across all terms for the authenticated student
+# ─────────────────────────────────────────────────────────────────────────────
+@csrf_exempt
+def api_student_transcript(request):
+    if request.method != 'GET':
+        return JsonResponse({'success': False, 'message': 'GET required.'}, status=405)
+
+    token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
+    user  = _get_user_from_token(token)
+    if not user:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+
+    try:
+        student = Student.objects.select_related('user', 'school', 'classroom').get(user=user)
+    except Student.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Student record not found.'}, status=404)
+
+    grades_qs = (
+        Grade.objects
+        .filter(student=student)
+        .select_related('subject', 'teacher__user', 'term', 'term__academic_year')
+        .order_by('term__academic_year__start_year', 'term__start_date', 'subject__name')
+    )
+
+    from collections import defaultdict
+    years = defaultdict(lambda: defaultdict(list))
+    for g in grades_qs:
+        ay  = g.term.academic_year
+        ay_key   = f"{ay.start_year}/{ay.end_year}" if hasattr(ay, 'end_year') else str(ay.start_year)
+        term_key = g.term.name
+        years[ay_key][term_key].append({
+            'subject':     g.subject.name if g.subject else '',
+            'ca':          g.ca_score,
+            'midterm':     g.midterm_score,
+            'final':       g.final_score,
+            'total':       g.total_score,
+            'gradeLetter': g.grade_letter,
+            'status':      'Locked' if g.is_locked else 'Draft',
+            'remarks':     g.remarks or '',
+        })
+
+    transcript = []
+    for ay_label, terms_dict in years.items():
+        term_list = []
+        for term_name, subject_grades in terms_dict.items():
+            scores   = [s['total'] for s in subject_grades if s['total'] is not None]
+            term_avg = round(sum(scores) / len(scores), 1) if scores else None
+            term_list.append({'term': term_name, 'subjects': subject_grades, 'average': term_avg})
+        transcript.append({'academicYear': ay_label, 'terms': term_list})
+
+    return JsonResponse({
+        'success':    True,
+        'student':    student.user.get_full_name(),
+        'studentId':  getattr(student, 'student_number', ''),
+        'transcript': transcript,
+    })
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Bulk Import
+# POST /api/school/bulk-import/?type=students|teachers|subjects|classrooms
+# Accepts multipart CSV file upload or JSON array body
+# ─────────────────────────────────────────────────────────────────────────────
+@csrf_exempt
+def api_bulk_import(request):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'POST required.'}, status=405)
+
+    token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
+    user  = _get_user_from_token(token)
+    if not user:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+
+    school = _get_school_for_user(user)
+    if not school:
+        return JsonResponse({'success': False, 'message': 'School not found.'}, status=404)
+
+    import_type = request.GET.get('type', '').lower()
+    if import_type not in ('students', 'teachers', 'subjects', 'classrooms'):
+        return JsonResponse({'success': False, 'message': 'type must be students, teachers, subjects, or classrooms.'}, status=400)
+
+    rows = []
+    if request.FILES.get('file'):
+        import csv, io
+        raw    = request.FILES['file'].read().decode('utf-8-sig')
+        reader = csv.DictReader(io.StringIO(raw))
+        rows   = [dict(r) for r in reader]
+    else:
+        try:
+            body = json.loads(request.body)
+            rows = body if isinstance(body, list) else body.get('rows', [])
+        except (json.JSONDecodeError, TypeError):
+            return JsonResponse({'success': False, 'message': 'Provide a CSV file or a JSON array.'}, status=400)
+
+    if not rows:
+        return JsonResponse({'success': False, 'message': 'No rows provided.'}, status=400)
+
+    created = 0
+    errors  = []
+
+    if import_type == 'subjects':
+        for i, row in enumerate(rows, 1):
+            name = (row.get('name') or row.get('subject_name') or '').strip()
+            if not name:
+                errors.append({'row': i, 'error': 'Missing subject name.'})
+                continue
+            _, was_created = Subject.objects.get_or_create(school=school, name=name)
+            if was_created:
+                created += 1
+
+    elif import_type == 'classrooms':
+        ay = AcademicYear.objects.filter(school=school, is_active=True).first()
+        for i, row in enumerate(rows, 1):
+            name  = (row.get('name') or row.get('class_name') or '').strip()
+            grade = (row.get('grade_level') or row.get('grade') or '').strip()
+            if not name:
+                errors.append({'row': i, 'error': 'Missing classroom name.'})
+                continue
+            _, was_created = ClassRoom.objects.get_or_create(
+                school=school, name=name,
+                defaults={'grade_level': grade, 'academic_year': ay, 'is_active': True},
+            )
+            if was_created:
+                created += 1
+
+    elif import_type == 'students':
+        from django.contrib.auth import get_user_model
+        from django.utils.crypto import get_random_string
+        User = get_user_model()
+        active_year = AcademicYear.objects.filter(school=school, is_active=True).first()
+        for i, row in enumerate(rows, 1):
+            first = (row.get('first_name') or '').strip()
+            last  = (row.get('last_name')  or '').strip()
+            email = (row.get('email') or '').strip().lower()
+            if not first or not last:
+                errors.append({'row': i, 'error': 'first_name and last_name required.'})
+                continue
+            if not email:
+                slug  = get_random_string(4)
+                email = f"{first.lower()}.{last.lower()}.{slug}@student.{school.code.lower()}.eksms.edu.sl"
+            if User.objects.filter(email=email).exists():
+                errors.append({'row': i, 'error': f'Email {email} already in use.'})
+                continue
+            try:
+                pwd = get_random_string(10)
+                u   = User.objects.create_user(
+                    username=email, email=email,
+                    first_name=first, last_name=last, password=pwd,
+                )
+                classroom_name = (row.get('classroom') or row.get('class') or '').strip()
+                classroom = ClassRoom.objects.filter(school=school, name__iexact=classroom_name).first() if classroom_name else None
+                Student.objects.create(
+                    user=u, school=school, classroom=classroom,
+                    academic_year=active_year, must_change_password=True,
+                )
+                created += 1
+            except Exception as exc:
+                errors.append({'row': i, 'error': str(exc)})
+
+    elif import_type == 'teachers':
+        from django.contrib.auth import get_user_model
+        from django.utils.crypto import get_random_string
+        User = get_user_model()
+        for i, row in enumerate(rows, 1):
+            first = (row.get('first_name') or '').strip()
+            last  = (row.get('last_name')  or '').strip()
+            email = (row.get('email') or '').strip().lower()
+            if not first or not last:
+                errors.append({'row': i, 'error': 'first_name and last_name required.'})
+                continue
+            if not email:
+                slug  = get_random_string(4)
+                email = f"{first.lower()}.{last.lower()}.{slug}@teacher.{school.code.lower()}.eksms.edu.sl"
+            if User.objects.filter(email=email).exists():
+                errors.append({'row': i, 'error': f'Email {email} already in use.'})
+                continue
+            try:
+                pwd = get_random_string(10)
+                u   = User.objects.create_user(
+                    username=email, email=email,
+                    first_name=first, last_name=last, password=pwd,
+                )
+                Teacher.objects.create(user=u, school=school)
+                created += 1
+            except Exception as exc:
+                errors.append({'row': i, 'error': str(exc)})
+
+    return JsonResponse({
+        'success':    True,
+        'type':       import_type,
+        'total_rows': len(rows),
+        'created':    created,
+        'skipped':    len(rows) - created - len(errors),
+        'errors':     errors,
+    })
+

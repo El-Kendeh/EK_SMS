@@ -73,6 +73,10 @@ from .views import (
     # Global teacher assignments (school-wide)
     api_teacher_assignments_global,
     api_teacher_assignment_delete,
+    # Close term, transcript, bulk import
+    api_close_term,
+    api_student_transcript,
+    api_bulk_import,
 )
 from .secure_views import csrf_token_view
 from django.conf import settings
@@ -233,6 +237,10 @@ urlpatterns = [
     # Global teacher assignments
     path('api/school/teacher-assignments/',                            api_teacher_assignments_global, name='api_teacher_assignments_global'),
     path('api/school/teacher-assignments/<int:assignment_id>/',        api_teacher_assignment_delete,  name='api_teacher_assignment_delete'),
+    # Close term / transcript / bulk import
+    path('api/school/close-term/',                           api_close_term,               name='api_close_term'),
+    path('api/student/transcript/',                          api_student_transcript,        name='api_student_transcript'),
+    path('api/school/bulk-import/',                          api_bulk_import,              name='api_bulk_import'),
     # Public document verification
     path('verify/<str:token>/',                              verify_grade_document,        name='verify_grade_document'),
 
