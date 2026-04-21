@@ -371,8 +371,28 @@ class Grade(models.Model):
         return self.total_score
 
     def calculate_grade_letter(self):
-        """Convert score to letter grade per workflow spec (pass mark = 50)."""
+        """Convert score to letter grade using the school's GradingScheme when available."""
+        # Caller may pre-set _boundaries to avoid extra DB queries in batch saves
+        boundaries = getattr(self, '_boundaries', None)
+        if boundaries is None:
+            try:
+                boundaries = sorted(
+                    self.student.school.grading_scheme.boundaries,
+                    key=lambda b: -b['min'],
+                )
+            except Exception:
+                boundaries = None
+
         s = float(self.total_score)
+        if boundaries:
+            for b in boundaries:
+                if s >= b['min']:
+                    self.grade_letter = b['letter']
+                    return
+            self.grade_letter = boundaries[-1]['letter'] if boundaries else 'I'
+            return
+
+        # Hardcoded fallback (used when no GradingScheme exists yet)
         if s >= 90:   self.grade_letter = 'A+'
         elif s >= 80: self.grade_letter = 'A'
         elif s >= 70: self.grade_letter = 'B'

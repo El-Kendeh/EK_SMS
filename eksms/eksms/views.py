@@ -3551,6 +3551,13 @@ def api_grades(request):
             return JsonResponse({'success': False, 'message': 'Subject or term not found.'}, status=404)
         saved = 0
         blocked = 0
+        # Pre-fetch the school's grading scheme once for the whole batch
+        _scheme_boundaries = None
+        try:
+            gs = GradingScheme.objects.get(school=school)
+            _scheme_boundaries = sorted(gs.boundaries, key=lambda b: -b['min'])
+        except GradingScheme.DoesNotExist:
+            pass
         for entry in entries:
             sid = entry.get('student_id')
             try:
@@ -3590,6 +3597,8 @@ def api_grades(request):
             grade.continuous_assessment = min(float(entry.get('ca') or 0), 20)
             grade.mid_term_exam         = min(float(entry.get('midterm') or 0), 30)
             grade.final_exam            = min(float(entry.get('final') or 0), 50)
+            if _scheme_boundaries:
+                grade._boundaries = _scheme_boundaries
             grade.save()
             _write_grade_audit(grade, 'CREATE' if created else 'UPDATE', actor, request,
                                old_values=old_vals if not created else {},
@@ -5563,6 +5572,13 @@ def api_teacher_gradebook(request):
 
         saved = 0
         blocked = 0
+        # Pre-fetch grading scheme once for the whole batch
+        _scheme_boundaries = None
+        try:
+            gs = GradingScheme.objects.get(school=teacher.school)
+            _scheme_boundaries = sorted(gs.boundaries, key=lambda b: -b['min'])
+        except GradingScheme.DoesNotExist:
+            pass
         for entry in entries:
             student_id = entry.get('student_id')
             ca       = float(entry.get('ca')         or 0)
@@ -5597,6 +5613,8 @@ def api_teacher_gradebook(request):
                 grade.continuous_assessment = min(max(ca, 0), 20)
                 grade.mid_term_exam         = min(max(mid_term, 0), 30)
                 grade.final_exam            = min(max(final, 0), 50)
+                if _scheme_boundaries:
+                    grade._boundaries = _scheme_boundaries
                 grade.save()
                 _write_grade_audit(grade, 'CREATE' if created else 'UPDATE', user, request,
                                    old_values=old_vals if not created else {},
@@ -6241,6 +6259,7 @@ def api_school_mod_requests(request):
         'review_reason':  r.review_reason,
         'created_at':     str(r.created_at),
         'reviewed_at':    str(r.reviewed_at) if r.reviewed_at else None,
+        'evidence_url':   request.build_absolute_uri(r.evidence_file.url) if r.evidence_file else None,
     } for r in reqs]
     return JsonResponse({'success': True, 'requests': data})
 

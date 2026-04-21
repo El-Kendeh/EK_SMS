@@ -192,6 +192,19 @@ export function ModRequestsPage() {
             <div><label className="ska-label">Reason from Teacher</label>
               <div style={{ background: 'var(--ska-surface-low)', padding: '10px 14px', borderRadius: 8, fontSize: '0.875rem', color: 'var(--ska-text)' }}>{selected.reason || '—'}</div>
             </div>
+            {selected.evidence_url && (
+              <div>
+                <label className="ska-label">Evidence File</label>
+                <a
+                  href={selected.evidence_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, background: 'var(--ska-surface-low)', color: 'var(--ska-primary)', fontSize: '0.875rem', fontWeight: 600, textDecoration: 'none' }}
+                >
+                  <Ic name="attach_file" size="sm" /> View Attached Evidence
+                </a>
+              </div>
+            )}
             <label className="ska-form-group">
               <span className="ska-label">Your Review Reason (optional)</span>
               <textarea className="ska-input" rows={3} value={reason} onChange={e => setReason(e.target.value)}
