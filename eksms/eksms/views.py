@@ -14,9 +14,10 @@ from eksms_core.models import (
     Parent, ParentStudent, SchoolApplicationEvent, ForensicEvent, AlertBroadcast, AdminSetting,
     SecurityLogEntry, AcademicYear, ClassRoom, SystemWideAlert,
     Subject, Term, Attendance, FeeRecord, Expense, Message,
-    Parent, ParentStudent, TeacherSubjectClass,
+    TeacherSubjectClass, GradeAuditLog, GradeVerification, ReportCard, ClassRanking,
     Exam, ExamResult, Notification, NotificationRead, TimetableSlot,
-    SchoolStaffAccount,
+    SchoolStaffAccount, GradeModificationRequest, ClassSubject, UserToken,
+    Room, GradingScheme,
 )
 import datetime
 import re
@@ -31,42 +32,204 @@ from pathlib import Path
 
 logger = logging.getLogger('django.security')
 
+import hashlib
+import secrets as _secrets
+
+
+# ─────────────────────────────────────────────────────────────────
+# CRYPTO / AUDIT UTILITIES
+# ─────────────────────────────────────────────────────────────────
+
+def _compute_grade_hash(grade):
+    """SHA-256 fingerprint of a grade's core data. Stable across re-reads."""
+    payload = json.dumps({
+        'grade_id':   grade.id,
+        'student_id': grade.student_id,
+        'subject_id': grade.subject_id,
+        'term_id':    grade.term_id,
+        'ca':         str(grade.continuous_assessment),
+        'midterm':    str(grade.mid_term_exam),
+        'final':      str(grade.final_exam),
+        'total':      str(grade.total_score),
+        'is_locked':  grade.is_locked,
+        'locked_at':  str(grade.locked_at),
+    }, sort_keys=True)
+    return hashlib.sha256(payload.encode()).hexdigest()
+
+
+def _write_grade_audit(grade, action, actor, request=None, old_values=None, new_values=None, reason=''):
+    """Create an immutable GradeAuditLog entry with hash chaining."""
+    record_hash = _compute_grade_hash(grade)
+    prev = GradeAuditLog.objects.filter(grade=grade).order_by('-logged_at').first()
+    chain_input = (prev.merkle_hash if prev else '') + record_hash
+    merkle_hash = hashlib.sha256(chain_input.encode()).hexdigest()
+    GradeAuditLog.objects.create(
+        grade=grade,
+        action=action,
+        actor=actor,
+        old_values=old_values or {},
+        new_values=new_values or {},
+        ip_address=request.META.get('REMOTE_ADDR') if request else None,
+        user_agent=request.META.get('HTTP_USER_AGENT', '')[:500] if request else '',
+        change_reason=reason,
+        record_hash=record_hash,
+        merkle_hash=merkle_hash,
+    )
+
+
+def _create_notification(school, title, body, notif_type='info', recipient_role='all', recipient_user=None, sender=None):
+    """Create a Notification record. If recipient_user is set it's a personal notification."""
+    return Notification.objects.create(
+        school=school,
+        title=title,
+        body=body,
+        notif_type=notif_type,
+        recipient_role=recipient_role,
+        recipient_user=recipient_user,
+        sender=sender,
+    )
+
+
+def _dispatch_grade_lock_notifications(grade, school, request):
+    """Fire notifications to student + parent(s) + teacher after a grade is locked."""
+    student  = grade.student
+    subject  = grade.subject.name
+    score    = float(grade.total_score)
+    letter   = grade.grade_letter
+    s_user   = student.user
+
+    _create_notification(
+        school, f'{subject} grade locked',
+        f'Your {subject} grade has been confirmed: {score} ({letter}). Your record is now cryptographically secured.',
+        notif_type='success', recipient_user=s_user,
+    )
+    for link in student.parent_links.select_related('parent__user').all():
+        _create_notification(
+            school, f"{student.user.get_full_name()}'s {subject} grade locked",
+            f"{student.user.get_full_name()}'s {subject} grade: {score} ({letter}). Secured and verified.",
+            notif_type='success', recipient_user=link.parent.user,
+        )
+    if grade.teacher:
+        _create_notification(
+            school, f'Grade submission confirmed',
+            f'{student.user.get_full_name()} — {subject}: {score} ({letter}) locked successfully.',
+            notif_type='success', recipient_user=grade.teacher.user,
+        )
+
+
+def _dispatch_tamper_alerts(grade, actor, request, school):
+    """Fire CRITICAL tamper alerts to parent, student, admin, teacher."""
+    student = grade.student
+    subject = grade.subject.name
+    s_user  = student.user
+    ip      = request.META.get('REMOTE_ADDR', 'unknown') if request else 'unknown'
+
+    alert_body_student = (
+        f'An attempt was made to modify your {subject} grade. '
+        f'The attempt was BLOCKED. Your grade is safe and unchanged. '
+        f'This event is permanently logged.'
+    )
+    alert_body_parent = (
+        f'An attempt was made to alter {student.user.get_full_name()}\'s {subject} grade. '
+        f'The attempt was BLOCKED. The original grade is preserved. '
+        f'This event has been logged and the administrator has been notified.'
+    )
+    alert_body_admin = (
+        f'SECURITY: Locked grade modification attempt on {student.user.get_full_name()}\'s {subject} grade. '
+        f'Attempted by user "{actor.username if actor else "unknown"}" from IP {ip}. '
+        f'Attack blocked. Immediate investigation recommended.'
+    )
+
+    _create_notification(school, f'Grade Modification Attempt — {subject}',
+                         alert_body_student, notif_type='alert', recipient_user=s_user)
+
+    for link in student.parent_links.select_related('parent__user').all():
+        _create_notification(school, f'SECURITY ALERT — {student.user.get_full_name()}\'s {subject} Grade',
+                             alert_body_parent, notif_type='alert', recipient_user=link.parent.user)
+        try:
+            _send_notification_email(
+                f'[SECURITY ALERT] Grade Tampering Attempt Detected',
+                link.parent.user.email,
+                f'<p style="color:#dc2626;font-weight:bold">SECURITY ALERT</p><p>{alert_body_parent}</p>',
+            )
+        except Exception:
+            pass
+
+    if grade.teacher:
+        _create_notification(school, f'Your grade was protected — {subject}',
+                             f'{student.user.get_full_name()}\'s {subject} grade was targeted but the system blocked the attempt.',
+                             notif_type='warning', recipient_user=grade.teacher.user)
+
+    # Notify all school admins
+    for sa in SchoolAdmin.objects.filter(school=school, is_active=True).select_related('user'):
+        _create_notification(school, f'SECURITY: Modification Attempt Blocked',
+                             alert_body_admin, notif_type='alert', recipient_user=sa.user)
+        try:
+            _send_notification_email('[SECURITY] Grade Tampering Attempt', sa.user.email,
+                                     f'<p style="color:#dc2626"><strong>CRITICAL SECURITY EVENT</strong></p><p>{alert_body_admin}</p>')
+        except Exception:
+            pass
+
+
+def _password_strength_ok(password):
+    """Returns (ok, error_message). Requires 12 chars, upper, digit, special."""
+    if len(password) < 12:
+        return False, 'Password must be at least 12 characters.'
+    if not re.search(r'[A-Z]', password):
+        return False, 'Password must contain at least one uppercase letter.'
+    if not re.search(r'[0-9]', password):
+        return False, 'Password must contain at least one digit.'
+    if not re.search(r'[^A-Za-z0-9]', password):
+        return False, 'Password must contain at least one special character.'
+    return True, ''
+
+
+def _issue_token(user, request):
+    """Create and store a login token, returning the token string."""
+    token = f"token_{user.id}_{user.username.replace(' ', '_')}_{_secrets.token_hex(4)}"
+    UserToken.objects.create(
+        user=user, token=token,
+        ip_address=request.META.get('REMOTE_ADDR'),
+        user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
+    )
+    # Prune old tokens beyond 10 per user
+    old_ids = list(UserToken.objects.filter(user=user).order_by('-created_at').values_list('id', flat=True)[10:])
+    if old_ids:
+        UserToken.objects.filter(id__in=old_ids).delete()
+    return token
+
+
+def _validate_token(token_string):
+    """Returns User if token_string is in UserToken table, else None.
+    Falls back to legacy token_{id}_{username} format for backward compat."""
+    if not token_string or not token_string.startswith('token_'):
+        return None
+    try:
+        ut = UserToken.objects.select_related('user').get(token=token_string)
+        return ut.user
+    except UserToken.DoesNotExist:
+        pass
+    # Legacy fallback (tokens issued before UserToken was introduced)
+    parts = token_string.split('_', 2)
+    if len(parts) < 2:
+        return None
+    try:
+        uid = int(parts[1])
+        return User.objects.get(id=uid, is_active=True)
+    except (ValueError, User.DoesNotExist, User.MultipleObjectsReturned):
+        return None
+
 
 def _get_authed_user(request):
-    """
-    Extract authenticated User from the Authorization header.
-    Token format: token_{user_id}_{username}  (set at login)
-    Returns a User instance or None.
-    """
+    """Extract authenticated User from Authorization header. Uses UserToken table with legacy fallback."""
     auth = request.META.get('HTTP_AUTHORIZATION', '')
-    token = ''
     if auth.startswith('Bearer '):
         token = auth[7:]
     elif auth.startswith('Token '):
         token = auth[6:]
     else:
         token = auth.strip()
-
-    if not token or not token.startswith('token_'):
-        return None
-
-    parts = token.split('_', 2)   # ['token', '<id>', '<username>']
-    if len(parts) < 2:
-        return None
-    try:
-        user_id = int(parts[1])
-        u = User.objects.get(id=user_id)
-        if u.is_active:
-            return u
-            
-        # ALLOW login for inactive SchoolAdmins who are pending school approval
-        if hasattr(u, 'school_admin_profile'):
-            if not u.school_admin_profile.school.is_approved:
-                return u
-                
-        return None
-    except (ValueError, User.DoesNotExist):
-        return None
+    return _validate_token(token)
 
 
 def _parse_bool(value):
@@ -287,9 +450,22 @@ def api_login(request):
                     'message': 'School profile not found. Please contact support.'
                 }, status=403)
 
-        # Generate token
-        token = f"token_{user.id}_{user.username.replace(' ', '_')}"
-        
+        # 2FA check for school_admin role
+        if role == 'school_admin':
+            try:
+                from django_otp import devices_for_user as _otp_devices
+                confirmed_devices = [d for d in _otp_devices(user) if d.confirmed]
+                if confirmed_devices:
+                    pending = f"pending_{_secrets.token_hex(16)}"
+                    from django.core.cache import cache
+                    cache.set(f"2fa_pending_{pending}", user.id, timeout=300)
+                    return JsonResponse({'success': True, 'requires_2fa': True, 'pending_token': pending})
+            except Exception:
+                pass  # django_otp not available or no device — let through
+
+        # Generate token and store it
+        token = _issue_token(user, request)
+
         # Determine redirect URL based on role
         redirect_url = '/home'
         school_data = None
@@ -357,10 +533,22 @@ def api_login(request):
             metadata={'role': role},
         )
 
+        # Determine must_change_password flag
+        mcp = False
+        if role == 'school_admin' and hasattr(user, 'school_admin_profile'):
+            mcp = user.school_admin_profile.must_change_password
+        elif role == 'teacher' and hasattr(user, 'teacher_profile'):
+            mcp = user.teacher_profile.must_change_password
+        elif role == 'student' and hasattr(user, 'student_profile'):
+            mcp = user.student_profile.must_change_password
+        elif role == 'parent' and hasattr(user, 'parent_profile'):
+            mcp = user.parent_profile.must_change_password
+
         return JsonResponse({
             'success': True,
             'message': 'Login successful.',
             'token': token,
+            'must_change_password': mcp,
             'user': {
                 'id': user.id,
                 'username': user.username,
@@ -391,26 +579,97 @@ def api_login(request):
 @require_http_methods(["POST"])
 @csrf_exempt
 def api_logout(request):
-    """
-    API endpoint for user logout.
-    Clears any server-side session data if needed.
-    """
+    auth = request.META.get('HTTP_AUTHORIZATION', '')
+    token = auth[7:] if auth.startswith('Bearer ') else auth[6:] if auth.startswith('Token ') else auth.strip()
+    if token:
+        UserToken.objects.filter(token=token).delete()
+    return JsonResponse({'success': True, 'message': 'Logged out successfully.'}, status=200)
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def api_logout_all(request):
+    """Invalidate ALL active sessions for the authenticated user."""
+    user = _get_authed_user(request)
+    if not user:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+    deleted, _ = UserToken.objects.filter(user=user).delete()
+    _log_security_event('logout', description=f'All sessions invalidated for {user.username}',
+                        severity='info', actor=user, ip=request.META.get('REMOTE_ADDR'))
+    return JsonResponse({'success': True, 'message': f'{deleted} session(s) invalidated.'})
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def api_verify_2fa(request):
+    """Complete 2FA login. Body: {pending_token, otp_code}."""
     try:
-        # For token-based auth, client should discard the token
-        # Here we can log the logout event if needed
-        import logging
-        logger = logging.getLogger('django.security')
-        logger.info(f"User logout from {request.META.get('REMOTE_ADDR')}")
-        
-        return JsonResponse({
-            'success': True,
-            'message': 'Logged out successfully.'
-        }, status=200)
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'message': str(e)
-        }, status=500)
+        body = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+    pending = body.get('pending_token', '')
+    otp_code = str(body.get('otp_code', '')).strip()
+    if not pending or not otp_code:
+        return JsonResponse({'success': False, 'message': 'pending_token and otp_code required.'}, status=400)
+    from django.core.cache import cache
+    uid = cache.get(f"2fa_pending_{pending}")
+    if not uid:
+        return JsonResponse({'success': False, 'message': 'Session expired or invalid. Please log in again.'}, status=401)
+    try:
+        user = User.objects.get(id=uid)
+    except User.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'User not found.'}, status=404)
+    try:
+        from django_otp import devices_for_user as _otp_devices
+        verified = any(d.verify_token(otp_code) for d in _otp_devices(user, confirmed=True))
+    except Exception:
+        verified = False
+    if not verified:
+        return JsonResponse({'success': False, 'message': 'Invalid or expired OTP code.'}, status=401)
+    cache.delete(f"2fa_pending_{pending}")
+    token = _issue_token(user, request)
+    sa_profile = getattr(user, 'school_admin_profile', None)
+    mcp = sa_profile.must_change_password if sa_profile else False
+    return JsonResponse({'success': True, 'token': token, 'must_change_password': mcp,
+                         'user': {'id': user.id, 'email': user.email, 'role': 'school_admin',
+                                  'full_name': user.get_full_name()}})
+
+
+@csrf_exempt
+def verify_grade_document(request, token):
+    """Public endpoint — anyone can verify a report card or grade by token."""
+    try:
+        gv = GradeVerification.objects.select_related(
+            'grade__student__user', 'grade__subject', 'grade__term__academic_year'
+        ).get(verification_token=token)
+    except GradeVerification.DoesNotExist:
+        # Try ReportCard by verification_hash
+        try:
+            rc = ReportCard.objects.select_related('student__user', 'term', 'academic_year').get(
+                verification_hash=token
+            )
+            return JsonResponse({'success': True, 'authentic': True,
+                                 'type': 'report_card',
+                                 'student_name': rc.student.user.get_full_name(),
+                                 'term': rc.term.get_name_display(),
+                                 'academic_year': rc.academic_year.name,
+                                 'average_score': float(rc.average_score),
+                                 'class_rank': rc.class_rank,
+                                 'generated_at': str(rc.generated_at)})
+        except ReportCard.DoesNotExist:
+            return JsonResponse({'success': False, 'authentic': False,
+                                 'message': 'Document not found or token invalid.'}, status=404)
+    gv.verification_attempts += 1
+    gv.last_verification_at = timezone.now()
+    gv.save(update_fields=['verification_attempts', 'last_verification_at'])
+    grade = gv.grade
+    return JsonResponse({'success': True, 'authentic': True, 'type': 'grade',
+                         'student_name': grade.student.user.get_full_name(),
+                         'subject': grade.subject.name,
+                         'grade_letter': grade.grade_letter,
+                         'total_score': float(grade.total_score),
+                         'term': grade.term.get_name_display(),
+                         'issued_at': str(gv.issued_at)})
 
 
 @require_http_methods(["POST"])
@@ -1924,8 +2183,9 @@ def api_change_password(request):
         if not current_password or not new_password:
             return JsonResponse({'success': False, 'message': 'current_password and new_password are required'}, status=400)
 
-        if len(new_password) < 8:
-            return JsonResponse({'success': False, 'message': 'New password must be at least 8 characters'}, status=400)
+        ok, err = _password_strength_ok(new_password)
+        if not ok:
+            return JsonResponse({'success': False, 'message': err}, status=400)
 
         # Verify current password
         if not actor.check_password(current_password):
@@ -1940,6 +2200,10 @@ def api_change_password(request):
 
         actor.set_password(new_password)
         actor.save()
+        sa_profile = getattr(actor, 'school_admin_profile', None)
+        if sa_profile and sa_profile.must_change_password:
+            sa_profile.must_change_password = False
+            sa_profile.save(update_fields=['must_change_password'])
 
         _log_security_event(
             'password_changed',
@@ -2717,14 +2981,36 @@ def api_teachers(request):
         teacher = Teacher.objects.create(
             school=school, user=user, employee_id=employee_id,
             phone_number=phone_number, qualification=qualification,
+            must_change_password=True,
             **(({'profile_picture': profile_picture}) if profile_picture else {}),
         )
+        email_sent = False
+        if email:
+            html_content = (
+                f'<p>Hello {user.get_full_name()},</p>'
+                f'<p>Your teacher account has been created at <strong>{school.name}</strong>.</p>'
+                f'<p>Login credentials:</p>'
+                f'<ul><li><strong>Username:</strong> {username}</li>'
+                f'<li><strong>Password:</strong> {password}</li></ul>'
+                f'<p>You will be required to change your password on first login.</p>'
+            )
+            try:
+                _send_notification_email(
+                    subject=f'Your teacher account at {school.name}',
+                    to_email=email,
+                    html_content=html_content,
+                )
+                email_sent = True
+            except Exception:
+                email_sent = False
         return JsonResponse({
             'success': True, 'message': 'Teacher added.',
             'id': teacher.id, 'full_name': user.get_full_name(),
             'employee_id': teacher.employee_id,
             'login_email': email or username,
             'login_username': username,
+            'email_sent': email_sent,
+            'email_warning': None if email_sent else 'Credentials email could not be delivered. Please share login details manually.',
         }, status=201)
 
     return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
@@ -2791,6 +3077,86 @@ def api_teacher_detail(request, teacher_id):
         teacher.is_active = False
         teacher.save(update_fields=['is_active'])
         return JsonResponse({'success': True, 'message': 'Teacher removed.'})
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+# ── Teacher-Subject-Class Assignments ────────────────────────────
+
+@csrf_exempt
+def api_teacher_assignments(request, teacher_id):
+    """GET/POST/DELETE assignments linking a teacher to subject+class+year."""
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+    try:
+        teacher = Teacher.objects.get(id=teacher_id, school=school)
+    except Teacher.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Teacher not found.'}, status=404)
+
+    if request.method == 'GET':
+        tscs = TeacherSubjectClass.objects.filter(
+            teacher=teacher, is_active=True
+        ).select_related('subject', 'classroom', 'academic_year').order_by('classroom__name', 'subject__name')
+        data = [{
+            'id': tsc.id,
+            'subject_id': tsc.subject_id,
+            'subject_name': tsc.subject.name,
+            'subject_code': tsc.subject.code,
+            'class_id': tsc.classroom_id,
+            'class_name': tsc.classroom.name,
+            'academic_year_id': tsc.academic_year_id,
+            'academic_year_name': tsc.academic_year.name,
+            'student_count': tsc.classroom.students.filter(is_active=True).count(),
+        } for tsc in tscs]
+        return JsonResponse({'success': True, 'assignments': data})
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        subject_id  = body.get('subject_id')
+        class_id    = body.get('class_id')
+        year_id     = body.get('academic_year_id')
+        if not all([subject_id, class_id, year_id]):
+            return JsonResponse({'success': False, 'message': 'subject_id, class_id, academic_year_id required.'}, status=400)
+        try:
+            subject  = Subject.objects.get(id=subject_id, school=school)
+            classroom = ClassRoom.objects.get(id=class_id, school=school)
+            year     = AcademicYear.objects.get(id=year_id, school=school)
+        except (Subject.DoesNotExist, ClassRoom.DoesNotExist, AcademicYear.DoesNotExist) as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=404)
+        tsc, created = TeacherSubjectClass.objects.get_or_create(
+            teacher=teacher, subject=subject, classroom=classroom, academic_year=year,
+            defaults={'is_active': True},
+        )
+        if not created and not tsc.is_active:
+            tsc.is_active = True
+            tsc.save(update_fields=['is_active'])
+        if not created and tsc.is_active:
+            return JsonResponse({'success': False, 'message': 'Assignment already exists.'}, status=400)
+        return JsonResponse({'success': True, 'message': 'Assignment created.', 'id': tsc.id}, status=201)
+
+    if request.method == 'DELETE':
+        assignment_id = request.GET.get('assignment_id')
+        if not assignment_id:
+            try:
+                body = json.loads(request.body)
+                assignment_id = body.get('assignment_id')
+            except Exception:
+                pass
+        if not assignment_id:
+            return JsonResponse({'success': False, 'message': 'assignment_id required.'}, status=400)
+        try:
+            tsc = TeacherSubjectClass.objects.get(id=assignment_id, teacher=teacher)
+        except TeacherSubjectClass.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Assignment not found.'}, status=404)
+        tsc.delete()
+        return JsonResponse({'success': True, 'message': 'Assignment removed.'})
 
     return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
 
@@ -2980,11 +3346,67 @@ def api_academic_years(request):
     return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
 
 
+@csrf_exempt
+def api_academic_year_detail(request, year_id):
+    """PUT/PATCH a single academic year — supports activating (deactivates all others in school)."""
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    try:
+        year = AcademicYear.objects.get(id=year_id, school=school)
+    except AcademicYear.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Academic year not found.'}, status=404)
+
+    if request.method in ('PUT', 'PATCH'):
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        if 'name' in body:
+            year.name = body['name'].strip()
+        if 'start_date' in body:
+            year.start_date = body['start_date']
+        if 'end_date' in body:
+            year.end_date = body['end_date']
+        if body.get('is_active'):
+            AcademicYear.objects.filter(school=school).exclude(id=year.id).update(is_active=False)
+            year.is_active = True
+        year.save()
+        return JsonResponse({'success': True, 'message': 'Academic year updated.',
+                             'year': {'id': year.id, 'name': year.name,
+                                      'start_date': str(year.start_date),
+                                      'end_date': str(year.end_date),
+                                      'is_active': year.is_active}})
+
+    if request.method == 'DELETE':
+        year.delete()
+        return JsonResponse({'success': True, 'message': 'Academic year deleted.'})
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
 # ─────────────────────────────────────────────────────────────────
-# TERMS
+# TERMS  (full CRUD)
 # ─────────────────────────────────────────────────────────────────
 
-@require_http_methods(["GET"])
+def _term_to_dict(t):
+    return {
+        'id': t.id,
+        'name': t.name,
+        'name_display': t.get_name_display(),
+        'academic_year_id': t.academic_year_id,
+        'academic_year_name': t.academic_year.name,
+        'start_date': str(t.start_date),
+        'end_date': str(t.end_date),
+        'is_active': t.is_active,
+        'grade_entry_open': t.grade_entry_open,
+        'grade_entry_deadline': t.grade_entry_deadline.isoformat() if t.grade_entry_deadline else None,
+    }
+
+
 @csrf_exempt
 def api_terms(request):
     try:
@@ -2993,12 +3415,89 @@ def api_terms(request):
         return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
     if not actor:
         return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
-    active_year = AcademicYear.objects.filter(school=school, is_active=True).first()
-    if not active_year:
-        return JsonResponse({'success': True, 'terms': []})
-    terms = Term.objects.filter(academic_year=active_year).order_by('name')
-    data = [{'id': t.id, 'name': t.get_name_display(), 'is_active': t.is_active} for t in terms]
-    return JsonResponse({'success': True, 'terms': data})
+
+    if request.method == 'GET':
+        year_id = request.GET.get('academic_year_id')
+        if year_id:
+            qs = Term.objects.filter(academic_year_id=year_id, academic_year__school=school)
+        else:
+            active_year = AcademicYear.objects.filter(school=school, is_active=True).first()
+            if not active_year:
+                return JsonResponse({'success': True, 'terms': []})
+            qs = Term.objects.filter(academic_year=active_year)
+        terms = qs.select_related('academic_year').order_by('name')
+        return JsonResponse({'success': True, 'terms': [_term_to_dict(t) for t in terms]})
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        year_id    = body.get('academic_year_id')
+        name       = body.get('name', '').upper()
+        start_date = body.get('start_date')
+        end_date   = body.get('end_date')
+        if not all([year_id, name, start_date, end_date]):
+            return JsonResponse({'success': False, 'message': 'academic_year_id, name, start_date, end_date required.'}, status=400)
+        valid_names = [c[0] for c in Term.TERM_CHOICES]
+        if name not in valid_names:
+            return JsonResponse({'success': False, 'message': f'name must be one of: {", ".join(valid_names)}'}, status=400)
+        try:
+            year = AcademicYear.objects.get(id=year_id, school=school)
+        except AcademicYear.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Academic year not found.'}, status=404)
+        if Term.objects.filter(academic_year=year, name=name).exists():
+            return JsonResponse({'success': False, 'message': 'This term already exists for that academic year.'}, status=400)
+        term = Term.objects.create(
+            academic_year=year, name=name,
+            start_date=start_date, end_date=end_date,
+        )
+        return JsonResponse({'success': True, 'message': 'Term created.', 'term': _term_to_dict(term)}, status=201)
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+@csrf_exempt
+def api_term_detail(request, term_id):
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+    try:
+        term = Term.objects.select_related('academic_year').get(id=term_id, academic_year__school=school)
+    except Term.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Term not found.'}, status=404)
+
+    if request.method == 'GET':
+        return JsonResponse({'success': True, 'term': _term_to_dict(term)})
+
+    if request.method == 'PUT':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        if 'start_date' in body:
+            term.start_date = body['start_date']
+        if 'end_date' in body:
+            term.end_date = body['end_date']
+        if 'is_active' in body:
+            if body['is_active']:
+                Term.objects.filter(academic_year=term.academic_year).exclude(id=term.id).update(is_active=False)
+            term.is_active = bool(body['is_active'])
+        if 'grade_entry_open' in body:
+            term.grade_entry_open = bool(body['grade_entry_open'])
+        if 'grade_entry_deadline' in body:
+            term.grade_entry_deadline = body['grade_entry_deadline'] or None
+        term.save()
+        return JsonResponse({'success': True, 'message': 'Term updated.', 'term': _term_to_dict(term)})
+
+    if request.method == 'DELETE':
+        term.delete()
+        return JsonResponse({'success': True, 'message': 'Term deleted.'})
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -3051,24 +3550,52 @@ def api_grades(request):
         except (Subject.DoesNotExist, Term.DoesNotExist):
             return JsonResponse({'success': False, 'message': 'Subject or term not found.'}, status=404)
         saved = 0
+        blocked = 0
         for entry in entries:
             sid = entry.get('student_id')
             try:
                 student = Student.objects.get(id=sid, school=school)
             except Student.DoesNotExist:
                 continue
-            grade, _ = Grade.objects.get_or_create(
+            assigned_teacher = None
+            try:
+                tsc = TeacherSubjectClass.objects.select_related('teacher').filter(
+                    subject=subject, classroom=student.classroom, is_active=True
+                ).first()
+                if tsc:
+                    assigned_teacher = tsc.teacher
+            except Exception:
+                pass
+            grade, created = Grade.objects.get_or_create(
                 student=student, subject=subject, term=term,
-                defaults={'teacher': None},
+                defaults={'teacher': assigned_teacher},
             )
             if grade.is_locked:
+                GradeChangeAlert.objects.create(
+                    grade=grade, severity='CRITICAL',
+                    alert_type='locked_grade_edit_attempt',
+                    description=f'School admin {actor.get_full_name()} attempted to modify locked grade',
+                    triggered_by=actor,
+                    ip_address=request.META.get('REMOTE_ADDR'),
+                    old_value={'total_score': float(grade.total_score)},
+                    new_value={'ca': entry.get('ca'), 'midterm': entry.get('midterm'), 'final': entry.get('final')},
+                )
+                _write_grade_audit(grade, 'MODIFICATION_ATTEMPT', actor, request,
+                                   old_values={'total_score': float(grade.total_score)},
+                                   new_values={'ca': entry.get('ca')})
+                _dispatch_tamper_alerts(grade, actor, request, school)
+                blocked += 1
                 continue
+            old_vals = {'ca': float(grade.continuous_assessment), 'midterm': float(grade.mid_term_exam), 'final': float(grade.final_exam)}
             grade.continuous_assessment = min(float(entry.get('ca') or 0), 20)
             grade.mid_term_exam         = min(float(entry.get('midterm') or 0), 30)
             grade.final_exam            = min(float(entry.get('final') or 0), 50)
             grade.save()
+            _write_grade_audit(grade, 'CREATE' if created else 'UPDATE', actor, request,
+                               old_values=old_vals if not created else {},
+                               new_values={'ca': entry.get('ca'), 'midterm': entry.get('midterm'), 'final': entry.get('final')})
             saved += 1
-        return JsonResponse({'success': True, 'message': f'{saved} grade(s) saved.'})
+        return JsonResponse({'success': True, 'message': f'{saved} grade(s) saved.', 'blocked': blocked})
 
     return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
 
@@ -4055,6 +4582,76 @@ def api_parents(request):
             })
         return JsonResponse({'success': True, 'parents': data})
 
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+
+        first_name   = (body.get('first_name')   or '').strip()
+        last_name    = (body.get('last_name')    or '').strip()
+        email        = (body.get('email')        or '').strip().lower()
+        phone        = (body.get('phone')        or body.get('phone_number') or '').strip()
+        relationship = (body.get('relationship') or 'Guardian').strip()
+        occupation   = (body.get('occupation')   or '').strip()
+        password     = (body.get('password')     or '').strip()
+
+        if not first_name or not last_name:
+            return JsonResponse({'success': False, 'message': 'first_name and last_name are required.'}, status=400)
+        if not email:
+            return JsonResponse({'success': False, 'message': 'email is required.'}, status=400)
+        if not password or len(password) < 8:
+            return JsonResponse({'success': False, 'message': 'password must be at least 8 characters.'}, status=400)
+        if User.objects.filter(email=email).exists():
+            return JsonResponse({'success': False, 'message': 'A user with that email already exists.'}, status=409)
+
+        base_username = re.sub(r'[^a-z0-9_]', '', f"par_{school.code}_{last_name}".lower())[:50]
+        username = base_username
+        counter = 1
+        while User.objects.filter(username=username).exists():
+            username = f"{base_username}_{counter}"
+            counter += 1
+
+        try:
+            user = User.objects.create_user(
+                username=username, email=email,
+                first_name=first_name, last_name=last_name,
+                password=password,
+            )
+            parent = Parent.objects.create(
+                school=school, user=user,
+                phone_number=phone, relationship=relationship,
+                occupation=occupation,
+            )
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=400)
+
+        # Send credential email
+        html_content = (
+            f'<p>Hello {user.get_full_name()},</p>'
+            f'<p>A parent account has been created for you at <strong>{school.name}</strong>.</p>'
+            f'<p>Use the credentials below to access the parent portal:</p>'
+            f'<ul>'
+            f'<li><strong>Email:</strong> {email}</li>'
+            f'<li><strong>Password:</strong> {password}</li>'
+            f'</ul>'
+            f'<p>Please change your password after first login.</p>'
+        )
+        _send_notification_email(
+            subject=f'Your parent portal account at {school.name}',
+            to_email=email,
+            html_content=html_content,
+        )
+
+        return JsonResponse({
+            'success':        True,
+            'message':        'Parent account created successfully.',
+            'id':             parent.id,
+            'full_name':      user.get_full_name(),
+            'login_email':    email,
+            'login_username': username,
+        }, status=201)
+
     return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
 
 
@@ -4334,6 +4931,223 @@ def api_principal_user_toggle(request, uid):
     })
 
 
+# =================================================================
+# UNIFIED STAFF ACCOUNTS  (Registrar, Librarian, Counselor, etc.)
+# GET/POST  /api/school/staff/
+# GET/PUT/DELETE  /api/school/staff/<id>/
+# =================================================================
+
+STAFF_ROLES = {
+    'ACCOUNTANT': 'Finance Officer',
+    'PRINCIPAL':  'Principal',
+    'REGISTRAR':  'Registrar',
+    'LIBRARIAN':  'Librarian',
+    'COUNSELOR':  'Counselor',
+    'STAFF':      'Administrative Staff',
+}
+
+
+def _staff_account_to_dict(a):
+    return {
+        'id':          a.id,
+        'full_name':   a.user.get_full_name() or a.user.username,
+        'first_name':  a.user.first_name,
+        'last_name':   a.user.last_name,
+        'email':       a.user.email,
+        'username':    a.user.username,
+        'phone':       a.phone_number,
+        'role':        a.role,
+        'role_label':  a.get_role_display(),
+        'job_title':   a.job_title,
+        'department':  a.department,
+        'status':      a.account_status,
+        'is_active':   a.is_active,
+        'created_at':  a.created_at.strftime('%Y-%m-%d'),
+        'activated_at': a.activated_at.strftime('%Y-%m-%d %H:%M') if a.activated_at else None,
+    }
+
+
+@csrf_exempt
+def api_staff_accounts(request):
+    """
+    GET  /api/school/staff/?role=REGISTRAR   — list staff, optionally filtered by role
+    POST /api/school/staff/                  — create a new staff account
+    """
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+
+    if request.method == 'GET':
+        qs = SchoolStaffAccount.objects.filter(school=school).select_related('user').order_by('-created_at')
+        role_filter = request.GET.get('role', '').strip().upper()
+        if role_filter and role_filter in STAFF_ROLES:
+            qs = qs.filter(role=role_filter)
+        return JsonResponse({
+            'success': True,
+            'staff':   [_staff_account_to_dict(a) for a in qs],
+            'count':   qs.count(),
+            'roles':   [{'value': k, 'label': v} for k, v in STAFF_ROLES.items()],
+        })
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+
+        first_name = (body.get('first_name') or '').strip()
+        last_name  = (body.get('last_name')  or '').strip()
+        email      = (body.get('email')      or '').strip().lower()
+        phone      = (body.get('phone')      or '').strip()
+        role       = (body.get('role')       or '').strip().upper()
+        job_title  = (body.get('job_title')  or '').strip()
+        department = (body.get('department') or '').strip()
+        password   = (body.get('password')   or '').strip()
+
+        if not first_name or not last_name:
+            return JsonResponse({'success': False, 'message': 'first_name and last_name are required.'}, status=400)
+        if not email:
+            return JsonResponse({'success': False, 'message': 'email is required.'}, status=400)
+        if not role or role not in STAFF_ROLES:
+            return JsonResponse({
+                'success': False,
+                'message': f'role is required. Valid roles: {", ".join(STAFF_ROLES.keys())}',
+            }, status=400)
+        if not password or len(password) < 8:
+            return JsonResponse({'success': False, 'message': 'password must be at least 8 characters.'}, status=400)
+        if User.objects.filter(email=email).exists():
+            return JsonResponse({'success': False, 'message': 'A user with that email already exists.'}, status=409)
+
+        # Generate unique username: role_prefix + school_code + last_name
+        role_prefix = role[:3].lower()
+        base_username = re.sub(r'[^a-z0-9_]', '', f"{role_prefix}_{school.code}_{last_name}".lower())[:50]
+        username = base_username
+        counter = 1
+        while User.objects.filter(username=username).exists():
+            username = f"{base_username}_{counter}"
+            counter += 1
+
+        try:
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                password=password,
+                first_name=first_name,
+                last_name=last_name,
+            )
+            account = SchoolStaffAccount.objects.create(
+                user=user,
+                school=school,
+                role=role,
+                job_title=job_title or STAFF_ROLES[role],
+                department=department,
+                phone_number=phone,
+                is_active=True,
+                account_status='ACTIVE',
+                activated_at=timezone.now(),
+                created_by=actor,
+            )
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=400)
+
+        # Send credential email
+        if email:
+            html_content = (
+                f'<p>Hello {user.get_full_name()},</p>'
+                f'<p>Your staff account has been created at <strong>{school.name}</strong> '
+                f'with the role of <strong>{account.get_role_display()}</strong>.</p>'
+                f'<p>Use the credentials below to log in:</p>'
+                f'<ul>'
+                f'<li><strong>Email / Username:</strong> {email}</li>'
+                f'<li><strong>Password:</strong> {password}</li>'
+                f'</ul>'
+                f'<p>Please change your password after first login.</p>'
+                f'<p>© {datetime.datetime.now().year} EK-SMS</p>'
+            )
+            _send_notification_email(
+                subject=f'Your {account.get_role_display()} account at {school.name}',
+                to_email=email,
+                html_content=html_content,
+            )
+
+        return JsonResponse({
+            'success':  True,
+            'message':  f'{account.get_role_display()} account created successfully.',
+            'staff':    _staff_account_to_dict(account),
+            'login_email':    email,
+            'login_username': username,
+        }, status=201)
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+@csrf_exempt
+def api_staff_account_detail(request, staff_id):
+    """
+    GET    /api/school/staff/<id>/  — retrieve single staff account
+    PUT    /api/school/staff/<id>/  — update details or change status (activate/suspend/terminate)
+    DELETE /api/school/staff/<id>/  — soft-delete (terminate) the account
+    """
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+
+    try:
+        account = SchoolStaffAccount.objects.select_related('user').get(id=staff_id, school=school)
+    except SchoolStaffAccount.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Staff account not found.'}, status=404)
+
+    if request.method == 'GET':
+        return JsonResponse({'success': True, 'staff': _staff_account_to_dict(account)})
+
+    if request.method == 'PUT':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+
+        # Update user fields
+        u = account.user
+        u.first_name = body.get('first_name', u.first_name).strip()
+        u.last_name  = body.get('last_name',  u.last_name).strip()
+        if body.get('email') and body['email'].strip().lower() != u.email:
+            new_email = body['email'].strip().lower()
+            if User.objects.exclude(id=u.id).filter(email=new_email).exists():
+                return JsonResponse({'success': False, 'message': 'That email is already in use.'}, status=409)
+            u.email = new_email
+        u.save(update_fields=['first_name', 'last_name', 'email'])
+
+        # Update account fields
+        if body.get('phone'):       account.phone_number = body['phone'].strip()
+        if body.get('job_title'):   account.job_title    = body['job_title'].strip()
+        if body.get('department'):  account.department   = body['department'].strip()
+
+        # Status change
+        new_status = (body.get('status') or '').upper()
+        if new_status == 'ACTIVE':
+            account.activate_account()
+        elif new_status == 'SUSPENDED':
+            account.suspend_account()
+        elif new_status == 'TERMINATED':
+            account.terminate_account()
+        else:
+            account.save()
+
+        return JsonResponse({'success': True, 'message': 'Staff account updated.', 'staff': _staff_account_to_dict(account)})
+
+    if request.method == 'DELETE':
+        account.terminate_account()
+        return JsonResponse({'success': True, 'message': 'Staff account terminated.'})
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
 @csrf_exempt
 def api_student_stats(request):
     """
@@ -4501,6 +5315,12 @@ def api_teacher_me(request):
         except Exception:
             badge_url = None
 
+    try:
+        from django_otp import devices_for_user as _otp_devices
+        has_2fa = any(d.confirmed for d in _otp_devices(user))
+    except Exception:
+        has_2fa = False
+
     return JsonResponse({'success': True, 'teacher': {
         'id': teacher.id,
         'full_name': user.get_full_name(),
@@ -4517,6 +5337,7 @@ def api_teacher_me(request):
         'classes': classes,
         'total_students': sum(c['student_count'] for c in classes),
         'periods_per_week': len(classes),
+        'has_2fa': has_2fa,
     }})
 
 
@@ -4717,7 +5538,6 @@ def api_teacher_gradebook(request):
             body = json.loads(request.body)
         except json.JSONDecodeError:
             return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
-        from eksms_core.models import Grade, Term, Student as StudentModel
 
         subject_id   = body.get('subject_id')
         classroom_id = body.get('classroom_id')
@@ -4731,32 +5551,60 @@ def api_teacher_gradebook(request):
         if not active_term:
             return JsonResponse({'success': False, 'message': 'No active term found.'}, status=400)
 
-        # Bulk entries format: {"classroom_id":…, "subject_id":…, "entries":[{student_id, ca, midterm, final_exam}]}
+        # Grade entry window enforcement
+        if not active_term.grade_entry_open:
+            return JsonResponse({'success': False, 'message': 'Grade entry is not open for this term. Contact your administrator.'}, status=403)
+        if active_term.grade_entry_deadline and timezone.now() > active_term.grade_entry_deadline:
+            return JsonResponse({'success': False, 'message': 'Grade entry deadline has passed for this term.'}, status=403)
+
         entries = body.get('entries', [])
         if not entries:
             return JsonResponse({'success': False, 'message': 'entries list is required.'}, status=400)
 
         saved = 0
+        blocked = 0
         for entry in entries:
             student_id = entry.get('student_id')
             ca       = float(entry.get('ca')         or 0)
             mid_term = float(entry.get('midterm')     or 0)
             final    = float(entry.get('final_exam')  or 0)
             try:
-                student = StudentModel.objects.get(id=student_id, school=teacher.school)
-                Grade.objects.update_or_create(
+                student = Student.objects.get(id=student_id, school=teacher.school)
+                grade, created = Grade.objects.get_or_create(
                     student=student, subject_id=subject_id, term=active_term,
-                    defaults={
-                        'teacher': teacher,
-                        'continuous_assessment': min(max(ca, 0), 20),
-                        'mid_term_exam': min(max(mid_term, 0), 30),
-                        'final_exam': min(max(final, 0), 50),
-                    }
+                    defaults={'teacher': teacher,
+                              'continuous_assessment': 0, 'mid_term_exam': 0, 'final_exam': 0},
                 )
+                if grade.is_locked:
+                    # Tamper attempt — alert all parties
+                    GradeChangeAlert.objects.create(
+                        grade=grade, severity='CRITICAL',
+                        alert_type='locked_grade_edit_attempt',
+                        description=f'Teacher {user.get_full_name()} attempted to modify locked grade for {student.user.get_full_name()}',
+                        triggered_by=user,
+                        ip_address=request.META.get('REMOTE_ADDR'),
+                        old_value={'total_score': float(grade.total_score)},
+                        new_value={'ca': ca, 'midterm': mid_term, 'final': final},
+                    )
+                    _write_grade_audit(grade, 'MODIFICATION_ATTEMPT', user, request,
+                                       old_values={'total_score': float(grade.total_score)},
+                                       new_values={'ca': ca, 'midterm': mid_term, 'final': final})
+                    _dispatch_tamper_alerts(grade, user, request, teacher.school)
+                    blocked += 1
+                    continue
+                old_vals = {'ca': float(grade.continuous_assessment), 'midterm': float(grade.mid_term_exam), 'final': float(grade.final_exam)}
+                grade.teacher = teacher
+                grade.continuous_assessment = min(max(ca, 0), 20)
+                grade.mid_term_exam         = min(max(mid_term, 0), 30)
+                grade.final_exam            = min(max(final, 0), 50)
+                grade.save()
+                _write_grade_audit(grade, 'CREATE' if created else 'UPDATE', user, request,
+                                   old_values=old_vals if not created else {},
+                                   new_values={'ca': ca, 'midterm': mid_term, 'final': final})
                 saved += 1
             except Exception:
                 continue
-        return JsonResponse({'success': True, 'saved': saved})
+        return JsonResponse({'success': True, 'saved': saved, 'blocked': blocked})
 
     return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
 
@@ -4777,9 +5625,12 @@ def api_teacher_change_password(request):
     new_pass = body.get('new_password', '').strip()
     if not user.check_password(current):
         return JsonResponse({'success': False, 'message': 'Current password is incorrect.'}, status=400)
-    if len(new_pass) < 6:
-        return JsonResponse({'success': False, 'message': 'New password must be at least 6 characters.'}, status=400)
+    ok, err = _password_strength_ok(new_pass)
+    if not ok:
+        return JsonResponse({'success': False, 'message': err}, status=400)
     user.set_password(new_pass)
+    teacher.must_change_password = False
+    teacher.save(update_fields=['must_change_password'])
     user.save()
     return JsonResponse({'success': True, 'message': 'Password updated successfully.'})
 
@@ -4851,6 +5702,22 @@ def api_student_me(request):
         'is_locked':    g.is_locked,
     } for g in grades_qs[-5:]]
 
+    # class rank from latest ClassRanking
+    class_rank = None
+    class_size = None
+    try:
+        latest_ranking = ClassRanking.objects.filter(student=student).order_by('-created_at').first()
+        if latest_ranking:
+            class_rank = latest_ranking.rank
+            class_size = ClassRanking.objects.filter(
+                term=latest_ranking.term,
+                student__classroom=student.classroom,
+            ).count()
+    except Exception:
+        pass
+
+    must_change = getattr(getattr(user, 'student_profile', None), 'must_change_password', False)
+
     return JsonResponse({
         'success': True,
         'student': {
@@ -4870,6 +5737,7 @@ def api_student_me(request):
             'school_name':      school.name if school else '',
             'school_badge':     badge_url,
             'admission_date':   str(student.admission_date),
+            'must_change_password': must_change,
         },
         'stats': {
             'attendance_rate': att_rate,
@@ -4880,6 +5748,8 @@ def api_student_me(request):
             'avg_score':       avg_score,
             'subjects_count':  subjects_ct,
             'upcoming_exams':  upcoming_exams,
+            'class_rank':      class_rank,
+            'class_size':      class_size,
         },
         'recent_grades': recent_grades,
     })
@@ -4894,7 +5764,7 @@ def api_student_grades(request):
         return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
 
     term_id = request.GET.get('term_id')
-    qs = student.grades.select_related('subject', 'term').order_by('subject__name')
+    qs = student.grades.select_related('subject', 'term', 'teacher__user').order_by('subject__name')
     if term_id:
         try:
             qs = qs.filter(term_id=int(term_id))
@@ -4913,6 +5783,7 @@ def api_student_grades(request):
         'total_score':  float(g.total_score),
         'grade_letter': g.grade_letter,
         'is_locked':    g.is_locked,
+        'teacher_name': g.teacher.user.get_full_name() if g.teacher and g.teacher.user else None,
     } for g in qs]
 
     terms = list(Term.objects.filter(school=student.school).values('id', 'name').order_by('-start_date'))
@@ -5042,12 +5913,1120 @@ def api_student_change_password(request):
         new_password = data.get('new_password', '').strip()
         if not old_password or not new_password:
             return JsonResponse({'success': False, 'message': 'Both old and new password required.'}, status=400)
-        if len(new_password) < 6:
-            return JsonResponse({'success': False, 'message': 'New password must be at least 6 characters.'}, status=400)
+        ok, err = _password_strength_ok(new_password)
+        if not ok:
+            return JsonResponse({'success': False, 'message': err}, status=400)
         if not user.check_password(old_password):
             return JsonResponse({'success': False, 'message': 'Old password is incorrect.'}, status=400)
         user.set_password(new_password)
+        student.must_change_password = False
+        student.save(update_fields=['must_change_password'])
         user.save()
         return JsonResponse({'success': True, 'message': 'Password changed successfully.'})
     except json.JSONDecodeError:
         return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+
+
+# =============================================================================
+# GRADE LOCKING
+# =============================================================================
+
+@csrf_exempt
+def api_teacher_grade_lock(request):
+    """POST: Lock grades for a class+subject in active term.
+    Accepts: { student_ids:[...], subject_id, term_id }
+             OR { grade_id }
+             OR { lock_all:true, class_id, subject_id, term_id }
+    Uses Grade.lock(user) so locked_by and locked_at are always set.
+    """
+    user, teacher = _get_teacher_profile(request)
+    if not teacher:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+    try:
+        data        = json.loads(request.body)
+        grade_id    = data.get('grade_id')
+        student_ids = data.get('student_ids')          # primary format from frontend
+        lock_all    = data.get('lock_all', False)
+        class_id    = data.get('class_id')
+        subject_id  = data.get('subject_id')
+        term_id     = data.get('term_id')
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+
+    school = teacher.school
+
+    def _lock_one(grade):
+        if grade.is_locked:
+            return False
+        grade.lock(user)  # sets is_locked, locked_by, locked_at and saves
+        _write_grade_audit(grade, 'LOCK', user, request, {}, {
+            'total_score': str(grade.total_score),
+            'grade_letter': grade.grade_letter,
+        }, 'Grade locked by teacher')
+        GradeVerification.objects.get_or_create(
+            grade=grade,
+            defaults={
+                'verification_token': _secrets.token_urlsafe(32),
+                'sha256_hash': _compute_grade_hash(grade),
+                'issued_by': user,
+            }
+        )
+        _dispatch_grade_lock_notifications(grade, school, request)
+        return True
+
+    # Mode 1: lock by explicit grade_id
+    if grade_id:
+        try:
+            grade = Grade.objects.get(id=grade_id, teacher=teacher)
+        except Grade.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Grade not found.'}, status=404)
+        if not _lock_one(grade):
+            return JsonResponse({'success': False, 'message': 'Grade already locked.'}, status=400)
+        return JsonResponse({'success': True, 'message': 'Grade locked.', 'locked': 1})
+
+    # Mode 2: lock by student_ids + subject_id + term_id (frontend SubmitConfirmModal)
+    if student_ids and subject_id and term_id:
+        if not isinstance(student_ids, list) or not student_ids:
+            return JsonResponse({'success': False, 'message': 'student_ids must be a non-empty list.'}, status=400)
+        grades = Grade.objects.filter(
+            teacher=teacher,
+            student_id__in=student_ids,
+            subject_id=subject_id,
+            term_id=term_id,
+        )
+        locked, already, not_found = 0, 0, 0
+        found_ids = set(grades.values_list('student_id', flat=True))
+        for sid in student_ids:
+            if sid not in found_ids:
+                not_found += 1
+        for grade in grades:
+            if _lock_one(grade):
+                locked += 1
+            else:
+                already += 1
+        return JsonResponse({
+            'success': True,
+            'message': f'{locked} grade(s) locked.',
+            'locked': locked,
+            'already_locked': already,
+            'not_found': not_found,
+        })
+
+    # Mode 3: lock_all for a full class+subject+term
+    if lock_all and (class_id or True) and subject_id and term_id:
+        qs = Grade.objects.filter(teacher=teacher, subject_id=subject_id, term_id=term_id, is_locked=False)
+        if class_id:
+            qs = qs.filter(student__classroom_id=class_id)
+        locked = sum(1 for grade in qs if _lock_one(grade))
+        return JsonResponse({'success': True, 'message': f'{locked} grades locked.', 'locked': locked})
+
+    return JsonResponse({
+        'success': False,
+        'message': 'Provide student_ids+subject_id+term_id, grade_id, or lock_all+subject_id+term_id.',
+    }, status=400)
+
+
+# =============================================================================
+# GRADE HISTORY / AUDIT TRAIL
+# =============================================================================
+
+@csrf_exempt
+def api_teacher_grade_history(request, grade_id):
+    """GET: Audit trail for a specific grade (teacher view)."""
+    user, teacher = _get_teacher_profile(request)
+    if not teacher:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    try:
+        grade = Grade.objects.get(id=grade_id, teacher=teacher)
+    except Grade.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Grade not found.'}, status=404)
+    logs = GradeAuditLog.objects.filter(grade=grade).order_by('logged_at')
+    data = [{
+        'id':        l.id,
+        'action':    l.action,
+        'actor':     l.actor.get_full_name() or l.actor.username if l.actor else 'System',
+        'old':       l.old_values,
+        'new':       l.new_values,
+        'reason':    l.change_reason,
+        'timestamp': str(l.logged_at),
+        'ip':        l.ip_address,
+    } for l in logs]
+    return JsonResponse({'success': True, 'history': data})
+
+
+@csrf_exempt
+def api_student_grade_history(request, grade_id):
+    """GET: Audit trail for a grade (student view — IP redacted)."""
+    user, student = _get_student_profile(request)
+    if not student:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    try:
+        grade = Grade.objects.get(id=grade_id, student=student)
+    except Grade.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Grade not found.'}, status=404)
+    logs = GradeAuditLog.objects.filter(grade=grade).order_by('logged_at')
+    data = [{
+        'id':        l.id,
+        'action':    l.action,
+        'actor':     l.actor.get_full_name() or l.actor.username if l.actor else 'System',
+        'old':       l.old_values,
+        'new':       l.new_values,
+        'reason':    l.change_reason,
+        'timestamp': str(l.logged_at),
+    } for l in logs]
+    return JsonResponse({'success': True, 'history': data})
+
+
+@csrf_exempt
+def api_teacher_analytics(request):
+    """GET term-over-term class average trend for teacher's classes."""
+    if request.method != 'GET':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+    user, teacher = _get_teacher_profile(request)
+    if not teacher:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    class_id   = request.GET.get('class_id')
+    subject_id = request.GET.get('subject_id')
+    school     = teacher.school
+    terms = Term.objects.filter(academic_year__school=school).select_related('academic_year').order_by(
+        'academic_year__start_date', 'name'
+    )
+    trend = []
+    for term in terms:
+        filters = {'term': term, 'teacher': teacher, 'is_locked': True}
+        if class_id:
+            filters['student__classroom_id'] = class_id
+        if subject_id:
+            filters['subject_id'] = subject_id
+        from django.db.models import Avg, Count
+        agg = Grade.objects.filter(**filters).aggregate(avg=Avg('total_score'), count=Count('id'))
+        if agg['count']:
+            trend.append({
+                'term_id':   term.id,
+                'term_name': term.get_name_display(),
+                'year':      term.academic_year.name,
+                'label':     f"{term.get_name_display()} {term.academic_year.name}",
+                'average':   round(float(agg['avg'] or 0), 1),
+                'count':     agg['count'],
+            })
+    return JsonResponse({'success': True, 'trend': trend})
+
+
+# =============================================================================
+# GRADE MODIFICATION REQUESTS
+# =============================================================================
+
+@csrf_exempt
+def api_teacher_mod_requests(request):
+    """GET: list own requests. POST: submit new request."""
+    user, teacher = _get_teacher_profile(request)
+    if not teacher:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+
+    if request.method == 'GET':
+        reqs = GradeModificationRequest.objects.filter(
+            requested_by=user
+        ).select_related('grade__student__user', 'grade__subject').order_by('-created_at')
+        def _evidence_url(r):
+            if r.evidence_file:
+                try:
+                    return request.build_absolute_uri(r.evidence_file.url)
+                except Exception:
+                    return None
+            return None
+        data = [{
+            'id':             r.id,
+            'grade_id':       r.grade_id,
+            'student_name':   r.grade.student.user.get_full_name(),
+            'student':        r.grade.student.user.get_full_name(),
+            'subject':        r.grade.subject.name,
+            'current_score':  str(r.current_score),
+            'proposed_score': str(r.proposed_score),
+            'reason':         r.reason,
+            'status':         r.status,
+            'review_reason':  r.review_reason,
+            'evidence_url':   _evidence_url(r),
+            'created_at':     str(r.created_at),
+            'reviewed_at':    str(r.reviewed_at) if r.reviewed_at else None,
+        } for r in reqs]
+        return JsonResponse({'success': True, 'requests': data})
+
+    if request.method == 'POST':
+        content_type = request.content_type or ''
+        if 'multipart' in content_type or 'form-data' in content_type:
+            post_data = request.POST
+            evidence_file = request.FILES.get('evidence_file')
+        else:
+            try:
+                post_data = json.loads(request.body)
+            except json.JSONDecodeError:
+                return JsonResponse({'success': False, 'message': 'Invalid JSON (mod request).'}, status=400)
+            evidence_file = None
+
+        action = post_data.get('action', '')
+
+        # Withdrawal action
+        if action == 'withdraw':
+            req_id = post_data.get('request_id')
+            try:
+                mod = GradeModificationRequest.objects.get(id=req_id, requested_by=user, status='pending')
+            except GradeModificationRequest.DoesNotExist:
+                return JsonResponse({'success': False, 'message': 'Pending request not found.'}, status=404)
+            mod.status = 'withdrawn'
+            mod.save(update_fields=['status'])
+            return JsonResponse({'success': True, 'message': 'Request withdrawn.'})
+
+        grade_id       = post_data.get('grade_id')
+        proposed_score = post_data.get('proposed_score')
+        reason         = post_data.get('reason', '').strip()
+        if not grade_id or proposed_score is None or not reason:
+            return JsonResponse({'success': False, 'message': 'grade_id, proposed_score and reason required.'}, status=400)
+        try:
+            grade = Grade.objects.get(id=grade_id, teacher=teacher)
+        except Grade.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Grade not found.'}, status=404)
+        if not grade.is_locked:
+            return JsonResponse({'success': False, 'message': 'Grade is not locked — edit directly.'}, status=400)
+        if GradeModificationRequest.objects.filter(grade=grade, status='pending').exists():
+            return JsonResponse({'success': False, 'message': 'A pending request already exists for this grade.'}, status=400)
+        mod = GradeModificationRequest.objects.create(
+            grade=grade,
+            requested_by=user,
+            current_score=grade.total_score,
+            proposed_score=proposed_score,
+            reason=reason,
+        )
+        if evidence_file:
+            # Validate size (5 MB)
+            if evidence_file.size > 5 * 1024 * 1024:
+                mod.delete()
+                return JsonResponse({'success': False, 'message': 'Evidence file must be under 5 MB.'}, status=400)
+            mod.evidence_file = evidence_file
+            mod.save(update_fields=['evidence_file'])
+        _write_grade_audit(grade, 'MOD_REQUEST', user, request, {}, {'proposed': str(proposed_score)}, reason)
+        return JsonResponse({'success': True, 'message': 'Modification request submitted.', 'id': mod.id})
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+@csrf_exempt
+def api_school_mod_requests(request):
+    """GET: list all mod requests for this school (school admin)."""
+    try:
+        user, sa, school = _get_school_for_admin(request)
+    except Exception:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    if not user:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    reqs = GradeModificationRequest.objects.filter(
+        grade__student__school=school
+    ).select_related('grade__student__user', 'grade__subject', 'requested_by').order_by('-created_at')
+    status_filter = request.GET.get('status', '')
+    if status_filter:
+        reqs = reqs.filter(status=status_filter)
+    data = [{
+        'id':             r.id,
+        'grade_id':       r.grade_id,
+        'student_name':   r.grade.student.user.get_full_name(),
+        'student':        r.grade.student.user.get_full_name(),
+        'subject':        r.grade.subject.name,
+        'teacher_name':   r.requested_by.get_full_name(),
+        'requested_by':   r.requested_by.get_full_name(),
+        'current_score':  str(r.current_score),
+        'proposed_score': str(r.proposed_score),
+        'reason':         r.reason,
+        'status':         r.status,
+        'review_reason':  r.review_reason,
+        'created_at':     str(r.created_at),
+        'reviewed_at':    str(r.reviewed_at) if r.reviewed_at else None,
+    } for r in reqs]
+    return JsonResponse({'success': True, 'requests': data})
+
+
+@csrf_exempt
+def api_school_mod_review(request):
+    """POST: approve or reject a grade modification request (school admin)."""
+    try:
+        user, sa, school = _get_school_for_admin(request)
+    except Exception:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    if not user:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+    try:
+        data   = json.loads(request.body)
+        req_id = data.get('request_id')
+        action = data.get('action')
+        reason = data.get('reason', '').strip()
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON (mod review).'}, status=400)
+    if not req_id or action not in ('approve', 'reject'):
+        return JsonResponse({'success': False, 'message': 'request_id and action (approve/reject) required.'}, status=400)
+    try:
+        mod = GradeModificationRequest.objects.select_related('grade').get(
+            id=req_id, grade__student__school=school, status='pending'
+        )
+    except GradeModificationRequest.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Request not found or not pending.'}, status=404)
+    mod.reviewed_by   = user
+    mod.review_reason = reason
+    mod.reviewed_at   = timezone.now()
+    if action == 'approve':
+        grade = mod.grade
+        old_score = grade.total_score
+        grade.total_score = mod.proposed_score
+        grade.calculate_grade_letter()
+        grade.is_locked = False
+        grade.save(update_fields=['total_score', 'grade_letter', 'is_locked'])
+        mod.status = 'approved'
+        _write_grade_audit(grade, 'MOD_APPROVED', user, request,
+                           {'total_score': str(old_score)},
+                           {'total_score': str(mod.proposed_score)}, reason)
+    else:
+        mod.status = 'rejected'
+        _write_grade_audit(mod.grade, 'MOD_REJECTED', user, request, {}, {}, reason)
+    mod.save()
+    return JsonResponse({'success': True, 'message': f'Request {action}d.'})
+
+
+# =============================================================================
+# PARENT PORTAL ENDPOINTS
+# =============================================================================
+
+def _get_parent_profile(request):
+    user = _get_authed_user(request)
+    if not user:
+        return None, None
+    try:
+        parent = Parent.objects.select_related('school').get(user=user)
+        return user, parent
+    except Parent.DoesNotExist:
+        return user, None
+
+
+@csrf_exempt
+def api_parent_profile(request):
+    """GET: parent profile info."""
+    user, parent = _get_parent_profile(request)
+    if not parent:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    data = {
+        'id':                    parent.id,
+        'name':                  user.get_full_name(),
+        'email':                 user.email,
+        'phone':                 parent.phone_number,
+        'school':                parent.school.name if parent.school else None,
+        'must_change_password':  getattr(parent, 'must_change_password', False),
+    }
+    return JsonResponse({'success': True, 'profile': data})
+
+
+@csrf_exempt
+def api_parent_children(request):
+    """GET: list of children linked to this parent."""
+    user, parent = _get_parent_profile(request)
+    if not parent:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    links = ParentStudent.objects.filter(parent=parent).select_related(
+        'student__user', 'student__classroom'
+    )
+    data = [{
+        'student_id':       ps.student.id,
+        'name':             ps.student.user.get_full_name(),
+        'admission_number': ps.student.admission_number,
+        'classroom':        ps.student.classroom.name if ps.student.classroom else None,
+        'is_primary':       ps.is_primary_contact,
+    } for ps in links]
+    return JsonResponse({'success': True, 'children': data})
+
+
+@csrf_exempt
+def api_parent_child_grades(request, student_id):
+    """GET: grades for a specific child of this parent."""
+    user, parent = _get_parent_profile(request)
+    if not parent:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    if not ParentStudent.objects.filter(parent=parent, student_id=student_id).exists():
+        return JsonResponse({'success': False, 'message': 'Child not linked to this account.'}, status=403)
+    term_id   = request.GET.get('term_id')
+    grades_qs = Grade.objects.filter(student_id=student_id).select_related('subject', 'term')
+    if term_id:
+        grades_qs = grades_qs.filter(term_id=term_id)
+    data = [{
+        'id':           g.id,
+        'subject':      g.subject.name,
+        'term':         g.term.name if g.term else None,
+        'ca':           str(g.continuous_assessment) if g.continuous_assessment is not None else None,
+        'midterm':      str(g.mid_term_exam) if g.mid_term_exam is not None else None,
+        'final':        str(g.final_exam) if g.final_exam is not None else None,
+        'total':        str(g.total_score) if g.total_score is not None else None,
+        'grade_letter': g.grade_letter,
+        'is_locked':    g.is_locked,
+    } for g in grades_qs.order_by('subject__name')]
+    return JsonResponse({'success': True, 'grades': data})
+
+
+@csrf_exempt
+def api_parent_child_report_cards(request, student_id):
+    """GET: report cards for a specific child."""
+    user, parent = _get_parent_profile(request)
+    if not parent:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    if not ParentStudent.objects.filter(parent=parent, student_id=student_id).exists():
+        return JsonResponse({'success': False, 'message': 'Child not linked to this account.'}, status=403)
+    cards = ReportCard.objects.filter(student_id=student_id).select_related('term', 'academic_year').order_by('-generated_at')
+    data = [{
+        'id':                c.id,
+        'term':              c.term.name if c.term else None,
+        'academic_year':     c.academic_year.name if c.academic_year else None,
+        'average_score':     str(c.average_score) if c.average_score is not None else None,
+        'class_rank':        c.class_rank,
+        'class_size':        c.class_size,
+        'pdf_url':           c.pdf_file.url if c.pdf_file else None,
+        'verification_hash': c.verification_hash,
+        'generated_at':      str(c.generated_at),
+    } for c in cards]
+    return JsonResponse({'success': True, 'report_cards': data})
+
+
+@csrf_exempt
+def api_parent_notifications(request):
+    """GET: notifications for this parent. POST: mark as read."""
+    from django.db.models import Q
+    user, parent = _get_parent_profile(request)
+    if not parent:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+
+    if request.method == 'GET':
+        notifs = Notification.objects.filter(
+            Q(recipient_user=user) | Q(school=parent.school, recipient_role='parent')
+        ).order_by('-created_at')[:50]
+        data = [{
+            'id':         n.id,
+            'title':      n.title,
+            'body':       n.body,
+            'type':       n.notif_type,
+            'created_at': str(n.created_at),
+        } for n in notifs]
+        return JsonResponse({'success': True, 'notifications': data})
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+            nid  = body.get('notification_id')
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON (parent notif).'}, status=400)
+        if not nid:
+            return JsonResponse({'success': False, 'message': 'notification_id required.'}, status=400)
+        NotificationRead.objects.get_or_create(notification_id=nid, user=user)
+        return JsonResponse({'success': True, 'message': 'Marked as read.'})
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+# =============================================================================
+# STUDENT REPORT CARDS
+# =============================================================================
+
+@csrf_exempt
+def api_student_report_cards(request):
+    """GET: report cards for the logged-in student."""
+    user, student = _get_student_profile(request)
+    if not student:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    cards = ReportCard.objects.filter(student=student).select_related('term', 'academic_year').order_by('-generated_at')
+    data = [{
+        'id':                c.id,
+        'term':              c.term.name if c.term else None,
+        'academic_year':     c.academic_year.name if c.academic_year else None,
+        'average_score':     str(c.average_score) if c.average_score is not None else None,
+        'class_rank':        c.class_rank,
+        'class_size':        c.class_size,
+        'pdf_url':           c.pdf_file.url if c.pdf_file else None,
+        'verification_hash': c.verification_hash,
+        'generated_at':      str(c.generated_at),
+    } for c in cards]
+    return JsonResponse({'success': True, 'report_cards': data})
+
+
+@csrf_exempt
+def api_report_card_generate(request):
+    """POST: generate/regenerate a report card for a student+term (school admin)."""
+    try:
+        user, sa, school = _get_school_for_admin(request)
+    except Exception:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    if not user:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+    try:
+        data       = json.loads(request.body)
+        student_id = data.get('student_id')
+        term_id    = data.get('term_id')
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON (report card).'}, status=400)
+    if not student_id or not term_id:
+        return JsonResponse({'success': False, 'message': 'student_id and term_id required.'}, status=400)
+    try:
+        student = Student.objects.get(id=student_id, school=school)
+        term    = Term.objects.get(id=term_id, academic_year__school=school)
+    except (Student.DoesNotExist, Term.DoesNotExist):
+        return JsonResponse({'success': False, 'message': 'Student or term not found.'}, status=404)
+    grades = Grade.objects.filter(student=student, term=term)
+    if not grades.exists():
+        return JsonResponse({'success': False, 'message': 'No grades found for this student/term.'}, status=400)
+    total   = sum(float(g.total_score) for g in grades if g.total_score is not None)
+    avg     = total / grades.count() if grades.count() else 0
+    ranking = ClassRanking.objects.filter(student=student, term=term).first()
+    rank    = ranking.rank if ranking else None
+    raw     = f"{student.id}-{term.id}-{total:.2f}-{avg:.2f}"
+    v_hash  = hashlib.sha256(raw.encode()).hexdigest()
+    if avg >= 90:   overall = 'A+'
+    elif avg >= 80: overall = 'A'
+    elif avg >= 70: overall = 'B'
+    elif avg >= 60: overall = 'C'
+    elif avg >= 50: overall = 'D'
+    else:           overall = 'F'
+    card, created = ReportCard.objects.update_or_create(
+        student=student, term=term,
+        defaults={
+            'academic_year':     term.academic_year,
+            'classroom':         student.classroom,
+            'average_score':     avg,
+            'class_rank':        rank,
+            'total_subjects':    grades.count(),
+            'verification_hash': v_hash,
+            'generated_by':      user,
+        }
+    )
+    return JsonResponse({
+        'success': True,
+        'message': 'Report card generated.' if created else 'Report card updated.',
+        'id':      card.id,
+        'avg':     round(avg, 2),
+        'overall': overall,
+        'rank':    rank,
+        'hash':    v_hash,
+    })
+
+
+# =============================================================================
+# CLASS SUBJECTS
+# =============================================================================
+
+@csrf_exempt
+def api_class_subjects(request):
+    """GET: list. POST: add. DELETE: remove (?id=<id>)."""
+    try:
+        user, sa, school = _get_school_for_admin(request)
+    except Exception:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    if not user:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+
+    if request.method == 'GET':
+        class_id = request.GET.get('class_id')
+        year_id  = request.GET.get('year_id')
+        qs = ClassSubject.objects.filter(
+            classroom__school=school
+        ).select_related('classroom', 'subject', 'academic_year')
+        if class_id:
+            qs = qs.filter(classroom_id=class_id)
+        if year_id:
+            qs = qs.filter(academic_year_id=year_id)
+        data = [{
+            'id':            cs.id,
+            'classroom':     cs.classroom.name,
+            'classroom_id':  cs.classroom_id,
+            'subject':       cs.subject.name,
+            'subject_id':    cs.subject_id,
+            'academic_year': cs.academic_year.name,
+            'is_active':     cs.is_active,
+        } for cs in qs]
+        return JsonResponse({'success': True, 'class_subjects': data})
+
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON (class subjects).'}, status=400)
+        class_id = data.get('class_id')
+        subj_id  = data.get('subject_id')
+        year_id  = data.get('year_id')
+        if not class_id or not subj_id or not year_id:
+            return JsonResponse({'success': False, 'message': 'class_id, subject_id, year_id required.'}, status=400)
+        try:
+            classroom = ClassRoom.objects.get(id=class_id, school=school)
+            subject   = Subject.objects.get(id=subj_id, school=school)
+            year      = AcademicYear.objects.get(id=year_id, school=school)
+        except (ClassRoom.DoesNotExist, Subject.DoesNotExist, AcademicYear.DoesNotExist):
+            return JsonResponse({'success': False, 'message': 'Class, subject or year not found.'}, status=404)
+        cs, created = ClassSubject.objects.get_or_create(
+            classroom=classroom, subject=subject, academic_year=year,
+            defaults={'is_active': True}
+        )
+        if not created:
+            cs.is_active = True
+            cs.save(update_fields=['is_active'])
+        return JsonResponse({'success': True, 'message': 'Class-subject added.', 'id': cs.id})
+
+    if request.method == 'DELETE':
+        cs_id = request.GET.get('id')
+        if not cs_id:
+            return JsonResponse({'success': False, 'message': 'id required.'}, status=400)
+        deleted, _ = ClassSubject.objects.filter(id=cs_id, classroom__school=school).delete()
+        if not deleted:
+            return JsonResponse({'success': False, 'message': 'Not found.'}, status=404)
+        return JsonResponse({'success': True, 'message': 'Removed.'})
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+# =============================================================================
+# STRONG PASSWORD CHANGE (all roles)
+# =============================================================================
+
+@csrf_exempt
+def api_change_password_strong(request):
+    """POST: change password with 12-char strength requirement."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+    user = _get_authed_user(request)
+    if not user:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    try:
+        data         = json.loads(request.body)
+        old_password = data.get('old_password', '')
+        new_password = data.get('new_password', '').strip()
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON (password change).'}, status=400)
+    if not old_password or not new_password:
+        return JsonResponse({'success': False, 'message': 'Both old and new password required.'}, status=400)
+    if not user.check_password(old_password):
+        return JsonResponse({'success': False, 'message': 'Old password is incorrect.'}, status=400)
+    ok, err = _password_strength_ok(new_password)
+    if not ok:
+        return JsonResponse({'success': False, 'message': err}, status=400)
+    user.set_password(new_password)
+    user.save()
+    for attr in ('school_admin_profile', 'teacher_profile', 'student_profile', 'parent_profile'):
+        profile = getattr(user, attr, None)
+        if profile and getattr(profile, 'must_change_password', False):
+            profile.must_change_password = False
+            profile.save(update_fields=['must_change_password'])
+            break
+    return JsonResponse({'success': True, 'message': 'Password changed successfully.'})
+
+
+# =============================================================================
+# ROOMS — CRUD
+# =============================================================================
+
+@csrf_exempt
+def api_rooms(request):
+    """GET list / POST create rooms for the school."""
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+
+    if request.method == 'GET':
+        qs = Room.objects.filter(school=school).order_by('name')
+        data = [{'id': r.id, 'name': r.name, 'code': r.code,
+                 'room_type': r.room_type, 'capacity': r.capacity,
+                 'is_active': r.is_active, 'notes': r.notes} for r in qs]
+        return JsonResponse({'success': True, 'rooms': data})
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        name = body.get('name', '').strip()
+        if not name:
+            return JsonResponse({'success': False, 'message': 'name is required.'}, status=400)
+        if Room.objects.filter(school=school, name=name).exists():
+            return JsonResponse({'success': False, 'message': 'Room name already exists.'}, status=409)
+        room = Room.objects.create(
+            school=school, name=name,
+            code=body.get('code', '').strip(),
+            room_type=body.get('room_type', 'classroom'),
+            capacity=int(body.get('capacity', 30)),
+            notes=body.get('notes', '').strip(),
+        )
+        return JsonResponse({'success': True, 'message': 'Room created.', 'id': room.id}, status=201)
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+@csrf_exempt
+def api_room_detail(request, room_id):
+    """GET / PUT / DELETE a single room."""
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    try:
+        room = Room.objects.get(id=room_id, school=school)
+    except Room.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Room not found.'}, status=404)
+
+    if request.method == 'GET':
+        return JsonResponse({'success': True, 'room': {
+            'id': room.id, 'name': room.name, 'code': room.code,
+            'room_type': room.room_type, 'capacity': room.capacity,
+            'is_active': room.is_active, 'notes': room.notes,
+        }})
+
+    if request.method in ('PUT', 'PATCH'):
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        for field in ('name', 'code', 'room_type', 'notes'):
+            if field in body:
+                setattr(room, field, body[field])
+        if 'capacity' in body:
+            room.capacity = int(body['capacity'])
+        if 'is_active' in body:
+            room.is_active = bool(body['is_active'])
+        room.save()
+        return JsonResponse({'success': True, 'message': 'Room updated.'})
+
+    if request.method == 'DELETE':
+        room.delete()
+        return JsonResponse({'success': True, 'message': 'Room deleted.'})
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+# =============================================================================
+# GRADING SCHEME — GET / PUT
+# =============================================================================
+
+@csrf_exempt
+def api_grading_scheme(request):
+    """GET or PUT the school's grading scheme (grade boundaries + pass mark)."""
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+
+    scheme, _ = GradingScheme.objects.get_or_create(
+        school=school,
+        defaults={'boundaries': GradingScheme.default_boundaries(), 'pass_mark': 50},
+    )
+
+    if request.method == 'GET':
+        return JsonResponse({'success': True, 'scheme': {
+            'id': scheme.id,
+            'pass_mark': scheme.pass_mark,
+            'boundaries': scheme.boundaries,
+            'updated_at': scheme.updated_at.isoformat(),
+        }})
+
+    if request.method in ('PUT', 'POST'):
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        if 'pass_mark' in body:
+            pm = int(body['pass_mark'])
+            if not (0 <= pm <= 100):
+                return JsonResponse({'success': False, 'message': 'pass_mark must be 0–100.'}, status=400)
+            scheme.pass_mark = pm
+        if 'boundaries' in body:
+            boundaries = body['boundaries']
+            if not isinstance(boundaries, list) or len(boundaries) < 2:
+                return JsonResponse({'success': False, 'message': 'boundaries must be a list with at least 2 entries.'}, status=400)
+            for b in boundaries:
+                if not all(k in b for k in ('letter', 'min', 'max')):
+                    return JsonResponse({'success': False, 'message': 'Each boundary needs letter, min, max.'}, status=400)
+            scheme.boundaries = boundaries
+        scheme.save()
+        return JsonResponse({'success': True, 'message': 'Grading scheme updated.'})
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+# =============================================================================
+# GRADE ENTRY OVERSIGHT — which teachers submitted for each class/subject/term
+# =============================================================================
+
+@csrf_exempt
+def api_grade_entry_status(request):
+    """GET submission overview: for each teacher → class → subject, count submitted vs. total."""
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+
+    term_id = request.GET.get('term_id')
+    if not term_id:
+        active_term = Term.objects.filter(academic_year__school=school, is_active=True).first()
+        if not active_term:
+            return JsonResponse({'success': True, 'rows': [], 'term': None})
+        term_id = active_term.id
+    else:
+        try:
+            active_term = Term.objects.get(id=term_id, academic_year__school=school)
+        except Term.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Term not found.'}, status=404)
+
+    tscs = TeacherSubjectClass.objects.filter(
+        teacher__school=school, is_active=True
+    ).select_related('teacher__user', 'subject', 'classroom')
+
+    rows = []
+    for tsc in tscs:
+        student_count = tsc.classroom.students.filter(is_active=True).count()
+        submitted = Grade.objects.filter(
+            student__classroom=tsc.classroom,
+            subject=tsc.subject,
+            term=active_term,
+            teacher=tsc.teacher,
+        ).count()
+        locked = Grade.objects.filter(
+            student__classroom=tsc.classroom,
+            subject=tsc.subject,
+            term=active_term,
+            teacher=tsc.teacher,
+            is_locked=True,
+        ).count()
+        rows.append({
+            'teacher_id':    tsc.teacher.id,
+            'teacher_name':  tsc.teacher.user.get_full_name(),
+            'employee_id':   tsc.teacher.employee_id,
+            'subject':       tsc.subject.name,
+            'subject_id':    tsc.subject.id,
+            'classroom':     tsc.classroom.name,
+            'classroom_id':  tsc.classroom.id,
+            'total_students': student_count,
+            'submitted':     submitted,
+            'locked':        locked,
+            'pending':       max(0, student_count - submitted),
+            'complete':      student_count > 0 and submitted >= student_count,
+        })
+
+    rows.sort(key=lambda r: (r['complete'], r['teacher_name']))
+    return JsonResponse({
+        'success': True,
+        'rows': rows,
+        'term': {'id': active_term.id, 'name': str(active_term)},
+        'summary': {
+            'total': len(rows),
+            'complete': sum(1 for r in rows if r['complete']),
+            'pending': sum(1 for r in rows if not r['complete']),
+        },
+    })
+
+
+# =============================================================================
+# STUDENT PROMOTION / TRANSFER
+# =============================================================================
+
+@csrf_exempt
+def api_promote_student(request, student_id):
+    """POST: move student to a different classroom. Preserves existing grades."""
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+    try:
+        student = Student.objects.select_related('classroom').get(id=student_id, school=school)
+    except Student.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Student not found.'}, status=404)
+
+    try:
+        body = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+
+    new_class_id = body.get('classroom_id')
+    if not new_class_id:
+        return JsonResponse({'success': False, 'message': 'classroom_id is required.'}, status=400)
+
+    try:
+        new_class = ClassRoom.objects.get(id=new_class_id, school=school)
+    except ClassRoom.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Destination class not found.'}, status=404)
+
+    old_class_name = student.classroom.name if student.classroom else '(none)'
+    student.classroom = new_class
+    student.save(update_fields=['classroom'])
+
+    # Log the transfer
+    _log_security_event(
+        event_type='student_transfer',
+        description=f'Student {student.user.get_full_name()} moved from {old_class_name} to {new_class.name}',
+        severity='low',
+        actor=actor,
+        ip=request.META.get('REMOTE_ADDR'),
+    )
+
+    return JsonResponse({
+        'success': True,
+        'message': f'Student moved to {new_class.name}.',
+        'old_class': old_class_name,
+        'new_class': new_class.name,
+    })
+
+
+# =============================================================================
+# EXAMINATION OFFICER ASSIGNMENT
+# =============================================================================
+
+@csrf_exempt
+def api_exam_officers(request):
+    """GET list of teachers + their exam officer status. POST to toggle."""
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+
+    if request.method == 'GET':
+        teachers = Teacher.objects.filter(school=school, is_active=True).select_related('user')
+        data = [{
+            'id': t.id,
+            'name': t.user.get_full_name(),
+            'employee_id': t.employee_id,
+            'email': t.user.email,
+            'is_examination_officer': t.is_examination_officer,
+        } for t in teachers]
+        return JsonResponse({'success': True, 'teachers': data})
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        teacher_id = body.get('teacher_id')
+        assign = bool(body.get('assign', True))
+        try:
+            teacher = Teacher.objects.get(id=teacher_id, school=school)
+        except Teacher.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Teacher not found.'}, status=404)
+        teacher.is_examination_officer = assign
+        teacher.save(update_fields=['is_examination_officer'])
+        action = 'assigned' if assign else 'removed'
+        return JsonResponse({'success': True, 'message': f'Examination officer role {action}.'})
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+# =============================================================================
+# GLOBAL TEACHER ASSIGNMENTS  (school-wide list + create + delete by id)
+# /api/school/teacher-assignments/          → GET list, POST create
+# /api/school/teacher-assignments/<id>/     → DELETE
+# =============================================================================
+
+@csrf_exempt
+def api_teacher_assignments_global(request):
+    """GET all active assignments for the school. POST creates a new one (auto-resolves active year)."""
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+
+    if request.method == 'GET':
+        tscs = TeacherSubjectClass.objects.filter(
+            teacher__school=school, is_active=True,
+        ).select_related('teacher__user', 'subject', 'classroom', 'academic_year').order_by(
+            'classroom__name', 'subject__name', 'teacher__user__first_name',
+        )
+        data = [{
+            'id':             tsc.id,
+            'teacher_id':     tsc.teacher.id,
+            'teacher_name':   tsc.teacher.user.get_full_name(),
+            'employee_id':    tsc.teacher.employee_id,
+            'subject_id':     tsc.subject.id,
+            'subject_name':   tsc.subject.name,
+            'class_id':       tsc.classroom.id,
+            'class_name':     tsc.classroom.name,
+            'academic_year':  tsc.academic_year.name if tsc.academic_year else '',
+            'student_count':  tsc.classroom.students.filter(is_active=True).count(),
+        } for tsc in tscs]
+        return JsonResponse({'success': True, 'assignments': data})
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        teacher_id  = body.get('teacher_id')
+        class_id    = body.get('class_id')
+        subject_id  = body.get('subject_id')
+        year_id     = body.get('academic_year_id')
+        if not all([teacher_id, class_id, subject_id]):
+            return JsonResponse({'success': False, 'message': 'teacher_id, class_id, subject_id required.'}, status=400)
+        try:
+            teacher   = Teacher.objects.get(id=teacher_id, school=school)
+            classroom = ClassRoom.objects.get(id=class_id, school=school)
+            subject   = Subject.objects.get(id=subject_id, school=school)
+        except (Teacher.DoesNotExist, ClassRoom.DoesNotExist, Subject.DoesNotExist) as exc:
+            return JsonResponse({'success': False, 'message': str(exc)}, status=404)
+        if year_id:
+            try:
+                year = AcademicYear.objects.get(id=year_id, school=school)
+            except AcademicYear.DoesNotExist:
+                return JsonResponse({'success': False, 'message': 'Academic year not found.'}, status=404)
+        else:
+            year = AcademicYear.objects.filter(school=school, is_active=True).first()
+            if not year:
+                year = AcademicYear.objects.filter(school=school).order_by('-start_date').first()
+            if not year:
+                return JsonResponse({'success': False, 'message': 'No academic year found. Create one first.'}, status=400)
+        tsc, created = TeacherSubjectClass.objects.get_or_create(
+            teacher=teacher, subject=subject, classroom=classroom, academic_year=year,
+            defaults={'is_active': True},
+        )
+        if not created:
+            if tsc.is_active:
+                return JsonResponse({'success': False, 'message': 'This assignment already exists.'}, status=409)
+            tsc.is_active = True
+            tsc.save(update_fields=['is_active'])
+        return JsonResponse({'success': True, 'message': 'Assignment created.', 'id': tsc.id}, status=201)
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+@csrf_exempt
+def api_teacher_assignment_delete(request, assignment_id):
+    """DELETE a single TeacherSubjectClass by ID (soft-delete: sets is_active=False)."""
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    if request.method != 'DELETE':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+    try:
+        tsc = TeacherSubjectClass.objects.get(id=assignment_id, teacher__school=school)
+    except TeacherSubjectClass.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Assignment not found.'}, status=404)
+    tsc.is_active = False
+    tsc.save(update_fields=['is_active'])
+    return JsonResponse({'success': True, 'message': 'Assignment removed.'})
+

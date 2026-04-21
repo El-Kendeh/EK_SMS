@@ -1,0 +1,61 @@
+/* ============================================================
+   TERM SELECTOR
+   ============================================================ */
+.term-selector {
+  display: flex;
+  padding: 5px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 12px;
+  gap: 4px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+
+.term-selector::-webkit-scrollbar { display: none; }
+.term-selector { scrollbar-width: none; }
+
+.term-selector__btn {
+  padding: 9px 22px;
+  border-radius: 9px;
+  border: none;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.18s, color 0.18s;
+  font-family: 'Manrope', 'Inter', sans-serif;
+}
+
+.term-selector__btn--active {
+  background: var(--student-primary);
+  color: #fff;
+}
+
+.term-selector__btn--inactive {
+  background: transparent;
+  color: #94A3B8;
+}
+.term-selector__btn--inactive:hover {
+  background: rgba(255,255,255,0.06);
+  color: #CBD5E1;
+}
+
+/* Light variant (for report cards, profile) */
+.term-selector--light {
+  background: var(--student-surface);
+}
+
+.term-selector--light .term-selector__btn--inactive {
+  color: var(--student-text-secondary);
+}
+.term-selector--light .term-selector__btn--inactive:hover {
+  background: var(--student-surface-high);
+  color: var(--student-text-primary);
+}
+
+@media (max-width: 600px) {
+  .term-selector__btn {
+    padding: 8px 14px;
+    font-size: 12px;
+  }
+}

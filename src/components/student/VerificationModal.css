@@ -1,0 +1,260 @@
+/* ============================================================
+   VERIFICATION MODAL
+   ============================================================ */
+.vmod-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.vmod-panel {
+  background: var(--student-card-bg);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 440px;
+  overflow: hidden;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.2);
+}
+
+.vmod-header {
+  background: #101C2E;
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.vmod-header h3 {
+  font-family: 'Manrope', sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vmod-header h3 span { color: var(--student-primary); font-size: 20px; }
+
+.vmod-close {
+  background: rgba(255,255,255,0.08);
+  border: none;
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #94A3B8;
+  transition: background 0.15s;
+}
+.vmod-close:hover { background: rgba(255,255,255,0.14); color: #fff; }
+.vmod-close span { font-size: 18px; }
+
+.vmod-body {
+  padding: 28px 24px;
+}
+
+.vmod-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  margin-bottom: 24px;
+}
+
+.vmod-status--valid {
+  background: #ECFDF5;
+  color: #065F46;
+}
+
+.vmod-status--invalid {
+  background: #FEF2F2;
+  color: #991B1B;
+}
+
+.vmod-status span.material-symbols-outlined {
+  font-size: 22px;
+}
+
+.vmod-status p {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* QR code display */
+.vmod-qr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.vmod-qr-box {
+  width: 160px;
+  height: 160px;
+  background: #fff;
+  border: 2px solid var(--student-border);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+
+.vmod-qr-label {
+  font-size: 11px;
+  color: var(--student-text-secondary);
+  font-weight: 600;
+}
+
+/* Hash row */
+.vmod-hash {
+  background: var(--student-surface-low);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.vmod-hash code {
+  font-size: 11px;
+  color: var(--student-text-secondary);
+  font-family: monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vmod-hash-copy {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--student-text-secondary);
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+.vmod-hash-copy:hover { background: var(--student-surface-high); color: var(--student-text-primary); }
+.vmod-hash-copy span { font-size: 17px; }
+
+/* Info rows */
+.vmod-info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--student-border);
+  font-size: 13px;
+}
+.vmod-info-row:last-of-type { border-bottom: none; }
+.vmod-info-row span:first-child { color: var(--student-text-secondary); }
+.vmod-info-row span:last-child { font-weight: 700; color: var(--student-text-primary); }
+
+/* Info block */
+.vmod-info-block {
+  background: var(--student-surface-low);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+}
+
+/* Action button */
+.vmod-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.vmod-btn {
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  border: none;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.18s;
+}
+.vmod-btn span { font-size: 18px; }
+
+.vmod-btn--primary {
+  background: linear-gradient(135deg, var(--student-primary-dark), var(--student-primary));
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(16,185,129,0.25);
+}
+.vmod-btn--primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(16,185,129,0.35); }
+
+.vmod-btn--secondary {
+  background: var(--student-surface-high);
+  color: var(--student-text-primary);
+}
+.vmod-btn--secondary:hover { background: var(--student-surface-highest); }
+
+/* Smart verification info panel */
+.vmod-info-panel {
+  background: #101C2E;
+  border-radius: 12px;
+  padding: 18px;
+  margin-top: 4px;
+  position: relative;
+  overflow: hidden;
+}
+
+.vmod-info-panel::before {
+  content: '';
+  position: absolute;
+  bottom: -20px;
+  right: -20px;
+  width: 80px;
+  height: 80px;
+  background: rgba(16,185,129,0.12);
+  border-radius: 50%;
+  filter: blur(20px);
+}
+
+.vmod-info-panel h4 {
+  font-family: 'Manrope', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.vmod-info-panel h4 span { font-size: 16px; color: var(--student-primary); }
+
+.vmod-info-panel p {
+  font-size: 12px;
+  color: #94A3B8;
+  line-height: 1.6;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 480px) {
+  .vmod-overlay { padding: 10px; }
+  .vmod-panel { border-radius: 16px; }
+  .vmod-body { padding: 20px 16px; }
+}

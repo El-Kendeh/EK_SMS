@@ -373,6 +373,12 @@ export function GradesPage({ school }) {
 /* ============================================================
    ATTENDANCE PAGE
    ============================================================ */
+const ATT_POLL_MS = 30_000;
+function fmtAttTime(d) {
+  if (!d) return '—';
+  return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
 export function AttendancePage({ school }) {
   const [classes,    setClasses]    = useState([]);
   const [students,   setStudents]   = useState([]);
@@ -380,16 +386,28 @@ export function AttendancePage({ school }) {
   const [date,       setDate]       = useState(new Date().toISOString().split('T')[0]);
   const [attendance, setAttendance] = useState({});
   const [loadingStudents, setLoadingStudents] = useState(false);
-  const [saving,  setSaving]  = useState(false);
-  const [saved,   setSaved]   = useState(false);
-  const [banner,  setBanner]  = useState(null);
+  const [saving,   setSaving]  = useState(false);
+  const [saved,    setSaved]   = useState(false);
+  const [banner,   setBanner]  = useState(null);
+  const [syncing,  setSyncing] = useState(false);
+  const [lastSync, setLastSync] = useState(null);
+  const [isDirty,  setIsDirty] = useState(false);
+  // dirtyRef mirrors isDirty for synchronous reads inside the poll interval (refs don't re-render)
+  const dirtyRef    = useRef(false);
+  const pollRef     = useRef(null);
+  const selClassRef = useRef('');
+  const dateRef     = useRef(date);
+
+  const markDirty  = useCallback(() => { dirtyRef.current = true;  setIsDirty(true); }, []);
+  const clearDirty = useCallback(() => { dirtyRef.current = false; setIsDirty(false); }, []);
 
   useEffect(() => {
     ApiClient.get('/api/school/classes/').then(d => setClasses(d.classes || [])).catch(() => {});
   }, []);
 
   useEffect(() => {
-    if (!selClass) { setStudents([]); setAttendance({}); setSaved(false); return; }
+    if (!selClass) { setStudents([]); setAttendance({}); setSaved(false); clearDirty(); return; }
+    selClassRef.current = selClass;
     setLoadingStudents(true);
     ApiClient.get('/api/school/students/')
       .then(d => {
@@ -397,23 +415,65 @@ export function AttendancePage({ school }) {
         setStudents(all.filter(s => String(s.classroom_id) === String(selClass)));
         setAttendance({});
         setSaved(false);
+        clearDirty();
       })
       .catch(() => setStudents([]))
       .finally(() => setLoadingStudents(false));
-  }, [selClass]);
+  }, [selClass, clearDirty]);
 
-  // Load existing attendance whenever class or date changes
+  // Fetch saved attendance for current class+date
+  const fetchAttendance = useCallback(async (classId, dateStr, silent = false) => {
+    if (!classId || !dateStr) return;
+    if (!silent) setSyncing(true);
+    try {
+      const d = await ApiClient.get(`/api/school/attendance/?class_id=${classId}&date=${dateStr}`);
+      if (d.attendance) {
+        if (!dirtyRef.current) {
+          setAttendance(d.attendance);
+        }
+        setLastSync(new Date());
+      }
+    } catch { /* keep stale */ }
+    if (!silent) setSyncing(false);
+  }, []);
+
+  // Load on class/date change
   useEffect(() => {
-    if (!selClass || !date) return;
-    ApiClient.get(`/api/school/attendance/?class_id=${selClass}&date=${date}`)
-      .then(d => {
-        if (d.attendance) setAttendance(d.attendance);
-      })
-      .catch(() => {});
-  }, [selClass, date]);
+    dateRef.current = date;
+    clearDirty();
+    fetchAttendance(selClass, date, false);
+  }, [selClass, date, fetchAttendance, clearDirty]);
 
-  const setStatus = (id, status) => setAttendance(a => ({ ...a, [id]: status }));
-  const markAll   = (status)    => setAttendance(Object.fromEntries(students.map(s => [s.id, status])));
+  // Polling — refresh saved attendance every 30 s (only when not dirty)
+  useEffect(() => {
+    pollRef.current = setInterval(() => {
+      const cls = selClassRef.current;
+      const dt  = dateRef.current;
+      if (!cls || !dt || dirtyRef.current) return;
+      setSyncing(true);
+      ApiClient.get(`/api/school/attendance/?class_id=${cls}&date=${dt}`)
+        .then(d => {
+          if (d.attendance && !dirtyRef.current) {
+            setAttendance(d.attendance);
+            setLastSync(new Date());
+          }
+        })
+        .catch(() => {})
+        .finally(() => setSyncing(false));
+    }, ATT_POLL_MS);
+    return () => clearInterval(pollRef.current);
+  }, []);
+
+  const setStatus = (id, status) => {
+    markDirty();
+    setSaved(false);
+    setAttendance(a => ({ ...a, [id]: status }));
+  };
+  const markAll = (status) => {
+    markDirty();
+    setSaved(false);
+    setAttendance(Object.fromEntries(students.map(s => [s.id, status])));
+  };
 
   const present = Object.values(attendance).filter(v => v === 'present').length;
   const absent  = Object.values(attendance).filter(v => v === 'absent').length;
@@ -431,6 +491,8 @@ export function AttendancePage({ school }) {
         records: attendance,
       });
       setSaved(true);
+      clearDirty();
+      setLastSync(new Date());
       setBanner({ type: 'ok', text: res.message || 'Attendance saved.' });
     } catch (e) {
       setBanner({ type: 'err', text: e?.message || 'Failed to save attendance.' });
@@ -451,6 +513,16 @@ export function AttendancePage({ school }) {
       </div>
 
       <Banner msg={banner} />
+
+      {/* Live sync indicator */}
+      {selClass && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.75rem', color: 'var(--ska-text-3)', marginBottom: 12 }}>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', display: 'inline-block', flexShrink: 0,
+            background: isDirty ? 'var(--ska-tertiary)' : syncing ? 'var(--ska-primary)' : 'var(--ska-green)',
+            animation: (syncing || isDirty) ? 'ska-pulse 1s infinite' : 'none' }} />
+          {isDirty ? 'Unsaved changes — save to sync' : syncing ? 'Syncing…' : `Live · Last synced ${fmtAttTime(lastSync)}`}
+        </div>
+      )}
 
       {/* Stats */}
       <div className="ska-stat-grid-4">
@@ -1817,6 +1889,297 @@ export function SyllabusPage({ school }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/* ============================================================
+   BURSAR FINANCIAL LEDGER PAGE
+   Institution-wide: totals, transactions table, export
+   ============================================================ */
+const SLL = (n) =>
+  new Intl.NumberFormat('en-SL', { style: 'currency', currency: 'SLL', maximumFractionDigits: 0 })
+    .format(n)
+    .replace('SLL', 'Le');
+
+const MOCK_LEDGER = {
+  totalExpected: 4820500, totalCollected: 3952810, outstanding: 867690, collectionRate: 91.4,
+  transactions: [
+    { id: 'tx-001', studentName: 'Aminata Kamara',  studentId: 'EK-2024-001', amount: 450000, method: 'Bank Transfer', status: 'verified', date: '2024-10-01' },
+    { id: 'tx-002', studentName: 'Ibrahim Sesay',    studentId: 'EK-2024-002', amount: 320000, method: 'Mobile Money',  status: 'verified', date: '2024-10-03' },
+    { id: 'tx-003', studentName: 'Fatmata Conteh',  studentId: 'EK-2024-003', amount: 450000, method: 'Cash',          status: 'pending',  date: '2024-10-05' },
+    { id: 'tx-004', studentName: 'Mohamed Koroma',  studentId: 'EK-2024-004', amount: 280000, method: 'Bank Transfer', status: 'verified', date: '2024-10-07' },
+    { id: 'tx-005', studentName: 'Hawa Bangura',    studentId: 'EK-2024-005', amount: 450000, method: 'Mobile Money',  status: 'verified', date: '2024-10-09' },
+    { id: 'tx-006', studentName: 'Sorie Turay',     studentId: 'EK-2024-006', amount: 150000, method: 'Cash',          status: 'partial',  date: '2024-10-11' },
+    { id: 'tx-007', studentName: 'Mariama Jalloh',  studentId: 'EK-2024-007', amount: 450000, method: 'Bank Transfer', status: 'verified', date: '2024-10-13' },
+    { id: 'tx-008', studentName: 'Abu Kamara',      studentId: 'EK-2024-008', amount: 0,      method: '—',             status: 'unpaid',   date: '—' },
+  ],
+};
+
+function TxStatusBadge({ status }) {
+  const map = {
+    verified: { label: 'Verified', bg: 'var(--ska-green-dim)',   color: 'var(--ska-green)' },
+    pending:  { label: 'Pending',  bg: 'rgba(245,158,11,0.12)',  color: '#F59E0B' },
+    partial:  { label: 'Partial',  bg: 'rgba(59,130,246,0.12)',  color: '#3B82F6' },
+    unpaid:   { label: 'Unpaid',   bg: 'var(--ska-error-dim)',   color: 'var(--ska-error)' },
+  };
+  const s = map[status] || map.pending;
+  return <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 700, background: s.bg, color: s.color }}>{s.label}</span>;
+}
+
+export function BursarLedgerPage({ school }) {
+  const [search, setSearch] = useState('');
+  const data = MOCK_LEDGER;
+  const pct = Math.round((data.totalCollected / data.totalExpected) * 100);
+  const filtered = data.transactions.filter(tx =>
+    tx.studentName.toLowerCase().includes(search.toLowerCase()) ||
+    tx.studentId.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div className="ska-page-root">
+      <div className="ska-page-head" style={{ marginBottom: 24 }}>
+        <div>
+          <h1 className="ska-page-title">Institutional Financial Ledger</h1>
+          <p className="ska-page-sub">Academic Year 2024/25 · All Students</p>
+        </div>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <button className="ska-btn ska-btn--ghost" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Ic name="picture_as_pdf" size="sm" /> Export PDF</button>
+          <button className="ska-btn ska-btn--primary" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Ic name="payments" size="sm" /> Process Batch</button>
+        </div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 28 }}>
+        <div className="ska-card ska-card-pad">
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ska-text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Total Fees Expected</div>
+          <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--ska-text)', fontFamily: 'var(--ska-font-headline)', lineHeight: 1.1 }}>{SLL(data.totalExpected)}</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--ska-text-3)', marginTop: 4 }}>Academic Year 2024/25</div>
+        </div>
+        <div className="ska-card ska-card-pad">
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ska-text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Total Collected</div>
+          <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--ska-green)', fontFamily: 'var(--ska-font-headline)', lineHeight: 1.1 }}>{SLL(data.totalCollected)}</div>
+          <div className="ska-progress-track" style={{ marginTop: 10, marginBottom: 4 }}>
+            <div className="ska-progress-fill" style={{ width: `${pct}%`, background: 'var(--ska-green)' }} />
+          </div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--ska-text-3)' }}>{pct}% of target collected</div>
+        </div>
+        <div className="ska-card ska-card-pad">
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ska-text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Outstanding</div>
+          <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--ska-error)', fontFamily: 'var(--ska-font-headline)', lineHeight: 1.1 }}>{SLL(data.outstanding)}</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--ska-text-3)', marginTop: 4 }}>Collection rate: <strong style={{ color: 'var(--ska-green)' }}>{data.collectionRate}%</strong></div>
+        </div>
+      </div>
+      <div className="ska-card" style={{ overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--ska-border)', flexWrap: 'wrap', gap: 12 }}>
+          <h3 style={{ fontSize: '0.9375rem', fontWeight: 800, color: 'var(--ska-text)', fontFamily: 'var(--ska-font-headline)', margin: 0 }}>Recent Transactions</h3>
+          <div className="ska-search" style={{ width: 220 }}>
+            <Ic name="search" />
+            <input className="ska-search-input" type="text" placeholder="Search student…" value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
+        </div>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--ska-border)' }}>
+                {['Student', 'ID', 'Amount', 'Method', 'Status', 'Date', 'Receipt'].map(h => (
+                  <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontSize: '0.7rem', fontWeight: 800, color: 'var(--ska-text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map(tx => {
+                const initials = tx.studentName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+                return (
+                  <tr key={tx.id} style={{ borderBottom: '1px solid var(--ska-border)' }}>
+                    <td style={{ padding: '12px 16px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--ska-primary-dim)', color: 'var(--ska-primary)', fontSize: '0.75rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{initials}</div>
+                        <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--ska-text)' }}>{tx.studentName}</span>
+                      </div>
+                    </td>
+                    <td style={{ padding: '12px 16px', fontSize: '0.8125rem', color: 'var(--ska-text-3)', fontFamily: 'monospace' }}>{tx.studentId}</td>
+                    <td style={{ padding: '12px 16px', fontSize: '0.875rem', fontWeight: 700, color: tx.amount > 0 ? 'var(--ska-text)' : 'var(--ska-text-3)' }}>{tx.amount > 0 ? SLL(tx.amount) : '—'}</td>
+                    <td style={{ padding: '12px 16px', fontSize: '0.8125rem', color: 'var(--ska-text-2)' }}>{tx.method}</td>
+                    <td style={{ padding: '12px 16px' }}><TxStatusBadge status={tx.status} /></td>
+                    <td style={{ padding: '12px 16px', fontSize: '0.8125rem', color: 'var(--ska-text-3)' }}>{tx.date}</td>
+                    <td style={{ padding: '12px 16px' }}>
+                      {tx.status === 'verified'
+                        ? <button className="ska-btn ska-btn--ghost" style={{ padding: '4px 10px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: 4 }}><Ic name="download" size="sm" /> PDF</button>
+                        : <span style={{ color: 'var(--ska-text-3)', fontSize: '0.8125rem' }}>—</span>
+                      }
+                    </td>
+                  </tr>
+                );
+              })}
+              {filtered.length === 0 && (
+                <tr><td colSpan={7} style={{ padding: '32px', textAlign: 'center', color: 'var(--ska-text-3)', fontSize: '0.875rem' }}>No transactions match your search.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   BURSAR AUDIT REQUEST PAGE
+   Restricted banner, blurred preview, request form, history
+   ============================================================ */
+const MOCK_AUDIT_HISTORY = [
+  { id: 'aud-001', reason: 'Annual Financial Review',  requestedAt: '2024-09-12', status: 'approved', approver: 'Principal Koroma', duration: '30 days' },
+  { id: 'aud-002', reason: 'Term-End Reconciliation',  requestedAt: '2024-07-01', status: 'approved', approver: 'Board Secretary',  duration: '14 days' },
+  { id: 'aud-003', reason: 'Spot-Check Audit',          requestedAt: '2024-05-20', status: 'denied',   approver: 'Principal Koroma', duration: 'N/A' },
+  { id: 'aud-004', reason: 'End-of-Year Full Audit',    requestedAt: '2023-11-30', status: 'expired',  approver: '—',               duration: '60 days' },
+  { id: 'aud-005', reason: 'Scholarship Fund Review',   requestedAt: '2023-08-15', status: 'approved', approver: 'Board Secretary',  duration: '7 days' },
+];
+
+function AuditStatusPill({ status }) {
+  const map = {
+    approved: { label: 'Approved', bg: 'var(--ska-green-dim)',   color: 'var(--ska-green)' },
+    denied:   { label: 'Denied',   bg: 'var(--ska-error-dim)',   color: 'var(--ska-error)' },
+    expired:  { label: 'Expired',  bg: 'rgba(100,116,139,0.1)', color: '#64748B' },
+  };
+  const s = map[status] || map.expired;
+  return <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 700, background: s.bg, color: s.color }}>{s.label}</span>;
+}
+
+export function BursarAuditPage({ school }) {
+  const [form, setForm] = useState({ reason: '', duration: '', authority: '', justification: '', acknowledged: false });
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.reason || !form.duration || !form.justification || !form.acknowledged) return;
+    setSubmitting(true);
+    await new Promise(r => setTimeout(r, 900));
+    setSubmitting(false);
+    setSubmitted(true);
+  };
+
+  const totalAudits = MOCK_AUDIT_HISTORY.length;
+  const activeNow   = MOCK_AUDIT_HISTORY.filter(a => a.status === 'approved').length;
+
+  return (
+    <div className="ska-page-root">
+      <div className="ska-page-head" style={{ marginBottom: 24 }}>
+        <div>
+          <h1 className="ska-page-title">Bursar Audit Request</h1>
+          <p className="ska-page-sub">Restricted — Level 4 Access Required</p>
+        </div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 24, alignItems: 'start' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, padding: '20px 22px', borderRadius: 12, background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)' }}>
+            <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(239,68,68,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Ic name="lock" style={{ color: 'var(--ska-error)', fontSize: 22 }} />
+            </div>
+            <div>
+              <h3 style={{ fontSize: '0.9375rem', fontWeight: 800, color: 'var(--ska-error)', margin: '0 0 4px', fontFamily: 'var(--ska-font-headline)' }}>Financial Ledger Restricted</h3>
+              <p style={{ fontSize: '0.8125rem', color: 'var(--ska-text-3)', margin: 0, lineHeight: 1.6 }}>
+                Full ledger access requires <strong style={{ color: 'var(--ska-text)' }}>Level 4 authorization</strong>. Submit a formal audit request with principal approval to view complete financial records.
+              </p>
+            </div>
+          </div>
+          <div className="ska-card" style={{ overflow: 'hidden', position: 'relative' }}>
+            <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--ska-border)' }}>
+              <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--ska-text-3)' }}>Financial Ledger Preview</span>
+            </div>
+            <div style={{ filter: 'blur(6px)', userSelect: 'none', pointerEvents: 'none', padding: 20, opacity: 0.7 }}>
+              {[['Tuition Fee — SSS3A', 'Le 1,200,000', 'Verified'], ['Lab Fee', 'Le 120,000', 'Verified'], ['Library Fee', 'Le 45,000', 'Pending'], ['Activity Fee', 'Le 80,000', 'Partial']].map(([label, amount, stat]) => (
+                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--ska-border)', fontSize: '0.875rem', color: 'var(--ska-text)' }}>
+                  <span>{label}</span><span style={{ fontWeight: 700 }}>{amount}</span><span>{stat}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.35)' }}>
+              <Ic name="lock" style={{ fontSize: 36, color: '#fff', marginBottom: 8 }} />
+              <span style={{ fontSize: '0.875rem', fontWeight: 800, color: '#fff', letterSpacing: '0.12em', textTransform: 'uppercase' }}>Content Protected</span>
+            </div>
+          </div>
+          {submitted ? (
+            <div className="ska-card ska-card-pad" style={{ textAlign: 'center', padding: '40px 32px' }}>
+              <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--ska-green-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                <Ic name="check_circle" style={{ fontSize: 28, color: 'var(--ska-green)' }} />
+              </div>
+              <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--ska-text)', fontFamily: 'var(--ska-font-headline)', marginBottom: 8 }}>Audit Request Submitted</h3>
+              <p style={{ fontSize: '0.8125rem', color: 'var(--ska-text-3)', marginBottom: 20 }}>Your request has been securely forwarded to the approving authority. You will be notified once a decision is made.</p>
+              <button className="ska-btn ska-btn--ghost" onClick={() => { setSubmitted(false); setForm({ reason: '', duration: '', authority: '', justification: '', acknowledged: false }); }}>Submit Another Request</button>
+            </div>
+          ) : (
+            <div className="ska-card ska-card-pad">
+              <h3 style={{ fontSize: '0.9375rem', fontWeight: 800, color: 'var(--ska-text)', fontFamily: 'var(--ska-font-headline)', marginBottom: 18 }}>Submit Audit Request</h3>
+              <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div className="ska-form-group">
+                  <label className="ska-label">Reason for Audit</label>
+                  <select className="ska-input" value={form.reason} onChange={e => setForm(f => ({ ...f, reason: e.target.value }))} required>
+                    <option value="">Select a reason…</option>
+                    {['Annual Financial Review', 'Term-End Reconciliation', 'Spot-Check Audit', 'Scholarship Fund Review', 'Regulatory Compliance', 'Other'].map(r => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                </div>
+                <div className="ska-form-group">
+                  <label className="ska-label">Access Duration</label>
+                  <select className="ska-input" value={form.duration} onChange={e => setForm(f => ({ ...f, duration: e.target.value }))} required>
+                    <option value="">Select duration…</option>
+                    {['24 hours', '3 days', '7 days', '14 days', '30 days', '60 days'].map(d => <option key={d} value={d}>{d}</option>)}
+                  </select>
+                </div>
+                <div className="ska-form-group">
+                  <label className="ska-label">Approving Authority</label>
+                  <input className="ska-input" type="text" placeholder="Principal name or Board Secretary…" value={form.authority} onChange={e => setForm(f => ({ ...f, authority: e.target.value }))} />
+                </div>
+                <div className="ska-form-group">
+                  <label className="ska-label">Justification</label>
+                  <textarea className="ska-input" rows={4} placeholder="Provide detailed justification for this audit request…" value={form.justification} onChange={e => setForm(f => ({ ...f, justification: e.target.value }))} required style={{ resize: 'vertical', minHeight: 100 }} />
+                </div>
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={form.acknowledged} onChange={e => setForm(f => ({ ...f, acknowledged: e.target.checked }))} style={{ marginTop: 2, flexShrink: 0, accentColor: 'var(--ska-primary)' }} />
+                  <span style={{ fontSize: '0.8125rem', color: 'var(--ska-text-3)', lineHeight: 1.5 }}>I acknowledge that accessing financial records without authorization is a breach of institutional policy and may result in disciplinary action.</span>
+                </label>
+                <button type="submit" className="ska-btn ska-btn--primary" disabled={submitting || !form.reason || !form.duration || !form.justification || !form.acknowledged} style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
+                  <Ic name="security" size="sm" />
+                  {submitting ? 'Submitting…' : 'Submit Secure Request'}
+                </button>
+              </form>
+            </div>
+          )}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div className="ska-card" style={{ overflow: 'hidden' }}>
+            <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--ska-border)' }}>
+              <h3 style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--ska-text)', fontFamily: 'var(--ska-font-headline)', margin: 0 }}>History of Requests</h3>
+            </div>
+            <div style={{ padding: '12px 18px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {MOCK_AUDIT_HISTORY.map((entry, idx) => (
+                <div key={entry.id} style={{ display: 'flex', gap: 12, position: 'relative' }}>
+                  {idx < MOCK_AUDIT_HISTORY.length - 1 && (
+                    <div style={{ position: 'absolute', left: 7, top: 18, bottom: -16, width: 2, background: 'var(--ska-border)' }} />
+                  )}
+                  <div style={{ width: 16, height: 16, borderRadius: '50%', background: entry.status === 'approved' ? 'var(--ska-green)' : entry.status === 'denied' ? 'var(--ska-error)' : 'var(--ska-border)', flexShrink: 0, marginTop: 2, zIndex: 1 }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3, gap: 8, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--ska-text)' }}>{entry.reason}</span>
+                      <AuditStatusPill status={entry.status} />
+                    </div>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--ska-text-3)', margin: '0 0 2px' }}>{entry.requestedAt} · {entry.duration}</p>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--ska-text-3)', margin: 0 }}>By: {entry.approver}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', borderTop: '1px solid var(--ska-border)', padding: '12px 18px' }}>
+              <div style={{ flex: 1, textAlign: 'center', borderRight: '1px solid var(--ska-border)' }}>
+                <div style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--ska-text)', fontFamily: 'var(--ska-font-headline)' }}>{String(totalAudits).padStart(3, '0')}</div>
+                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--ska-text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Total Audits</div>
+              </div>
+              <div style={{ flex: 1, textAlign: 'center' }}>
+                <div style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--ska-green)', fontFamily: 'var(--ska-font-headline)' }}>{String(activeNow).padStart(2, '0')}</div>
+                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--ska-text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Active Now</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

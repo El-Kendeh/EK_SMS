@@ -2963,26 +2963,6 @@ function TeacherProfilePanel({ teacher: initTeacher, onClose, onEdit }) {
   );
 }
 
-/* ── Shared field + review helpers for AddTeacherWizard ── */
-/* Defined at module level so React sees a stable component reference
-   across renders — prevents input remounting on every keystroke.       */
-function TeacherFld({ fkey, label, type = 'text', required = false, full = false, placeholder = '', form, setForm }) {
-  return (
-    <label style={{ display: 'flex', flexDirection: 'column', gap: 5, gridColumn: full ? '1/-1' : undefined }}>
-      <span style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ska-text-3)' }}>
-        {label}{required && <span style={{ color: 'var(--ska-error)', marginLeft: 2 }}>*</span>}
-      </span>
-      <input
-        className="ska-input"
-        type={type}
-        value={form[fkey]}
-        placeholder={placeholder}
-        onChange={e => setForm(f => ({ ...f, [fkey]: e.target.value }))}
-      />
-    </label>
-  );
-}
-
 function TeacherReviewRow({ label, value, icon }) {
   return (
     <div style={{
@@ -3286,10 +3266,25 @@ function AddTeacherWizard({ school, onSave, onCancel }) {
                   </div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  <TeacherFld fkey="first_name" label="First Name" required placeholder="e.g. Abubakarr" form={form} setForm={setForm} />
-                  <TeacherFld fkey="last_name"  label="Last Name"  required placeholder="e.g. Kamara" form={form} setForm={setForm} />
-                  <TeacherFld fkey="email"      label="Email Address" type="email" required full placeholder="teacher@school.com" form={form} setForm={setForm} />
-                  <TeacherFld fkey="phone_number" label="Phone Number" placeholder="+232 76 000 000" form={form} setForm={setForm} />
+                  {[
+                    { key: 'first_name',   label: 'First Name',    required: true,  type: 'text',  placeholder: 'e.g. Abubakarr',     full: false },
+                    { key: 'last_name',    label: 'Last Name',     required: true,  type: 'text',  placeholder: 'e.g. Kamara',        full: false },
+                    { key: 'email',        label: 'Email Address', required: true,  type: 'email', placeholder: 'teacher@school.com', full: false },
+                    { key: 'phone_number', label: 'Phone Number',  required: false, type: 'tel',   placeholder: '+232 76 000 000',    full: false },
+                  ].map(({ key, label, required, type, placeholder, full }) => (
+                    <label key={key} style={{ display: 'flex', flexDirection: 'column', gap: 5, gridColumn: full ? '1/-1' : undefined }}>
+                      <span style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ska-text-3)' }}>
+                        {label}{required && <span style={{ color: 'var(--ska-error)', marginLeft: 2 }}>*</span>}
+                      </span>
+                      <input
+                        className="ska-input"
+                        type={type}
+                        value={form[key]}
+                        placeholder={placeholder}
+                        onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
+                      />
+                    </label>
+                  ))}
                   <div style={{ gridColumn: '1/-1', height: 1, background: 'var(--ska-border)', margin: '4px 0' }} />
                   {/* Password full-width with strength meter */}
                   <label style={{ display: 'flex', flexDirection: 'column', gap: 5, gridColumn: '1/-1' }}>
@@ -3340,8 +3335,23 @@ function AddTeacherWizard({ school, onSave, onCancel }) {
                   Assign a staff ID and professional details for this teacher.
                 </p>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  <TeacherFld fkey="employee_id"   label="Employee ID"          required placeholder="e.g. T-0042" form={form} setForm={setForm} />
-                  <TeacherFld fkey="qualification" label="Qualification / Degree" placeholder="e.g. B.Sc. Mathematics" form={form} setForm={setForm} />
+                  {[
+                    { key: 'employee_id',   label: 'Employee ID',           required: true,  placeholder: 'e.g. T-0042' },
+                    { key: 'qualification', label: 'Qualification / Degree', required: false, placeholder: 'e.g. B.Sc. Mathematics' },
+                  ].map(({ key, label, required, placeholder }) => (
+                    <label key={key} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                      <span style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ska-text-3)' }}>
+                        {label}{required && <span style={{ color: 'var(--ska-error)', marginLeft: 2 }}>*</span>}
+                      </span>
+                      <input
+                        className="ska-input"
+                        type="text"
+                        value={form[key]}
+                        placeholder={placeholder}
+                        onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
+                      />
+                    </label>
+                  ))}
                 </div>
 
                 {/* Login credentials summary */}
@@ -3684,7 +3694,7 @@ function WorkloadAnalytics({ stats, teachers }) {
   const maxP = Math.max(...sorted.map(t => t.periods_per_week || 0), 20);
 
   return (
-    <div className="ska-card ska-card-pad" style={{ marginBottom: 20 }}>
+    <div className="ska-card ska-card-pad">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h3 style={{ margin: 0, fontWeight: 800, fontSize: '0.9375rem', color: 'var(--ska-text)' }}>Workload Balance</h3>
         <span style={{ fontSize: '0.6875rem', color: 'var(--ska-text-3)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
@@ -3801,50 +3811,48 @@ export function TeachersPage({ school }) {
         </button>
       </div>
 
-      {/* Stats row */}
+      {/* ── Analytics section: stats grid + workload ── */}
       {stats && (
-        <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4, marginBottom: 20 }}>
-          {statCards.map(m => (
-            <div key={m.label} className="ska-card ska-card-pad" style={{ minWidth: 140, flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 14 }}>
-              <div style={{ width: 40, height: 40, borderRadius: 10, background: m.color + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <span className="ska-icon" style={{ color: m.color }}>{m.icon}</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 28 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12 }}>
+            {statCards.map(m => (
+              <div key={m.label} className="ska-card ska-card-pad" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 10, background: m.color + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <span className="ska-icon" style={{ color: m.color }}>{m.icon}</span>
+                </div>
+                <div>
+                  <div style={{ fontWeight: 900, fontSize: '1.375rem', color: m.color, lineHeight: 1 }}>{m.value}</div>
+                  <div style={{ fontSize: '0.6875rem', color: 'var(--ska-text-3)', textTransform: 'uppercase', letterSpacing: '0.07em', marginTop: 2 }}>{m.label}</div>
+                </div>
               </div>
-              <div>
-                <div style={{ fontWeight: 900, fontSize: '1.375rem', color: m.color, lineHeight: 1 }}>{m.value}</div>
-                <div style={{ fontSize: '0.6875rem', color: 'var(--ska-text-3)', textTransform: 'uppercase', letterSpacing: '0.07em', marginTop: 2 }}>{m.label}</div>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
+          {teachers.length > 0 && <WorkloadAnalytics stats={stats} teachers={teachers} />}
         </div>
       )}
 
-      {/* Workload analytics panel */}
-      {stats && teachers.length > 0 && (
-        <WorkloadAnalytics stats={stats} teachers={teachers} />
-      )}
+      {/* ── List section: search, filters, teacher grid ── */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div className="ska-search ska-toolbar-search">
+          <span className="ska-icon">search</span>
+          <input className="ska-search-input" placeholder="Search by name or employee ID…" value={search} onChange={handleSearch} />
+        </div>
 
-      {/* Search */}
-      <div className="ska-search ska-toolbar-search" style={{ marginBottom: 12 }}>
-        <span className="ska-icon">search</span>
-        <input className="ska-search-input" placeholder="Search by name or employee ID…" value={search} onChange={handleSearch} />
-      </div>
+        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+          {[{ key: 'all', label: 'All Teachers' }, { key: 'overloaded', label: 'Overloaded' }].map(c => (
+            <button key={c.key} onClick={() => setFilterLoad(c.key)} style={{
+              flexShrink: 0, padding: '6px 14px', borderRadius: 20, border: 'none',
+              fontWeight: 700, fontSize: '0.8125rem', cursor: 'pointer',
+              background: filter === c.key ? 'var(--ska-primary)' : 'var(--ska-surface-card)',
+              color:      filter === c.key ? 'var(--ska-surface)' : 'var(--ska-text-2)',
+              transition: 'background 0.2s',
+            }}>{c.label}</button>
+          ))}
+        </div>
 
-      {/* Filter chips */}
-      <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, marginBottom: 16 }}>
-        {[{ key: 'all', label: 'All Teachers' }, { key: 'overloaded', label: 'Overloaded' }].map(c => (
-          <button key={c.key} onClick={() => setFilterLoad(c.key)} style={{
-            flexShrink: 0, padding: '6px 14px', borderRadius: 20, border: 'none',
-            fontWeight: 700, fontSize: '0.8125rem', cursor: 'pointer',
-            background: filter === c.key ? 'var(--ska-primary)' : 'var(--ska-surface-card)',
-            color:      filter === c.key ? 'var(--ska-surface)' : 'var(--ska-text-2)',
-            transition: 'background 0.2s',
-          }}>{c.label}</button>
-        ))}
-      </div>
-
-      <p style={{ margin: '0 0 12px', fontSize: '0.8125rem', color: 'var(--ska-text-3)', fontWeight: 600 }}>
-        {loading ? 'Loading…' : `${teachers.length} teacher${teachers.length !== 1 ? 's' : ''}`}
-      </p>
+        <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--ska-text-3)', fontWeight: 600 }}>
+          {loading ? 'Loading…' : `${teachers.length} teacher${teachers.length !== 1 ? 's' : ''}`}
+        </p>
 
       {/* Card grid */}
       {!loading && teachers.length === 0 ? (
@@ -3865,6 +3873,7 @@ export function TeachersPage({ school }) {
           ))}
         </div>
       )}
+      </div>{/* end list section */}
 
       {/* Profile panel overlay */}
       {subView === 'profile' && profileTeacher && (

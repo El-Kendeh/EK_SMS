@@ -150,9 +150,13 @@ function Login({ onNavigate }) {
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       const user = data.user;
-      const isSuper = user.is_superuser || user.role === 'superadmin' || user.role === 'admin' || user.role === 'superuser';
 
       if (onNavigate) {
+        if (data.must_change_password) {
+          onNavigate('force-change-password');
+          return;
+        }
+        const isSuper = user.is_superuser || user.role === 'superadmin' || user.role === 'admin' || user.role === 'superuser';
         if (isSuper) {
           onNavigate('superadmindashboard');
         } else if (user.role === 'school_admin') {

@@ -1531,3 +1531,5 @@ textarea.ska-input { height: auto; padding: 10px 12px; }
 }
 .logo-dropzone:hover { border-color: var(--ska-primary); background: var(--ska-primary-dim); }
 .logo-dropzone.active { border-color: var(--ska-primary); background: var(--ska-primary-dim); }
+
+@keyframes ska-pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }

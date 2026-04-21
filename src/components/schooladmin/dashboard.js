@@ -5,12 +5,16 @@ import ApiClient from '../../api/client';
 import {
   GradesPage, AttendancePage, FinancePage,
   ReportsPage, MessagesPage, SecurityPage, SettingsPage,
-  SyllabusPage,
+  SyllabusPage, BursarLedgerPage, BursarAuditPage,
 } from './SchoolAdminPages';
 import {
   AnalyticsPage, ExamsPage, NotificationsPage, TimetablePage, ParentsPage,
   FinanceUsersPage, PrincipalUsersPage, StudentsPage, TeachersPage,
 } from './NewPages';
+import {
+  ModRequestsPage, GradingSchemePage, AcademicCalendarPage, SecurityPageEnhanced,
+  GradeOversightPage, RoomsPage, ExamOfficersPage, TeacherAssignmentsPage, StudentPromotionPage,
+} from './SAExtraPages';
 
 /* ============================================================
    HELPERS
@@ -40,12 +44,22 @@ const NAV_ITEMS = [
   { key: 'attendance',    icon: 'event_available',  label: 'Attendance' },
   { key: 'exams',         icon: 'quiz',             label: 'Exams & Results' },
   { key: 'finance',         icon: 'payments',         label: 'Finance' },
+  { key: 'bursar_ledger',   icon: 'account_balance',  label: 'Bursar Ledger' },
+  { key: 'bursar_audit',    icon: 'policy',           label: 'Bursar Audit' },
   { key: 'finance_users',   icon: 'manage_accounts',  label: 'Finance Users' },
   { key: 'principal',       icon: 'school',           label: 'Principal' },
   { key: 'timetable',       icon: 'calendar_today',   label: 'Timetable' },
   { key: 'analytics',     icon: 'insights',         label: 'Analytics' },
   { key: 'parents',       icon: 'family_restroom',  label: 'Parents' },
-  { key: 'reports',       icon: 'assessment',       label: 'Reports' },
+  { key: 'reports',        icon: 'assessment',       label: 'Reports' },
+  { key: 'grade_oversight',icon: 'checklist',        label: 'Grade Oversight' },
+  { key: 'mod_requests',   icon: 'rate_review',      label: 'Mod Requests' },
+  { key: 'grading_scheme', icon: 'grading',          label: 'Grading Scheme' },
+  { key: 'academic_cal',   icon: 'event_note',       label: 'Academic Calendar' },
+  { key: 'rooms',          icon: 'meeting_room',     label: 'Rooms' },
+  { key: 'exam_officers',  icon: 'verified_user',    label: 'Exam Officers' },
+  { key: 'teacher_assign', icon: 'assignment_ind',   label: 'Assignments' },
+  { key: 'promotions',     icon: 'move_up',          label: 'Promotions' },
 ];
 const NAV_ITEMS_BOTTOM = [
   { key: 'notifications', icon: 'notifications',    label: 'Notifications' },
@@ -1568,6 +1582,8 @@ export default function SchoolAdminDashboard({ onNavigate }) {
   else if (activePage === 'attendance')    pageContent = <AttendancePage school={school} />;
   else if (activePage === 'exams')         pageContent = <ExamsPage school={school} />;
   else if (activePage === 'finance')        pageContent = <FinancePage school={school} />;
+  else if (activePage === 'bursar_ledger')  pageContent = <BursarLedgerPage school={school} />;
+  else if (activePage === 'bursar_audit')   pageContent = <BursarAuditPage school={school} />;
   else if (activePage === 'finance_users')  pageContent = <FinanceUsersPage school={school} admin={admin} />;
   else if (activePage === 'principal')      pageContent = <PrincipalUsersPage school={school} admin={admin} />;
   else if (activePage === 'timetable')     pageContent = <TimetablePage school={school} />;
@@ -1576,7 +1592,15 @@ export default function SchoolAdminDashboard({ onNavigate }) {
   else if (activePage === 'reports')       pageContent = <ReportsPage school={school} />;
   else if (activePage === 'notifications') pageContent = <NotificationsPage school={school} />;
   else if (activePage === 'messages')      pageContent = <MessagesPage school={school} admin={admin} />;
-  else if (activePage === 'security')      pageContent = <SecurityPage />;
+  else if (activePage === 'security')       pageContent = <SecurityPageEnhanced />;
+  else if (activePage === 'mod_requests')   pageContent = <ModRequestsPage />;
+  else if (activePage === 'grading_scheme') pageContent = <GradingSchemePage />;
+  else if (activePage === 'academic_cal')   pageContent = <AcademicCalendarPage />;
+  else if (activePage === 'grade_oversight')pageContent = <GradeOversightPage />;
+  else if (activePage === 'rooms')          pageContent = <RoomsPage />;
+  else if (activePage === 'exam_officers')  pageContent = <ExamOfficersPage />;
+  else if (activePage === 'teacher_assign') pageContent = <TeacherAssignmentsPage />;
+  else if (activePage === 'promotions')     pageContent = <StudentPromotionPage />;
   else if (activePage === 'settings')   pageContent = (
     <SettingsPage
       school={school}

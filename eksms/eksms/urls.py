@@ -23,13 +23,13 @@ from .views import (
     # School-admin CRUD
     api_school_profile_full,
     api_students, api_student_detail,
-    api_teachers, api_teacher_detail,
+    api_teachers, api_teacher_detail, api_teacher_assignments,
     api_parent_students,
     api_classes,  api_class_detail,
     api_subjects, api_subject_detail,
     api_academic_years,
     # New school-admin modules
-    api_terms,
+    api_terms, api_term_detail, api_academic_year_detail,
     api_grades,
     api_attendance, api_attendance_stats,
     api_finance_stats, api_finance_fees, api_finance_fee_detail, api_finance_expenses,
@@ -43,14 +43,35 @@ from .views import (
     api_fee_receipt,
     api_finance_users, api_finance_user_toggle,
     api_principal_users, api_principal_user_toggle,
+    api_staff_accounts, api_staff_account_detail,
     api_student_stats,
     api_teacher_stats,
     # Teacher portal
     api_teacher_me, api_teacher_classes, api_teacher_students,
     api_teacher_attendance, api_teacher_gradebook, api_teacher_change_password,
+    api_teacher_analytics,
     # Student portal
     api_student_me, api_student_grades, api_student_attendance,
     api_student_timetable, api_student_notifications, api_student_change_password,
+    # New: grade locking, audit, mod requests, parent portal, report cards, class subjects
+    api_teacher_grade_lock, api_teacher_grade_history, api_student_grade_history,
+    api_teacher_mod_requests, api_school_mod_requests, api_school_mod_review,
+    api_parent_profile, api_parent_children, api_parent_child_grades,
+    api_parent_child_report_cards, api_parent_notifications,
+    api_student_report_cards, api_report_card_generate,
+    api_class_subjects,
+    api_change_password_strong,
+    api_logout_all,
+    verify_grade_document,
+    # New: rooms, grading scheme, grade oversight, student promotion, exam officers
+    api_rooms, api_room_detail,
+    api_grading_scheme,
+    api_grade_entry_status,
+    api_promote_student,
+    api_exam_officers,
+    # Global teacher assignments (school-wide)
+    api_teacher_assignments_global,
+    api_teacher_assignment_delete,
 )
 from .secure_views import csrf_token_view
 from django.conf import settings
@@ -102,13 +123,16 @@ urlpatterns = [
     path('api/parent/students/',                 api_parent_students,  name='api_parent_students'),
     path('api/school/teachers/',                api_teachers,         name='api_teachers'),
     path('api/school/teachers/<int:teacher_id>/', api_teacher_detail, name='api_teacher_detail'),
+    path('api/school/teachers/<int:teacher_id>/assignments/', api_teacher_assignments, name='api_teacher_assignments'),
     path('api/school/classes/',                 api_classes,          name='api_classes'),
     path('api/school/classes/<int:class_id>/',  api_class_detail,     name='api_class_detail'),
     path('api/school/subjects/',                api_subjects,         name='api_subjects'),
     path('api/school/subjects/<int:subject_id>/', api_subject_detail, name='api_subject_detail'),
-    path('api/school/academic-years/',          api_academic_years,   name='api_academic_years'),
+    path('api/school/academic-years/',                    api_academic_years,        name='api_academic_years'),
+    path('api/school/academic-years/<int:year_id>/',      api_academic_year_detail,  name='api_academic_year_detail'),
     # Terms / Grades / Attendance
     path('api/school/terms/',                   api_terms,            name='api_terms'),
+    path('api/school/terms/<int:term_id>/',     api_term_detail,      name='api_term_detail'),
     path('api/school/grades/',                  api_grades,           name='api_grades'),
     path('api/school/attendance/',              api_attendance,       name='api_attendance'),
     path('api/school/attendance/stats/',        api_attendance_stats, name='api_attendance_stats'),
@@ -142,6 +166,9 @@ urlpatterns = [
     # Principal users (school admin creates principal accounts)
     path('api/school/principal-users/',           api_principal_users,        name='api_principal_users'),
     path('api/school/principal-users/<int:uid>/', api_principal_user_toggle,  name='api_principal_user_toggle'),
+    # Unified staff accounts (Registrar, Librarian, Counselor, Admin Staff, etc.)
+    path('api/school/staff/',                     api_staff_accounts,       name='api_staff_accounts'),
+    path('api/school/staff/<int:staff_id>/',      api_staff_account_detail, name='api_staff_account_detail'),
     # Student module stats
     path('api/school/student-stats/',             api_student_stats,          name='api_student_stats'),
     # Teacher module stats
@@ -153,6 +180,7 @@ urlpatterns = [
     path('api/teacher/attendance/',      api_teacher_attendance,      name='api_teacher_attendance'),
     path('api/teacher/gradebook/',       api_teacher_gradebook,       name='api_teacher_gradebook'),
     path('api/teacher/change-password/', api_teacher_change_password, name='api_teacher_change_password'),
+    path('api/teacher/analytics/',       api_teacher_analytics,       name='api_teacher_analytics'),
     # Student portal
     path('api/student/me/',              api_student_me,              name='api_student_me'),
     path('api/student/grades/',          api_student_grades,          name='api_student_grades'),
@@ -160,6 +188,46 @@ urlpatterns = [
     path('api/student/timetable/',       api_student_timetable,       name='api_student_timetable'),
     path('api/student/notifications/',   api_student_notifications,   name='api_student_notifications'),
     path('api/student/change-password/', api_student_change_password, name='api_student_change_password'),
+    # Grade locking
+    path('api/teacher/grades/lock/',                  api_teacher_grade_lock,   name='api_teacher_grade_lock'),
+    path('api/teacher/grades/<int:grade_id>/history/', api_teacher_grade_history, name='api_teacher_grade_history'),
+    path('api/student/grades/<int:grade_id>/history/', api_student_grade_history, name='api_student_grade_history'),
+    # Grade modification requests
+    path('api/teacher/modification-requests/',         api_teacher_mod_requests, name='api_teacher_mod_requests'),
+    path('api/school/modification-requests/',          api_school_mod_requests,  name='api_school_mod_requests'),
+    path('api/school/modification-requests/review/',   api_school_mod_review,    name='api_school_mod_review'),
+    # Parent portal
+    path('api/parent/profile/',                              api_parent_profile,           name='api_parent_profile'),
+    path('api/parent/children/',                             api_parent_children,          name='api_parent_children'),
+    path('api/parent/children/<int:student_id>/grades/',     api_parent_child_grades,      name='api_parent_child_grades'),
+    path('api/parent/children/<int:student_id>/report-cards/', api_parent_child_report_cards, name='api_parent_child_report_cards'),
+    path('api/parent/notifications/',                        api_parent_notifications,     name='api_parent_notifications'),
+    # Student report cards
+    path('api/student/report-cards/',                        api_student_report_cards,     name='api_student_report_cards'),
+    # Report card generation (school admin)
+    path('api/school/report-cards/generate/',                api_report_card_generate,     name='api_report_card_generate'),
+    # Class subjects (school admin)
+    path('api/school/class-subjects/',                       api_class_subjects,           name='api_class_subjects'),
+    # Shared strong password change
+    path('api/change-password-strong/',                      api_change_password_strong,   name='api_change_password_strong'),
+    # Logout all sessions
+    path('api/logout-all/',                                  api_logout_all,               name='api_logout_all'),
+    # Rooms
+    path('api/school/rooms/',                               api_rooms,              name='api_rooms'),
+    path('api/school/rooms/<int:room_id>/',                 api_room_detail,        name='api_room_detail'),
+    # Grading scheme
+    path('api/school/grading-scheme/',                      api_grading_scheme,     name='api_grading_scheme'),
+    # Grade entry oversight
+    path('api/school/grade-entry-status/',                  api_grade_entry_status, name='api_grade_entry_status'),
+    # Student promotion / transfer
+    path('api/school/students/<int:student_id>/promote/',   api_promote_student,    name='api_promote_student'),
+    # Examination officer assignment
+    path('api/school/exam-officers/',                       api_exam_officers,      name='api_exam_officers'),
+    # Global teacher assignments
+    path('api/school/teacher-assignments/',                            api_teacher_assignments_global, name='api_teacher_assignments_global'),
+    path('api/school/teacher-assignments/<int:assignment_id>/',        api_teacher_assignment_delete,  name='api_teacher_assignment_delete'),
+    # Public document verification
+    path('verify/<str:token>/',                              verify_grade_document,        name='verify_grade_document'),
 
     # Root URL redirects to admin
     path('', RedirectView.as_view(url='admin/', permanent=False)),

@@ -1,0 +1,529 @@
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { motion } from 'framer-motion';
+import { studentApi } from '../../api/studentApi';
+import { useStudentProfile } from '../../hooks/useStudentProfile';
+import { useLowData } from '../../context/LowDataContext';
+import {
+  getTermProgress,
+  ordinalSuffix,
+  getGradeColor,
+  formatRelativeTime,
+} from '../../utils/studentUtils';
+import './StudentHome.css';
+
+/* ── Circular Progress Ring ── */
+function CircularProgress({ percentage, size = 120, strokeWidth = 10 }) {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (percentage / 100) * circumference;
+  const color =
+    percentage >= 70
+      ? 'var(--student-primary)'
+      : percentage >= 50
+      ? 'var(--student-warning)'
+      : 'var(--student-danger)';
+
+  return (
+    <svg width={size} height={size} className="circular-progress">
+      <circle
+        cx={size / 2} cy={size / 2} r={radius}
+        fill="none" stroke="#E5E7EB" strokeWidth={strokeWidth}
+      />
+      <circle
+        cx={size / 2} cy={size / 2} r={radius}
+        fill="none" stroke={color} strokeWidth={strokeWidth}
+        strokeDasharray={circumference}
+        strokeDashoffset={offset}
+        strokeLinecap="round"
+        transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        style={{ transition: 'stroke-dashoffset 1.2s ease' }}
+      />
+      <text
+        x="50%" y="50%"
+        textAnchor="middle"
+        dominantBaseline="middle"
+        style={{
+          fontSize: '20px',
+          fontWeight: '900',
+          fill: color,
+          fontFamily: 'Manrope, Inter, sans-serif',
+        }}
+      >
+        {percentage}%
+      </text>
+    </svg>
+  );
+}
+
+/* ── Subject icon map ── */
+const SUBJECT_ICONS = {
+  MTH: { icon: 'calculate',   color: 'var(--student-primary)' },
+  MTE: { icon: 'calculate',   color: 'var(--student-primary)' },
+  ENG: { icon: 'menu_book',   color: '#3B82F6' },
+  BIO: { icon: 'biotech',     color: 'var(--student-primary)' },
+  CHM: { icon: 'science',     color: '#EF4444' },
+  HIS: { icon: 'history_edu', color: '#8B5CF6' },
+  default: { icon: 'school',  color: '#F59E0B' },
+};
+
+function getSubjectStyle(code) {
+  return SUBJECT_ICONS[code] || SUBJECT_ICONS.default;
+}
+
+/* ── Skeleton cards ── */
+function StatSkeleton() {
+  return (
+    <div className="stu-stat-card">
+      <div className="skeleton" style={{ height: 12, width: '60%', marginBottom: 12 }} />
+      <div className="skeleton" style={{ height: 40, width: '80%', marginBottom: 8 }} />
+      <div className="skeleton" style={{ height: 10, width: '50%' }} />
+    </div>
+  );
+}
+
+/* ── Notification icon + color by type ── */
+function notifStyle(type, isSecurityAlert) {
+  if (isSecurityAlert || type === 'MODIFICATION_ATTEMPT')
+    return { bg: '#FEF2F2', color: 'var(--student-danger)', icon: 'warning' };
+  if (type === 'GRADE_LOCKED')
+    return { bg: '#ECFDF5', color: 'var(--student-primary)', icon: 'lock' };
+  if (type === 'GRADE_POSTED' || type === 'GRADE_PENDING')
+    return { bg: '#FFFBEB', color: 'var(--student-warning)', icon: 'edit_note' };
+  if (type === 'REPORT_AVAILABLE')
+    return { bg: '#EFF6FF', color: 'var(--student-info)', icon: 'description' };
+  return { bg: '#F3F4F6', color: '#6B7280', icon: 'notifications' };
+}
+
+/* ── Low-Data Lite Layout ── */
+function StudentHomeLite({ profile, summary, grades, recentNotifs, loading, navigateTo }) {
+  const firstName = profile?.firstName || profile?.fullName?.split(' ')[0] || 'Student';
+  const lastName  = profile?.lastName  || profile?.fullName?.split(' ').slice(-1)[0] || '';
+  const initials  = `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+  const avg  = summary?.overallAverage ?? 0;
+  const rank = summary?.classRank ?? '--';
+  const total = summary?.totalStudentsInClass ?? '--';
+
+  return (
+    <div className="stu-home stu-home--lite">
+      {/* Lite mode pill */}
+      <div className="stu-lite-pill">
+        <span className="material-symbols-outlined">signal_cellular_alt</span>
+        Low-Data Mode Active
+      </div>
+
+      {/* Avatar + greeting */}
+      <div className="stu-lite-header">
+        <div className="stu-lite-avatar">{initials}</div>
+        <div>
+          <h2 className="stu-lite-name">{firstName} {lastName}</h2>
+          <p className="stu-lite-sub">Student · {profile?.className || 'SSS3'}</p>
+        </div>
+      </div>
+
+      {/* 2-col stat grid */}
+      <div className="stu-lite-stats">
+        <div className="stu-lite-stat">
+          <p className="stu-lite-stat__label">Term Average</p>
+          <p className="stu-lite-stat__value">{avg}%</p>
+        </div>
+        <div className="stu-lite-stat">
+          <p className="stu-lite-stat__label">Class Rank</p>
+          <p className="stu-lite-stat__value">
+            {typeof rank === 'number' ? ordinalSuffix(rank) : rank}
+            <span className="stu-lite-stat__sub"> / {total}</span>
+          </p>
+        </div>
+      </div>
+
+      {/* Subjects list */}
+      <div className="stu-lite-section">
+        <p className="stu-lite-section__title">Subjects</p>
+        {loading
+          ? [1,2,3].map(i => <div key={i} className="skeleton" style={{ height: 38, borderRadius: 6, marginBottom: 6 }} />)
+          : grades.map((g) => (
+              <div key={g.id} className="stu-lite-row" onClick={() => navigateTo('grades')}>
+                <span className="stu-lite-row__name">{g.subject?.name}</span>
+                {g.status === 'locked' && (
+                  <span className="material-symbols-outlined stu-lite-row__lock">lock</span>
+                )}
+                <span
+                  className="stu-lite-row__score"
+                  style={{ color: getGradeColor(g.score) }}
+                >
+                  {g.score}%
+                </span>
+              </div>
+            ))}
+      </div>
+
+      {/* Notifications */}
+      <div className="stu-lite-section">
+        <p className="stu-lite-section__title">Recent Notifications</p>
+        {loading
+          ? [1,2,3].map(i => <div key={i} className="skeleton" style={{ height: 32, borderRadius: 6, marginBottom: 6 }} />)
+          : recentNotifs.map((n) => {
+              const style = notifStyle(n.type, n.isSecurityAlert);
+              return (
+                <div key={n.id} className="stu-lite-notif" onClick={() => navigateTo('notifications')}>
+                  <span className="stu-lite-notif__dot" style={{ background: style.color }} />
+                  <span className="stu-lite-notif__text">{n.title}</span>
+                  <span className="stu-lite-notif__time">{formatRelativeTime(n.createdAt)}</span>
+                </div>
+              );
+            })}
+        {!loading && recentNotifs.length === 0 && (
+          <p className="stu-lite-empty">No notifications.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ── Main Component ── */
+export default function StudentHome({ navigateTo }) {
+  const { profile } = useStudentProfile();
+  const { lowData } = useLowData();
+
+  const [currentTerm, setCurrentTerm] = useState(null);
+  const [summary, setSummary] = useState(null);
+  const [grades, setGrades] = useState([]);
+  const [recentNotifs, setRecentNotifs] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const scrollRef = useRef(null);
+
+  const load = useCallback(async () => {
+    try {
+      const [term, notifs] = await Promise.all([
+        studentApi.getCurrentTerm(),
+        studentApi.getNotifications(4),
+      ]);
+      setCurrentTerm(term);
+      setRecentNotifs(notifs);
+
+      const [g, s] = await Promise.all([
+        studentApi.getGrades(term.id),
+        studentApi.getGradesSummary(term.id),
+      ]);
+      setGrades(g);
+      setSummary(s);
+    } catch (e) {
+      // fail silently — show empty state
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const scroll = (dir) => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollBy({ left: dir === 'left' ? -220 : 220, behavior: 'smooth' });
+    }
+  };
+
+  const termProgress = currentTerm
+    ? getTermProgress(currentTerm.startDate, currentTerm.endDate)
+    : null;
+
+  const firstName = profile?.firstName || profile?.fullName?.split(' ')[0] || 'Student';
+  const avg = summary?.overallAverage ?? 0;
+  const rank = summary?.classRank ?? '--';
+  const total = summary?.totalStudentsInClass ?? '--';
+  const passed = summary?.subjectsPassed ?? 0;
+  const totalSubj = summary?.totalSubjects ?? 0;
+
+  const cardVariants = {
+    hidden:  { opacity: 0, y: 20 },
+    visible: (i) => ({ opacity: 1, y: 0, transition: { duration: 0.4, delay: i * 0.08 } }),
+  };
+
+  if (lowData) {
+    return (
+      <StudentHomeLite
+        profile={profile}
+        summary={summary}
+        grades={grades}
+        recentNotifs={recentNotifs}
+        loading={loading}
+        navigateTo={navigateTo}
+      />
+    );
+  }
+
+  return (
+    <div className="stu-home">
+      {/* Welcome */}
+      <div className="stu-home__welcome">
+        <div className="stu-home__welcome-text">
+          <h2>Welcome back, {firstName}</h2>
+          <p>
+            Your academic performance is{' '}
+            <strong>{avg >= 70 ? 'on track' : avg >= 50 ? 'progressing' : 'needs attention'}</strong>{' '}
+            this term.
+          </p>
+        </div>
+        <div className="stu-home__welcome-actions">
+          <button className="stu-btn stu-btn--outline" onClick={() => navigateTo('report-cards')}>
+            <span className="material-symbols-outlined">download</span>
+            Download Report Card
+          </button>
+          <button className="stu-btn stu-btn--primary" onClick={() => navigateTo('grades')}>
+            <span className="material-symbols-outlined">menu_book</span>
+            View Full Grades
+          </button>
+        </div>
+      </div>
+
+      {/* Trust / integrity banner */}
+      <div className="stu-trust-banner">
+        <span className="material-symbols-outlined stu-trust-banner__icon" style={{ fontVariationSettings: "'FILL' 1" }}>verified_user</span>
+        <div className="stu-trust-banner__body">
+          <strong>Your grades are permanently recorded and tamper-proof.</strong>
+          <span> Any unauthorized modification attempt is automatically blocked, logged, and visible to you.</span>
+        </div>
+      </div>
+
+      {/* Stats row */}
+      <div className="stu-home__stats">
+        {loading ? (
+          <>
+            <StatSkeleton />
+            <StatSkeleton />
+            <StatSkeleton />
+          </>
+        ) : (
+          <>
+            {/* Average */}
+            <motion.div
+              custom={0} variants={cardVariants} initial="hidden" animate="visible"
+              className="stu-stat-card stu-stat-card--average"
+            >
+              <div className="stu-stat-card__ring-wrap">
+                <CircularProgress percentage={Math.round(avg)} size={112} strokeWidth={9} />
+              </div>
+              <div className="stu-stat-card__average-info">
+                <div className="stu-stat-card__label">Term Average</div>
+                <div className="stu-stat-card__big">{avg >= 70 ? 'Consistent' : avg >= 50 ? 'Progressing' : 'Needs Work'}</div>
+                <div className="stu-stat-card__trend">
+                  <span className="material-symbols-outlined">
+                    {avg >= 70 ? 'trending_up' : avg >= 50 ? 'trending_flat' : 'trending_down'}
+                  </span>
+                  {passed}/{totalSubj} subjects passed
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Rank */}
+            <motion.div
+              custom={1} variants={cardVariants} initial="hidden" animate="visible"
+              className="stu-stat-card stu-stat-card--rank"
+            >
+              <div className="stu-stat-card__label">Class Rank</div>
+              <div style={{ marginTop: 8 }}>
+                <span className="stu-stat-card__rank-number">{typeof rank === 'number' ? ordinalSuffix(rank) : rank}</span>
+                <span className="stu-stat-card__rank-of">of {total}</span>
+              </div>
+              {typeof rank === 'number' && typeof total === 'number' && (
+                <div className="stu-stat-card__trend" style={{ marginTop: 12 }}>
+                  <span className="material-symbols-outlined">emoji_events</span>
+                  Top {Math.round((rank / total) * 100)}% of cohort
+                </div>
+              )}
+            </motion.div>
+
+            {/* Term progress */}
+            <motion.div
+              custom={2} variants={cardVariants} initial="hidden" animate="visible"
+              className="stu-stat-card stu-stat-card--progress"
+            >
+              <div className="stu-progress-header">
+                <div className="stu-stat-card__label">Term Progress</div>
+                <span className="stu-progress-week">
+                  {termProgress
+                    ? `Week ${termProgress.currentWeek} of ${termProgress.totalWeeks}`
+                    : currentTerm?.name || '—'}
+                </span>
+              </div>
+              <div className="stu-progress-track">
+                <div
+                  className="stu-progress-fill"
+                  style={{ width: `${termProgress?.percentage ?? 0}%` }}
+                />
+              </div>
+              <div className="stu-progress-note">
+                {termProgress?.daysRemaining > 0
+                  ? `${termProgress.daysRemaining} days remaining`
+                  : 'Term complete'}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </div>
+
+      {/* Subjects at a Glance */}
+      <div className="stu-home__subjects">
+        <div className="stu-section-title">
+          <div className="stu-section-title__bar" />
+          Subjects at a Glance
+        </div>
+
+        <div className="stu-subjects-scroll-wrap">
+          <button className="stu-scroll-btn stu-scroll-btn--left" onClick={() => scroll('left')} aria-label="Scroll left">
+            <span className="material-symbols-outlined">chevron_left</span>
+          </button>
+
+          <div className="stu-subjects-scroll" ref={scrollRef}>
+            {loading
+              ? Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} style={{ flexShrink: 0, width: 190 }}>
+                    <div className="skeleton" style={{ height: 160, borderRadius: 16 }} />
+                  </div>
+                ))
+              : grades.map((g, i) => {
+                  const { icon, color } = getSubjectStyle(g.subject?.code);
+                  const gradeColor = getGradeColor(g.score);
+                  const isFailing = g.score < 50;
+
+                  return (
+                    <motion.div
+                      key={g.id}
+                      custom={i}
+                      variants={cardVariants}
+                      initial="hidden"
+                      animate="visible"
+                      className="stu-subject-card"
+                      onClick={() => navigateTo('grades')}
+                    >
+                      <div className="stu-subject-card__top">
+                        <div
+                          className="stu-subject-card__icon"
+                          style={{ background: `${color}18` }}
+                        >
+                          <span className="material-symbols-outlined" style={{ color }}>{icon}</span>
+                        </div>
+                        <div
+                          className="stu-subject-card__grade-letter"
+                          style={{ background: `${gradeColor}18`, color: gradeColor }}
+                        >
+                          {g.gradeLetter}
+                        </div>
+                      </div>
+                      <div
+                        className="stu-subject-card__name"
+                        style={{ color: isFailing ? 'var(--student-danger)' : undefined }}
+                      >
+                        {g.subject?.name}
+                      </div>
+                      <div
+                        className="stu-subject-card__score"
+                        style={{ color: isFailing ? 'var(--student-danger)' : undefined }}
+                      >
+                        {g.score}%
+                      </div>
+                      <div className="stu-subject-card__footer">
+                        {g.status === 'locked' ? (
+                          <span className="material-symbols-outlined" style={{ color: 'var(--student-primary)', fontVariationSettings: "'FILL' 1" }}>lock</span>
+                        ) : (
+                          <span className="material-symbols-outlined" style={{ color: 'var(--student-warning)' }}>edit_note</span>
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                })}
+
+            {!loading && grades.length === 0 && (
+              <div className="stu-empty">No grades available for this term.</div>
+            )}
+          </div>
+
+          <button className="stu-scroll-btn stu-scroll-btn--right" onClick={() => scroll('right')} aria-label="Scroll right">
+            <span className="material-symbols-outlined">chevron_right</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Bottom: notifications + quick actions */}
+      <div className="stu-home__bottom">
+        {/* Recent notifications */}
+        <div className="stu-home__notifs">
+          <div className="stu-home__notifs-header">
+            <h3>Recent Notifications</h3>
+            <button onClick={() => navigateTo('notifications')}>View all</button>
+          </div>
+
+          {loading
+            ? Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} style={{ display: 'flex', gap: 12, padding: '12px 0', alignItems: 'center' }}>
+                  <div className="skeleton" style={{ width: 40, height: 40, borderRadius: '50%', flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <div className="skeleton" style={{ height: 12, marginBottom: 6 }} />
+                    <div className="skeleton" style={{ height: 10, width: '60%' }} />
+                  </div>
+                </div>
+              ))
+            : recentNotifs.map((n) => {
+                const style = notifStyle(n.type, n.isSecurityAlert);
+                return (
+                  <div
+                    key={n.id}
+                    className="stu-notif-item"
+                    onClick={() => navigateTo('notifications')}
+                  >
+                    <div className="stu-notif-item__icon" style={{ background: style.bg }}>
+                      <span className="material-symbols-outlined" style={{ color: style.color, fontSize: 20 }}>
+                        {style.icon}
+                      </span>
+                    </div>
+                    <div className="stu-notif-item__body">
+                      <div className="stu-notif-item__title">{n.title}</div>
+                      <div className="stu-notif-item__meta">{formatRelativeTime(n.createdAt)}</div>
+                    </div>
+                    {!n.isRead && <div className="stu-notif-item__dot" />}
+                  </div>
+                );
+              })}
+
+          {!loading && recentNotifs.length === 0 && (
+            <div className="stu-empty">No notifications yet.</div>
+          )}
+        </div>
+
+        {/* Right column */}
+        <div className="stu-home__right">
+          {/* Academic Counseling */}
+          <div className="stu-counseling-card">
+            <h4>Academic Counseling</h4>
+            <p>Need help improving your grades? Schedule a session with your academic advisor.</p>
+            <button>
+              <span className="material-symbols-outlined">calendar_month</span>
+              Book Session
+            </button>
+          </div>
+
+          {/* Quick shortcuts */}
+          <div className="stu-shortcuts-card">
+            <h4>Quick Shortcuts</h4>
+            <div className="stu-shortcuts-grid">
+              {[
+                { label: 'Grades',       icon: 'auto_stories', section: 'grades' },
+                { label: 'Report Cards', icon: 'description',  section: 'report-cards' },
+                { label: 'Notifications',icon: 'notifications',section: 'notifications' },
+                { label: 'Profile',      icon: 'person',       section: 'profile' },
+              ].map(({ label, icon, section }) => (
+                <button
+                  key={section}
+                  className="stu-shortcut-btn"
+                  onClick={() => navigateTo(section)}
+                >
+                  <span className="material-symbols-outlined">{icon}</span>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

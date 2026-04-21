@@ -1,0 +1,18 @@
+.tch-notif-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.tch-notif-header-row .tch-page-title { margin-bottom: 0; }
+.tch-notif-header-row .tch-page-sub { margin-bottom: 0; }
+
+.tn-unread-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--tch-primary);
+  flex-shrink: 0;
+  margin-top: 4px;
+}

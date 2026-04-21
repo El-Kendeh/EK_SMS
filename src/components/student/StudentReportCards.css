@@ -1,0 +1,333 @@
+/* ============================================================
+   STUDENT REPORT CARDS — light theme
+   ============================================================ */
+.srep {
+  background: var(--student-bg);
+  min-height: calc(100vh - var(--student-header-height));
+  padding: 32px 24px 80px;
+  font-family: 'Inter', sans-serif;
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+/* ── Header ── */
+.srep__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 28px;
+}
+
+.srep__title {
+  font-family: 'Manrope', sans-serif;
+  font-size: 28px;
+  font-weight: 900;
+  color: var(--student-text-primary);
+  letter-spacing: -0.02em;
+}
+
+/* ── Report card ── */
+.srep-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.04);
+  position: relative;
+  overflow: hidden;
+}
+
+.srep-card--archived {
+  opacity: 0.7;
+}
+
+/* Top row */
+.srep-card__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.srep-card__year-badge {
+  display: inline-block;
+  background: rgba(16,185,129,0.1);
+  color: var(--student-primary-dark);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 999px;
+  margin-bottom: 8px;
+}
+
+.srep-card--archived .srep-card__year-badge {
+  background: rgba(83,95,116,0.1);
+  color: #535F74;
+}
+
+.srep-card__term-name {
+  font-family: 'Manrope', sans-serif;
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--student-text-primary);
+}
+
+.srep-verified-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(16,185,129,0.12);
+  color: var(--student-primary-dark);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.srep-verified-badge span { font-size: 15px; }
+
+/* Stats + QR row */
+.srep-card__mid {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  padding: 16px 0;
+  margin-bottom: 16px;
+  border-top: 1px solid #F2F4F6;
+  border-bottom: 1px solid #F2F4F6;
+}
+
+.srep-avg-label {
+  font-size: 10px;
+  font-weight: 800;
+  color: #94A3B8;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-bottom: 4px;
+}
+
+.srep-avg-value {
+  font-family: 'Manrope', sans-serif;
+  font-size: 36px;
+  font-weight: 900;
+  color: var(--student-text-primary);
+  line-height: 1;
+}
+
+.srep-qr-wrap {
+  margin-left: auto;
+  padding: 8px;
+  background: #F2F4F6;
+  border-radius: 10px;
+  border: 1px solid rgba(187,202,191,0.3);
+}
+
+.srep-qr-wrap canvas {
+  display: block;
+  border-radius: 4px;
+}
+
+/* Hash row */
+.srep-hash-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #F2F4F6;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 16px;
+}
+
+.srep-hash-row code {
+  font-size: 11px;
+  color: #94A3B8;
+  font-family: monospace;
+}
+
+.srep-hash-copy {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #94A3B8;
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  transition: color 0.15s;
+}
+.srep-hash-copy:hover { color: var(--student-text-primary); }
+.srep-hash-copy span { font-size: 16px; }
+
+/* Buttons */
+.srep-card__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.srep-btn {
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  border: none;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.18s;
+  font-family: 'Inter', sans-serif;
+}
+.srep-btn span { font-size: 18px; }
+
+.srep-btn--primary {
+  background: linear-gradient(135deg, var(--student-primary-dark), var(--student-primary));
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(16,185,129,0.2);
+}
+.srep-btn--primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(16,185,129,0.3); }
+.srep-btn--primary:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
+
+.srep-btn--ghost {
+  background: #E7E8EA;
+  color: var(--student-text-primary);
+}
+.srep-btn--ghost:hover { background: #DCDFE3; }
+
+.srep-btn--cert {
+  background: #101C2E;
+  color: #fff;
+}
+.srep-btn--cert:hover { background: #1A2D44; }
+
+/* Archive view button */
+.srep-btn--archive {
+  background: #E7E8EA;
+  color: #535F74;
+  font-size: 13px;
+}
+.srep-btn--archive:hover { background: #DCDFE3; }
+
+/* Empty / upcoming card */
+.srep-empty {
+  border: 2px dashed #BBCABF;
+  border-radius: 16px;
+  padding: 40px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background: rgba(242,244,246,0.4);
+  margin-bottom: 20px;
+}
+
+.srep-empty__icon-wrap {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #E7E8EA;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+.srep-empty__icon-wrap span { font-size: 32px; color: #94A3B8; }
+
+.srep-empty__title {
+  font-family: 'Manrope', sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  color: #535F74;
+  margin-bottom: 6px;
+}
+
+.srep-empty__sub {
+  font-size: 13px;
+  color: #94A3B8;
+}
+
+/* Smart verification panel */
+.srep-info-panel {
+  background: #101C2E;
+  border-radius: 16px;
+  padding: 20px;
+  margin-top: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.srep-info-panel::before {
+  content: '';
+  position: absolute;
+  bottom: -20px;
+  right: -20px;
+  width: 80px;
+  height: 80px;
+  background: rgba(16,185,129,0.15);
+  border-radius: 50%;
+  filter: blur(24px);
+}
+
+.srep-info-panel__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.srep-info-panel__head span { font-size: 20px; color: var(--student-primary); }
+
+.srep-info-panel__title {
+  font-family: 'Manrope', sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  color: #fff;
+}
+
+.srep-info-panel__body {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.srep-info-panel__text {
+  font-size: 13px;
+  color: #94A3B8;
+  line-height: 1.6;
+  flex: 1;
+}
+
+/* Skeleton */
+.srep-skeleton-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 20px;
+}
+
+/* Downloading overlay */
+.srep-downloading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+@keyframes srep-spin {
+  to { transform: rotate(360deg); }
+}
+.srep-spinning {
+  display: inline-block;
+  animation: srep-spin 1s linear infinite;
+}
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  .srep { padding: 20px 14px 72px; }
+  .srep__title { font-size: 22px; }
+  .srep-avg-value { font-size: 28px; }
+  .srep-card { padding: 18px; }
+}

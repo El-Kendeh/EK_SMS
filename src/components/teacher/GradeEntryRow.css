@@ -1,0 +1,96 @@
+.ge-row--selected td { background: var(--tch-primary-light) !important; }
+.ge-row--locked { background: var(--grade-locked-bg) !important; }
+.ge-row--locked td { color: var(--grade-locked-text); }
+
+.ge-checkbox {
+  width: 16px; height: 16px;
+  cursor: pointer;
+  accent-color: var(--tch-primary);
+}
+.ge-row__index {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--tch-text-secondary);
+}
+
+.ge-student-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ge-student-avatar {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  color: white;
+  font-size: 12px;
+  font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.ge-student-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--tch-text-primary);
+  margin: 0 0 2px;
+  white-space: nowrap;
+}
+.ge-student-num {
+  font-size: 11px;
+  color: var(--tch-text-secondary);
+  margin: 0;
+}
+
+.ge-locked-score {
+  font-size: 15px;
+  font-weight: 800;
+  font-family: 'Manrope', monospace;
+}
+.ge-score-input-wrap { }
+.ge-score-error {
+  font-size: 10px;
+  color: var(--tch-error);
+  margin: 2px 0 0;
+}
+
+.ge-grade-letter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 900;
+}
+.ge-grade-letter--empty {
+  color: var(--tch-text-secondary);
+  font-size: 14px;
+}
+
+.ge-remarks-text {
+  font-size: 12px;
+  color: var(--tch-text-secondary);
+  margin: 0;
+  max-width: 200px;
+}
+.ge-remarks-input {
+  min-height: 52px;
+  font-size: 12px;
+  padding: 6px 10px;
+  min-width: 140px;
+}
+
+.ge-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.ge-lock-icon {
+  font-size: 16px;
+  color: var(--tch-primary);
+  opacity: 0.7;
+}
+
+@media (max-width: 600px) {
+  .ge-remarks-input { min-width: 100px; }
+}

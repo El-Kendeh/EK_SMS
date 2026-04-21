@@ -1,0 +1,82 @@
+.myclasses-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.myclasses-card {
+  background: var(--tch-surface);
+  border: 1px solid var(--tch-border);
+  border-radius: 14px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.myclasses-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.myclasses-card__name {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--tch-text-primary);
+  margin: 0 0 4px;
+}
+.myclasses-card__room {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--tch-text-secondary);
+  margin: 0;
+  font-weight: 600;
+}
+.myclasses-card__room .material-symbols-outlined { font-size: 14px; }
+
+.myclasses-card__subject {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tch-text-secondary);
+  margin: 0;
+}
+
+.myclasses-card__stats-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.myclasses-card__progress {}
+.myclasses-card__progress-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.myclasses-card__progress-sub {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+  font-weight: 600;
+}
+
+.myclasses-card__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+}
+.myclasses-card__actions .tch-btn--ghost {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  flex-shrink: 0;
+}
+.myclasses-card__actions .tch-btn--ghost .material-symbols-outlined { font-size: 20px; }
+
+@media (max-width: 600px) {
+  .myclasses-grid { grid-template-columns: 1fr; }
+}

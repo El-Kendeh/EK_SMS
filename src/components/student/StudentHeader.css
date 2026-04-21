@@ -1,0 +1,182 @@
+/* ============================================================
+   STUDENT HEADER
+   ============================================================ */
+.stu-header {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: var(--student-sidebar-width);
+  height: var(--student-header-height);
+  background: rgba(248,249,251,0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--student-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  z-index: 40;
+  transition: left var(--student-sidebar-transition);
+}
+
+.stu-header.sidebar-open  { left: var(--student-sidebar-width); }
+.stu-header.sidebar-closed { left: var(--student-sidebar-collapsed); }
+
+/* ── Left side ── */
+.stu-header__left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.stu-header__menu-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--student-text-secondary);
+  display: flex;
+  align-items: center;
+  padding: 6px;
+  border-radius: 8px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.stu-header__menu-btn:hover {
+  background: var(--student-surface);
+  color: var(--student-text-primary);
+}
+
+.stu-header__menu-btn span { font-size: 22px; }
+
+.stu-header__context {
+  display: flex;
+  flex-direction: column;
+}
+
+.stu-header__term {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--student-text-secondary);
+  letter-spacing: 0.02em;
+}
+
+.stu-header__section-label {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--student-text-primary);
+  font-family: 'Manrope', 'Inter', sans-serif;
+  letter-spacing: -0.01em;
+}
+
+/* ── Right side ── */
+.stu-header__right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.stu-header__class-badge {
+  padding: 4px 12px;
+  background: #D4E0F9;
+  color: #3c475b;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Bell button */
+.stu-header__bell {
+  position: relative;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--student-text-secondary);
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  border-radius: 50%;
+  transition: background 0.15s, color 0.15s;
+}
+
+.stu-header__bell:hover {
+  background: var(--student-surface);
+  color: var(--student-primary);
+}
+
+.stu-header__bell span { font-size: 22px; }
+
+.stu-header__bell-dot {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 8px;
+  height: 8px;
+  background: var(--student-danger);
+  border-radius: 50%;
+  border: 2px solid var(--student-page-bg);
+}
+
+/* User info */
+.stu-header__user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 16px;
+  border-left: 1px solid var(--student-border);
+}
+
+.stu-header__user-info {
+  text-align: right;
+}
+
+.stu-header__user-name {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--student-text-primary);
+  line-height: 1.2;
+  font-family: 'Manrope', 'Inter', sans-serif;
+}
+
+.stu-header__user-id {
+  font-size: 10px;
+  color: var(--student-text-secondary);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.stu-header__avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 800;
+  color: #fff;
+  flex-shrink: 0;
+  border: 2px solid rgba(16,185,129,0.25);
+  font-family: 'Manrope', sans-serif;
+  cursor: pointer;
+}
+
+/* ── Mobile ── */
+@media (max-width: 767px) {
+  .stu-header {
+    left: 0 !important;
+    padding: 0 16px;
+  }
+
+  .stu-header__class-badge { display: none; }
+  .stu-header__user-info   { display: none; }
+
+  .stu-header__right {
+    gap: 8px;
+  }
+}
+
+@media (max-width: 400px) {
+  .stu-header__context { display: none; }
+}

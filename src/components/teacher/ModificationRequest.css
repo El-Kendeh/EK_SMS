@@ -1,0 +1,113 @@
+.mr-root { }
+
+.mr-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--tch-info-bg);
+  border: 1px solid var(--tch-info);
+  border-radius: 10px;
+  margin-bottom: 20px;
+  font-size: 13px;
+  color: var(--tch-text-primary);
+  line-height: 1.5;
+}
+.mr-warning .material-symbols-outlined { color: var(--tch-info); font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+
+.mr-section-label {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--tch-text-secondary);
+  margin: 0 0 10px;
+}
+
+.mr-existing-req {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--tch-surface-low);
+  border-radius: 10px;
+  border: 1px solid var(--tch-border);
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.mr-existing-req__student {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--tch-text-primary);
+  margin: 0 0 3px;
+}
+.mr-existing-req__detail {
+  font-size: 12px;
+  color: var(--tch-text-secondary);
+  margin: 0;
+}
+
+.mr-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.mr-form__label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--tch-text-secondary);
+  margin: 0 0 6px;
+}
+.mr-current-grade {
+  background: var(--grade-locked-bg);
+  border: 1px solid var(--grade-locked-border);
+  border-radius: 10px;
+  padding: 14px;
+}
+.mr-current-grade__display {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+.mr-current-grade__score {
+  font-size: 22px;
+  font-weight: 900;
+  color: var(--tch-primary);
+  font-family: 'Manrope', monospace;
+}
+
+.mr-existing-req__reject-reason {
+  font-size: 11px;
+  color: var(--tch-error, #dc2626);
+  margin: 4px 0 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.mr-evidence-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--tch-primary);
+  margin-top: 4px;
+  text-decoration: none;
+}
+.mr-evidence-link:hover { text-decoration: underline; }
+
+.mr-file-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+@media (max-width: 600px) {
+  .mr-existing-req { flex-direction: column; }
+  .mr-file-wrap { flex-wrap: wrap; }
+}
