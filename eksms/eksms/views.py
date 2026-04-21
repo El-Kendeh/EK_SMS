@@ -7030,3 +7030,251 @@ def api_teacher_assignment_delete(request, assignment_id):
     tsc.save(update_fields=['is_active'])
     return JsonResponse({'success': True, 'message': 'Assignment removed.'})
 
+
+# =============================================================================
+# STUDENT GRADES SUMMARY (classRank, overallAverage, subjectsPassed)
+# =============================================================================
+
+@csrf_exempt
+def api_student_grades_summary(request):
+    """GET: grade summary for a student for a given term."""
+    if request.method != 'GET':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+    user, student = _get_student_profile(request)
+    if not student:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+
+    term_id = request.GET.get('term_id')
+    qs = student.grades.select_related('subject', 'term')
+    if term_id:
+        try:
+            qs = qs.filter(term_id=int(term_id))
+        except (ValueError, TypeError):
+            pass
+
+    grades = list(qs)
+    scores = [float(g.total_score) for g in grades if g.total_score is not None]
+    overall_average = round(sum(scores) / len(scores), 1) if scores else 0
+    subjects_passed = sum(1 for s in scores if s >= 50)
+    total_subjects  = len(scores)
+
+    # Class rank from ClassRanking model
+    class_rank = None
+    class_size = None
+    ranking_pending = True
+    try:
+        if term_id:
+            ranking = ClassRanking.objects.filter(student=student, term_id=int(term_id)).first()
+        else:
+            ranking = ClassRanking.objects.filter(student=student).order_by('-created_at').first()
+        if ranking:
+            class_rank = ranking.rank
+            class_size = ClassRanking.objects.filter(
+                term=ranking.term,
+                classroom=student.classroom,
+            ).count() or None
+            ranking_pending = False
+    except Exception:
+        pass
+
+    return JsonResponse({
+        'success':             True,
+        'overallAverage':      overall_average,
+        'classRank':           class_rank,
+        'totalStudentsInClass': class_size,
+        'subjectsPassed':      subjects_passed,
+        'totalSubjects':       total_subjects,
+        'rankingPending':      ranking_pending,
+    })
+
+
+# =============================================================================
+# REPORT CARD DOWNLOAD (HTML with embedded QR code)
+# =============================================================================
+
+@csrf_exempt
+def api_report_card_download(request, card_id):
+    """GET: download a report card as a print-ready HTML page with QR code."""
+    user, student = _get_student_profile(request)
+    if not student:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    if request.method != 'GET':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+    try:
+        card = ReportCard.objects.select_related('term', 'academic_year', 'classroom').get(
+            id=card_id, student=student
+        )
+    except ReportCard.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Report card not found.'}, status=404)
+
+    grades = Grade.objects.filter(student=student, term=card.term).select_related('subject')
+
+    # Generate QR code as base64 PNG
+    qr_data_uri = ''
+    try:
+        import qrcode, io, base64
+        verify_url = f"{request.scheme}://{request.get_host()}/verify/{card.verification_hash}/"
+        qr = qrcode.QRCode(version=2, box_size=6, border=2)
+        qr.add_data(verify_url)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color='black', back_color='white')
+        buf = io.BytesIO()
+        img.save(buf, format='PNG')
+        qr_data_uri = 'data:image/png;base64,' + base64.b64encode(buf.getvalue()).decode()
+    except Exception:
+        pass
+
+    grade_rows = ''.join(
+        f'<tr><td>{g.subject.name}</td>'
+        f'<td style="text-align:center">{float(g.continuous_assessment)}</td>'
+        f'<td style="text-align:center">{float(g.mid_term_exam)}</td>'
+        f'<td style="text-align:center">{float(g.final_exam)}</td>'
+        f'<td style="text-align:center;font-weight:700">{float(g.total_score)}</td>'
+        f'<td style="text-align:center">{g.grade_letter}</td></tr>'
+        for g in grades
+    )
+    avg_display = f"{float(card.average_score):.1f}" if card.average_score else '—'
+    rank_display = f"{card.class_rank} / {card.class_size}" if card.class_rank else 'Ranking pending'
+    hash_short   = card.verification_hash[:16] + '…' if card.verification_hash else '—'
+
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Report Card — {student.user.get_full_name()}</title>
+<style>
+  @media print {{ .no-print {{ display:none }} }}
+  body {{ font-family: Arial, sans-serif; margin: 0; padding: 24px; color: #111; }}
+  h1   {{ margin: 0 0 4px; font-size: 1.4rem; }}
+  .header {{ display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid #1B3FAF; padding-bottom:12px; margin-bottom:16px; }}
+  .school-info h2 {{ margin:0 0 4px; font-size:1rem; color:#1B3FAF; }}
+  .school-info p  {{ margin:0; font-size:0.8rem; color:#555; }}
+  .student-info {{ margin-bottom:16px; display:grid; grid-template-columns:1fr 1fr; gap:6px 24px; font-size:0.85rem; }}
+  .student-info span {{ color:#555; }}
+  table {{ width:100%; border-collapse:collapse; font-size:0.85rem; margin-bottom:16px; }}
+  th    {{ background:#1B3FAF; color:#fff; padding:8px 10px; text-align:left; }}
+  td    {{ border-bottom:1px solid #e5e7eb; padding:7px 10px; }}
+  tr:nth-child(even) td {{ background:#f8f9ff; }}
+  .summary-row {{ display:flex; gap:24px; font-size:0.9rem; margin-bottom:16px; }}
+  .summary-box {{ background:#f0f4ff; border-radius:8px; padding:10px 18px; }}
+  .summary-box label {{ display:block; font-size:0.7rem; color:#555; text-transform:uppercase; letter-spacing:.05em; }}
+  .summary-box strong {{ font-size:1.3rem; color:#1B3FAF; }}
+  .footer {{ font-size:0.7rem; color:#888; border-top:1px solid #e5e7eb; padding-top:10px; margin-top:8px; }}
+  .qr-section {{ text-align:right; }}
+  .qr-section img {{ width:90px; height:90px; }}
+  .qr-section p {{ margin:4px 0 0; font-size:0.65rem; color:#888; font-family:monospace; }}
+  .print-btn {{ background:#1B3FAF; color:#fff; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-size:0.9rem; margin-bottom:16px; }}
+</style>
+</head>
+<body>
+<button class="print-btn no-print" onclick="window.print()">⬇ Print / Save as PDF</button>
+<div class="header">
+  <div class="school-info">
+    <h2>{getattr(student.school, 'name', 'School Name')}</h2>
+    <p>Academic Year: {card.academic_year.name if card.academic_year else '—'} &nbsp;|&nbsp; Term: {card.term.name if card.term else '—'}</p>
+  </div>
+  {'<div class="qr-section"><img src="' + qr_data_uri + '" alt="QR"/><p>' + hash_short + '</p></div>' if qr_data_uri else ''}
+</div>
+<h1>Official Academic Report</h1>
+<div class="student-info">
+  <div><span>Student Name</span><br/><strong>{student.user.get_full_name()}</strong></div>
+  <div><span>Admission No.</span><br/><strong>{student.admission_number}</strong></div>
+  <div><span>Class</span><br/><strong>{card.classroom.name if card.classroom else '—'}</strong></div>
+  <div><span>Generated</span><br/><strong>{card.generated_at.strftime('%d %b %Y') if card.generated_at else '—'}</strong></div>
+</div>
+<table>
+  <thead><tr><th>Subject</th><th style="text-align:center">CA</th><th style="text-align:center">Mid-Term</th><th style="text-align:center">Final</th><th style="text-align:center">Total</th><th style="text-align:center">Grade</th></tr></thead>
+  <tbody>{grade_rows}</tbody>
+</table>
+<div class="summary-row">
+  <div class="summary-box"><label>Term Average</label><strong>{avg_display}%</strong></div>
+  <div class="summary-box"><label>Class Rank</label><strong>{rank_display}</strong></div>
+  <div class="summary-box"><label>Subjects</label><strong>{card.total_subjects}</strong></div>
+</div>
+<div class="footer">
+  Verification Hash: <code>{card.verification_hash or '—'}</code><br/>
+  This document can be verified at <strong>/verify/&lt;hash&gt;/</strong>
+</div>
+</body>
+</html>"""
+
+    from django.http import HttpResponse
+    response = HttpResponse(html, content_type='text/html; charset=utf-8')
+    fname = f"report_card_{student.admission_number}_{card.term.name.replace(' ', '_') if card.term else 'term'}.html"
+    response['Content-Disposition'] = f'attachment; filename="{fname}"'
+    return response
+
+
+# =============================================================================
+# STUDENT 2FA SETUP
+# =============================================================================
+
+@csrf_exempt
+def api_student_2fa_setup(request):
+    """GET: get 2FA status + setup QR. POST: enable or disable 2FA."""
+    user, student = _get_student_profile(request)
+    if not student:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+
+    try:
+        from django_otp.plugins.otp_totp.models import TOTPDevice
+    except ImportError:
+        return JsonResponse({'success': False, 'message': '2FA not available on this server.'}, status=503)
+
+    if request.method == 'GET':
+        device = TOTPDevice.objects.filter(user=user, confirmed=True).first()
+        pending = TOTPDevice.objects.filter(user=user, confirmed=False).first()
+        if not pending and not device:
+            pending = TOTPDevice.objects.create(user=user, name='Student 2FA', confirmed=False)
+
+        setup_uri = ''
+        qr_data_uri = ''
+        if not device and pending:
+            try:
+                import qrcode, io, base64
+                setup_uri = pending.config_url
+                qr = qrcode.QRCode(version=2, box_size=6, border=2)
+                qr.add_data(setup_uri)
+                qr.make(fit=True)
+                img = qr.make_image(fill_color='black', back_color='white')
+                buf = io.BytesIO()
+                img.save(buf, format='PNG')
+                qr_data_uri = 'data:image/png;base64,' + base64.b64encode(buf.getvalue()).decode()
+            except Exception:
+                pass
+
+        return JsonResponse({
+            'success':        True,
+            'enabled':        device is not None,
+            'setup_required': device is None,
+            'qr_code':        qr_data_uri,
+            'setup_uri':      setup_uri,
+        })
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+
+        action = body.get('action')
+
+        if action == 'enable':
+            otp_code = str(body.get('otp_code', '')).strip()
+            pending  = TOTPDevice.objects.filter(user=user, confirmed=False).first()
+            if not pending:
+                return JsonResponse({'success': False, 'message': 'No pending 2FA setup found.'}, status=400)
+            if pending.verify_token(otp_code):
+                pending.confirmed = True
+                pending.save(update_fields=['confirmed'])
+                return JsonResponse({'success': True, 'message': '2FA enabled successfully.'})
+            return JsonResponse({'success': False, 'message': 'Invalid OTP code. Please try again.'}, status=400)
+
+        if action == 'disable':
+            deleted, _ = TOTPDevice.objects.filter(user=user).delete()
+            return JsonResponse({'success': True, 'message': '2FA disabled.' if deleted else 'No 2FA device found.'})
+
+        return JsonResponse({'success': False, 'message': 'action must be enable or disable.'}, status=400)
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+

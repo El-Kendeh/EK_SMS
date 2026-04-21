@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { studentApi } from '../../api/studentApi';
 import './SecurityReportModal.css';
 
-export default function SecurityReportModal({ gradeId, subjectName, onClose }) {
+export default function SecurityReportModal({ gradeId, subjectName, onClose, onContactSchool }) {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -139,9 +139,12 @@ export default function SecurityReportModal({ gradeId, subjectName, onClose }) {
                       <span className="material-symbols-outlined">security</span>
                       Review Account Security
                     </button>
-                    <button className="srm-btn srm-btn--ghost" onClick={onClose}>
-                      <span className="material-symbols-outlined">flag</span>
-                      Report This Activity
+                    <button
+                      className="srm-btn srm-btn--ghost"
+                      onClick={() => { onClose(); onContactSchool?.(); }}
+                    >
+                      <span className="material-symbols-outlined">mail</span>
+                      Contact School
                     </button>
                   </div>
                 </>

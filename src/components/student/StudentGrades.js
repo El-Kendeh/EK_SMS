@@ -80,11 +80,12 @@ export default function StudentGrades({ navigateTo }) {
   };
 
   const selectedTerm = terms.find((t) => t.id === selectedTermId);
-  const avg   = summary?.overallAverage ?? 0;
-  const rank  = summary?.classRank ?? '--';
-  const total = summary?.totalStudentsInClass ?? '--';
-  const passed = summary?.subjectsPassed ?? 0;
-  const totalSubj = summary?.totalSubjects ?? 0;
+  const avg     = summary?.overallAverage ?? 0;
+  const rank    = summary?.classRank ?? null;
+  const total   = summary?.totalStudentsInClass ?? null;
+  const passed  = summary?.subjectsPassed ?? 0;
+  const totalSubj    = summary?.totalSubjects ?? 0;
+  const rankPending  = summary ? (summary.rankingPending !== false || rank === null) : true;
 
   const cardVariants = {
     hidden:  { opacity: 0, y: 16 },
@@ -139,16 +140,26 @@ export default function StudentGrades({ navigateTo }) {
             {/* Class rank */}
             <motion.div custom={1} variants={cardVariants} initial="hidden" animate="visible" className="stu-glass-card">
               <div className="stu-glass-card__label">Class Rank</div>
-              <div className="stu-glass-card__value">
-                {typeof rank === 'number' ? ordinalSuffix(rank) : rank}
-                <span className="of"> / {total}</span>
-              </div>
-              <div className="stu-glass-card__sub">
-                <span className="material-symbols-outlined">trending_up</span>
-                {typeof rank === 'number' && typeof total === 'number'
-                  ? `Top ${Math.round((rank / total) * 100)}% of cohort`
-                  : 'Class ranking'}
-              </div>
+              {rankPending ? (
+                <>
+                  <div className="stu-glass-card__value" style={{ fontSize: '1rem', opacity: 0.6 }}>Pending</div>
+                  <div className="stu-glass-card__sub">
+                    <span className="material-symbols-outlined">hourglass_empty</span>
+                    Rankings not yet calculated
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="stu-glass-card__value">
+                    {ordinalSuffix(rank)}
+                    <span className="of"> / {total}</span>
+                  </div>
+                  <div className="stu-glass-card__sub">
+                    <span className="material-symbols-outlined">trending_up</span>
+                    {`Top ${Math.round((rank / total) * 100)}% of cohort`}
+                  </div>
+                </>
+              )}
             </motion.div>
 
             {/* Subjects passed */}
@@ -300,7 +311,7 @@ export default function StudentGrades({ navigateTo }) {
                                 <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>shield</span>
                               </button>
                             )}
-                            {grade.score < 50 && grade.hasRemedialPlan && (
+                            {grade.score < 50 && (
                               <button
                                 className="stu-action-btn stu-action-btn--remedial"
                                 onClick={() => setRemedialGrade(grade)}
@@ -373,6 +384,7 @@ export default function StudentGrades({ navigateTo }) {
         gradeId={securityGrade?.id}
         subjectName={securityGrade?.subject?.name}
         onClose={() => setSecurityGrade(null)}
+        onContactSchool={() => navigateTo('messages')}
       />
 
       {/* Remedial action modal */}

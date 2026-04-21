@@ -153,10 +153,10 @@ export const studentApi = {
   async downloadReportCard(id) {
     if (USE_MOCK) {
       await delay(1500);
-      return new Blob(['Mock PDF content for report card ' + id], { type: 'application/pdf' });
+      return '<html><body><h1>Mock Report Card ' + id + '</h1></body></html>';
     }
     const response = await apiClient.request(`/api/report-cards/${id}/download/`, { method: 'GET' });
-    return response.blob();
+    return response.text();
   },
 
   // ── Notifications ─────────────────────────────────────────────────────
@@ -243,6 +243,25 @@ export const studentApi = {
       };
     }
     return apiClient.get('/api/student/parental-access-log/');
+  },
+
+  // ── 2FA Setup ────────────────────────────────────────────────────────
+  async get2FASetup() {
+    if (USE_MOCK) {
+      await delay(400);
+      return { enabled: false, setup_required: true, qr_code: '', setup_uri: '' };
+    }
+    return apiClient.get('/api/student/2fa/setup/');
+  },
+
+  async enable2FA(otpCode) {
+    if (USE_MOCK) { await delay(600); return { success: true }; }
+    return apiClient.post('/api/student/2fa/setup/', { action: 'enable', otp_code: otpCode });
+  },
+
+  async disable2FA() {
+    if (USE_MOCK) { await delay(400); return { success: true }; }
+    return apiClient.post('/api/student/2fa/setup/', { action: 'disable' });
   },
 
   // ── Financials ────────────────────────────────────────────────────────

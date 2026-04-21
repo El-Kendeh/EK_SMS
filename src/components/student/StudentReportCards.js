@@ -77,14 +77,13 @@ export default function StudentReportCards() {
   const handleDownload = useCallback(async (card) => {
     setDownloading(card.id);
     try {
-      const blob = await studentApi.downloadReportCard(card.id);
-      if (blob) {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `report-card-${card.termName || card.id}.pdf`;
-        a.click();
-        URL.revokeObjectURL(url);
+      const html = await studentApi.downloadReportCard(card.id);
+      if (html) {
+        const win = window.open('', '_blank');
+        if (win) {
+          win.document.write(html);
+          win.document.close();
+        }
       }
     } catch {
       // silently fail

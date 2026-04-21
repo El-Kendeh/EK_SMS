@@ -70,6 +70,56 @@ export default function StudentProfile() {
     }
   };
 
+  // 2FA modal state
+  const [show2FA, setShow2FA] = useState(false);
+  const [twoFAData, setTwoFAData] = useState(null);
+  const [twoFALoading, setTwoFALoading] = useState(false);
+  const [twoFAOtp, setTwoFAOtp] = useState('');
+  const [twoFAMsg, setTwoFAMsg] = useState(null);
+
+  const open2FA = async () => {
+    setShow2FA(true);
+    setTwoFAMsg(null);
+    setTwoFAOtp('');
+    setTwoFALoading(true);
+    try {
+      const data = await studentApi.get2FASetup();
+      setTwoFAData(data);
+    } catch { setTwoFAMsg({ type: 'err', text: 'Could not load 2FA settings.' }); }
+    finally { setTwoFALoading(false); }
+  };
+
+  const handle2FAEnable = async () => {
+    if (!twoFAOtp.trim()) return;
+    setTwoFALoading(true); setTwoFAMsg(null);
+    try {
+      const res = await studentApi.enable2FA(twoFAOtp.trim());
+      if (res.success) {
+        setTwoFAMsg({ type: 'ok', text: '2FA enabled successfully.' });
+        setSecHealth(prev => prev ? { ...prev, twoFactorEnabled: true } : prev);
+        setTwoFAData(prev => prev ? { ...prev, enabled: true } : prev);
+        setTimeout(() => setShow2FA(false), 1800);
+      } else {
+        setTwoFAMsg({ type: 'err', text: res.message || 'Invalid code.' });
+      }
+    } catch { setTwoFAMsg({ type: 'err', text: 'Failed to enable 2FA.' }); }
+    finally { setTwoFALoading(false); }
+  };
+
+  const handle2FADisable = async () => {
+    setTwoFALoading(true); setTwoFAMsg(null);
+    try {
+      const res = await studentApi.disable2FA();
+      if (res.success) {
+        setTwoFAMsg({ type: 'ok', text: '2FA has been disabled.' });
+        setSecHealth(prev => prev ? { ...prev, twoFactorEnabled: false } : prev);
+        setTwoFAData(prev => prev ? { ...prev, enabled: false } : prev);
+        setTimeout(() => setShow2FA(false), 1800);
+      }
+    } catch { setTwoFAMsg({ type: 'err', text: 'Failed to disable 2FA.' }); }
+    finally { setTwoFALoading(false); }
+  };
+
   // Password change state
   const [currentPw, setCurrentPw] = useState('');
   const [newPw, setNewPw] = useState('');
@@ -113,6 +163,7 @@ export default function StudentProfile() {
   );
 
   return (
+    <>
     <div className="sprof">
       {/* Hero */}
       <motion.div
@@ -339,7 +390,7 @@ export default function StudentProfile() {
                   ? `Enabled since ${secHealth.twoFactorSince || 'recently'}`
                   : 'Strongly recommended — not yet enabled'}
               </p>
-              <button className="sprof-2fa-dark__btn">Manage Settings</button>
+              <button className="sprof-2fa-dark__btn" onClick={open2FA}>Manage Settings</button>
             </div>
 
             {/* Trusted devices */}
@@ -440,5 +491,72 @@ export default function StudentProfile() {
         )}
       </motion.section>
     </div>
+
+    {/* ── 2FA Setup Modal ── */}
+    {show2FA && (
+      <div style={{ position:'fixed', inset:0, zIndex:1300, background:'rgba(0,0,0,0.72)', display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
+           onClick={e => e.target === e.currentTarget && setShow2FA(false)}>
+        <div style={{ width:'100%', maxWidth:420, background:'var(--student-surface, #1a2340)', borderRadius:20, padding:'28px 24px', boxShadow:'0 24px 64px rgba(0,0,0,0.5)', display:'flex', flexDirection:'column', gap:20 }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <h3 style={{ margin:0, fontSize:'1.1rem', fontWeight:800, color:'#fff' }}>Two-Factor Authentication</h3>
+            <button onClick={() => setShow2FA(false)} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.5)', cursor:'pointer', padding:4 }}>
+              <span className="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          {twoFALoading && <p style={{ color:'rgba(255,255,255,0.5)', textAlign:'center', margin:0 }}>Loading…</p>}
+
+          {twoFAMsg && (
+            <div style={{ padding:'10px 14px', borderRadius:10, background: twoFAMsg.type === 'ok' ? 'rgba(52,211,153,0.15)' : 'rgba(248,113,113,0.15)', color: twoFAMsg.type === 'ok' ? '#34d399' : '#f87171', fontSize:'0.85rem' }}>
+              {twoFAMsg.text}
+            </div>
+          )}
+
+          {!twoFALoading && twoFAData && (
+            twoFAData.enabled ? (
+              <>
+                <div style={{ display:'flex', alignItems:'center', gap:12, background:'rgba(52,211,153,0.1)', borderRadius:12, padding:'14px 16px' }}>
+                  <span className="material-symbols-outlined" style={{ color:'#34d399', fontVariationSettings:"'FILL' 1" }}>verified_user</span>
+                  <div>
+                    <p style={{ margin:0, fontWeight:700, color:'#34d399', fontSize:'0.9rem' }}>2FA is Active</p>
+                    <p style={{ margin:'2px 0 0', fontSize:'0.78rem', color:'rgba(255,255,255,0.5)' }}>Your account is protected with a TOTP authenticator app.</p>
+                  </div>
+                </div>
+                <button onClick={handle2FADisable} disabled={twoFALoading}
+                  style={{ background:'rgba(248,113,113,0.15)', color:'#f87171', border:'1px solid rgba(248,113,113,0.3)', borderRadius:10, padding:'10px 16px', cursor:'pointer', fontWeight:700, fontSize:'0.875rem' }}>
+                  Disable 2FA
+                </button>
+              </>
+            ) : (
+              <>
+                <p style={{ margin:0, fontSize:'0.85rem', color:'rgba(255,255,255,0.6)', lineHeight:1.5 }}>
+                  Scan the QR code below with an authenticator app (Google Authenticator, Authy, etc.), then enter the 6-digit code to activate 2FA.
+                </p>
+                {twoFAData.qr_code && (
+                  <div style={{ display:'flex', justifyContent:'center' }}>
+                    <img src={twoFAData.qr_code} alt="2FA QR Code" style={{ width:160, height:160, borderRadius:12, background:'#fff', padding:8 }} />
+                  </div>
+                )}
+                <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                  <label style={{ fontSize:'0.75rem', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.07em', color:'rgba(255,255,255,0.5)' }}>Enter 6-digit code</label>
+                  <input
+                    type="text" inputMode="numeric" maxLength={6}
+                    value={twoFAOtp}
+                    onChange={e => setTwoFAOtp(e.target.value.replace(/\D/g, '').slice(0,6))}
+                    placeholder="000000"
+                    style={{ background:'rgba(255,255,255,0.07)', border:'1px solid rgba(255,255,255,0.12)', borderRadius:10, padding:'10px 14px', color:'#fff', fontSize:'1.1rem', letterSpacing:'0.3em', textAlign:'center', outline:'none', fontFamily:'monospace' }}
+                  />
+                </div>
+                <button onClick={handle2FAEnable} disabled={twoFALoading || twoFAOtp.length !== 6}
+                  style={{ background:'var(--student-primary, #4f8ef7)', color:'#fff', border:'none', borderRadius:10, padding:'12px 16px', cursor:'pointer', fontWeight:700, fontSize:'0.9rem', opacity: twoFAOtp.length !== 6 ? 0.5 : 1 }}>
+                  {twoFALoading ? 'Verifying…' : 'Activate 2FA'}
+                </button>
+              </>
+            )
+          )}
+        </div>
+      </div>
+    )}
+    </>
   );
 }
