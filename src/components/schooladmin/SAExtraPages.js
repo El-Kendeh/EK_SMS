@@ -1358,7 +1358,6 @@ export function StudentPromotionPage() {
   const [destClass, setDestClass] = useState('');
   const [saving, setSaving]     = useState(false);
   const [banner, setBanner]     = useState(null);
-  const [, setConfirmModal] = useState(null);
 
   useEffect(() => {
     setLoading(true);
@@ -1389,7 +1388,6 @@ export function StudentPromotionPage() {
       setBanner({ type: 'ok', text: `${promoting.full_name} moved to ${dest?.name}.` });
       setStudents(prev => prev.map(s => s.id === promoting.id ? { ...s, classroom: dest?.name, classroom_id: dest?.id } : s));
       setPromoting(null);
-      setConfirmModal(null);
     } catch (e) { setBanner({ type: 'err', text: e.message || 'Promotion failed.' }); }
     setSaving(false);
   };

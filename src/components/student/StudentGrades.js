@@ -85,7 +85,7 @@ export default function StudentGrades({ navigateTo }) {
   const total   = summary?.totalStudentsInClass ?? null;
   const passed  = summary?.subjectsPassed ?? 0;
   const totalSubj    = summary?.totalSubjects ?? 0;
-  const rankPending  = summary ? (summary.rankingPending !== false || rank === null) : true;
+  const rankPending  = typeof rank !== 'number';
 
   const cardVariants = {
     hidden:  { opacity: 0, y: 16 },
