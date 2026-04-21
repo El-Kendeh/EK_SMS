@@ -7579,3 +7579,241 @@ def api_bulk_import(request):
         'errors':     errors,
     })
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Batch Student Promotion
+# POST /api/school/students/promote-batch/
+# Body: { "student_ids": [1,2,3,...], "target_classroom_id": <int> }
+# Moves all listed students to the target classroom in one call.
+# ─────────────────────────────────────────────────────────────────────────────
+@csrf_exempt
+def api_promote_students_batch(request):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'POST required.'}, status=405)
+
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except Exception:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    if not actor or not school:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+
+    try:
+        body = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+
+    student_ids      = body.get('student_ids', [])
+    target_class_id  = body.get('target_classroom_id')
+
+    if not student_ids or not target_class_id:
+        return JsonResponse({'success': False, 'message': 'student_ids and target_classroom_id are required.'}, status=400)
+
+    try:
+        target_class = ClassRoom.objects.get(id=target_class_id, school=school)
+    except ClassRoom.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Target classroom not found.'}, status=404)
+
+    moved   = 0
+    skipped = []
+    for sid in student_ids:
+        try:
+            student = Student.objects.select_related('classroom').get(id=sid, school=school)
+        except Student.DoesNotExist:
+            skipped.append({'id': sid, 'reason': 'Not found'})
+            continue
+        old_name = student.classroom.name if student.classroom else '(none)'
+        student.classroom = target_class
+        student.save(update_fields=['classroom'])
+        moved += 1
+        _log_security_event(
+            event_type='student_transfer',
+            description=f'Batch: {student.user.get_full_name()} moved from {old_name} to {target_class.name}',
+            severity='low',
+            actor=actor,
+            ip=request.META.get('REMOTE_ADDR'),
+        )
+
+    return JsonResponse({
+        'success':           True,
+        'moved':             moved,
+        'skipped':           skipped,
+        'target_classroom':  target_class.name,
+    })
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Transcript Download (printable HTML)
+# GET /api/student/transcript/download/
+# Generates a print-ready HTML transcript for the authenticated student.
+# ─────────────────────────────────────────────────────────────────────────────
+@csrf_exempt
+def api_student_transcript_download(request):
+    if request.method != 'GET':
+        return JsonResponse({'success': False, 'message': 'GET required.'}, status=405)
+
+    token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
+    user  = _validate_token(token)
+    if not user:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+
+    try:
+        student = Student.objects.select_related('user', 'school', 'classroom').get(user=user)
+    except Student.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Student record not found.'}, status=404)
+
+    grades_qs = (
+        Grade.objects
+        .filter(student=student)
+        .select_related('subject', 'term', 'term__academic_year')
+        .order_by('term__academic_year__start_date', 'term__start_date', 'subject__name')
+    )
+
+    from collections import defaultdict
+    years = defaultdict(lambda: defaultdict(list))
+    for g in grades_qs:
+        ay       = g.term.academic_year
+        ay_key   = f"{ay.start_date.year}/{ay.end_date.year}"
+        term_key = g.term.name
+        years[ay_key][term_key].append(g)
+
+    school_name = student.school.name if student.school else 'EK School Management System'
+    student_name = student.user.get_full_name()
+    adm_no = student.admission_number
+
+    rows_html = ''
+    for ay_label, terms_dict in years.items():
+        for term_name, grades in terms_dict.items():
+            scores = [float(g.total_score) for g in grades]
+            avg    = round(sum(scores) / len(scores), 1) if scores else 0
+            for g in grades:
+                rows_html += (
+                    f'<tr><td>{ay_label}</td><td>{term_name}</td>'
+                    f'<td>{g.subject.name if g.subject else "—"}</td>'
+                    f'<td style="text-align:center">{float(g.continuous_assessment):.1f}</td>'
+                    f'<td style="text-align:center">{float(g.mid_term_exam):.1f}</td>'
+                    f'<td style="text-align:center">{float(g.final_exam):.1f}</td>'
+                    f'<td style="text-align:center;font-weight:700">{float(g.total_score):.1f}</td>'
+                    f'<td style="text-align:center;font-weight:700">{g.grade_letter}</td>'
+                    f'<td style="text-align:center">{"🔒 Locked" if g.is_locked else "Draft"}</td></tr>'
+                )
+            rows_html += (
+                f'<tr style="background:#f3f4f6"><td colspan="6" style="text-align:right;font-style:italic">'
+                f'Term average</td>'
+                f'<td style="text-align:center;font-weight:800">{avg}</td>'
+                f'<td colspan="2"></td></tr>'
+            )
+
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Official Transcript — {student_name}</title>
+<style>
+  body {{font-family:Arial,sans-serif;color:#111;margin:40px;font-size:13px}}
+  h1 {{font-size:20px;margin:0 0 4px}}
+  .school {{font-size:15px;color:#555;margin-bottom:20px}}
+  .meta {{display:flex;gap:40px;margin-bottom:24px;font-size:12px}}
+  .meta b {{display:block;font-size:11px;color:#888;margin-bottom:2px}}
+  table {{width:100%;border-collapse:collapse;font-size:12px}}
+  th {{background:#1e3a8a;color:#fff;padding:7px 10px;text-align:left}}
+  td {{padding:6px 10px;border-bottom:1px solid #e5e7eb}}
+  tr:hover td {{background:#f9fafb}}
+  .footer {{margin-top:32px;font-size:11px;color:#888;text-align:center}}
+  @media print {{body{{margin:20px}} .no-print{{display:none}}}}
+</style>
+</head>
+<body>
+<h1>Official Academic Transcript</h1>
+<div class="school">{school_name}</div>
+<div class="meta">
+  <div><b>Student Name</b>{student_name}</div>
+  <div><b>Admission Number</b>{adm_no}</div>
+  <div><b>Generated</b>{timezone.now().strftime('%d %B %Y at %H:%M')}</div>
+</div>
+<table>
+  <thead>
+    <tr>
+      <th>Academic Year</th><th>Term</th><th>Subject</th>
+      <th>CA (/20)</th><th>Mid-Term (/30)</th><th>Final (/50)</th>
+      <th>Total (/100)</th><th>Grade</th><th>Status</th>
+    </tr>
+  </thead>
+  <tbody>{rows_html}</tbody>
+</table>
+<div class="footer">
+  This transcript was generated by EK School Management System and is only valid with an official school stamp.
+</div>
+<div class="no-print" style="margin-top:20px;text-align:center">
+  <button onclick="window.print()" style="padding:10px 24px;background:#1e3a8a;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px">Print / Save as PDF</button>
+</div>
+</body>
+</html>"""
+
+    from django.http import HttpResponse
+    return HttpResponse(html, content_type='text/html')
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Academic Year Archive
+# POST /api/school/academic-years/<id>/archive/
+# Marks an academic year as archived (read-only historical record):
+#   - sets is_archived=True, is_active=False, archived_at=now
+#   - closes all open terms in the year (sets status=closed, grade_entry_open=False)
+#   - locks all remaining unlocked grades for those terms
+# ─────────────────────────────────────────────────────────────────────────────
+@csrf_exempt
+def api_archive_academic_year(request, year_id):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'POST required.'}, status=405)
+
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except Exception:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    if not actor or not school:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+
+    try:
+        ay = AcademicYear.objects.get(id=year_id, school=school)
+    except AcademicYear.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Academic year not found.'}, status=404)
+
+    if ay.is_archived:
+        return JsonResponse({'success': False, 'message': 'Academic year is already archived.'}, status=400)
+
+    # Close all open/draft terms and lock their grades
+    terms_closed  = 0
+    grades_locked = 0
+    for term in ay.terms.exclude(status='closed'):
+        unlocked = Grade.objects.filter(term=term, is_locked=False)
+        grades_locked += unlocked.count()
+        unlocked.update(is_locked=True)
+        term.grade_entry_open = False
+        term.status = 'closed'
+        term.save(update_fields=['grade_entry_open', 'status'])
+        terms_closed += 1
+
+    ay.is_active  = False
+    ay.is_archived = True
+    ay.archived_at = timezone.now()
+    ay.save(update_fields=['is_active', 'is_archived', 'archived_at'])
+
+    _log_security_event(
+        event_type='academic_year_archived',
+        description=f'Academic year "{ay.name}" archived by {actor.get_full_name()}. '
+                    f'{terms_closed} term(s) closed, {grades_locked} grade(s) locked.',
+        severity='low',
+        actor=actor,
+        ip=request.META.get('REMOTE_ADDR'),
+    )
+
+    return JsonResponse({
+        'success':       True,
+        'message':       f'Academic year "{ay.name}" has been archived.',
+        'year_id':       ay.id,
+        'year_name':     ay.name,
+        'terms_closed':  terms_closed,
+        'grades_locked': grades_locked,
+    })
+

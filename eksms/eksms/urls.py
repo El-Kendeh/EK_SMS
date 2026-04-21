@@ -77,6 +77,10 @@ from .views import (
     api_close_term,
     api_student_transcript,
     api_bulk_import,
+    # Batch promotion, transcript download, academic year archive
+    api_promote_students_batch,
+    api_student_transcript_download,
+    api_archive_academic_year,
 )
 from .secure_views import csrf_token_view
 from django.conf import settings
@@ -238,9 +242,12 @@ urlpatterns = [
     path('api/school/teacher-assignments/',                            api_teacher_assignments_global, name='api_teacher_assignments_global'),
     path('api/school/teacher-assignments/<int:assignment_id>/',        api_teacher_assignment_delete,  name='api_teacher_assignment_delete'),
     # Close term / transcript / bulk import
-    path('api/school/close-term/',                           api_close_term,               name='api_close_term'),
-    path('api/student/transcript/',                          api_student_transcript,        name='api_student_transcript'),
-    path('api/school/bulk-import/',                          api_bulk_import,              name='api_bulk_import'),
+    path('api/school/close-term/',                                      api_close_term,                    name='api_close_term'),
+    path('api/student/transcript/',                                     api_student_transcript,             name='api_student_transcript'),
+    path('api/student/transcript/download/',                            api_student_transcript_download,   name='api_student_transcript_download'),
+    path('api/school/bulk-import/',                                     api_bulk_import,                   name='api_bulk_import'),
+    path('api/school/students/promote-batch/',                          api_promote_students_batch,        name='api_promote_students_batch'),
+    path('api/school/academic-years/<int:year_id>/archive/',            api_archive_academic_year,         name='api_archive_academic_year'),
     # Public document verification
     path('verify/<str:token>/',                              verify_grade_document,        name='verify_grade_document'),
 

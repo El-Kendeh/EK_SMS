@@ -103,6 +103,8 @@ class AcademicYear(models.Model):
     start_date = models.DateField(help_text="Academic year start date")
     end_date = models.DateField(help_text="Academic year end date")
     is_active = models.BooleanField(default=False, help_text="Only one year should be active at a time")
+    is_archived = models.BooleanField(default=False, help_text="Archived years are read-only historical records")
+    archived_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
