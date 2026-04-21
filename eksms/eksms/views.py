@@ -7354,24 +7354,23 @@ def api_student_transcript(request):
         Grade.objects
         .filter(student=student)
         .select_related('subject', 'teacher__user', 'term', 'term__academic_year')
-        .order_by('term__academic_year__start_year', 'term__start_date', 'subject__name')
+        .order_by('term__academic_year__start_date', 'term__start_date', 'subject__name')
     )
 
     from collections import defaultdict
     years = defaultdict(lambda: defaultdict(list))
     for g in grades_qs:
         ay  = g.term.academic_year
-        ay_key   = f"{ay.start_year}/{ay.end_year}" if hasattr(ay, 'end_year') else str(ay.start_year)
+        ay_key   = f"{ay.start_date.year}/{ay.end_date.year}"
         term_key = g.term.name
         years[ay_key][term_key].append({
             'subject':     g.subject.name if g.subject else '',
-            'ca':          g.ca_score,
-            'midterm':     g.midterm_score,
-            'final':       g.final_score,
-            'total':       g.total_score,
+            'ca':          float(g.continuous_assessment),
+            'midterm':     float(g.mid_term_exam),
+            'final':       float(g.final_exam),
+            'total':       float(g.total_score),
             'gradeLetter': g.grade_letter,
             'status':      'Locked' if g.is_locked else 'Draft',
-            'remarks':     g.remarks or '',
         })
 
     transcript = []
@@ -7386,7 +7385,7 @@ def api_student_transcript(request):
     return JsonResponse({
         'success':    True,
         'student':    student.user.get_full_name(),
-        'studentId':  getattr(student, 'student_number', ''),
+        'studentId':  getattr(student, 'admission_number', ''),
         'transcript': transcript,
     })
 
@@ -7444,19 +7443,31 @@ def api_bulk_import(request):
                 created += 1
 
     elif import_type == 'classrooms':
-        ay = AcademicYear.objects.filter(school=school, is_active=True).first()
         for i, row in enumerate(rows, 1):
-            name  = (row.get('name') or row.get('class_name') or '').strip()
-            grade = (row.get('grade_level') or row.get('grade') or '').strip()
+            name        = (row.get('name') or row.get('class_name') or '').strip()
+            code        = (row.get('code') or '').strip()
+            form_number = (row.get('form_number') or row.get('grade') or '').strip()
             if not name:
                 errors.append({'row': i, 'error': 'Missing classroom name.'})
                 continue
-            _, was_created = ClassRoom.objects.get_or_create(
-                school=school, name=name,
-                defaults={'grade_level': grade, 'academic_year': ay, 'is_active': True},
-            )
-            if was_created:
+            if not code:
+                import re
+                code = re.sub(r'\s+', '', name.upper())[:20]
+            try:
+                form_int = int(form_number) if form_number else 1
+            except ValueError:
+                form_int = 1
+            if ClassRoom.objects.filter(school=school, code=code).exists():
+                errors.append({'row': i, 'error': f'Classroom code "{code}" already exists.'})
+                continue
+            try:
+                ClassRoom.objects.create(
+                    school=school, name=name, code=code,
+                    form_number=form_int, is_active=True,
+                )
                 created += 1
+            except Exception as exc:
+                errors.append({'row': i, 'error': str(exc)})
 
     elif import_type == 'students':
         from django.contrib.auth import get_user_model

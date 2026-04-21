@@ -144,6 +144,15 @@ export const studentApi = {
     return apiClient.get(`/api/student/grades/${gradeId}/security-report/`);
   },
 
+  // ── Transcript ───────────────────────────────────────────────────────
+  async getTranscript() {
+    if (USE_MOCK) {
+      await delay(700);
+      return { success: true, student: 'Mock Student', studentId: 'STU-001', transcript: [] };
+    }
+    return apiClient.get('/api/student/transcript/');
+  },
+
   // ── Report Cards ──────────────────────────────────────────────────────
   async getReportCards() {
     if (USE_MOCK) { await delay(600); return mockReportCards; }
