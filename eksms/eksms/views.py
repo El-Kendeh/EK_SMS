@@ -676,39 +676,114 @@ def api_verify_2fa(request):
 
 @csrf_exempt
 def verify_grade_document(request, token):
-    """Public endpoint — anyone can verify a report card or grade by token."""
+    """
+    Public endpoint — anyone can verify a grade or report card by token.
+    Returns HTML for browser / QR-code scans; JSON for API calls (Accept: application/json).
+    """
+    from django.http import HttpResponse
+    wants_html = 'application/json' not in request.META.get('HTTP_ACCEPT', '')
+
+    def _html(authentic, doc_type, fields, school_name=''):
+        colour   = '#16a34a' if authentic else '#dc2626'
+        icon     = '✔' if authentic else '✘'
+        status   = 'AUTHENTIC' if authentic else 'NOT VERIFIED'
+        rows     = ''.join(
+            f'<tr><td style="padding:8px 16px;background:#f8fafc;font-weight:600;white-space:nowrap">{k}</td>'
+            f'<td style="padding:8px 16px">{v}</td></tr>'
+            for k, v in fields.items()
+        )
+        return HttpResponse(f'''<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EK-SMS — Document Verification</title>
+<style>
+  body{{font-family:system-ui,sans-serif;background:#f1f5f9;margin:0;padding:20px;display:flex;justify-content:center}}
+  .card{{background:#fff;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,.12);max-width:480px;width:100%;overflow:hidden}}
+  .banner{{background:{colour};color:#fff;padding:24px 28px;text-align:center}}
+  .icon{{font-size:3rem;display:block;margin-bottom:8px}}
+  .status{{font-size:1.25rem;font-weight:800;letter-spacing:.04em}}
+  .doc-type{{font-size:.875rem;opacity:.85;margin-top:4px}}
+  table{{width:100%;border-collapse:collapse;font-size:.9rem}}
+  tr+tr td{{border-top:1px solid #e2e8f0}}
+  .footer{{padding:16px 28px;font-size:.75rem;color:#94a3b8;text-align:center;border-top:1px solid #e2e8f0}}
+  .school{{font-weight:700;color:#1e293b}}
+</style></head><body>
+<div class="card">
+  <div class="banner">
+    <span class="icon">{icon}</span>
+    <div class="status">{status}</div>
+    <div class="doc-type">{doc_type.replace("_"," ").title()}</div>
+  </div>
+  <table>{rows}</table>
+  <div class="footer">
+    {'<span class="school">'+school_name+'</span> &nbsp;|&nbsp; ' if school_name else ''}
+    Verified by <strong>EK-SMS</strong> &nbsp;&middot;&nbsp; {timezone.now().strftime("%d %b %Y, %H:%M")} UTC
+  </div>
+</div></body></html>''', content_type='text/html')
+
+    # ── Lookup ─────────────────────────────────────────────────────
     try:
         gv = GradeVerification.objects.select_related(
-            'grade__student__user', 'grade__subject', 'grade__term__academic_year'
+            'grade__student__user', 'grade__subject', 'grade__term__academic_year',
+            'grade__student__school',
         ).get(verification_token=token)
+        gv.verification_attempts += 1
+        gv.last_verification_at  = timezone.now()
+        gv.save(update_fields=['verification_attempts', 'last_verification_at'])
+        grade  = gv.grade
+        fields = {
+            'Student':   grade.student.user.get_full_name(),
+            'Subject':   grade.subject.name,
+            'Score':     f"{float(grade.total_score):.1f}",
+            'Grade':     grade.grade_letter,
+            'Term':      grade.term.get_name_display(),
+            'Locked':    grade.locked_at.strftime('%d %b %Y') if grade.locked_at else '—',
+            'Token':     token[:16] + '…',
+        }
+        data = {'success': True, 'authentic': True, 'type': 'grade',
+                'student_name': grade.student.user.get_full_name(),
+                'subject': grade.subject.name, 'grade_letter': grade.grade_letter,
+                'total_score': float(grade.total_score),
+                'term': grade.term.get_name_display(), 'issued_at': str(gv.issued_at)}
+        school_name = grade.student.school.name if grade.student.school else ''
+        if wants_html:
+            return _html(True, 'grade', fields, school_name)
+        return JsonResponse(data)
+
     except GradeVerification.DoesNotExist:
-        # Try ReportCard by verification_hash
-        try:
-            rc = ReportCard.objects.select_related('student__user', 'term', 'academic_year').get(
-                verification_hash=token
-            )
-            return JsonResponse({'success': True, 'authentic': True,
-                                 'type': 'report_card',
-                                 'student_name': rc.student.user.get_full_name(),
-                                 'term': rc.term.get_name_display(),
-                                 'academic_year': rc.academic_year.name,
-                                 'average_score': float(rc.average_score),
-                                 'class_rank': rc.class_rank,
-                                 'generated_at': str(rc.generated_at)})
-        except ReportCard.DoesNotExist:
-            return JsonResponse({'success': False, 'authentic': False,
-                                 'message': 'Document not found or token invalid.'}, status=404)
-    gv.verification_attempts += 1
-    gv.last_verification_at = timezone.now()
-    gv.save(update_fields=['verification_attempts', 'last_verification_at'])
-    grade = gv.grade
-    return JsonResponse({'success': True, 'authentic': True, 'type': 'grade',
-                         'student_name': grade.student.user.get_full_name(),
-                         'subject': grade.subject.name,
-                         'grade_letter': grade.grade_letter,
-                         'total_score': float(grade.total_score),
-                         'term': grade.term.get_name_display(),
-                         'issued_at': str(gv.issued_at)})
+        pass
+
+    try:
+        rc = ReportCard.objects.select_related(
+            'student__user', 'term', 'academic_year', 'student__school'
+        ).get(verification_hash=token)
+        fields = {
+            'Student':       rc.student.user.get_full_name(),
+            'Term':          rc.term.get_name_display(),
+            'Academic Year': rc.academic_year.name,
+            'Average Score': f"{float(rc.average_score):.1f}",
+            'Class Rank':    str(rc.class_rank) if rc.class_rank else '—',
+            'Generated':     rc.generated_at.strftime('%d %b %Y') if rc.generated_at else '—',
+            'Hash':          token[:16] + '…',
+        }
+        data = {'success': True, 'authentic': True, 'type': 'report_card',
+                'student_name': rc.student.user.get_full_name(),
+                'term': rc.term.get_name_display(), 'academic_year': rc.academic_year.name,
+                'average_score': float(rc.average_score), 'class_rank': rc.class_rank,
+                'generated_at': str(rc.generated_at)}
+        school_name = rc.student.school.name if rc.student.school else ''
+        if wants_html:
+            return _html(True, 'report_card', fields, school_name)
+        return JsonResponse(data)
+
+    except ReportCard.DoesNotExist:
+        pass
+
+    # ── Not found ──────────────────────────────────────────────────
+    if wants_html:
+        return _html(False, 'unknown', {'Token': token[:16] + '…', 'Error': 'No matching document found.'})
+    return JsonResponse({'success': False, 'authentic': False,
+                         'message': 'Document not found or token invalid.'}, status=404)
 
 
 @require_http_methods(["POST"])
@@ -6131,14 +6206,20 @@ def api_teacher_grade_lock(request):
             'total_score': str(grade.total_score),
             'grade_letter': grade.grade_letter,
         }, 'Grade locked by teacher')
-        GradeVerification.objects.get_or_create(
+        new_hash = _compute_grade_hash(grade)
+        gv, created = GradeVerification.objects.get_or_create(
             grade=grade,
             defaults={
                 'verification_token': _secrets.token_urlsafe(32),
-                'sha256_hash': _compute_grade_hash(grade),
+                'sha256_hash': new_hash,
                 'issued_by': user,
             }
         )
+        if not created:
+            # Re-lock after a mod approval — refresh hash; keep token so printed QR codes remain valid
+            gv.sha256_hash = new_hash
+            gv.issued_by = user
+            gv.save(update_fields=['sha256_hash', 'issued_by'])
         _dispatch_grade_lock_notifications(grade, school, request)
         return True
 
@@ -6372,6 +6453,17 @@ def api_teacher_mod_requests(request):
             mod.evidence_file = evidence_file
             mod.save(update_fields=['evidence_file'])
         _write_grade_audit(grade, 'MOD_REQUEST', user, request, {}, {'proposed': str(proposed_score)}, reason)
+        # Notify all school admins that a new request needs review
+        for sa_obj in SchoolAdmin.objects.filter(school=teacher.school, is_active=True).select_related('user'):
+            _create_notification(
+                teacher.school,
+                f'Grade Modification Request — {grade.subject.name}',
+                f'{user.get_full_name()} has requested a correction for '
+                f'{grade.student.user.get_full_name()}\'s {grade.subject.name} grade '
+                f'(current: {grade.total_score} → proposed: {proposed_score}). '
+                f'Review required.',
+                notif_type='warning', recipient_user=sa_obj.user,
+            )
         return JsonResponse({'success': True, 'message': 'Modification request submitted.', 'id': mod.id})
 
     return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
@@ -6442,19 +6534,64 @@ def api_school_mod_review(request):
     mod.review_reason = reason
     mod.reviewed_at   = timezone.now()
     if action == 'approve':
-        grade = mod.grade
+        grade     = mod.grade
         old_score = grade.total_score
+        # Apply the corrected score
         grade.total_score = mod.proposed_score
         grade.calculate_grade_letter()
-        grade.is_locked = False
-        grade.save(update_fields=['total_score', 'grade_letter', 'is_locked'])
+        grade.save(update_fields=['total_score', 'grade_letter'])
+        # Re-lock immediately with new hash — unlocking after approval would leave grade vulnerable
+        grade.is_locked = True
+        grade.locked_by = user
+        grade.locked_at = timezone.now()
+        grade.save(update_fields=['is_locked', 'locked_by', 'locked_at'])
+        # Refresh the GradeVerification hash (keep same token so existing QR codes remain valid)
+        new_hash = _compute_grade_hash(grade)
+        gv_qs = GradeVerification.objects.filter(grade=grade)
+        if gv_qs.exists():
+            gv_qs.update(sha256_hash=new_hash)
+        else:
+            GradeVerification.objects.create(
+                grade=grade,
+                verification_token=_secrets.token_urlsafe(32),
+                sha256_hash=new_hash,
+                issued_by=user,
+            )
         mod.status = 'approved'
         _write_grade_audit(grade, 'MOD_APPROVED', user, request,
                            {'total_score': str(old_score)},
                            {'total_score': str(mod.proposed_score)}, reason)
+        # Notify teacher, student, parents
+        student     = grade.student
+        subject     = grade.subject.name
+        new_letter  = grade.grade_letter
+        teacher_user = mod.requested_by
+        _create_notification(school,
+            f'Grade Correction Approved — {subject}',
+            f'Your modification request for {student.user.get_full_name()}\'s {subject} grade '
+            f'has been approved. Score updated from {old_score} to {mod.proposed_score} ({new_letter}).',
+            notif_type='success', recipient_user=teacher_user)
+        _create_notification(school,
+            f'Your {subject} grade has been corrected',
+            f'Your {subject} grade has been updated to {float(mod.proposed_score):.1f} ({new_letter}) '
+            f'following a teacher correction approved by your school admin.',
+            notif_type='success', recipient_user=student.user)
+        for link in student.parent_links.select_related('parent__user').all():
+            _create_notification(school,
+                f'{student.user.get_full_name()}\'s {subject} grade corrected',
+                f'A formally approved correction has been applied to {student.user.get_full_name()}\'s '
+                f'{subject} grade: now {float(mod.proposed_score):.1f} ({new_letter}).',
+                notif_type='success', recipient_user=link.parent.user)
     else:
         mod.status = 'rejected'
         _write_grade_audit(mod.grade, 'MOD_REJECTED', user, request, {}, {}, reason)
+        # Notify teacher of rejection
+        _create_notification(school,
+            f'Grade Modification Request Rejected — {mod.grade.subject.name}',
+            f'Your modification request for {mod.grade.student.user.get_full_name()}\'s '
+            f'{mod.grade.subject.name} grade has been rejected. '
+            + (f'Reason: {reason}' if reason else 'No reason provided.'),
+            notif_type='warning', recipient_user=mod.requested_by)
     mod.save()
     return JsonResponse({'success': True, 'message': f'Request {action}d.'})
 
