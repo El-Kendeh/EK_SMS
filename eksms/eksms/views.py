@@ -2601,6 +2601,33 @@ def api_school_profile_full(request):
 
 # ── Students ─────────────────────────────────────────────────────
 
+def _generate_admission_number(school):
+    """
+    Returns the next available admission number for the school.
+    Format: {SCHOOL_CODE}/{YEAR}/{SEQ:04d}   e.g. GBHS/2026/0042
+    Seq is 1-indexed from the total number of students ever registered.
+    """
+    year = timezone.now().year
+    seq  = Student.objects.filter(school=school).count() + 1
+    adm  = f"{school.code.upper()}/{year}/{seq:04d}"
+    while Student.objects.filter(school=school, admission_number=adm).exists():
+        seq += 1
+        adm  = f"{school.code.upper()}/{year}/{seq:04d}"
+    return adm
+
+
+@csrf_exempt
+def api_student_next_admission(request):
+    """GET: return the next auto-generated admission number for the school."""
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+    return JsonResponse({'success': True, 'admission_number': _generate_admission_number(school)})
+
+
 @csrf_exempt
 def api_students(request):
     try:
@@ -2695,18 +2722,31 @@ def api_students(request):
         except Exception:
             primary_contact = False
 
-        if not first_name or not last_name or not admission_number:
-            return JsonResponse({'success': False, 'message': 'first_name, last_name, and admission_number are required.'}, status=400)
-        if Student.objects.filter(school=school, admission_number=admission_number).exists():
+        if not first_name or not last_name:
+            return JsonResponse({'success': False, 'message': 'first_name and last_name are required.'}, status=400)
+
+        # Auto-generate admission number if not supplied
+        if not admission_number:
+            admission_number = _generate_admission_number(school)
+        elif Student.objects.filter(school=school, admission_number=admission_number).exists():
             return JsonResponse({'success': False, 'message': 'Admission number already exists.'}, status=400)
 
-        student_username = f"stu_{school.code}_{admission_number}".lower().replace(' ', '_')[:150]
-        if User.objects.filter(username=student_username).exists():
-            student_username = f"{student_username}_{uuid.uuid4().hex[:4]}"
+        # Accept a custom student password; default to admission number
+        student_password = body.get('student_password', '').strip() or admission_number
+
+        # Build a clean slug username from the admission number (strip all non-alnum)
+        adm_slug         = re.sub(r'[^a-z0-9]', '', admission_number.lower())
+        student_username = f"stu_{adm_slug}"[:148]
+        base_uname       = student_username
+        counter          = 0
+        while User.objects.filter(username=student_username).exists():
+            counter       += 1
+            student_username = f"{base_uname}_{uuid.uuid4().hex[:4]}"
+
         student_user = User.objects.create_user(
             username=student_username, email=email,
             first_name=first_name, last_name=last_name,
-            password=admission_number,
+            password=student_password,
         )
 
         classroom = None
@@ -2819,13 +2859,36 @@ def api_students(request):
                 return JsonResponse({'success': False, 'message': mother_result['error']}, status=400)
             created_parents.append({'relationship': 'Mother', **mother_result})
 
+        # Email the student their login credentials if email was provided
+        if email:
+            _send_notification_email(
+                f'Welcome to {school.name} — Your Student Portal Credentials',
+                email,
+                (
+                    f'<p>Hello <strong>{first_name}</strong>,</p>'
+                    f'<p>Your student account has been created at <strong>{school.name}</strong>.</p>'
+                    f'<p>Use the details below to access the <strong>Student Portal</strong>:</p>'
+                    f'<table style="border-collapse:collapse;margin:12px 0">'
+                    f'<tr><td style="padding:6px 12px;background:#f3f4f6;font-weight:600">Admission No.</td>'
+                    f'<td style="padding:6px 12px">{admission_number}</td></tr>'
+                    f'<tr><td style="padding:6px 12px;background:#f3f4f6;font-weight:600">Username</td>'
+                    f'<td style="padding:6px 12px">{student_username}</td></tr>'
+                    f'<tr><td style="padding:6px 12px;background:#f3f4f6;font-weight:600">Password</td>'
+                    f'<td style="padding:6px 12px">{student_password}</td></tr>'
+                    f'</table>'
+                    f'<p style="color:#dc2626"><strong>Please change your password after your first login.</strong></p>'
+                ),
+            )
+
         response_data = {
             'success': True,
             'message': 'Student added.',
-            'id': student.id,
-            'full_name': student_user.get_full_name(),
-            'admission_number': student.admission_number,
-            'parents': created_parents,
+            'id':                    student.id,
+            'full_name':             student_user.get_full_name(),
+            'admission_number':      student.admission_number,
+            'student_username':      student_username,
+            'student_initial_password': student_password,
+            'parents':               created_parents,
         }
         return JsonResponse(response_data, status=201)
 

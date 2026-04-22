@@ -22,7 +22,7 @@ from .views import (
     api_system_alerts,
     # School-admin CRUD
     api_school_profile_full,
-    api_students, api_student_detail,
+    api_students, api_student_detail, api_student_next_admission,
     api_teachers, api_teacher_detail, api_teacher_assignments,
     api_parent_students,
     api_classes,  api_class_detail,
@@ -127,6 +127,7 @@ urlpatterns = [
     # School-admin CRUD
     path('api/school/info/',                    api_school_profile_full,      name='api_school_info'),
     path('api/school/update/',                  api_school_profile_full,      name='api_school_update'),
+    path('api/school/students/next-admission-number/', api_student_next_admission, name='api_student_next_admission'),
     path('api/school/students/',                api_students,         name='api_students'),
     path('api/school/students/<int:student_id>/', api_student_detail, name='api_student_detail'),
     path('api/parent/students/',                 api_parent_students,  name='api_parent_students'),
