@@ -244,6 +244,10 @@ class Student(models.Model):
     phone_number = models.CharField(max_length=20, blank=True)
     gender = models.CharField(max_length=1, choices=[('M', 'Male'), ('F', 'Female')], blank=True)
     passport_picture     = models.ImageField(upload_to='student_passports/', blank=True, null=True)
+    # Medical information
+    blood_type           = models.CharField(max_length=5, blank=True, help_text="e.g., A+, O-")
+    allergies            = models.TextField(blank=True, help_text="Known allergies")
+    medical_notes        = models.TextField(blank=True, help_text="General medical notes / conditions")
     is_active            = models.BooleanField(default=True)
     must_change_password = models.BooleanField(default=False)
     created_at           = models.DateTimeField(auto_now_add=True)
@@ -282,6 +286,7 @@ class ParentStudent(models.Model):
     parent = models.ForeignKey(Parent, on_delete=models.CASCADE, related_name='student_links')
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='parent_links')
     is_primary_contact = models.BooleanField(default=False, help_text="Primary contact for emergencies")
+    relationship_type  = models.CharField(max_length=50, blank=True, help_text="e.g., Mother, Father, Guardian")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -291,6 +296,25 @@ class ParentStudent(models.Model):
 
     def __str__(self):
         return f"{self.student} - {self.parent}"
+
+
+class ParentNotificationPreference(models.Model):
+    """Stores per-parent notification channel and category preferences"""
+    parent          = models.OneToOneField(Parent, on_delete=models.CASCADE, related_name='notification_preferences')
+    email_enabled   = models.BooleanField(default=True)
+    sms_enabled     = models.BooleanField(default=False)
+    push_enabled    = models.BooleanField(default=False)
+    grade_alerts    = models.BooleanField(default=True)
+    attendance_alerts = models.BooleanField(default=True)
+    fee_alerts      = models.BooleanField(default=True)
+    updated_at      = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Parent Notification Preference"
+        verbose_name_plural = "Parent Notification Preferences"
+
+    def __str__(self):
+        return f"Notification prefs for {self.parent}"
 
 
 class Grade(models.Model):
@@ -769,6 +793,10 @@ class ReportCard(models.Model):
     generated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     is_published = models.BooleanField(default=False, help_text="Can parents view this report card?")
     published_at = models.DateTimeField(null=True, blank=True)
+
+    # Comments
+    teacher_comment   = models.TextField(blank=True, help_text="Class teacher's comments")
+    principal_comment = models.TextField(blank=True, help_text="Principal's comments")
 
     class Meta:
         unique_together = ('student', 'term', 'academic_year')

@@ -57,7 +57,7 @@ from .views import (
     api_teacher_grade_lock, api_teacher_grade_history, api_student_grade_history,
     api_teacher_mod_requests, api_school_mod_requests, api_school_mod_review,
     api_parent_profile, api_parent_children, api_parent_child_grades,
-    api_parent_child_report_cards, api_parent_notifications,
+    api_parent_child_report_cards, api_parent_notifications, api_parent_notification_prefs,
     api_student_report_cards, api_report_card_generate,
     api_student_grades_summary, api_report_card_download, api_student_2fa_setup,
     api_class_subjects,
@@ -210,7 +210,8 @@ urlpatterns = [
     path('api/parent/children/',                             api_parent_children,          name='api_parent_children'),
     path('api/parent/children/<int:student_id>/grades/',     api_parent_child_grades,      name='api_parent_child_grades'),
     path('api/parent/children/<int:student_id>/report-cards/', api_parent_child_report_cards, name='api_parent_child_report_cards'),
-    path('api/parent/notifications/',                        api_parent_notifications,     name='api_parent_notifications'),
+    path('api/parent/notifications/',                        api_parent_notifications,        name='api_parent_notifications'),
+    path('api/parent/notification-preferences/',             api_parent_notification_prefs,   name='api_parent_notification_prefs'),
     # Student grades summary (classRank, average, subjectsPassed)
     path('api/student/grades/summary/',                      api_student_grades_summary,   name='api_student_grades_summary'),
     # Student report cards

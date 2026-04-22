@@ -17,7 +17,7 @@ from eksms_core.models import (
     TeacherSubjectClass, GradeAuditLog, GradeVerification, ReportCard, ClassRanking,
     Exam, ExamResult, Notification, NotificationRead, TimetableSlot,
     SchoolStaffAccount, GradeModificationRequest, ClassSubject, UserToken,
-    Room, GradingScheme,
+    Room, GradingScheme, ParentNotificationPreference,
 )
 import datetime
 import re
@@ -331,6 +331,35 @@ def _send_notification_email(subject, to_email, html_content, text_content=None)
             f"{'='*55}"
         )
         return False, str(e)
+
+
+def _send_sms(to_phone, message):
+    """
+    Send SMS via Africa's Talking gateway.
+    Returns (success: bool, info: str).
+    Falls back to logging if credentials are not configured.
+    """
+    from django.conf import settings
+    import logging as _logging
+    _sms_logger = _logging.getLogger('django')
+
+    api_key  = getattr(settings, 'AFRICAS_TALKING_API_KEY', None)
+    username = getattr(settings, 'AFRICAS_TALKING_USERNAME', None)
+
+    if api_key and username:
+        try:
+            import africastalking
+            africastalking.initialize(username, api_key)
+            sms = africastalking.SMS
+            response = sms.send(message, [to_phone])
+            _sms_logger.info(f'SMS sent to {to_phone}: {response}')
+            return True, 'SMS sent via Africa\'s Talking'
+        except Exception as exc:
+            _sms_logger.error(f'Africa\'s Talking SMS error to {to_phone}: {exc}')
+            return False, str(exc)
+
+    _sms_logger.info(f'SMS (no gateway configured) → {to_phone}: {message[:80]}')
+    return False, 'SMS gateway not configured'
 
 
 # Serve favicon.jpeg from the public folder
@@ -2436,6 +2465,27 @@ def _get_school_for_admin(request):
     return actor, sa, sa.school
 
 
+def _require_exam_officer(request, school):
+    """
+    Returns (teacher, error_response).
+    Checks that the authed user is a Teacher with is_examination_officer=True.
+    School admins bypass this check (they have full access).
+    """
+    actor = _get_authed_user(request)
+    if not actor:
+        return None, JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    # School admins always have access
+    if SchoolAdmin.objects.filter(user=actor, school=school).exists():
+        return None, None
+    try:
+        teacher = Teacher.objects.get(user=actor, school=school, is_active=True)
+    except Teacher.DoesNotExist:
+        return None, JsonResponse({'success': False, 'message': 'Exam officer role required.'}, status=403)
+    if not teacher.is_examination_officer:
+        return None, JsonResponse({'success': False, 'message': 'Exam officer role required.'}, status=403)
+    return teacher, None
+
+
 # ── School info ──────────────────────────────────────────────────
 
 @csrf_exempt
@@ -2905,6 +2955,7 @@ def api_parent_students(request):
             'phone_number': student.phone_number,
             'email': student.user.email,
             'is_primary_contact': link.is_primary_contact,
+            'relationship_type':  link.relationship_type,
         })
 
     return JsonResponse({'success': True, 'children': children}, status=200)
@@ -4058,6 +4109,9 @@ def api_exams(request):
         return JsonResponse({'success': True, 'exams': data})
 
     if request.method == 'POST':
+        _, err = _require_exam_officer(request, school)
+        if err:
+            return err
         try:
             body = json.loads(request.body)
         except json.JSONDecodeError:
@@ -4138,6 +4192,9 @@ def api_exam_results(request, exam_id):
         }, 'results': data})
 
     if request.method == 'POST':
+        _, err = _require_exam_officer(request, school)
+        if err:
+            return err
         try:
             body = json.loads(request.body)
         except json.JSONDecodeError:
@@ -4317,8 +4374,14 @@ def api_timetable_generate(request):
 
     from collections import Counter, defaultdict
 
-    periods_per_day     = max(1, min(int(body.get('periods_per_day', 8)), 12))
-    max_teacher_per_day = max(1, min(int(body.get('max_teacher_per_day', 5)), periods_per_day))
+    periods_per_day          = max(1, min(int(body.get('periods_per_day', 8)), 12))
+    max_teacher_per_day      = max(1, min(int(body.get('max_teacher_per_day', 5)), periods_per_day))
+    period_duration_minutes  = max(15, min(int(body.get('period_duration_minutes', 45)), 120))
+    _raw_start               = body.get('school_start_time', '08:00')
+    try:
+        _sh, _sm = [int(x) for x in str(_raw_start).split(':')[:2]]
+    except Exception:
+        _sh, _sm = 8, 0
     _bp_raw             = body.get('break_periods') or []
     break_periods       = set(
         int(b) for b in _bp_raw
@@ -4500,17 +4563,29 @@ def api_timetable_generate(request):
                 _place(blocker, day, period)
 
     # ── 9. Persist results ────────────────────────────────────────
-    slots_to_create = [
-        TimetableSlot(
+    import datetime as _dt
+    _school_start = _dt.time(_sh, _sm)
+
+    def _slot_times(period_num):
+        total_start_minutes = _sh * 60 + _sm + (period_num - 1) * period_duration_minutes
+        s_h, s_m = divmod(total_start_minutes, 60)
+        e_total  = total_start_minutes + period_duration_minutes
+        e_h, e_m = divmod(e_total, 60)
+        return _dt.time(s_h % 24, s_m), _dt.time(e_h % 24, e_m)
+
+    slots_to_create = []
+    for (_cls_id, day, period), s in grid.items():
+        t_start, t_end = _slot_times(period)
+        slots_to_create.append(TimetableSlot(
             school=school,
             classroom=s['classroom'],
             subject=s['subject'],
             teacher=s['teacher'],
             day_of_week=day,
             period_number=period,
-        )
-        for ((_cls_id, day, period), s) in grid.items()
-    ]
+            start_time=t_start,
+            end_time=t_end,
+        ))
 
     TimetableSlot.objects.bulk_create(slots_to_create, ignore_conflicts=True)
     actual    = TimetableSlot.objects.filter(school=school).count()
@@ -6456,6 +6531,40 @@ def api_parent_notifications(request):
     return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
 
 
+@csrf_exempt
+def api_parent_notification_prefs(request):
+    """GET/POST: parent notification channel + category preferences."""
+    user, parent = _get_parent_profile(request)
+    if not parent:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+
+    prefs, _ = ParentNotificationPreference.objects.get_or_create(parent=parent)
+
+    if request.method == 'GET':
+        return JsonResponse({'success': True, 'preferences': {
+            'email_enabled':    prefs.email_enabled,
+            'sms_enabled':      prefs.sms_enabled,
+            'push_enabled':     prefs.push_enabled,
+            'grade_alerts':     prefs.grade_alerts,
+            'attendance_alerts': prefs.attendance_alerts,
+            'fee_alerts':       prefs.fee_alerts,
+        }})
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        for field in ('email_enabled', 'sms_enabled', 'push_enabled',
+                      'grade_alerts', 'attendance_alerts', 'fee_alerts'):
+            if field in body:
+                setattr(prefs, field, bool(body[field]))
+        prefs.save()
+        return JsonResponse({'success': True, 'message': 'Preferences saved.'})
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
 # =============================================================================
 # STUDENT REPORT CARDS
 # =============================================================================
@@ -6476,6 +6585,8 @@ def api_student_report_cards(request):
         'class_size':        c.class_size,
         'pdf_url':           c.pdf_file.url if c.pdf_file else None,
         'verification_hash': c.verification_hash,
+        'teacher_comment':   c.teacher_comment,
+        'principal_comment': c.principal_comment,
         'generated_at':      str(c.generated_at),
     } for c in cards]
     return JsonResponse({'success': True, 'report_cards': data})
@@ -6492,10 +6603,15 @@ def api_report_card_generate(request):
         return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
     if request.method != 'POST':
         return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+    _, err = _require_exam_officer(request, school)
+    if err:
+        return err
     try:
-        data       = json.loads(request.body)
-        student_id = data.get('student_id')
-        term_id    = data.get('term_id')
+        data              = json.loads(request.body)
+        student_id        = data.get('student_id')
+        term_id           = data.get('term_id')
+        teacher_comment   = data.get('teacher_comment', '')
+        principal_comment = data.get('principal_comment', '')
     except json.JSONDecodeError:
         return JsonResponse({'success': False, 'message': 'Invalid JSON (report card).'}, status=400)
     if not student_id or not term_id:
@@ -6530,6 +6646,8 @@ def api_report_card_generate(request):
             'total_subjects':    grades.count(),
             'verification_hash': v_hash,
             'generated_by':      user,
+            'teacher_comment':   teacher_comment,
+            'principal_comment': principal_comment,
         }
     )
     return JsonResponse({
