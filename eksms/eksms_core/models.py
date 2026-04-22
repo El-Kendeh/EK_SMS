@@ -1108,6 +1108,8 @@ class SecurityLogEntry(models.Model):
         ('suspicious_activity', 'Suspicious Activity'),
         ('api_rate_limited', 'API Rate Limited'),
         ('profile_updated', 'Profile Updated'),
+        ('student_transfer', 'Student Transfer'),
+        ('academic_year_archived', 'Academic Year Archived'),
     ]
     SEVERITY_CHOICES = [
         ('info', 'Info'),

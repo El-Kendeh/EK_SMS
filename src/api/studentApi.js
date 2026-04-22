@@ -153,6 +153,15 @@ export const studentApi = {
     return apiClient.get('/api/student/transcript/');
   },
 
+  async downloadTranscript() {
+    if (USE_MOCK) {
+      await delay(800);
+      return '<html><body><h1>Mock Transcript</h1></body></html>';
+    }
+    const response = await apiClient.request('/api/student/transcript/download/', { method: 'GET' });
+    return response.text();
+  },
+
   // ── Report Cards ──────────────────────────────────────────────────────
   async getReportCards() {
     if (USE_MOCK) { await delay(600); return mockReportCards; }
