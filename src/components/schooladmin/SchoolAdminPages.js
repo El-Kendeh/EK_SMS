@@ -964,9 +964,11 @@ export function FinancePage({ school }) {
    REPORTS PAGE
    ============================================================ */
 export function ReportsPage({ school }) {
-  const [classes,  setClasses]  = useState([]);
-  const [subjects, setSubjects] = useState([]);
-  const [years,    setYears]    = useState([]);
+  const [classes,      setClasses]      = useState([]);
+  const [subjects,     setSubjects]     = useState([]);
+  const [years,        setYears]        = useState([]);
+  const [yearsLoading, setYearsLoading] = useState(true);
+  const [recentReports] = useState([]);
   const [form, setForm] = useState({ yearId: '', type: 'performance', classId: '', subjectId: '' });
   const [generating, setGenerating] = useState(false);
   const [generated,  setGenerated]  = useState(false);
@@ -974,7 +976,9 @@ export function ReportsPage({ school }) {
   useEffect(() => {
     ApiClient.get('/api/school/classes/').then(d => setClasses(d.classes || [])).catch(() => {});
     ApiClient.get('/api/school/subjects/').then(d => setSubjects(d.subjects || [])).catch(() => {});
-    ApiClient.get('/api/school/academic-years/').then(d => setYears(d.academic_years || [])).catch(() => {});
+    ApiClient.get('/api/school/academic-years/')
+      .then(d => { setYears(d.academic_years || []); setYearsLoading(false); })
+      .catch(() => setYearsLoading(false));
   }, []);
 
   const REPORT_TYPES = [
@@ -984,12 +988,6 @@ export function ReportsPage({ school }) {
     { value: 'merit',        label: 'Merit List' },
     { value: 'retention',    label: 'Student Retention Analysis' },
     { value: 'finance',      label: 'Fee Collection Report' },
-  ];
-
-  const RECENT = [
-    { name: 'Consolidated Results — Term 1', date: 'Mar 20, 2026', type: 'Performance', status: 'ready' },
-    { name: 'Student Attendance Summary',    date: 'Mar 18, 2026', type: 'Attendance',  status: 'ready' },
-    { name: 'Merit List — Grade 12',         date: 'Mar 10, 2026', type: 'Merit',       status: 'inactive' },
   ];
 
   const handleGenerate = async () => {
@@ -1010,7 +1008,7 @@ export function ReportsPage({ school }) {
 
       {/* Stats */}
       <div className="ska-stat-grid-4">
-        <StatCard icon="assessment"        iconBg="var(--ska-primary-dim)"   iconColor="var(--ska-primary)"   label="Reports Generated"  value={RECENT.length} sub="All time" />
+        <StatCard icon="assessment"        iconBg="var(--ska-primary-dim)"   iconColor="var(--ska-primary)"   label="Reports Generated"  value={recentReports.length} sub="All time" />
         <StatCard icon="school"            iconBg="var(--ska-secondary-dim)" iconColor="var(--ska-secondary)" label="GPA Average"         value="—"             sub="Current term" />
         <StatCard icon="workspace_premium" iconBg="var(--ska-green-dim)"     iconColor="var(--ska-green)"     label="Graduation Rate"     value="—"             sub="This year" />
         <StatCard icon="people"            iconBg="var(--ska-tertiary-dim)"  iconColor="var(--ska-tertiary)"  label="Retention Rate"      value="—"             sub="This year" />
@@ -1031,14 +1029,35 @@ export function ReportsPage({ school }) {
                 {REPORT_TYPES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
               </select>
             </label>
-            <label className="ska-form-group">
+            <div className="ska-form-group">
               <span>Academic Year</span>
-              <select className="ska-input" value={form.yearId}
-                onChange={e => setForm(f => ({ ...f, yearId: e.target.value }))}>
-                <option value="">— All Years —</option>
-                {years.map(y => <option key={y.id} value={y.id}>{y.name}</option>)}
-              </select>
-            </label>
+              <div className="ska-year-filter" style={{ marginTop: 8 }}>
+                {yearsLoading ? (
+                  <div className="ska-year-filter__pills">
+                    {[1, 2, 3].map(i => <span key={i} className="ska-year-pill ska-year-pill--skeleton" />)}
+                  </div>
+                ) : (
+                  <div className="ska-year-filter__pills">
+                    <button type="button"
+                      className={`ska-year-pill${form.yearId === '' ? ' ska-year-pill--active' : ''}`}
+                      onClick={() => setForm(f => ({ ...f, yearId: '' }))}>
+                      All Years
+                    </button>
+                    {years.map(y => (
+                      <button type="button" key={y.id}
+                        className={`ska-year-pill${form.yearId === String(y.id) ? ' ska-year-pill--active' : ''}${y.is_active && form.yearId !== String(y.id) ? ' ska-year-pill--current' : ''}`}
+                        onClick={() => setForm(f => ({ ...f, yearId: String(y.id) }))}>
+                        {y.name}
+                        {y.is_active && <span className="ska-year-pill__dot" />}
+                      </button>
+                    ))}
+                    {years.length === 0 && (
+                      <span style={{ fontSize: '0.8rem', color: 'var(--ska-text-3)', padding: '6px 0' }}>No academic years found</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
             <label className="ska-form-group">
               <span>Class <span style={{ color: 'var(--ska-text-3)', fontSize: '0.75rem' }}>(optional)</span></span>
               <select className="ska-input" value={form.classId}
@@ -1073,7 +1092,13 @@ export function ReportsPage({ school }) {
             <h2 className="ska-card-title">Recent Reports</h2>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {RECENT.map((r, i) => (
+            {recentReports.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '32px 16px' }}>
+                <Ic name="description" style={{ fontSize: 36, color: 'var(--ska-text-3)', display: 'block', margin: '0 auto 10px' }} />
+                <p style={{ margin: 0, fontSize: '0.875rem', fontWeight: 600, color: 'var(--ska-text-3)' }}>No reports yet</p>
+                <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: 'var(--ska-text-3)' }}>Generated reports will appear here.</p>
+              </div>
+            ) : recentReports.map((r, i) => (
               <div key={i} style={{
                 display: 'flex', alignItems: 'center', gap: 12,
                 padding: '12px 14px', borderRadius: 8, background: 'var(--ska-surface-high)',
@@ -1902,19 +1927,6 @@ const SLL = (n) =>
     .format(n)
     .replace('SLL', 'Le');
 
-const MOCK_LEDGER = {
-  totalExpected: 4820500, totalCollected: 3952810, outstanding: 867690, collectionRate: 91.4,
-  transactions: [
-    { id: 'tx-001', studentName: 'Aminata Kamara',  studentId: 'EK-2024-001', amount: 450000, method: 'Bank Transfer', status: 'verified', date: '2024-10-01' },
-    { id: 'tx-002', studentName: 'Ibrahim Sesay',    studentId: 'EK-2024-002', amount: 320000, method: 'Mobile Money',  status: 'verified', date: '2024-10-03' },
-    { id: 'tx-003', studentName: 'Fatmata Conteh',  studentId: 'EK-2024-003', amount: 450000, method: 'Cash',          status: 'pending',  date: '2024-10-05' },
-    { id: 'tx-004', studentName: 'Mohamed Koroma',  studentId: 'EK-2024-004', amount: 280000, method: 'Bank Transfer', status: 'verified', date: '2024-10-07' },
-    { id: 'tx-005', studentName: 'Hawa Bangura',    studentId: 'EK-2024-005', amount: 450000, method: 'Mobile Money',  status: 'verified', date: '2024-10-09' },
-    { id: 'tx-006', studentName: 'Sorie Turay',     studentId: 'EK-2024-006', amount: 150000, method: 'Cash',          status: 'partial',  date: '2024-10-11' },
-    { id: 'tx-007', studentName: 'Mariama Jalloh',  studentId: 'EK-2024-007', amount: 450000, method: 'Bank Transfer', status: 'verified', date: '2024-10-13' },
-    { id: 'tx-008', studentName: 'Abu Kamara',      studentId: 'EK-2024-008', amount: 0,      method: '—',             status: 'unpaid',   date: '—' },
-  ],
-};
 
 function TxStatusBadge({ status }) {
   const map = {
@@ -1928,12 +1940,39 @@ function TxStatusBadge({ status }) {
 }
 
 export function BursarLedgerPage({ school }) {
-  const [search, setSearch] = useState('');
-  const data = MOCK_LEDGER;
-  const pct = Math.round((data.totalCollected / data.totalExpected) * 100);
-  const filtered = data.transactions.filter(tx =>
-    tx.studentName.toLowerCase().includes(search.toLowerCase()) ||
-    tx.studentId.toLowerCase().includes(search.toLowerCase())
+  const [search,     setSearch]     = useState('');
+  const [stats,      setStats]      = useState(null);
+  const [fees,       setFees]       = useState([]);
+  const [activeYear, setActiveYear] = useState('');
+  const [loading,    setLoading]    = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    Promise.all([
+      ApiClient.get('/api/school/finance/stats/').catch(() => null),
+      ApiClient.get('/api/school/finance/fees/').catch(() => ({ fees: [] })),
+      ApiClient.get('/api/school/academic-years/').catch(() => ({ academic_years: [] })),
+    ]).then(([statsData, feesData, yearsData]) => {
+      if (statsData?.success) setStats(statsData);
+      setFees(feesData?.fees || []);
+      const active = (yearsData?.academic_years || []).find(y => y.is_active);
+      setActiveYear(active ? active.name : '');
+    }).finally(() => setLoading(false));
+  }, []);
+
+  const totalExpected = stats ? (stats.collected + stats.outstanding) : 0;
+  const pct = totalExpected > 0 ? Math.round((stats.collected / totalExpected) * 100) : 0;
+  const filtered = fees.filter(tx =>
+    (tx.student_name || '').toLowerCase().includes(search.toLowerCase())
+  );
+
+  const StatSkeleton = () => (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 28 }}>
+      {[1, 2, 3].map(i => (
+        <div key={i} className="ska-card ska-card-pad"
+          style={{ height: 92, background: 'var(--ska-surface-high)', animation: 'ska-pulse 1.4s ease-in-out infinite' }} />
+      ))}
+    </div>
   );
 
   return (
@@ -1941,36 +1980,40 @@ export function BursarLedgerPage({ school }) {
       <div className="ska-page-head" style={{ marginBottom: 24 }}>
         <div>
           <h1 className="ska-page-title">Institutional Financial Ledger</h1>
-          <p className="ska-page-sub">Academic Year 2024/25 · All Students</p>
+          <p className="ska-page-sub">{activeYear ? `${activeYear} · All Students` : 'All Students'}</p>
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <button className="ska-btn ska-btn--ghost" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Ic name="picture_as_pdf" size="sm" /> Export PDF</button>
           <button className="ska-btn ska-btn--primary" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Ic name="payments" size="sm" /> Process Batch</button>
         </div>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 28 }}>
-        <div className="ska-card ska-card-pad">
-          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ska-text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Total Fees Expected</div>
-          <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--ska-text)', fontFamily: 'var(--ska-font-headline)', lineHeight: 1.1 }}>{SLL(data.totalExpected)}</div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--ska-text-3)', marginTop: 4 }}>Academic Year 2024/25</div>
-        </div>
-        <div className="ska-card ska-card-pad">
-          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ska-text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Total Collected</div>
-          <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--ska-green)', fontFamily: 'var(--ska-font-headline)', lineHeight: 1.1 }}>{SLL(data.totalCollected)}</div>
-          <div className="ska-progress-track" style={{ marginTop: 10, marginBottom: 4 }}>
-            <div className="ska-progress-fill" style={{ width: `${pct}%`, background: 'var(--ska-green)' }} />
+
+      {loading ? <StatSkeleton /> : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 28 }}>
+          <div className="ska-card ska-card-pad">
+            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ska-text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Total Fees Expected</div>
+            <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--ska-text)', fontFamily: 'var(--ska-font-headline)', lineHeight: 1.1 }}>{stats ? SLL(totalExpected) : '—'}</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--ska-text-3)', marginTop: 4 }}>{activeYear || 'All time'}</div>
           </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--ska-text-3)' }}>{pct}% of target collected</div>
+          <div className="ska-card ska-card-pad">
+            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ska-text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Total Collected</div>
+            <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--ska-green)', fontFamily: 'var(--ska-font-headline)', lineHeight: 1.1 }}>{stats ? SLL(stats.collected) : '—'}</div>
+            <div className="ska-progress-track" style={{ marginTop: 10, marginBottom: 4 }}>
+              <div className="ska-progress-fill" style={{ width: `${pct}%`, background: 'var(--ska-green)', transition: 'width 0.6s ease' }} />
+            </div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--ska-text-3)' }}>{pct}% of target collected</div>
+          </div>
+          <div className="ska-card ska-card-pad">
+            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ska-text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Outstanding</div>
+            <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--ska-error)', fontFamily: 'var(--ska-font-headline)', lineHeight: 1.1 }}>{stats ? SLL(stats.outstanding) : '—'}</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--ska-text-3)', marginTop: 4 }}>Collection rate: <strong style={{ color: 'var(--ska-green)' }}>{stats?.collection_rate ?? '—'}%</strong></div>
+          </div>
         </div>
-        <div className="ska-card ska-card-pad">
-          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ska-text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Outstanding</div>
-          <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--ska-error)', fontFamily: 'var(--ska-font-headline)', lineHeight: 1.1 }}>{SLL(data.outstanding)}</div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--ska-text-3)', marginTop: 4 }}>Collection rate: <strong style={{ color: 'var(--ska-green)' }}>{data.collectionRate}%</strong></div>
-        </div>
-      </div>
+      )}
+
       <div className="ska-card" style={{ overflow: 'hidden' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--ska-border)', flexWrap: 'wrap', gap: 12 }}>
-          <h3 style={{ fontSize: '0.9375rem', fontWeight: 800, color: 'var(--ska-text)', fontFamily: 'var(--ska-font-headline)', margin: 0 }}>Recent Transactions</h3>
+          <h3 style={{ fontSize: '0.9375rem', fontWeight: 800, color: 'var(--ska-text)', fontFamily: 'var(--ska-font-headline)', margin: 0 }}>Fee Records</h3>
           <div className="ska-search" style={{ width: 220 }}>
             <Ic name="search" />
             <input className="ska-search-input" type="text" placeholder="Search student…" value={search} onChange={e => setSearch(e.target.value)} />
@@ -1980,39 +2023,52 @@ export function BursarLedgerPage({ school }) {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--ska-border)' }}>
-                {['Student', 'ID', 'Amount', 'Method', 'Status', 'Date', 'Receipt'].map(h => (
+                {['Student', 'Description', 'Amount', 'Paid', 'Balance', 'Status', 'Due Date'].map(h => (
                   <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontSize: '0.7rem', fontWeight: 800, color: 'var(--ska-text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {filtered.map(tx => {
-                const initials = tx.studentName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+              {loading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i} style={{ borderBottom: '1px solid var(--ska-border)' }}>
+                    {Array.from({ length: 7 }).map((_, j) => (
+                      <td key={j} style={{ padding: '12px 16px' }}>
+                        <div style={{ height: 14, borderRadius: 4, background: 'var(--ska-surface-high)', animation: 'ska-pulse 1.4s ease-in-out infinite' }} />
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              ) : filtered.length === 0 ? (
+                <tr><td colSpan={7}>
+                  <div style={{ padding: '48px 32px', textAlign: 'center' }}>
+                    <Ic name="payments" style={{ fontSize: 40, color: 'var(--ska-text-3)', display: 'block', margin: '0 auto 12px' }} />
+                    <p style={{ margin: 0, fontSize: '0.875rem', fontWeight: 600, color: 'var(--ska-text-3)' }}>
+                      {search ? 'No records match your search.' : 'No fee records yet.'}
+                    </p>
+                    {!search && <p style={{ margin: '6px 0 0', fontSize: '0.8rem', color: 'var(--ska-text-3)' }}>Fee records will appear here once added.</p>}
+                  </div>
+                </td></tr>
+              ) : filtered.map(tx => {
+                const name = tx.student_name || 'Unknown';
+                const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
                 return (
                   <tr key={tx.id} style={{ borderBottom: '1px solid var(--ska-border)' }}>
                     <td style={{ padding: '12px 16px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--ska-primary-dim)', color: 'var(--ska-primary)', fontSize: '0.75rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{initials}</div>
-                        <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--ska-text)' }}>{tx.studentName}</span>
+                        <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--ska-text)' }}>{name}</span>
                       </div>
                     </td>
-                    <td style={{ padding: '12px 16px', fontSize: '0.8125rem', color: 'var(--ska-text-3)', fontFamily: 'monospace' }}>{tx.studentId}</td>
-                    <td style={{ padding: '12px 16px', fontSize: '0.875rem', fontWeight: 700, color: tx.amount > 0 ? 'var(--ska-text)' : 'var(--ska-text-3)' }}>{tx.amount > 0 ? SLL(tx.amount) : '—'}</td>
-                    <td style={{ padding: '12px 16px', fontSize: '0.8125rem', color: 'var(--ska-text-2)' }}>{tx.method}</td>
+                    <td style={{ padding: '12px 16px', fontSize: '0.8125rem', color: 'var(--ska-text-2)', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.description || tx.term || '—'}</td>
+                    <td style={{ padding: '12px 16px', fontSize: '0.875rem', fontWeight: 700, color: 'var(--ska-text)' }}>{SLL(tx.amount)}</td>
+                    <td style={{ padding: '12px 16px', fontSize: '0.875rem', fontWeight: 700, color: 'var(--ska-green)' }}>{SLL(tx.amount_paid)}</td>
+                    <td style={{ padding: '12px 16px', fontSize: '0.875rem', fontWeight: 700, color: tx.balance > 0 ? 'var(--ska-error)' : 'var(--ska-text-3)' }}>{SLL(tx.balance)}</td>
                     <td style={{ padding: '12px 16px' }}><TxStatusBadge status={tx.status} /></td>
-                    <td style={{ padding: '12px 16px', fontSize: '0.8125rem', color: 'var(--ska-text-3)' }}>{tx.date}</td>
-                    <td style={{ padding: '12px 16px' }}>
-                      {tx.status === 'verified'
-                        ? <button className="ska-btn ska-btn--ghost" style={{ padding: '4px 10px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: 4 }}><Ic name="download" size="sm" /> PDF</button>
-                        : <span style={{ color: 'var(--ska-text-3)', fontSize: '0.8125rem' }}>—</span>
-                      }
-                    </td>
+                    <td style={{ padding: '12px 16px', fontSize: '0.8125rem', color: 'var(--ska-text-3)' }}>{tx.due_date || '—'}</td>
                   </tr>
                 );
               })}
-              {filtered.length === 0 && (
-                <tr><td colSpan={7} style={{ padding: '32px', textAlign: 'center', color: 'var(--ska-text-3)', fontSize: '0.875rem' }}>No transactions match your search.</td></tr>
-              )}
             </tbody>
           </table>
         </div>
@@ -2025,13 +2081,6 @@ export function BursarLedgerPage({ school }) {
    BURSAR AUDIT REQUEST PAGE
    Restricted banner, blurred preview, request form, history
    ============================================================ */
-const MOCK_AUDIT_HISTORY = [
-  { id: 'aud-001', reason: 'Annual Financial Review',  requestedAt: '2024-09-12', status: 'approved', approver: 'Principal Koroma', duration: '30 days' },
-  { id: 'aud-002', reason: 'Term-End Reconciliation',  requestedAt: '2024-07-01', status: 'approved', approver: 'Board Secretary',  duration: '14 days' },
-  { id: 'aud-003', reason: 'Spot-Check Audit',          requestedAt: '2024-05-20', status: 'denied',   approver: 'Principal Koroma', duration: 'N/A' },
-  { id: 'aud-004', reason: 'End-of-Year Full Audit',    requestedAt: '2023-11-30', status: 'expired',  approver: '—',               duration: '60 days' },
-  { id: 'aud-005', reason: 'Scholarship Fund Review',   requestedAt: '2023-08-15', status: 'approved', approver: 'Board Secretary',  duration: '7 days' },
-];
 
 function AuditStatusPill({ status }) {
   const map = {
@@ -2046,7 +2095,9 @@ function AuditStatusPill({ status }) {
 export function BursarAuditPage({ school }) {
   const [form, setForm] = useState({ reason: '', duration: '', authority: '', justification: '', acknowledged: false });
   const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [submitted,  setSubmitted]  = useState(false);
+  const [auditHistory] = useState([]);
+  const histLoading    = false;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -2057,8 +2108,8 @@ export function BursarAuditPage({ school }) {
     setSubmitted(true);
   };
 
-  const totalAudits = MOCK_AUDIT_HISTORY.length;
-  const activeNow   = MOCK_AUDIT_HISTORY.filter(a => a.status === 'approved').length;
+  const totalAudits = auditHistory.length;
+  const activeNow   = auditHistory.filter(a => a.status === 'approved').length;
 
   return (
     <div className="ska-page-root">
@@ -2150,9 +2201,24 @@ export function BursarAuditPage({ school }) {
               <h3 style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--ska-text)', fontFamily: 'var(--ska-font-headline)', margin: 0 }}>History of Requests</h3>
             </div>
             <div style={{ padding: '12px 18px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {MOCK_AUDIT_HISTORY.map((entry, idx) => (
+              {histLoading ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 12 }}>
+                    <div style={{ width: 16, height: 16, borderRadius: '50%', background: 'var(--ska-surface-high)', flexShrink: 0, marginTop: 2, animation: 'ska-pulse 1.4s ease-in-out infinite' }} />
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <div style={{ height: 13, borderRadius: 4, background: 'var(--ska-surface-high)', animation: 'ska-pulse 1.4s ease-in-out infinite', width: '70%' }} />
+                      <div style={{ height: 11, borderRadius: 4, background: 'var(--ska-surface-high)', animation: 'ska-pulse 1.4s ease-in-out infinite', width: '50%' }} />
+                    </div>
+                  </div>
+                ))
+              ) : auditHistory.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '20px 8px' }}>
+                  <Ic name="history" style={{ fontSize: 32, color: 'var(--ska-text-3)', display: 'block', margin: '0 auto 8px' }} />
+                  <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--ska-text-3)' }}>No audit requests yet.</p>
+                </div>
+              ) : auditHistory.map((entry, idx) => (
                 <div key={entry.id} style={{ display: 'flex', gap: 12, position: 'relative' }}>
-                  {idx < MOCK_AUDIT_HISTORY.length - 1 && (
+                  {idx < auditHistory.length - 1 && (
                     <div style={{ position: 'absolute', left: 7, top: 18, bottom: -16, width: 2, background: 'var(--ska-border)' }} />
                   )}
                   <div style={{ width: 16, height: 16, borderRadius: '50%', background: entry.status === 'approved' ? 'var(--ska-green)' : entry.status === 'denied' ? 'var(--ska-error)' : 'var(--ska-border)', flexShrink: 0, marginTop: 2, zIndex: 1 }} />
@@ -2162,7 +2228,7 @@ export function BursarAuditPage({ school }) {
                       <AuditStatusPill status={entry.status} />
                     </div>
                     <p style={{ fontSize: '0.75rem', color: 'var(--ska-text-3)', margin: '0 0 2px' }}>{entry.requestedAt} · {entry.duration}</p>
-                    <p style={{ fontSize: '0.75rem', color: 'var(--ska-text-3)', margin: 0 }}>By: {entry.approver}</p>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--ska-text-3)', margin: 0 }}>By: {entry.approver || '—'}</p>
                   </div>
                 </div>
               ))}

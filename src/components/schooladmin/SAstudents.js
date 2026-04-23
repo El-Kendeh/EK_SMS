@@ -48,9 +48,10 @@ const previewUsername = admNo =>
 const copyText = text => navigator.clipboard?.writeText(text).catch(() => {});
 
 // ── Credential Success Overlay ─────────────────────────────────────
-function CredentialCard({ info, onDone }) {
-  const [copied, setCopied] = useState(false);
+function CredentialCard({ info, onDone, onLinkParent }) {
+  const [copied,  setCopied]  = useState(false);
   const [showPwd, setShowPwd] = useState(true);
+  const firstName = info.full_name?.split(' ')[0] || 'the student';
 
   const handleCopy = () => {
     copyText(
@@ -66,100 +67,471 @@ function CredentialCard({ info, onDone }) {
 
   return (
     <div style={{
-      position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.65)',
+      position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.68)',
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+      animation: 'ska-fade-in 0.18s ease',
     }}>
       <div style={{
         background: 'var(--ska-surface)', borderRadius: 20, maxWidth: 480, width: '100%',
-        padding: 32, boxShadow: '0 24px 64px rgba(0,0,0,0.35)', textAlign: 'center',
+        boxShadow: '0 24px 64px rgba(0,0,0,0.35)', overflow: 'hidden',
+        animation: 'ska-slide-up 0.22s ease',
       }}>
-        {/* Success icon */}
-        <div style={{
-          width: 64, height: 64, borderRadius: '50%', background: '#dcfce7',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          margin: '0 auto 16px', fontSize: 32,
-        }}>
-          <Ic name="check_circle" style={{ color: '#16a34a', fontSize: 36 }} />
+
+        {/* ── Header ── */}
+        <div style={{ padding: '28px 28px 0', textAlign: 'center' }}>
+          <div style={{
+            width: 60, height: 60, borderRadius: '50%', background: '#dcfce7',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 14px',
+          }}>
+            <Ic name="check_circle" style={{ color: '#16a34a', fontSize: 34 }} />
+          </div>
+          <h2 style={{ margin: '0 0 4px', fontSize: '1.2rem', fontWeight: 800, color: 'var(--ska-text)' }}>
+            Student Registered!
+          </h2>
+          <p style={{ margin: '0 0 20px', color: 'var(--ska-text-3)', fontSize: '0.875rem' }}>
+            {info.full_name} has been added to {info.school_name || 'the school'}.
+          </p>
         </div>
 
-        <h2 style={{ margin: '0 0 4px', fontSize: '1.25rem', fontWeight: 800, color: 'var(--ska-text)' }}>
-          Student Registered!
-        </h2>
-        <p style={{ margin: '0 0 24px', color: 'var(--ska-text-3)', fontSize: '0.9rem' }}>
-          {info.full_name} has been added successfully.
-        </p>
+        {/* ── Credential block ── */}
+        <div style={{ padding: '0 28px' }}>
+          <div style={{
+            background: 'var(--ska-surface-high)', borderRadius: 12, padding: '16px 20px',
+            border: '1px solid var(--ska-border)',
+          }}>
+            <p style={{
+              margin: '0 0 12px', fontWeight: 700, fontSize: '0.75rem',
+              color: 'var(--ska-primary)', textTransform: 'uppercase', letterSpacing: '0.07em',
+            }}>
+              Portal Login Credentials
+            </p>
+            {[
+              { label: 'Admission No.', value: info.admission_number,        icon: 'badge' },
+              { label: 'Username',      value: info.student_username,         icon: 'account_circle' },
+              { label: 'Password',      value: info.student_initial_password, icon: 'lock', secret: true },
+            ].map((row, idx, arr) => (
+              <div key={row.label} style={{
+                display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0',
+                borderBottom: idx < arr.length - 1 ? '1px solid var(--ska-border)' : 'none',
+              }}>
+                <div style={{
+                  width: 32, height: 32, borderRadius: 8, background: 'var(--ska-primary-dim)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                }}>
+                  <Ic name={row.icon} size="sm" style={{ color: 'var(--ska-primary)' }} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ margin: 0, fontSize: '0.6875rem', color: 'var(--ska-text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{row.label}</p>
+                  <p style={{
+                    margin: 0, fontWeight: 700, color: 'var(--ska-text)', fontSize: '0.9rem',
+                    fontFamily: row.secret ? 'monospace' : 'inherit',
+                    filter: (row.secret && !showPwd) ? 'blur(5px)' : 'none',
+                    userSelect: (row.secret && !showPwd) ? 'none' : 'text',
+                    letterSpacing: row.secret ? '0.04em' : 'inherit',
+                  }}>
+                    {row.value}
+                  </p>
+                </div>
+                {row.secret ? (
+                  <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+                    <button onClick={() => setShowPwd(p => !p)} title={showPwd ? 'Hide' : 'Show'}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ska-text-3)', padding: 4 }}>
+                      <Ic name={showPwd ? 'visibility_off' : 'visibility'} size="sm" />
+                    </button>
+                    <button onClick={() => copyText(row.value)} title="Copy password"
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ska-text-3)', padding: 4 }}>
+                      <Ic name="content_copy" size="sm" />
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            ))}
+          </div>
 
-        {/* Credential card */}
-        <div style={{
-          background: 'var(--ska-surface-high)', borderRadius: 14, padding: '20px 24px',
-          textAlign: 'left', marginBottom: 20, border: '1px solid var(--ska-border)',
-        }}>
-          <p style={{ margin: '0 0 14px', fontWeight: 700, fontSize: '0.8125rem',
-            color: 'var(--ska-primary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            Portal Login Credentials
+          {info.email_sent && (
+            <p style={{ margin: '8px 0 0', fontSize: '0.75rem', color: 'var(--ska-green)', display: 'flex', alignItems: 'center', gap: 5 }}>
+              <Ic name="mail" size="sm" /> Credentials emailed to {firstName}.
+            </p>
+          )}
+        </div>
+
+        {/* ── What's next ── */}
+        <div style={{ padding: '20px 28px 0', borderTop: '1px solid var(--ska-border)', marginTop: 20 }}>
+          <p style={{
+            margin: '0 0 12px', fontSize: '0.75rem', fontWeight: 700,
+            color: 'var(--ska-text-3)', textTransform: 'uppercase', letterSpacing: '0.07em',
+          }}>
+            What would you like to do next?
           </p>
 
-          {[
-            { label: 'Admission No.', value: info.admission_number, icon: 'badge' },
-            { label: 'Username',      value: info.student_username,  icon: 'account_circle' },
-            { label: 'Password',      value: info.student_initial_password, icon: 'lock', secret: true },
-          ].map(row => (
-            <div key={row.label} style={{
-              display: 'flex', alignItems: 'center', gap: 12,
-              padding: '10px 0', borderBottom: '1px solid var(--ska-border)',
+          {/* Link parent CTA — primary action */}
+          <button
+            onClick={onLinkParent}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', gap: 14,
+              padding: '14px 16px', borderRadius: 12, marginBottom: 10, cursor: 'pointer',
+              background: 'var(--ska-primary)', border: 'none', textAlign: 'left',
+              transition: 'filter 0.15s',
+            }}
+            onMouseEnter={e => e.currentTarget.style.filter = 'brightness(1.08)'}
+            onMouseLeave={e => e.currentTarget.style.filter = 'none'}
+          >
+            <div style={{
+              width: 40, height: 40, borderRadius: 10, background: 'rgba(255,255,255,0.18)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
             }}>
-              <div style={{
-                width: 34, height: 34, borderRadius: 9, background: 'var(--ska-primary-dim)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-              }}>
-                <Ic name={row.icon} size="sm" style={{ color: 'var(--ska-primary)' }} />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ margin: 0, fontSize: '0.6875rem', color: 'var(--ska-text-3)',
-                  textTransform: 'uppercase', letterSpacing: '0.05em' }}>{row.label}</p>
-                <p style={{ margin: 0, fontWeight: 700, color: 'var(--ska-text)',
-                  fontFamily: row.secret ? 'monospace' : 'inherit',
-                  filter: (row.secret && !showPwd) ? 'blur(5px)' : 'none',
-                  userSelect: (row.secret && !showPwd) ? 'none' : 'text',
-                }}>
-                  {row.value}
-                </p>
-              </div>
-              {row.secret && (
-                <button
-                  onClick={() => setShowPwd(p => !p)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer',
-                    color: 'var(--ska-text-3)', padding: 4, flexShrink: 0 }}
-                  title={showPwd ? 'Hide password' : 'Show password'}
-                >
-                  <Ic name={showPwd ? 'visibility_off' : 'visibility'} size="sm" />
-                </button>
-              )}
+              <Ic name="family_restroom" style={{ color: '#fff', fontSize: 22 }} />
             </div>
+            <div style={{ flex: 1 }}>
+              <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem', color: '#fff' }}>
+                Link Parent / Guardian
+              </p>
+              <p style={{ margin: '2px 0 0', fontSize: '0.75rem', color: 'rgba(255,255,255,0.72)' }}>
+                Give a parent access to {firstName}'s grades, attendance &amp; reports
+              </p>
+            </div>
+            <Ic name="chevron_right" style={{ color: 'rgba(255,255,255,0.7)', flexShrink: 0 }} />
+          </button>
+        </div>
+
+        {/* ── Bottom row ── */}
+        <div style={{ padding: '10px 28px 24px', display: 'flex', gap: 8 }}>
+          <button className="ska-btn ska-btn--ghost" onClick={handleCopy} style={{ flex: 1, gap: 6 }}>
+            <Ic name={copied ? 'check' : 'content_copy'} size="sm" />
+            {copied ? 'Copied!' : 'Copy Credentials'}
+          </button>
+          <button className="ska-btn ska-btn--ghost" onClick={onDone} style={{ padding: '0 22px' }}>
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Constants ──────────────────────────────────────────────────────
+const RELATIONSHIP_OPTIONS = [
+  'Father', 'Mother', 'Guardian', 'Stepfather', 'Stepmother',
+  'Grandfather', 'Grandmother', 'Uncle', 'Aunt', 'Sibling', 'Other',
+];
+
+// ── Link Parent Drawer ─────────────────────────────────────────────
+function LinkParentDrawer({ student, onClose, onLinked }) {
+  const [tab,         setTab]         = useState('existing');
+  // Existing-parent tab
+  const [searchQ,     setSearchQ]     = useState('');
+  const [results,     setResults]     = useState([]);
+  const [searching,   setSearching]   = useState(false);
+  const [selected,    setSelected]    = useState(null);
+  const [linkRel,     setLinkRel]     = useState('');
+  const [linkPrimary, setLinkPrimary] = useState(false);
+  const [linking,     setLinking]     = useState(false);
+  const [linkErr,     setLinkErr]     = useState('');
+  // New parent tab
+  const [newForm, setNewForm] = useState({
+    first_name: '', last_name: '', email: '', phone: '',
+    relationship: '', password: generatePassword(), rel_type: '', is_primary: false,
+  });
+  const [creating,    setCreating]    = useState(false);
+  const [createErr,   setCreateErr]   = useState('');
+  const [showNewPwd,  setShowNewPwd]  = useState(false);
+
+  // Debounced parent search
+  useEffect(() => {
+    if (!searchQ.trim()) { setResults([]); return; }
+    const t = setTimeout(() => {
+      setSearching(true);
+      ApiClient.get(`/api/school/parents/?q=${encodeURIComponent(searchQ)}`)
+        .then(d => setResults(d.parents || []))
+        .catch(() => setResults([]))
+        .finally(() => setSearching(false));
+    }, 320);
+    return () => clearTimeout(t);
+  }, [searchQ]);
+
+  const handleLink = async () => {
+    if (!selected || !linkRel) return;
+    setLinking(true); setLinkErr('');
+    try {
+      await ApiClient.post(`/api/school/students/${student.id}/parents/`, {
+        parent_id: selected.id,
+        relationship_type: linkRel,
+        is_primary_contact: linkPrimary,
+      });
+      onLinked();
+      onClose();
+    } catch (e) { setLinkErr(e.message || 'Failed to link parent.'); }
+    setLinking(false);
+  };
+
+  const handleCreate = async () => {
+    const { first_name, last_name, email, phone, relationship, password, rel_type, is_primary } = newForm;
+    if (!first_name || !last_name || !email || !relationship || !password) {
+      setCreateErr('First name, last name, email, relationship and password are required.'); return;
+    }
+    setCreating(true); setCreateErr('');
+    try {
+      const parentRes = await ApiClient.post('/api/school/parents/', {
+        first_name, last_name, email, phone_number: phone, relationship, password,
+      });
+      await ApiClient.post(`/api/school/students/${student.id}/parents/`, {
+        parent_id: parentRes.id,
+        relationship_type: rel_type || relationship,
+        is_primary_contact: is_primary,
+      });
+      onLinked();
+      onClose();
+    } catch (e) { setCreateErr(e.message || 'Failed to create and link parent.'); }
+    setCreating(false);
+  };
+
+  return (
+    <div className="ska-modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="ska-modal ska-modal--wide">
+        {/* Header */}
+        <div className="ska-modal-head">
+          <div>
+            <h2 className="ska-modal-title">Link Parent / Guardian</h2>
+            <p style={{ margin: '3px 0 0', fontSize: '0.8rem', color: 'var(--ska-text-3)' }}>
+              Linking to <strong style={{ color: 'var(--ska-text)' }}>{student.full_name}</strong>
+            </p>
+          </div>
+          <button className="ska-modal-close" onClick={onClose} aria-label="Close">
+            <Ic name="close" size="sm" />
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div style={{ display: 'flex', borderBottom: '1px solid var(--ska-border)', padding: '0 24px' }}>
+          {[
+            ['existing', 'person_search', 'Link Existing Parent'],
+            ['new',      'person_add',    'Create & Link New'],
+          ].map(([key, icon, label]) => (
+            <button key={key} type="button"
+              onClick={() => { setTab(key); setSelected(null); setLinkErr(''); setCreateErr(''); }}
+              style={{
+                padding: '12px 16px', background: 'none', border: 'none', cursor: 'pointer',
+                borderBottom: tab === key ? '2.5px solid var(--ska-primary)' : '2.5px solid transparent',
+                color: tab === key ? 'var(--ska-primary)' : 'var(--ska-text-3)',
+                fontWeight: tab === key ? 700 : 500, fontSize: '0.875rem',
+                display: 'flex', alignItems: 'center', gap: 6, transition: 'color 0.15s',
+                marginBottom: -1,
+              }}>
+              <Ic name={icon} size="sm" />{label}
+            </button>
           ))}
         </div>
 
-        <p style={{ fontSize: '0.8rem', color: 'var(--ska-text-3)', margin: '0 0 20px' }}>
-          Share these credentials with the student. They should change their password on first login.
-          {info.email_sent && (
-            <span style={{ display: 'block', color: 'var(--ska-green)', marginTop: 4 }}>
-              <Ic name="mail" size="sm" /> Credentials also sent to the student's email.
-            </span>
-          )}
-        </p>
+        <div className="ska-modal-body">
+          {/* ── TAB: Link Existing ── */}
+          {tab === 'existing' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div className="ska-search">
+                <Ic name="search" />
+                <input className="ska-search-input" autoFocus
+                  placeholder="Search parents by name, phone or email…"
+                  value={searchQ}
+                  onChange={e => { setSearchQ(e.target.value); setSelected(null); }} />
+                {searching && (
+                  <span style={{ fontSize: '0.75rem', color: 'var(--ska-text-3)', paddingRight: 10, flexShrink: 0 }}>Searching…</span>
+                )}
+              </div>
 
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
-          <button
-            className="ska-btn ska-btn--ghost"
-            onClick={handleCopy}
-            style={{ gap: 8, minWidth: 160 }}
-          >
-            <Ic name={copied ? 'check' : 'content_copy'} size="sm" />
-            {copied ? 'Copied!' : 'Copy All Credentials'}
-          </button>
-          <button className="ska-btn ska-btn--primary" onClick={onDone} style={{ minWidth: 100 }}>
-            Done
-          </button>
+              {/* Results list */}
+              {!selected && results.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 7, maxHeight: 220, overflowY: 'auto' }}>
+                  {results.map(p => (
+                    <button key={p.id} type="button"
+                      onClick={() => { setSelected(p); setLinkRel(p.relationship || ''); }}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px',
+                        borderRadius: 10, border: '1.5px solid var(--ska-border)',
+                        background: 'var(--ska-surface-high)', cursor: 'pointer', textAlign: 'left',
+                        width: '100%', transition: 'border-color 0.12s, background 0.12s',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--ska-primary)'; e.currentTarget.style.background = 'var(--ska-primary-dim)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--ska-border)'; e.currentTarget.style.background = 'var(--ska-surface-high)'; }}>
+                      <InitialsAvatar name={p.name} size={36} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ margin: 0, fontWeight: 700, fontSize: '0.875rem', color: 'var(--ska-text)' }}>{p.name}</p>
+                        <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--ska-text-3)' }}>
+                          {p.relationship}
+                          {p.phone ? ` · ${p.phone}` : ''}
+                          {p.children?.length > 0 ? ` · ${p.children.length} child${p.children.length !== 1 ? 'ren' : ''} linked` : ''}
+                        </p>
+                      </div>
+                      <Ic name="chevron_right" size="sm" style={{ color: 'var(--ska-text-3)', flexShrink: 0 }} />
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* No results */}
+              {searchQ && !searching && results.length === 0 && !selected && (
+                <div style={{ textAlign: 'center', padding: '20px', color: 'var(--ska-text-3)', fontSize: '0.875rem' }}>
+                  No parents found.{' '}
+                  <button type="button" onClick={() => setTab('new')}
+                    style={{ background: 'none', border: 'none', color: 'var(--ska-primary)', fontWeight: 700, cursor: 'pointer', fontSize: 'inherit' }}>
+                    Create a new parent instead
+                  </button>
+                </div>
+              )}
+
+              {!searchQ && (
+                <p style={{ textAlign: 'center', color: 'var(--ska-text-3)', fontSize: '0.8125rem', margin: 0 }}>
+                  Type a name to search parents registered in this school.
+                </p>
+              )}
+
+              {/* Selected parent — confirm step */}
+              {selected && (
+                <div style={{
+                  padding: 16, borderRadius: 12, border: '1.5px solid var(--ska-primary)',
+                  background: 'var(--ska-primary-dim)', display: 'flex', flexDirection: 'column', gap: 14,
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <InitialsAvatar name={selected.name} size={42} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ margin: 0, fontWeight: 800, fontSize: '0.9375rem', color: 'var(--ska-text)' }}>{selected.name}</p>
+                      <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--ska-text-3)' }}>{selected.email} · {selected.phone || '—'}</p>
+                    </div>
+                    <button type="button" onClick={() => { setSelected(null); setLinkRel(''); setLinkPrimary(false); }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ska-text-3)', padding: 4 }}>
+                      <Ic name="close" size="sm" />
+                    </button>
+                  </div>
+                  <div className="ska-form-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 0 }}>
+                    <label className="ska-form-group" style={{ margin: 0 }}>
+                      <span>Relationship to {student.full_name?.split(' ')[0]} *</span>
+                      <select className="ska-input" value={linkRel} onChange={e => setLinkRel(e.target.value)}>
+                        <option value="">— Select —</option>
+                        {RELATIONSHIP_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
+                      </select>
+                    </label>
+                    <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 1 }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '10px 0' }}>
+                        <input type="checkbox" checked={linkPrimary} onChange={e => setLinkPrimary(e.target.checked)}
+                          style={{ accentColor: 'var(--ska-primary)', width: 16, height: 16 }} />
+                        <span style={{ fontSize: '0.875rem', color: 'var(--ska-text)', fontWeight: 500 }}>Set as primary contact</span>
+                      </label>
+                    </div>
+                  </div>
+                  {linkErr && <p style={{ color: 'var(--ska-error)', fontSize: '0.8rem', margin: 0 }}>{linkErr}</p>}
+                  <button className="ska-btn ska-btn--primary"
+                    style={{ width: '100%', justifyContent: 'center' }}
+                    onClick={handleLink} disabled={linking || !linkRel}>
+                    <Ic name="link" size="sm" />
+                    {linking ? 'Linking…' : `Link ${selected.name.split(' ')[0]} to ${student.full_name.split(' ')[0]}`}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── TAB: Create & Link New ── */}
+          {tab === 'new' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{
+                display: 'flex', alignItems: 'flex-start', gap: 10, padding: '11px 14px',
+                borderRadius: 10, background: 'var(--ska-surface-high)',
+                fontSize: '0.8125rem', color: 'var(--ska-text-3)',
+              }}>
+                <Ic name="info" size="sm" style={{ color: 'var(--ska-primary)', flexShrink: 0, marginTop: 1 }} />
+                A new parent portal account will be created and instantly linked to {student.full_name?.split(' ')[0]}.
+              </div>
+              <div className="ska-form-grid">
+                <label className="ska-form-group">
+                  <span>First Name *</span>
+                  <input className="ska-input" value={newForm.first_name}
+                    onChange={e => setNewForm(f => ({ ...f, first_name: e.target.value }))} />
+                </label>
+                <label className="ska-form-group">
+                  <span>Last Name *</span>
+                  <input className="ska-input" value={newForm.last_name}
+                    onChange={e => setNewForm(f => ({ ...f, last_name: e.target.value }))} />
+                </label>
+                <label className="ska-form-group">
+                  <span>Email Address *</span>
+                  <input className="ska-input" type="email" value={newForm.email}
+                    onChange={e => setNewForm(f => ({ ...f, email: e.target.value }))} />
+                </label>
+                <label className="ska-form-group">
+                  <span>Phone Number</span>
+                  <input className="ska-input" value={newForm.phone}
+                    onChange={e => setNewForm(f => ({ ...f, phone: e.target.value }))} />
+                </label>
+                <label className="ska-form-group">
+                  <span>Parent Type *</span>
+                  <select className="ska-input" value={newForm.relationship}
+                    onChange={e => setNewForm(f => ({ ...f, relationship: e.target.value }))}>
+                    <option value="">— Select —</option>
+                    {RELATIONSHIP_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                </label>
+                <label className="ska-form-group">
+                  <span>Relationship to {student.full_name?.split(' ')[0]}</span>
+                  <select className="ska-input" value={newForm.rel_type}
+                    onChange={e => setNewForm(f => ({ ...f, rel_type: e.target.value }))}>
+                    <option value="">— Same as parent type —</option>
+                    {RELATIONSHIP_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                </label>
+              </div>
+              {/* Portal Password */}
+              <label className="ska-form-group">
+                <span>Portal Password *</span>
+                <div style={{ position: 'relative' }}>
+                  <input className="ska-input"
+                    type={showNewPwd ? 'text' : 'password'}
+                    value={newForm.password}
+                    onChange={e => setNewForm(f => ({ ...f, password: e.target.value }))}
+                    style={{ paddingRight: 88, fontFamily: 'monospace', letterSpacing: '0.05em' }}
+                  />
+                  <div style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', display: 'flex', gap: 2 }}>
+                    <button type="button" onClick={() => setShowNewPwd(p => !p)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ska-text-3)', padding: 4 }}>
+                      <Ic name={showNewPwd ? 'visibility_off' : 'visibility'} size="sm" />
+                    </button>
+                    <button type="button" onClick={() => setNewForm(f => ({ ...f, password: generatePassword() }))}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ska-text-3)', padding: 4 }}>
+                      <Ic name="refresh" size="sm" />
+                    </button>
+                    <button type="button" onClick={() => copyText(newForm.password)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ska-text-3)', padding: 4 }}>
+                      <Ic name="content_copy" size="sm" />
+                    </button>
+                  </div>
+                </div>
+                <span style={{ fontSize: '0.71875rem', color: 'var(--ska-text-3)', marginTop: 2 }}>
+                  The parent will use this password to log in to the parent portal.
+                </span>
+              </label>
+              {/* Primary contact toggle */}
+              <label style={{
+                display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
+                padding: '12px 14px', borderRadius: 10, background: 'var(--ska-surface-high)',
+                border: newForm.is_primary ? '1.5px solid var(--ska-green)' : '1.5px solid var(--ska-border)',
+                transition: 'border-color 0.15s',
+              }}>
+                <input type="checkbox" checked={newForm.is_primary}
+                  onChange={e => setNewForm(f => ({ ...f, is_primary: e.target.checked }))}
+                  style={{ accentColor: 'var(--ska-green)', width: 17, height: 17, flexShrink: 0 }} />
+                <div>
+                  <p style={{ margin: 0, fontWeight: 600, fontSize: '0.875rem', color: 'var(--ska-text)' }}>Set as primary contact</p>
+                  <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--ska-text-3)' }}>This parent will be the main point of contact for emergencies.</p>
+                </div>
+              </label>
+              {createErr && <p style={{ color: 'var(--ska-error)', fontSize: '0.8rem', margin: 0 }}>{createErr}</p>}
+              <button className="ska-btn ska-btn--primary"
+                style={{ width: '100%', justifyContent: 'center' }}
+                onClick={handleCreate}
+                disabled={creating || !newForm.first_name || !newForm.last_name || !newForm.email || !newForm.relationship || !newForm.password}>
+                <Ic name="person_add" size="sm" />
+                {creating ? 'Creating & Linking…' : 'Create Account & Link Parent'}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -181,6 +553,10 @@ export default function StudentsPage({ school, openAddSignal }) {
   const [generatingAdmNo,     setGeneratingAdmNo]     = useState(false);
   const [showFormPwd,         setShowFormPwd]         = useState(false);
   const [credSuccess,         setCredSuccess]         = useState(null);
+  const [linkedParents,       setLinkedParents]       = useState([]);
+  const [parentsLoading,      setParentsLoading]      = useState(false);
+  const [showLinkDrawer,      setShowLinkDrawer]      = useState(false);
+  const [pendingLinkStudent,  setPendingLinkStudent]  = useState(null);
   const prevSignal = useRef(openAddSignal);
 
   const load = useCallback(async (q = '') => {
@@ -195,10 +571,24 @@ export default function StudentsPage({ school, openAddSignal }) {
     setLoading(false);
   }, []);
 
+  const loadLinkedParents = useCallback(async (studentId) => {
+    if (!studentId) return;
+    setParentsLoading(true);
+    try {
+      const data = await ApiClient.get(`/api/school/students/${studentId}/parents/`);
+      setLinkedParents(data.parents || []);
+    } catch { setLinkedParents([]); }
+    setParentsLoading(false);
+  }, []);
+
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
     ApiClient.get('/api/school/classes/').then(d => setClasses(d.classes || [])).catch(() => {});
   }, []);
+  useEffect(() => {
+    if (viewStudent) loadLinkedParents(viewStudent.id);
+    else setLinkedParents([]);
+  }, [viewStudent, loadLinkedParents]);
 
   const emptyForm = {
     first_name: '', last_name: '', gender: '', date_of_birth: '', age: '', place_of_birth: '',
@@ -312,11 +702,13 @@ export default function StudentsPage({ school, openAddSignal }) {
         setModal(null);
         load(search);
         setCredSuccess({
+          id:                      res.id,
           full_name:               res.full_name || `${form.first_name} ${form.last_name}`.trim(),
           admission_number:        res.admission_number || form.admission_number,
           student_username:        res.student_username || previewUsername(res.admission_number || form.admission_number),
           student_initial_password: res.student_initial_password || form.student_password,
           email_sent:              !!form.email,
+          school_name:             school?.name,
         });
       } else {
         await ApiClient.put(`/api/school/students/${modal.id}/`, payload);
@@ -336,6 +728,21 @@ export default function StudentsPage({ school, openAddSignal }) {
   };
 
   const handleSearch = e => { const q = e.target.value; setSearch(q); load(q); };
+
+  const handleUnlinkParent = async (parentId, parentName) => {
+    if (!window.confirm(`Unlink ${parentName} from ${viewStudent.full_name}?`)) return;
+    try {
+      await ApiClient.delete(`/api/school/students/${viewStudent.id}/parents/${parentId}/`);
+      loadLinkedParents(viewStudent.id);
+    } catch (e) { alert(e.message || 'Failed to unlink.'); }
+  };
+
+  const handleSetPrimary = async (parentId) => {
+    try {
+      await ApiClient.patch(`/api/school/students/${viewStudent.id}/parents/${parentId}/`, { is_primary_contact: true });
+      loadLinkedParents(viewStudent.id);
+    } catch (e) { alert(e.message || 'Failed to update.'); }
+  };
 
   // ── Profile view ───────────────────────────────────────────────
   if (viewStudent) {
@@ -439,6 +846,10 @@ export default function StudentsPage({ school, openAddSignal }) {
                   <Ic name="edit" size="sm" /> Edit Student Details
                 </button>
                 <button className="ska-btn ska-btn--ghost" style={{ justifyContent: 'flex-start', gap: 10 }}
+                  onClick={() => setShowLinkDrawer(true)}>
+                  <Ic name="family_restroom" size="sm" /> Link Parent / Guardian
+                </button>
+                <button className="ska-btn ska-btn--ghost" style={{ justifyContent: 'flex-start', gap: 10 }}
                   onClick={() => setViewStudent(null)}>
                   <Ic name="arrow_back" size="sm" /> Back to Students List
                 </button>
@@ -446,6 +857,108 @@ export default function StudentsPage({ school, openAddSignal }) {
             </div>
           </div>
         </div>
+
+        {/* ── Linked Parents / Guardians ─────────────────────── */}
+        <div className="ska-card" style={{ marginTop: 20, overflow: 'hidden' }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '16px 20px', borderBottom: '1px solid var(--ska-border)', flexWrap: 'wrap', gap: 10,
+          }}>
+            <div>
+              <h2 className="ska-card-title" style={{ margin: 0 }}>Parents &amp; Guardians</h2>
+              <p style={{ margin: '2px 0 0', fontSize: '0.75rem', color: 'var(--ska-text-3)' }}>
+                {linkedParents.length === 0 ? 'No parents linked yet' : `${linkedParents.length} parent${linkedParents.length !== 1 ? 's' : ''} linked`}
+              </p>
+            </div>
+            <button className="ska-btn ska-btn--primary ska-btn--sm"
+              onClick={() => setShowLinkDrawer(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Ic name="add" size="sm" /> Link Parent
+            </button>
+          </div>
+
+          <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {parentsLoading ? (
+              Array.from({ length: 2 }).map((_, i) => (
+                <div key={i} style={{
+                  height: 72, borderRadius: 12, background: 'var(--ska-surface-high)',
+                  animation: 'ska-pulse 1.4s ease-in-out infinite',
+                }} />
+              ))
+            ) : linkedParents.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '32px 16px' }}>
+                <Ic name="family_restroom" style={{ fontSize: 40, color: 'var(--ska-text-3)', display: 'block', margin: '0 auto 10px' }} />
+                <p style={{ margin: 0, fontWeight: 600, fontSize: '0.875rem', color: 'var(--ska-text-3)' }}>No parents linked</p>
+                <p style={{ margin: '4px 0 12px', fontSize: '0.8rem', color: 'var(--ska-text-3)' }}>
+                  Link a parent or guardian to give them access to {s.first_name}'s records.
+                </p>
+                <button className="ska-btn ska-btn--primary" onClick={() => setShowLinkDrawer(true)}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <Ic name="add" size="sm" /> Link First Parent
+                </button>
+              </div>
+            ) : linkedParents.map(p => (
+              <div key={p.parent_id}
+                className={`ska-parent-card${p.is_primary ? ' ska-parent-card--primary' : ''}`}>
+                <InitialsAvatar name={p.full_name} size={42} />
+                <div className="ska-parent-card__info">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
+                    <p className="ska-parent-card__name">{p.full_name}</p>
+                    {p.is_primary && (
+                      <span style={{
+                        fontSize: '0.65rem', fontWeight: 800, padding: '2px 7px', borderRadius: 20,
+                        background: 'var(--ska-green)', color: '#fff', textTransform: 'uppercase',
+                        letterSpacing: '0.05em', flexShrink: 0,
+                      }}>Primary</span>
+                    )}
+                  </div>
+                  <div className="ska-parent-card__meta">
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                      <Ic name="badge" style={{ fontSize: 13, color: 'var(--ska-text-3)' }} />
+                      {p.relationship_type || p.relationship || '—'}
+                    </span>
+                    {p.phone && (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                        <Ic name="phone" style={{ fontSize: 13, color: 'var(--ska-text-3)' }} />
+                        {p.phone}
+                      </span>
+                    )}
+                    {p.email && (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                        <Ic name="mail" style={{ fontSize: 13, color: 'var(--ska-text-3)' }} />
+                        {p.email}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="ska-parent-card__actions">
+                  {!p.is_primary && (
+                    <button className="ska-btn ska-btn--ghost ska-btn--sm"
+                      title="Set as primary contact"
+                      onClick={() => handleSetPrimary(p.parent_id)}
+                      style={{ fontSize: '0.7rem', padding: '4px 8px' }}>
+                      <Ic name="star" size="sm" />
+                    </button>
+                  )}
+                  <button className="ska-btn ska-btn--ghost ska-btn--sm ska-btn--danger"
+                    title="Unlink parent"
+                    onClick={() => handleUnlinkParent(p.parent_id, p.full_name)}>
+                    <Ic name="link_off" size="sm" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Link Parent Drawer */}
+        {showLinkDrawer && (
+          <LinkParentDrawer
+            student={s}
+            onClose={() => setShowLinkDrawer(false)}
+            onLinked={() => loadLinkedParents(s.id)}
+          />
+        )}
       </div>
     );
   }
@@ -454,7 +967,23 @@ export default function StudentsPage({ school, openAddSignal }) {
   return (
     <div className="ska-content">
       {credSuccess && (
-        <CredentialCard info={credSuccess} onDone={() => setCredSuccess(null)} />
+        <CredentialCard
+          info={credSuccess}
+          onDone={() => setCredSuccess(null)}
+          onLinkParent={() => {
+            const s = { id: credSuccess.id, full_name: credSuccess.full_name, admission_number: credSuccess.admission_number };
+            setCredSuccess(null);
+            setPendingLinkStudent(s);
+          }}
+        />
+      )}
+
+      {pendingLinkStudent && (
+        <LinkParentDrawer
+          student={pendingLinkStudent}
+          onClose={() => setPendingLinkStudent(null)}
+          onLinked={() => setPendingLinkStudent(null)}
+        />
       )}
 
       <div className="ska-page-head">

@@ -81,6 +81,9 @@ from .views import (
     api_promote_students_batch,
     api_student_transcript_download,
     api_archive_academic_year,
+    # Student ↔ Parent linking
+    api_student_parents,
+    api_student_parent_detail,
 )
 from .secure_views import csrf_token_view
 from django.conf import settings
@@ -130,6 +133,8 @@ urlpatterns = [
     path('api/school/students/next-admission-number/', api_student_next_admission, name='api_student_next_admission'),
     path('api/school/students/',                api_students,         name='api_students'),
     path('api/school/students/<int:student_id>/', api_student_detail, name='api_student_detail'),
+    path('api/school/students/<int:student_id>/parents/', api_student_parents, name='api_student_parents'),
+    path('api/school/students/<int:student_id>/parents/<int:parent_id>/', api_student_parent_detail, name='api_student_parent_detail'),
     path('api/parent/students/',                 api_parent_students,  name='api_parent_students'),
     path('api/school/teachers/',                api_teachers,         name='api_teachers'),
     path('api/school/teachers/<int:teacher_id>/', api_teacher_detail, name='api_teacher_detail'),

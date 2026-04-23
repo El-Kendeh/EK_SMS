@@ -4793,9 +4793,18 @@ def api_parents(request):
         return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
 
     if request.method == 'GET':
+        from django.db.models import Q as _Q
         qs = Parent.objects.filter(school=school).select_related('user')
+        q = request.GET.get('q', '').strip()
+        if q:
+            qs = qs.filter(
+                _Q(user__first_name__icontains=q) |
+                _Q(user__last_name__icontains=q) |
+                _Q(user__email__icontains=q) |
+                _Q(phone_number__icontains=q)
+            )
         data = []
-        for p in qs.order_by('user__last_name')[:200]:
+        for p in qs.order_by('user__last_name')[:100]:
             children = ParentStudent.objects.filter(parent=p).select_related(
                 'student__user', 'student__classroom'
             )
@@ -4883,6 +4892,115 @@ def api_parents(request):
             'login_email':    email,
             'login_username': username,
         }, status=201)
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+# =================================================================
+# STUDENT ↔ PARENT LINKING  (school-admin)
+# =================================================================
+
+@csrf_exempt
+def api_student_parents(request, student_id):
+    """
+    GET  — list parents linked to a student
+    POST — link an existing parent to a student
+    """
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+    try:
+        student = Student.objects.get(id=student_id, school=school)
+    except Student.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Student not found.'}, status=404)
+
+    if request.method == 'GET':
+        links = ParentStudent.objects.filter(student=student).select_related('parent__user')
+        data = [{
+            'parent_id':        link.parent.id,
+            'full_name':        link.parent.user.get_full_name(),
+            'email':            link.parent.user.email,
+            'phone':            link.parent.phone_number,
+            'relationship':     link.parent.relationship,
+            'relationship_type': link.relationship_type,
+            'is_primary':       link.is_primary_contact,
+        } for link in links.order_by('-is_primary_contact', 'parent__user__last_name')]
+        return JsonResponse({'success': True, 'parents': data})
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+
+        parent_id         = body.get('parent_id')
+        relationship_type = (body.get('relationship_type') or '').strip()
+        is_primary        = bool(body.get('is_primary_contact', False))
+
+        if not parent_id:
+            return JsonResponse({'success': False, 'message': 'parent_id is required.'}, status=400)
+        try:
+            parent = Parent.objects.get(id=parent_id, school=school)
+        except Parent.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Parent not found in this school.'}, status=404)
+
+        if ParentStudent.objects.filter(parent=parent, student=student).exists():
+            return JsonResponse({'success': False, 'message': 'This parent is already linked to this student.'}, status=409)
+
+        # If marking as primary, clear existing primary flag
+        if is_primary:
+            ParentStudent.objects.filter(student=student, is_primary_contact=True).update(is_primary_contact=False)
+
+        ParentStudent.objects.create(
+            parent=parent, student=student,
+            relationship_type=relationship_type,
+            is_primary_contact=is_primary,
+        )
+        return JsonResponse({'success': True, 'message': f'{parent.user.get_full_name()} linked to {student.user.get_full_name()}.'}, status=201)
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+@csrf_exempt
+def api_student_parent_detail(request, student_id, parent_id):
+    """
+    PATCH  — update link (relationship_type, is_primary_contact)
+    DELETE — unlink parent from student
+    """
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+    try:
+        student = Student.objects.get(id=student_id, school=school)
+        parent  = Parent.objects.get(id=parent_id, school=school)
+        link    = ParentStudent.objects.get(student=student, parent=parent)
+    except (Student.DoesNotExist, Parent.DoesNotExist, ParentStudent.DoesNotExist):
+        return JsonResponse({'success': False, 'message': 'Link not found.'}, status=404)
+
+    if request.method in ('PATCH', 'PUT'):
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        if 'relationship_type' in body:
+            link.relationship_type = body['relationship_type']
+        if 'is_primary_contact' in body:
+            make_primary = bool(body['is_primary_contact'])
+            if make_primary:
+                ParentStudent.objects.filter(student=student, is_primary_contact=True).exclude(id=link.id).update(is_primary_contact=False)
+            link.is_primary_contact = make_primary
+        link.save()
+        return JsonResponse({'success': True, 'message': 'Link updated.'})
+
+    if request.method == 'DELETE':
+        link.delete()
+        return JsonResponse({'success': True, 'message': f'{parent.user.get_full_name()} unlinked from {student.user.get_full_name()}.'})
 
     return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
 

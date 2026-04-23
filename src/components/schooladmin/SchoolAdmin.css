@@ -1339,6 +1339,27 @@
   display: flex; gap: 10px; justify-content: flex-end;
   padding-top: 20px; border-top: 1px solid var(--ska-border); margin-top: 20px;
 }
+.ska-modal--wide { max-width: 640px; }
+
+/* ── Parent Link Cards ─────────────────────────────────────── */
+.ska-parent-card {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 16px; border-radius: 12px;
+  border: 1.5px solid var(--ska-border);
+  background: var(--ska-surface-high);
+  transition: border-color 0.15s;
+  position: relative;
+}
+.ska-parent-card--primary { border-color: var(--ska-green); background: var(--ska-green-dim); }
+.ska-parent-card__info { flex: 1; min-width: 0; }
+.ska-parent-card__name { margin: 0; font-weight: 700; font-size: 0.9rem; color: var(--ska-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ska-parent-card__meta { margin: 3px 0 0; font-size: 0.75rem; color: var(--ska-text-3); display: flex; flex-wrap: wrap; gap: 6px; }
+.ska-parent-card__actions { display: flex; gap: 6px; flex-shrink: 0; }
+@media (max-width: 600px) {
+  .ska-modal--wide { max-width: 100%; }
+  .ska-parent-card { flex-wrap: wrap; }
+  .ska-parent-card__actions { margin-left: auto; }
+}
 
 /* ── Form ── */
 .ska-form-grid {
@@ -1533,3 +1554,47 @@ textarea.ska-input { height: auto; padding: 10px 12px; }
 .logo-dropzone.active { border-color: var(--ska-primary); background: var(--ska-primary-dim); }
 
 @keyframes ska-pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+/* ── Academic Year Pill Filter ─────────────────────────────── */
+.ska-year-filter { display: flex; flex-direction: column; gap: 6px; }
+.ska-year-filter__pills {
+  display: flex; flex-wrap: wrap; gap: 7px;
+}
+.ska-year-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 16px; border-radius: 100px;
+  font-size: 0.8125rem; font-weight: 600; font-family: var(--ska-font-body);
+  border: 1.5px solid var(--ska-border);
+  background: var(--ska-surface-high);
+  color: var(--ska-text-2);
+  cursor: pointer; transition: border-color 0.15s, background 0.15s, color 0.15s, box-shadow 0.15s;
+  white-space: nowrap; line-height: 1;
+}
+.ska-year-pill:hover:not(.ska-year-pill--skeleton) {
+  border-color: var(--ska-primary); color: var(--ska-primary);
+  background: var(--ska-primary-dim);
+}
+.ska-year-pill--active {
+  background: var(--ska-primary) !important; border-color: var(--ska-primary) !important;
+  color: #fff !important;
+  box-shadow: 0 2px 10px rgba(27,63,175,0.25);
+}
+.ska-year-pill--current:not(.ska-year-pill--active) {
+  border-color: var(--ska-green); color: var(--ska-green);
+  background: var(--ska-green-dim);
+}
+.ska-year-pill__dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: currentColor; opacity: 0.75; flex-shrink: 0;
+}
+.ska-year-pill--skeleton {
+  width: 78px; height: 32px; border-radius: 100px;
+  background: var(--ska-surface-high);
+  animation: ska-pulse 1.4s ease-in-out infinite;
+  pointer-events: none; border-color: transparent; cursor: default;
+}
+@media (max-width: 600px) {
+  .ska-year-filter__pills { gap: 6px; }
+  .ska-year-pill { padding: 5px 12px; font-size: 0.75rem; }
+  .ska-year-pill--skeleton { width: 64px; height: 30px; }
+}
