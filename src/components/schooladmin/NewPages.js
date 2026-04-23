@@ -2467,7 +2467,7 @@ function EditStudentModal({ student, classes, onSave, onClose }) {
   );
 }
 
-export function StudentsPage({ school }) {
+export function StudentsPage({ school, openAddSignal }) {
   const [students,       setStudents]       = useState([]);
   const [stats,          setStats]          = useState(null);
   const [classes,        setClasses]        = useState([]);
@@ -2479,6 +2479,10 @@ export function StudentsPage({ school }) {
   const [editStudent,    setEditStudent]    = useState(null);
   const [banner,         setBanner]         = useState(null);
   const searchTimer = useRef(null);
+
+  useEffect(() => {
+    if (openAddSignal) setSubView('add');
+  }, [openAddSignal]);
 
   const load = useCallback((q = '', filter = 'all') => {
     setLoading(true);
