@@ -72,12 +72,12 @@
 
 .vmod-status--valid {
   background: rgba(16,185,129,0.12);
-  color: #065F46;
+  color: #6EE7B7;
 }
 
 .vmod-status--invalid {
   background: rgba(239,68,68,0.12);
-  color: #991B1B;
+  color: #FCA5A5;
 }
 
 .vmod-status span.material-symbols-outlined {

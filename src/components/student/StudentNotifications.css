@@ -110,7 +110,7 @@
 .snotif-item--warning { border-left-color: #EAB308; }
 .snotif-item--warning.snotif-item--unread::before { background: rgba(234,179,8,0.04); }
 
-.snotif-item--info { border-left-color: #005AC2; }
+.snotif-item--info { border-left-color: var(--student-info); }
 .snotif-item--info.snotif-item--unread::before { background: rgba(0,90,194,0.04); }
 
 .snotif-item--system { border-left-color: transparent; background: var(--student-surface-low); }
@@ -200,7 +200,7 @@
   transition: background 0.15s;
   font-family: 'Inter', sans-serif;
 }
-.snotif-item__action:hover { background: #DCDFE3; }
+.snotif-item__action:hover { background: var(--student-surface); }
 .snotif-item__action span { font-size: 14px; }
 
 /* Unread dot */

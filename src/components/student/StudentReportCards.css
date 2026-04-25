@@ -64,7 +64,7 @@
 
 .srep-card--archived .srep-card__year-badge {
   background: rgba(83,95,116,0.1);
-  color: #535F74;
+  color: var(--student-text-secondary);
 }
 
 .srep-card__term-name {
@@ -244,7 +244,7 @@
   background: var(--student-surface-high);
   color: var(--student-text-primary);
 }
-.srep-btn--ghost:hover { background: #DCDFE3; }
+.srep-btn--ghost:hover { background: var(--student-surface-high); }
 
 .srep-btn--cert {
   background: #101C2E;
@@ -255,10 +255,10 @@
 /* Archive view button */
 .srep-btn--archive {
   background: var(--student-surface-high);
-  color: #535F74;
+  color: var(--student-text-secondary);
   font-size: 13px;
 }
-.srep-btn--archive:hover { background: #DCDFE3; }
+.srep-btn--archive:hover { background: var(--student-surface-highest); }
 
 /* Empty / upcoming card */
 .srep-empty {
@@ -290,7 +290,7 @@
   font-family: 'Manrope', sans-serif;
   font-size: 17px;
   font-weight: 700;
-  color: #535F74;
+  color: var(--student-text-secondary);
   margin-bottom: 6px;
 }
 

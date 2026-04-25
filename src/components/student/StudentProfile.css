@@ -298,18 +298,18 @@
   gap: 10px;
   margin-bottom: 6px;
 }
-.sprof-2fa-card__head span { font-size: 20px; color: #005AC2; }
+.sprof-2fa-card__head span { font-size: 20px; color: #60A5FA; }
 
 .sprof-2fa-card__title {
   font-size: 14px;
   font-weight: 700;
-  color: #00367A;
+  color: var(--student-text-primary);
 }
 
 .sprof-2fa-card__text {
   font-size: 12px;
-  color: #004395;
-  opacity: 0.8;
+  color: var(--student-text-secondary);
+  opacity: 0.9;
   line-height: 1.5;
   margin-bottom: 12px;
 }

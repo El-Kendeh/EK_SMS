@@ -257,7 +257,7 @@
   transition: all 0.15s;
 }
 .ftp-send-btn:hover { transform: scale(1.05); }
-.ftp-send-btn:disabled { background: #D1D5DB; box-shadow: none; cursor: default; transform: none; }
+.ftp-send-btn:disabled { background: var(--student-surface-high); box-shadow: none; cursor: default; transform: none; opacity: 0.5; }
 .ftp-send-btn .material-symbols-outlined { font-size: 20px; }
 
 @media (max-width: 600px) {

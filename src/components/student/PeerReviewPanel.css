@@ -118,7 +118,7 @@
   font-family: 'Manrope', sans-serif;
   font-size: 20px;
   font-weight: 900;
-  color: #101C2E;
+  color: var(--student-text-primary);
   line-height: 1.2;
 }
 
@@ -174,7 +174,7 @@
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background: #101C2E;
+  background: var(--student-surface);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -303,7 +303,7 @@
   height: 20px;
   border-radius: 50%;
   background: var(--student-card-bg);
-  border: 2px solid #D1D5DB;
+  border: 2px solid rgba(255,255,255,0.18);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -323,7 +323,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #D1D5DB;
+  background: rgba(255,255,255,0.22);
 }
 
 .prp-step__time {

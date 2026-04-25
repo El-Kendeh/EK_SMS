@@ -286,7 +286,7 @@
   background: var(--student-surface-high);
   color: var(--student-text-primary);
 }
-.srm-btn--ghost:hover { background: #DCDFE3; }
+.srm-btn--ghost:hover { background: var(--student-surface-high); }
 
 @media (max-width: 600px) {
   .srm-incident-grid { grid-template-columns: 1fr; }
