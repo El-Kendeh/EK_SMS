@@ -411,13 +411,11 @@ def api_login(request):
         
         # 2. If it fails and looks like an email, try authenticating with email
         if user is None and '@' in username_or_email:
-            try:
-                # Find user by email
-                target_user = User.objects.get(email=username_or_email)
-                # Authenticate using their actual username
+            target_user = User.objects.filter(
+                email__iexact=username_or_email
+            ).exclude(email='').first()
+            if target_user:
                 user = authenticate(username=target_user.username, password=password)
-            except (User.DoesNotExist, User.MultipleObjectsReturned):
-                pass
         
         if user is None:
             # CHECK if login failed only because user is inactive (pending school admin)
