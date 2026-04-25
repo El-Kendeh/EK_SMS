@@ -23,6 +23,22 @@ export default function StudentGrades({ navigateTo }) {
   const [peerReviewGrade, setPeerReviewGrade] = useState(null);
   const [sortField, setSortField] = useState(null);
   const [sortDir, setSortDir] = useState('asc');
+  const [targets, setTargets] = useState(
+    () => JSON.parse(localStorage.getItem('stu_grade_targets') || '{}')
+  );
+
+  const updateTarget = (gradeId, value) => {
+    setTargets(prev => {
+      const next = { ...prev };
+      if (value === '' || value === undefined) {
+        delete next[gradeId];
+      } else {
+        next[gradeId] = Number(value);
+      }
+      localStorage.setItem('stu_grade_targets', JSON.stringify(next));
+      return next;
+    });
+  };
 
   // Load terms
   useEffect(() => {
@@ -373,6 +389,61 @@ export default function StudentGrades({ navigateTo }) {
               <span className="material-symbols-outlined">download</span>
               Download PDF
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Goal Tracker */}
+      {!loading && sortedGrades.length > 0 && (
+        <div className="stu-goal-tracker">
+          <div className="stu-goal-tracker__header">
+            <div className="stu-goal-tracker__title">
+              <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>track_changes</span>
+              Grade Goals
+            </div>
+            <div className="stu-goal-tracker__sub">Set your target grade for each subject</div>
+          </div>
+          <div className="stu-goal-tracker__grid">
+            {sortedGrades.map(g => {
+              const target = targets[g.id];
+              const achieved = target != null && g.score >= target;
+              const progress = target ? Math.min(100, Math.round((g.score / target) * 100)) : 0;
+              const gap = target != null ? target - g.score : null;
+              const barColor = achieved ? 'var(--student-primary)' : progress >= 85 ? '#F59E0B' : '#EF4444';
+              return (
+                <div key={g.id} className="stu-goal-row">
+                  <div className="stu-goal-row__subject">{g.subject?.name}</div>
+                  <div className="stu-goal-row__current">{g.score}%</div>
+                  <div className="stu-goal-row__input-wrap">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      placeholder="Target"
+                      value={target ?? ''}
+                      className="stu-goal-input"
+                      onChange={e => {
+                        const v = e.target.value;
+                        if (v === '' || (Number(v) >= 0 && Number(v) <= 100)) {
+                          updateTarget(g.id, v === '' ? undefined : v);
+                        }
+                      }}
+                    />
+                    <span className="stu-goal-input__unit">%</span>
+                  </div>
+                  {target != null && (
+                    <div className="stu-goal-row__progress">
+                      <div className="stu-goal-track">
+                        <div className="stu-goal-fill" style={{ width: `${progress}%`, background: barColor }} />
+                      </div>
+                      <span className="stu-goal-status" style={{ color: achieved ? 'var(--student-primary)' : barColor }}>
+                        {achieved ? '✓ Achieved' : `${gap > 0 ? gap : 0}% to go`}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

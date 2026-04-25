@@ -1010,3 +1010,200 @@
 @media (max-width: 600px) {
   .stu-lite-stats { grid-template-columns: 1fr 1fr; }
 }
+
+/* ── At-Risk Alert System ── */
+.stu-risk-alerts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.stu-risk-alert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: rgba(239,68,68,0.07);
+  border: 1px solid rgba(239,68,68,0.25);
+  border-left: 4px solid var(--student-danger);
+  border-radius: 10px;
+  flex-wrap: wrap;
+}
+
+.stu-risk-alert__icon {
+  color: var(--student-danger);
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.stu-risk-alert__text {
+  flex: 1;
+  font-size: 13px;
+  color: var(--student-text-primary);
+  line-height: 1.4;
+}
+.stu-risk-alert__text strong { color: var(--student-danger); }
+
+.stu-risk-alert__btn {
+  padding: 5px 14px;
+  background: var(--student-danger);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: opacity 0.15s;
+}
+.stu-risk-alert__btn:hover { opacity: 0.85; }
+
+/* ── Subject card trend chip + crown ── */
+.stu-subject-card__crown {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 800;
+  color: #F59E0B;
+  background: rgba(245,158,11,0.12);
+  padding: 2px 7px;
+  border-radius: 99px;
+}
+.stu-subject-card__crown span { font-size: 12px; }
+
+.stu-subject-card__trend-chip {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10.5px;
+  font-weight: 700;
+  margin-top: 4px;
+}
+.stu-subject-card__trend-chip span { font-size: 14px; }
+
+.stu-subject-card__focus-tag {
+  font-size: 10px;
+  font-weight: 800;
+  color: #F59E0B;
+  background: rgba(245,158,11,0.12);
+  padding: 2px 7px;
+  border-radius: 99px;
+  margin-right: auto;
+}
+
+/* ── Performance Insights Card ── */
+.stu-insights-card {
+  background: var(--student-sidebar-bg);
+  border-radius: 16px;
+  padding: 22px 22px 20px;
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+}
+
+.stu-insights-card__glow {
+  position: absolute;
+  top: -30px;
+  right: -30px;
+  width: 100px;
+  height: 100px;
+  background: rgba(16,185,129,0.14);
+  border-radius: 50%;
+  filter: blur(28px);
+  pointer-events: none;
+}
+
+.stu-insights-card__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Manrope', sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 14px;
+}
+.stu-insights-card__title span { font-size: 18px; color: var(--student-primary); }
+
+.stu-insights-card__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stu-insight-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-size: 13px;
+  line-height: 1.4;
+  padding: 10px 12px;
+  border-radius: 9px;
+}
+.stu-insight-row span:first-child { font-size: 17px; flex-shrink: 0; margin-top: 1px; }
+
+.stu-insight-row--best  { background: rgba(245,158,11,0.12); color: #FCD34D; }
+.stu-insight-row--best  span:first-child { color: #F59E0B; }
+.stu-insight-row--weak  { background: rgba(239,68,68,0.12); color: #FCA5A5; }
+.stu-insight-row--weak  span:first-child { color: #EF4444; }
+.stu-insight-row--tip   { background: rgba(16,185,129,0.1); color: #6EE7B7; }
+.stu-insight-row--tip   span:first-child { color: var(--student-primary); }
+
+.stu-insight-row strong { color: #fff; font-weight: 700; }
+
+/* ── Achievements Card ── */
+.stu-achievements-card {
+  background: var(--student-card-bg);
+  border-radius: 16px;
+  padding: 20px 20px 16px;
+  border: 1px solid rgba(0,0,0,0.06);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+}
+
+.stu-achievements-card__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Manrope', sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--student-text-primary);
+  margin-bottom: 12px;
+}
+.stu-achievements-card__title span { font-size: 18px; color: #F59E0B; }
+
+.stu-achievements-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.stu-badge-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 10px;
+  cursor: default;
+}
+
+.stu-badge-item__icon { font-size: 18px; }
+
+.stu-badge-item__label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--student-text-primary);
+}
+
+/* ── Responsive additions ── */
+@media (max-width: 600px) {
+  .stu-risk-alert { gap: 8px; }
+  .stu-risk-alert__text { font-size: 12px; }
+  .stu-subject-card__trend-chip { font-size: 9.5px; }
+  .stu-insight-row { font-size: 12px; padding: 8px 10px; }
+}

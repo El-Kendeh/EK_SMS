@@ -727,6 +727,124 @@ export const mockResources = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
+// GRADE INSIGHTS (per-subject trend vs previous term)
+// ─────────────────────────────────────────────────────────────────────────────
+export const mockGradeInsights = {
+  'grade-001': { trend: 5,  prevScore: 77, direction: 'up'   }, // Mathematics
+  'grade-002': { trend: 2,  prevScore: 72, direction: 'up'   }, // English
+  'grade-003': { trend: 8,  prevScore: 83, direction: 'up'   }, // Biology
+  'grade-004': { trend: -3, prevScore: 72, direction: 'down' }, // Chemistry
+  'grade-005': { trend: 1,  prevScore: 76, direction: 'up'   }, // History
+  'grade-006': { trend: -4, prevScore: 62, direction: 'down' }, // Math Elective
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SCHOOL EVENTS & CALENDAR
+// ─────────────────────────────────────────────────────────────────────────────
+export const mockEvents = [
+  {
+    id: 'ev-1',
+    type: 'deadline',
+    title: 'Assignment Submission Deadline',
+    date: '2026-04-30',
+    notes: 'All outstanding assignments must be submitted. Late submissions will not be accepted.',
+  },
+  {
+    id: 'ev-2',
+    type: 'exam',
+    title: 'Mathematics Final Exam',
+    subject: 'Mathematics',
+    subjectColor: '#3B82F6',
+    date: '2026-05-12',
+    time: '09:00',
+    endTime: '11:00',
+    location: 'Main Hall, Block A',
+    notes: 'Covers Chapters 1–8. Non-programmable calculator allowed.',
+  },
+  {
+    id: 'ev-3',
+    type: 'exam',
+    title: 'Biology Practical Exam',
+    subject: 'Biology',
+    subjectColor: '#10B981',
+    date: '2026-05-15',
+    time: '10:00',
+    endTime: '12:00',
+    location: 'Science Lab B',
+    notes: 'Bring lab coat and safety goggles. Practical equipment provided.',
+  },
+  {
+    id: 'ev-4',
+    type: 'exam',
+    title: 'English Language Paper',
+    subject: 'English Language',
+    subjectColor: '#8B5CF6',
+    date: '2026-05-18',
+    time: '09:00',
+    endTime: '11:30',
+    location: 'Main Hall, Block A',
+    notes: 'Section A: Comprehension. Section B: Essay writing.',
+  },
+  {
+    id: 'ev-5',
+    type: 'exam',
+    title: 'Chemistry Theory Exam',
+    subject: 'Chemistry',
+    subjectColor: '#EF4444',
+    date: '2026-05-20',
+    time: '09:00',
+    endTime: '11:00',
+    location: 'Room 204',
+    notes: 'Full periodic table provided. No calculators permitted.',
+  },
+  {
+    id: 'ev-6',
+    type: 'exam',
+    title: 'History Paper',
+    subject: 'History',
+    subjectColor: '#6366F1',
+    date: '2026-05-22',
+    time: '09:00',
+    endTime: '11:00',
+    location: 'Room 106',
+    notes: 'Source-based questions and essay. Open notes not permitted.',
+  },
+  {
+    id: 'ev-7',
+    type: 'event',
+    title: 'Sports Day',
+    date: '2026-06-12',
+    time: '08:00',
+    endTime: '15:00',
+    location: 'School Grounds',
+    notes: 'Inter-house competition. Wear house colors. Refreshments provided.',
+  },
+  {
+    id: 'ev-8',
+    type: 'holiday',
+    title: 'Eid Al-Adha (Public Holiday)',
+    date: '2026-06-16',
+    notes: 'School closed. All activities postponed to the following week.',
+  },
+  {
+    id: 'ev-9',
+    type: 'event',
+    title: 'End of Term Prize Giving',
+    date: '2026-07-03',
+    time: '10:00',
+    location: 'School Hall',
+    notes: 'Awards for academic excellence and attendance. Smart dress required.',
+  },
+  {
+    id: 'ev-10',
+    type: 'event',
+    title: 'School Vacation Begins',
+    date: '2026-07-10',
+    notes: 'First Term officially ends. Results published via the student portal.',
+  },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
 // ATTENDANCE
 // ─────────────────────────────────────────────────────────────────────────────
 export const mockAttendance = {

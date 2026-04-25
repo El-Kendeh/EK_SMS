@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { section: 'report-cards',  icon: 'description',  label: 'Report Cards' },
   { section: 'attendance',    icon: 'fact_check',   label: 'Attendance' },
   { section: 'resources',     icon: 'folder_open',  label: 'Resources' },
+  { section: 'events',        icon: 'event_note',   label: 'Events' },
   { section: 'messages',      icon: 'chat',         label: 'Messages',    badge: 'messages' },
   { section: 'financials',    icon: 'payments',     label: 'Financials' },
   { section: 'notifications', icon: 'notifications', label: 'Notifications' },

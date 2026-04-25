@@ -15,6 +15,7 @@ import StudentAssignments from './StudentAssignments';
 import StudentMessages from './StudentMessages';
 import StudentResources from './StudentResources';
 import StudentAttendance from './StudentAttendance';
+import StudentEvents from './StudentEvents';
 import './StudentDashboard.css';
 
 const SECTION_PATHS = {
@@ -29,6 +30,7 @@ const SECTION_PATHS = {
   messages:       '/student/messages',
   resources:      '/student/resources',
   attendance:     '/student/attendance',
+  events:         '/student/events',
 };
 
 function getInitialSection() {
@@ -43,6 +45,7 @@ function getInitialSection() {
   if (path.includes('/student/messages'))       return 'messages';
   if (path.includes('/student/resources'))      return 'resources';
   if (path.includes('/student/attendance'))     return 'attendance';
+  if (path.includes('/student/events'))         return 'events';
   return 'home';
 }
 
@@ -103,6 +106,7 @@ function StudentDashboardInner({ onNavigate }) {
       case 'messages':      return <StudentMessages      {...props} />;
       case 'resources':     return <StudentResources     {...props} />;
       case 'attendance':    return <StudentAttendance    {...props} />;
+      case 'events':        return <StudentEvents        {...props} />;
       default:              return <StudentHome          {...props} />;
     }
   };

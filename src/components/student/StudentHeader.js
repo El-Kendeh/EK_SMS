@@ -15,6 +15,7 @@ const SECTION_LABELS = {
   messages:       'Messages',
   resources:      'Learning Materials',
   attendance:     'Attendance Overview',
+  events:         'School Calendar',
 };
 
 export default function StudentHeader({ onMenuToggle, activeSection, navigateTo, isSidebarOpen }) {

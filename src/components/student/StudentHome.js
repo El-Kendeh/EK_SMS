@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { studentApi } from '../../api/studentApi';
 import { useStudentProfile } from '../../hooks/useStudentProfile';
@@ -193,17 +193,20 @@ export default function StudentHome({ navigateTo }) {
   const [loading, setLoading] = useState(true);
   const [nextClass, setNextClass] = useState(null);
   const [upcomingAssignments, setUpcomingAssignments] = useState([]);
+  const [insights, setInsights] = useState({});
 
   const scrollRef = useRef(null);
 
   const load = useCallback(async () => {
     try {
-      const [term, notifs, timetable, assignments] = await Promise.all([
+      const [term, notifs, timetable, assignments, insightsData] = await Promise.all([
         studentApi.getCurrentTerm(),
         studentApi.getNotifications(4),
         studentApi.getTimetable(),
         studentApi.getAssignments(),
+        studentApi.getGradeInsights(),
       ]);
+      setInsights(insightsData || {});
       setCurrentTerm(term);
       setRecentNotifs(notifs);
       setNextClass(getNextClassFromTimetable(timetable));
@@ -247,6 +250,39 @@ export default function StudentHome({ navigateTo }) {
     hidden:  { opacity: 0, y: 20 },
     visible: (i) => ({ opacity: 1, y: 0, transition: { duration: 0.4, delay: i * 0.08 } }),
   };
+
+  const atRiskSubjects = useMemo(
+    () => grades.filter(g => g.score < 60),
+    [grades]
+  );
+
+  const bestSubject = useMemo(
+    () => grades.length > 0 ? grades.reduce((b, g) => g.score > b.score ? g : b, grades[0]) : null,
+    [grades]
+  );
+
+  const weakestSubject = useMemo(
+    () => grades.length > 1 ? grades.reduce((w, g) => g.score < w.score ? g : w, grades[0]) : null,
+    [grades]
+  );
+
+  const badges = useMemo(() => {
+    const list = [];
+    const attendancePct = profile?.attendance ?? 0;
+    if (typeof rank === 'number' && typeof total === 'number' && rank <= Math.ceil(total * 0.2)) {
+      list.push({ id: 'top-20', icon: 'emoji_events', label: 'Top 20%', color: '#F59E0B', bg: 'rgba(245,158,11,0.1)', desc: `Ranked ${rank} of ${total}` });
+    }
+    if (avg >= 80) {
+      list.push({ id: 'high-avg', icon: 'stars', label: 'High Achiever', color: '#3B82F6', bg: 'rgba(59,130,246,0.1)', desc: `${avg.toFixed(1)}% average` });
+    }
+    if (grades.filter(g => g.score >= 70).length >= 4) {
+      list.push({ id: 'consistent', icon: 'workspace_premium', label: 'Consistent', color: '#8B5CF6', bg: 'rgba(139,92,246,0.1)', desc: '4+ subjects above 70%' });
+    }
+    if (attendancePct >= 90) {
+      list.push({ id: 'attendance', icon: 'how_to_reg', label: 'High Attendance', color: '#10B981', bg: 'rgba(16,185,129,0.1)', desc: `${attendancePct}% attendance` });
+    }
+    return list;
+  }, [avg, rank, total, grades, profile]);
 
   if (lowData) {
     return (
@@ -293,6 +329,21 @@ export default function StudentHome({ navigateTo }) {
           <span> Any unauthorized modification attempt is automatically blocked, logged, and visible to you.</span>
         </div>
       </div>
+
+      {/* At-Risk Alerts */}
+      {!loading && atRiskSubjects.length > 0 && (
+        <div className="stu-risk-alerts">
+          {atRiskSubjects.map(g => (
+            <div key={g.id} className="stu-risk-alert">
+              <span className="material-symbols-outlined stu-risk-alert__icon" style={{ fontVariationSettings: "'FILL' 1" }}>warning</span>
+              <span className="stu-risk-alert__text">
+                <strong>{g.subject?.name}</strong> — {g.score}% · At risk of failing. Immediate attention needed.
+              </span>
+              <button className="stu-risk-alert__btn" onClick={() => {}}>View Grades</button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Stats row */}
       <div className="stu-home__stats">
@@ -394,6 +445,9 @@ export default function StudentHome({ navigateTo }) {
                   const { icon, color } = getSubjectStyle(g.subject?.code);
                   const gradeColor = getGradeColor(g.score);
                   const isFailing = g.score < 50;
+                  const insight = insights[g.id];
+                  const isBest = bestSubject?.id === g.id;
+                  const isWeakest = weakestSubject?.id === g.id;
 
                   return (
                     <motion.div
@@ -405,6 +459,12 @@ export default function StudentHome({ navigateTo }) {
                       className="stu-subject-card"
                       onClick={() => navigateTo('grades')}
                     >
+                      {isBest && (
+                        <div className="stu-subject-card__crown">
+                          <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+                          Best
+                        </div>
+                      )}
                       <div className="stu-subject-card__top">
                         <div
                           className="stu-subject-card__icon"
@@ -431,7 +491,21 @@ export default function StudentHome({ navigateTo }) {
                       >
                         {g.score}%
                       </div>
+                      {insight && (
+                        <div
+                          className="stu-subject-card__trend-chip"
+                          style={{ color: insight.direction === 'up' ? 'var(--student-primary)' : 'var(--student-danger)' }}
+                        >
+                          <span className="material-symbols-outlined">
+                            {insight.direction === 'up' ? 'trending_up' : 'trending_down'}
+                          </span>
+                          {insight.trend > 0 ? '+' : ''}{insight.trend}% vs last term
+                        </div>
+                      )}
                       <div className="stu-subject-card__footer">
+                        {isWeakest && !isBest && (
+                          <span className="stu-subject-card__focus-tag">Focus</span>
+                        )}
                         {g.status === 'locked' ? (
                           <span className="material-symbols-outlined" style={{ color: 'var(--student-primary)', fontVariationSettings: "'FILL' 1" }}>lock</span>
                         ) : (
@@ -602,15 +676,66 @@ export default function StudentHome({ navigateTo }) {
 
         {/* Right column */}
         <div className="stu-home__right">
-          {/* Academic Counseling */}
-          <div className="stu-counseling-card">
-            <h4>Academic Counseling</h4>
-            <p>Need help improving your grades? Schedule a session with your academic advisor.</p>
-            <button>
-              <span className="material-symbols-outlined">calendar_month</span>
-              Book Session
-            </button>
+          {/* Performance Insights */}
+          <div className="stu-insights-card">
+            <div className="stu-insights-card__glow" />
+            <h4 className="stu-insights-card__title">
+              <span className="material-symbols-outlined">insights</span>
+              Performance Insights
+            </h4>
+            {loading ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {[1,2,3].map(i => <div key={i} className="skeleton" style={{ height: 36, background: 'rgba(255,255,255,0.06)', borderRadius: 8 }} />)}
+              </div>
+            ) : (
+              <div className="stu-insights-card__rows">
+                {bestSubject && (
+                  <div className="stu-insight-row stu-insight-row--best">
+                    <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>emoji_events</span>
+                    <span><strong>Best:</strong> {bestSubject.subject?.name} · {bestSubject.score}%</span>
+                  </div>
+                )}
+                {weakestSubject && (
+                  <div className="stu-insight-row stu-insight-row--weak">
+                    <span className="material-symbols-outlined">warning</span>
+                    <span><strong>Focus:</strong> {weakestSubject.subject?.name} · {weakestSubject.score}%</span>
+                  </div>
+                )}
+                {weakestSubject && (
+                  <div className="stu-insight-row stu-insight-row--tip">
+                    <span className="material-symbols-outlined">lightbulb</span>
+                    <span>Schedule extra study time for <strong>{weakestSubject.subject?.name}</strong> this week</span>
+                  </div>
+                )}
+                {!bestSubject && !weakestSubject && (
+                  <div className="stu-insight-row stu-insight-row--tip">
+                    <span className="material-symbols-outlined">lightbulb</span>
+                    <span>Grades not yet available for this term</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
+
+          {/* Achievements */}
+          {badges.length > 0 && (
+            <div className="stu-achievements-card">
+              <h4 className="stu-achievements-card__title">
+                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>workspace_premium</span>
+                Achievements
+              </h4>
+              <div className="stu-achievements-grid">
+                {badges.map(b => (
+                  <div key={b.id} className="stu-badge-item" style={{ background: b.bg }} title={b.desc}>
+                    <span className="material-symbols-outlined stu-badge-item__icon" style={{ color: b.color, fontVariationSettings: "'FILL' 1" }}>
+                      {b.icon}
+                    </span>
+                    <span className="stu-badge-item__label">{b.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Quick shortcuts */}
           <div className="stu-shortcuts-card">
@@ -619,10 +744,12 @@ export default function StudentHome({ navigateTo }) {
               {[
                 { label: 'Timetable',    icon: 'calendar_month', section: 'timetable' },
                 { label: 'Assignments',  icon: 'assignment',     section: 'assignments' },
-                { label: 'Messages',     icon: 'chat',           section: 'messages' },
                 { label: 'Grades',       icon: 'auto_stories',   section: 'grades' },
+                { label: 'Attendance',   icon: 'fact_check',     section: 'attendance' },
+                { label: 'Resources',    icon: 'folder_open',    section: 'resources' },
+                { label: 'Events',       icon: 'event_note',     section: 'events' },
+                { label: 'Messages',     icon: 'chat',           section: 'messages' },
                 { label: 'Report Cards', icon: 'description',    section: 'report-cards' },
-                { label: 'Profile',      icon: 'person',         section: 'profile' },
               ].map(({ label, icon, section }) => (
                 <button
                   key={section}

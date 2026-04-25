@@ -19,6 +19,8 @@ import {
   mockMessages,
   mockResources,
   mockAttendance,
+  mockGradeInsights,
+  mockEvents,
 } from '../mock/studentMockData';
 
 const USE_MOCK = process.env.REACT_APP_USE_MOCK_DATA === 'true';
@@ -365,5 +367,17 @@ export const studentApi = {
   async getAttendance() {
     if (USE_MOCK) { await delay(400); return mockAttendance; }
     return apiClient.get('/api/student/attendance/');
+  },
+
+  // ── Grade Insights (trends vs previous term) ──────────────────────────────
+  async getGradeInsights() {
+    if (USE_MOCK) { await delay(300); return mockGradeInsights; }
+    return apiClient.get('/api/student/grade-insights/');
+  },
+
+  // ── Events & Calendar ─────────────────────────────────────────────────────
+  async getEvents() {
+    if (USE_MOCK) { await delay(400); return mockEvents; }
+    return apiClient.get('/api/student/events/');
   },
 };
