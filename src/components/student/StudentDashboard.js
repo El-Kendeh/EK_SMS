@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { NotificationProvider } from '../../context/NotificationContext';
 import { LowDataProvider, useLowData } from '../../context/LowDataContext';
+import { studentApi } from '../../api/studentApi';
 import StudentSidebar from './StudentSidebar';
 import StudentHeader from './StudentHeader';
 import StudentHome from './StudentHome';
@@ -42,6 +43,7 @@ function getInitialSection() {
 function StudentDashboardInner({ onNavigate }) {
   const [activeSection, setActiveSection] = useState(getInitialSection);
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 768);
+  const [msgUnread, setMsgUnread] = useState(0);
 
   // Close sidebar on resize below mobile threshold
   useEffect(() => {
@@ -52,6 +54,18 @@ function StudentDashboardInner({ onNavigate }) {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Load message unread count for sidebar badge
+  useEffect(() => {
+    studentApi.getConversations().then((convs) => {
+      setMsgUnread(convs.reduce((s, c) => s + c.unread, 0));
+    }).catch(() => {});
+  }, []);
+
+  // Clear messages badge when user enters the messages section
+  useEffect(() => {
+    if (activeSection === 'messages') setMsgUnread(0);
+  }, [activeSection]);
 
   const navigateTo = (section) => {
     setActiveSection(section);
@@ -95,6 +109,7 @@ function StudentDashboardInner({ onNavigate }) {
         isOpen={isSidebarOpen}
         onToggle={() => setIsSidebarOpen((p) => !p)}
         onLogout={handleLogout}
+        msgUnread={msgUnread}
       />
 
       <div className={`student-main ${isSidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
