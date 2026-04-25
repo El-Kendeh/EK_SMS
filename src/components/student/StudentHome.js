@@ -339,7 +339,7 @@ export default function StudentHome({ navigateTo }) {
               <span className="stu-risk-alert__text">
                 <strong>{g.subject?.name}</strong> — {g.score}% · At risk of failing. Immediate attention needed.
               </span>
-              <button className="stu-risk-alert__btn" onClick={() => {}}>View Grades</button>
+              <button className="stu-risk-alert__btn" onClick={() => navigateTo('grades')}>View Grades</button>
             </div>
           ))}
         </div>
