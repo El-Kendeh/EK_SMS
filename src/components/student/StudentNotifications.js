@@ -5,10 +5,12 @@ import { formatRelativeTime, getNotificationIcon } from '../../utils/studentUtil
 import './StudentNotifications.css';
 
 const FILTERS = [
-  { key: 'all',    label: 'All' },
-  { key: 'grade',  label: 'Grades' },
-  { key: 'alert',  label: 'Alerts' },
-  { key: 'system', label: 'System' },
+  { key: 'all',        label: 'All' },
+  { key: 'grade',      label: 'Grades' },
+  { key: 'alert',      label: 'Alerts' },
+  { key: 'assignment', label: 'Assignments' },
+  { key: 'class',      label: 'Classes' },
+  { key: 'system',     label: 'System' },
 ];
 
 function getItemColorClass(type) {
@@ -16,8 +18,8 @@ function getItemColorClass(type) {
   const t = type.toLowerCase();
   if (t.includes('modification') || t.includes('alert') || t.includes('security')) return 'critical';
   if (t.includes('lock') || t.includes('grade') || t.includes('report')) return 'success';
-  if (t.includes('draft') || t.includes('pending') || t.includes('warning')) return 'warning';
-  if (t.includes('info') || t.includes('available')) return 'info';
+  if (t.includes('assignment') || t.includes('draft') || t.includes('pending') || t.includes('warning')) return 'warning';
+  if (t.includes('class') || t.includes('reminder') || t.includes('info') || t.includes('available')) return 'info';
   return 'system';
 }
 
@@ -26,18 +28,31 @@ function getFilterCategory(notification) {
   const msg = (notification.message || '').toLowerCase();
   if (t.includes('security') || t.includes('modification') || t.includes('alert')) return 'alert';
   if (t.includes('grade') || t.includes('lock') || t.includes('report') || msg.includes('grade')) return 'grade';
+  if (t.includes('assignment')) return 'assignment';
+  if (t.includes('class') || t.includes('reminder')) return 'class';
   return 'system';
 }
 
 function getNavigationTarget(notification) {
   const t = (notification.type || '').toUpperCase();
   if (t.includes('REPORT') || notification.relatedEntityType === 'report_card') return 'report-cards';
+  if (t.includes('ASSIGNMENT')) return 'assignments';
+  if (t.includes('CLASS') || t.includes('REMINDER')) return 'timetable';
   if (
     t.includes('GRADE') ||
     t.includes('MODIFICATION') ||
     t.includes('LOCK') ||
     notification.relatedEntityType === 'grade'
   ) return 'grades';
+  return null;
+}
+
+function getCtaLabel(colorClass, navTarget) {
+  if (colorClass === 'critical') return 'View Audit Trail';
+  if (navTarget === 'report-cards') return 'View Report Card';
+  if (navTarget === 'grades') return 'View Grades';
+  if (navTarget === 'assignments') return 'View Assignment';
+  if (navTarget === 'timetable') return 'View Timetable';
   return null;
 }
 
@@ -120,13 +135,7 @@ export default function StudentNotifications({ navigateTo }) {
                   if (navTarget && navigateTo) navigateTo(navTarget);
                 };
 
-                const ctaLabel = colorClass === 'critical'
-                  ? 'View Audit Trail'
-                  : navTarget === 'report-cards'
-                    ? 'View Report Card'
-                    : navTarget === 'grades'
-                      ? 'View Grades'
-                      : null;
+                const ctaLabel = getCtaLabel(colorClass, navTarget);
 
                 return (
                   <motion.div

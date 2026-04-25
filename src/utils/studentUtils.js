@@ -85,11 +85,13 @@ export function getTermProgress(startDate, endDate) {
 export function getNotificationIcon(type) {
   switch (type) {
     case 'MODIFICATION_ATTEMPT': return 'warning';
-    case 'GRADE_LOCKED': return 'lock';
-    case 'GRADE_POSTED': return 'grade';
-    case 'GRADE_PENDING': return 'edit_note';
-    case 'REPORT_AVAILABLE': return 'description';
-    default: return 'notifications';
+    case 'GRADE_LOCKED':         return 'lock';
+    case 'GRADE_POSTED':         return 'grade';
+    case 'GRADE_PENDING':        return 'edit_note';
+    case 'REPORT_AVAILABLE':     return 'description';
+    case 'ASSIGNMENT_POSTED':    return 'assignment';
+    case 'CLASS_REMINDER':       return 'video_call';
+    default:                     return 'notifications';
   }
 }
 
@@ -99,5 +101,38 @@ export function getNotificationBorderColor(type, isSecurityAlert) {
   if (type === 'GRADE_LOCKED') return 'var(--student-primary)';
   if (type === 'GRADE_PENDING') return '#F59E0B';
   if (type === 'REPORT_AVAILABLE') return '#3B82F6';
+  if (type === 'ASSIGNMENT_POSTED') return '#F59E0B';
+  if (type === 'CLASS_REMINDER') return '#3B82F6';
   return '#E5E7EB';
+}
+
+// Find the next upcoming class slot from the timetable
+export function getNextClassFromTimetable(timetable) {
+  if (!timetable) return null;
+  const now = new Date();
+  const dayIndex = now.getDay(); // 0=Sun, 1=Mon...5=Fri, 6=Sat
+  if (dayIndex === 0 || dayIndex === 6) return null; // weekend
+  const dayNames = ['', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+  const todayName = dayNames[dayIndex];
+  const todaySlots = (timetable[todayName] || []).filter((s) => !s.isBreak);
+  const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const upcoming = todaySlots.find((s) => s.time > hhmm);
+  if (!upcoming) return null;
+  // minutes until
+  const [sh, sm] = upcoming.time.split(':').map(Number);
+  const minutesUntil = (sh * 60 + sm) - (now.getHours() * 60 + now.getMinutes());
+  return { ...upcoming, minutesUntil };
+}
+
+// Format assignment due date label
+export function formatDueDate(dateStr) {
+  if (!dateStr) return '';
+  const due = new Date(dateStr);
+  const now = new Date();
+  const diffDays = Math.round((due.setHours(0,0,0,0) - now.setHours(0,0,0,0)) / 86400000);
+  if (diffDays < 0)  return `${Math.abs(diffDays)} day${Math.abs(diffDays) > 1 ? 's' : ''} overdue`;
+  if (diffDays === 0) return 'Due today';
+  if (diffDays === 1) return 'Due tomorrow';
+  if (diffDays <= 7)  return `Due in ${diffDays} days`;
+  return `Due ${new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`;
 }

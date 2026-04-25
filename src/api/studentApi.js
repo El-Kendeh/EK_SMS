@@ -14,6 +14,9 @@ import {
   mockSecurityHealth,
   mockParentalAccessLog,
   mockFinancials,
+  mockTimetable,
+  mockAssignments,
+  mockMessages,
 } from '../mock/studentMockData';
 
 const USE_MOCK = process.env.REACT_APP_USE_MOCK_DATA === 'true';
@@ -317,5 +320,36 @@ export const studentApi = {
     }
     const res = await apiClient.request(`/api/student/receipts/${receiptId}/download/`, { method: 'GET' });
     return res.blob();
+  },
+
+  // ── Timetable ─────────────────────────────────────────────────────────────
+  async getTimetable() {
+    if (USE_MOCK) { await delay(400); return mockTimetable; }
+    return apiClient.get('/api/student/timetable/');
+  },
+
+  // ── Assignments ───────────────────────────────────────────────────────────
+  async getAssignments() {
+    if (USE_MOCK) { await delay(500); return mockAssignments; }
+    return apiClient.get('/api/student/assignments/');
+  },
+
+  async submitAssignment(assignmentId) {
+    if (USE_MOCK) { await delay(800); return { success: true }; }
+    return apiClient.post(`/api/student/assignments/${assignmentId}/submit/`);
+  },
+
+  // ── Messages ──────────────────────────────────────────────────────────────
+  async getConversations() {
+    if (USE_MOCK) { await delay(400); return mockMessages; }
+    return apiClient.get('/api/student/messages/');
+  },
+
+  async sendMessage(conversationId, text) {
+    if (USE_MOCK) {
+      await delay(300);
+      return { id: `msg-${Date.now()}`, sender: 'student', text, sentAt: new Date().toISOString() };
+    }
+    return apiClient.post(`/api/student/messages/${conversationId}/`, { text });
   },
 };

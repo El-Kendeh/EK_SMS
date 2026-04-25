@@ -447,6 +447,195 @@ export const mockParentalAccessLog = [
   { id: 'pal-004', guardianName: 'Fatmata Kamara', relationship: 'Mother', section: 'Notifications', time: new Date(Date.now() - 10 * 86400000).toISOString() },
 ];
 
+// ─────────────────────────────────────────────────────────────────────────────
+// TIMETABLE
+// ─────────────────────────────────────────────────────────────────────────────
+export const mockTimetable = {
+  Monday: [
+    { id: 'tt-m-1', time: '08:00', endTime: '09:00', subject: 'Mathematics',      teacher: 'Mr. Johnson',  room: 'Room 3',       color: '#3B82F6', icon: 'calculate',   link: 'https://meet.google.com/abc-defg-hij' },
+    { id: 'tt-m-2', time: '09:00', endTime: '10:00', subject: 'English Language',  teacher: 'Mrs. Williams', room: 'Room 1',       color: '#8B5CF6', icon: 'menu_book',   link: null },
+    { id: 'tt-m-3', time: '10:00', endTime: '11:00', subject: 'Biology',           teacher: 'Mrs. Conteh',  room: 'Lab B',        color: '#10B981', icon: 'biotech',     link: null },
+    { id: 'tt-m-b1', isBreak: true, time: '11:00', endTime: '11:20', subject: 'Short Break' },
+    { id: 'tt-m-4', time: '11:20', endTime: '12:20', subject: 'Chemistry',         teacher: 'Mr. Sesay',    room: 'Lab A',        color: '#EF4444', icon: 'science',     link: 'https://zoom.us/j/123456789' },
+    { id: 'tt-m-l1', isBreak: true, time: '12:20', endTime: '13:20', subject: 'Lunch Break' },
+    { id: 'tt-m-5', time: '13:20', endTime: '14:20', subject: 'Physical Education', teacher: 'Mr. Bangura', room: 'Sports Field', color: '#F59E0B', icon: 'sports_soccer', link: null },
+    { id: 'tt-m-6', time: '14:20', endTime: '15:00', subject: 'History',            teacher: 'Mrs. Taylor', room: 'Room 5',       color: '#6366F1', icon: 'history_edu', link: null },
+  ],
+  Tuesday: [
+    { id: 'tt-t-1', time: '08:00', endTime: '09:00', subject: 'English Literature', teacher: 'Mrs. Williams', room: 'Room 1', color: '#8B5CF6', icon: 'menu_book',   link: null },
+    { id: 'tt-t-2', time: '09:00', endTime: '10:00', subject: 'Mathematics',        teacher: 'Mr. Johnson',   room: 'Room 3', color: '#3B82F6', icon: 'calculate',   link: 'https://meet.google.com/abc-defg-hij' },
+    { id: 'tt-t-3', time: '10:00', endTime: '11:00', subject: 'Physics',            teacher: 'Mr. Kamara',    room: 'Lab C',  color: '#06B6D4', icon: 'bolt',        link: null },
+    { id: 'tt-t-b1', isBreak: true, time: '11:00', endTime: '11:20', subject: 'Short Break' },
+    { id: 'tt-t-4', time: '11:20', endTime: '12:20', subject: 'Biology',            teacher: 'Mrs. Conteh',   room: 'Lab B',  color: '#10B981', icon: 'biotech',     link: null },
+    { id: 'tt-t-l1', isBreak: true, time: '12:20', endTime: '13:20', subject: 'Lunch Break' },
+    { id: 'tt-t-5', time: '13:20', endTime: '14:20', subject: 'History',            teacher: 'Mrs. Taylor',   room: 'Room 5', color: '#6366F1', icon: 'history_edu', link: null },
+    { id: 'tt-t-6', time: '14:20', endTime: '15:00', subject: 'Mathematics',        teacher: 'Mr. Johnson',   room: 'Room 3', color: '#3B82F6', icon: 'calculate',   link: null },
+  ],
+  Wednesday: [
+    { id: 'tt-w-1', time: '08:00', endTime: '09:00', subject: 'Chemistry',         teacher: 'Mr. Sesay',    room: 'Lab A',  color: '#EF4444', icon: 'science',     link: 'https://zoom.us/j/123456789' },
+    { id: 'tt-w-2', time: '09:00', endTime: '10:00', subject: 'History',           teacher: 'Mrs. Taylor',  room: 'Room 5', color: '#6366F1', icon: 'history_edu', link: null },
+    { id: 'tt-w-3', time: '10:00', endTime: '11:00', subject: 'Mathematics',       teacher: 'Mr. Johnson',  room: 'Room 3', color: '#3B82F6', icon: 'calculate',   link: 'https://meet.google.com/abc-defg-hij' },
+    { id: 'tt-w-b1', isBreak: true, time: '11:00', endTime: '11:20', subject: 'Short Break' },
+    { id: 'tt-w-4', time: '11:20', endTime: '12:20', subject: 'English Language',  teacher: 'Mrs. Williams', room: 'Room 1', color: '#8B5CF6', icon: 'menu_book',   link: null },
+    { id: 'tt-w-l1', isBreak: true, time: '12:20', endTime: '13:20', subject: 'Lunch Break' },
+    { id: 'tt-w-5', time: '13:20', endTime: '14:20', subject: 'Physics',           teacher: 'Mr. Kamara',   room: 'Lab C',  color: '#06B6D4', icon: 'bolt',        link: null },
+  ],
+  Thursday: [
+    { id: 'tt-th-1', time: '08:00', endTime: '09:00', subject: 'Biology',           teacher: 'Mrs. Conteh',  room: 'Lab B',  color: '#10B981', icon: 'biotech',     link: null },
+    { id: 'tt-th-2', time: '09:00', endTime: '10:00', subject: 'Chemistry',         teacher: 'Mr. Sesay',    room: 'Lab A',  color: '#EF4444', icon: 'science',     link: null },
+    { id: 'tt-th-3', time: '10:00', endTime: '11:00', subject: 'English Literature', teacher: 'Mrs. Williams', room: 'Room 1', color: '#8B5CF6', icon: 'menu_book',  link: null },
+    { id: 'tt-th-b1', isBreak: true, time: '11:00', endTime: '11:20', subject: 'Short Break' },
+    { id: 'tt-th-4', time: '11:20', endTime: '12:20', subject: 'Mathematics',       teacher: 'Mr. Johnson',  room: 'Room 3', color: '#3B82F6', icon: 'calculate',   link: 'https://meet.google.com/abc-defg-hij' },
+    { id: 'tt-th-l1', isBreak: true, time: '12:20', endTime: '13:20', subject: 'Lunch Break' },
+    { id: 'tt-th-5', time: '13:20', endTime: '14:20', subject: 'Physical Education', teacher: 'Mr. Bangura', room: 'Sports Field', color: '#F59E0B', icon: 'sports_soccer', link: null },
+    { id: 'tt-th-6', time: '14:20', endTime: '15:00', subject: 'History',           teacher: 'Mrs. Taylor',  room: 'Room 5', color: '#6366F1', icon: 'history_edu', link: null },
+  ],
+  Friday: [
+    { id: 'tt-f-1', time: '08:00', endTime: '09:00', subject: 'Mathematics',       teacher: 'Mr. Johnson',  room: 'Room 3', color: '#3B82F6', icon: 'calculate',   link: 'https://meet.google.com/abc-defg-hij' },
+    { id: 'tt-f-2', time: '09:00', endTime: '10:00', subject: 'Biology',           teacher: 'Mrs. Conteh',  room: 'Lab B',  color: '#10B981', icon: 'biotech',     link: null },
+    { id: 'tt-f-3', time: '10:00', endTime: '11:00', subject: 'Physics',           teacher: 'Mr. Kamara',   room: 'Lab C',  color: '#06B6D4', icon: 'bolt',        link: null },
+    { id: 'tt-f-b1', isBreak: true, time: '11:00', endTime: '11:20', subject: 'Short Break' },
+    { id: 'tt-f-4', time: '11:20', endTime: '12:20', subject: 'English Language',  teacher: 'Mrs. Williams', room: 'Room 1', color: '#8B5CF6', icon: 'menu_book',   link: null },
+    { id: 'tt-f-l1', isBreak: true, time: '12:20', endTime: '13:20', subject: 'Lunch Break' },
+    { id: 'tt-f-5', time: '13:20', endTime: '14:20', subject: 'Chemistry',         teacher: 'Mr. Sesay',    room: 'Lab A',  color: '#EF4444', icon: 'science',     link: null },
+  ],
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ASSIGNMENTS
+// ─────────────────────────────────────────────────────────────────────────────
+export const mockAssignments = [
+  {
+    id: 'asgn-001',
+    title: 'Algebra Problem Set',
+    subject: 'Mathematics',
+    subjectColor: '#3B82F6',
+    subjectIcon: 'calculate',
+    dueDate: new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10),
+    status: 'pending',
+    description: 'Complete exercises 4.1–4.6 from the textbook. Show all working. Focus on quadratic equations and factoring.',
+    teacher: 'Mr. Johnson',
+    maxScore: 20,
+  },
+  {
+    id: 'asgn-002',
+    title: 'Cell Division Essay',
+    subject: 'Biology',
+    subjectColor: '#10B981',
+    subjectIcon: 'biotech',
+    dueDate: new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10),
+    status: 'pending',
+    description: 'Write a 500-word essay explaining the stages of mitosis and meiosis. Include labeled diagrams.',
+    teacher: 'Mrs. Conteh',
+    maxScore: 25,
+  },
+  {
+    id: 'asgn-003',
+    title: 'The Great Gatsby — Chapter Analysis',
+    subject: 'English Literature',
+    subjectColor: '#8B5CF6',
+    subjectIcon: 'menu_book',
+    dueDate: new Date(Date.now() - 1 * 86400000).toISOString().slice(0, 10),
+    status: 'submitted',
+    description: 'Analyse the symbolism in Chapters 1–3. Reference specific quotes to support your points.',
+    teacher: 'Mrs. Williams',
+    maxScore: 30,
+    submittedAt: new Date(Date.now() - 2 * 86400000).toISOString(),
+  },
+  {
+    id: 'asgn-004',
+    title: 'Titration Lab Report',
+    subject: 'Chemistry',
+    subjectColor: '#EF4444',
+    subjectIcon: 'science',
+    dueDate: new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10),
+    status: 'graded',
+    description: 'Write a full lab report for the acid-base titration experiment. Include methodology and error analysis.',
+    teacher: 'Mr. Sesay',
+    maxScore: 40,
+    score: 36,
+    feedback: 'Excellent work! Your methodology was thorough. Strengthen your error analysis section next time.',
+  },
+  {
+    id: 'asgn-005',
+    title: 'World War II Timeline',
+    subject: 'History',
+    subjectColor: '#6366F1',
+    subjectIcon: 'history_edu',
+    dueDate: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
+    status: 'pending',
+    description: 'Create a detailed timeline of key events from 1939–1945. Include causes and consequences for each event.',
+    teacher: 'Mrs. Taylor',
+    maxScore: 20,
+  },
+  {
+    id: 'asgn-006',
+    title: 'Forces and Motion Quiz',
+    subject: 'Physics',
+    subjectColor: '#06B6D4',
+    subjectIcon: 'bolt',
+    dueDate: new Date(Date.now() + 4 * 86400000).toISOString().slice(0, 10),
+    status: 'pending',
+    description: "Online quiz covering Newton's Laws of Motion. 15 questions, 30 minutes time limit.",
+    teacher: 'Mr. Kamara',
+    maxScore: 15,
+  },
+  {
+    id: 'asgn-007',
+    title: 'Persuasive Essay Draft',
+    subject: 'English Language',
+    subjectColor: '#8B5CF6',
+    subjectIcon: 'menu_book',
+    dueDate: new Date(Date.now() - 5 * 86400000).toISOString().slice(0, 10),
+    status: 'graded',
+    description: 'Write a 400-word persuasive essay: "Technology has more benefits than drawbacks."',
+    teacher: 'Mrs. Williams',
+    maxScore: 20,
+    score: 17,
+    feedback: 'Good structure and strong arguments. Improve your counter-argument paragraph with more evidence.',
+  },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MESSAGES
+// ─────────────────────────────────────────────────────────────────────────────
+export const mockMessages = [
+  {
+    id: 'conv-001',
+    teacher: { name: 'Mr. Johnson', subject: 'Mathematics', initials: 'MJ', color: '#3B82F6' },
+    unread: 2,
+    messages: [
+      { id: 'msg-001-1', sender: 'teacher', text: 'Hi Aminata, great work on last week\'s test! You scored 87%.', sentAt: new Date(Date.now() - 3 * 86400000).toISOString() },
+      { id: 'msg-001-2', sender: 'student', text: 'Thank you Mr. Johnson! I studied really hard for it.', sentAt: new Date(Date.now() - 3 * 86400000 + 900000).toISOString() },
+      { id: 'msg-001-3', sender: 'teacher', text: 'I noticed you had some trouble with the quadratic section. Would you like some extra practice problems?', sentAt: new Date(Date.now() - 3 * 86400000 + 1200000).toISOString() },
+      { id: 'msg-001-4', sender: 'student', text: 'Yes please! That would be very helpful.', sentAt: new Date(Date.now() - 3 * 86400000 + 1500000).toISOString() },
+      { id: 'msg-001-5', sender: 'teacher', text: 'I\'ve sent a practice sheet to your student email. Remember the formula for the discriminant: b²-4ac.', sentAt: new Date(Date.now() - 2 * 86400000).toISOString() },
+      { id: 'msg-001-6', sender: 'teacher', text: 'Also, don\'t forget your Problem Set is due Monday!', sentAt: new Date(Date.now() - 86400000).toISOString() },
+    ],
+  },
+  {
+    id: 'conv-002',
+    teacher: { name: 'Mrs. Conteh', subject: 'Biology', initials: 'MC', color: '#10B981' },
+    unread: 0,
+    messages: [
+      { id: 'msg-002-1', sender: 'teacher', text: 'Hi Aminata, please remember to bring your lab coat for Wednesday\'s practicals.', sentAt: new Date(Date.now() - 4 * 86400000).toISOString() },
+      { id: 'msg-002-2', sender: 'student', text: 'Yes Mrs. Conteh, I will bring it. Is there anything specific we should prepare?', sentAt: new Date(Date.now() - 4 * 86400000 + 1800000).toISOString() },
+      { id: 'msg-002-3', sender: 'teacher', text: 'Review Chapter 8 on cell division. We\'ll be doing a microscope lab — it\'s very hands-on!', sentAt: new Date(Date.now() - 4 * 86400000 + 3600000).toISOString() },
+      { id: 'msg-002-4', sender: 'student', text: 'Understood! I\'ll read through it tonight.', sentAt: new Date(Date.now() - 4 * 86400000 + 7200000).toISOString() },
+    ],
+  },
+  {
+    id: 'conv-003',
+    teacher: { name: 'Mrs. Williams', subject: 'English', initials: 'EW', color: '#8B5CF6' },
+    unread: 1,
+    messages: [
+      { id: 'msg-003-1', sender: 'teacher', text: 'Your essay on Gatsby was well-structured. I\'ve left some feedback in the grading system.', sentAt: new Date(Date.now() - 2 * 86400000).toISOString() },
+      { id: 'msg-003-2', sender: 'student', text: 'Thank you! I worked really hard on the symbolism section.', sentAt: new Date(Date.now() - 2 * 86400000 + 3600000).toISOString() },
+      { id: 'msg-003-3', sender: 'teacher', text: 'It shows! For the next assignment, focus on expanding your vocabulary and using more literary devices.', sentAt: new Date(Date.now() - 86400000).toISOString() },
+    ],
+  },
+];
+
 export const mockFinancials = {
   summary: {
     totalFees: 2400000,   // in Leones (SLL)

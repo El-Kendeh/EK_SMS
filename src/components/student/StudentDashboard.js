@@ -9,6 +9,9 @@ import StudentReportCards from './StudentReportCards';
 import StudentNotifications from './StudentNotifications';
 import StudentProfile from './StudentProfile';
 import StudentFinancials from './StudentFinancials';
+import StudentTimetable from './StudentTimetable';
+import StudentAssignments from './StudentAssignments';
+import StudentMessages from './StudentMessages';
 import './StudentDashboard.css';
 
 const SECTION_PATHS = {
@@ -18,6 +21,9 @@ const SECTION_PATHS = {
   financials:     '/student/financials',
   notifications:  '/student/notifications',
   profile:        '/student/profile',
+  timetable:      '/student/timetable',
+  assignments:    '/student/assignments',
+  messages:       '/student/messages',
 };
 
 function getInitialSection() {
@@ -27,6 +33,9 @@ function getInitialSection() {
   if (path.includes('/student/financials'))     return 'financials';
   if (path.includes('/student/notifications'))  return 'notifications';
   if (path.includes('/student/profile'))        return 'profile';
+  if (path.includes('/student/timetable'))      return 'timetable';
+  if (path.includes('/student/assignments'))    return 'assignments';
+  if (path.includes('/student/messages'))       return 'messages';
   return 'home';
 }
 
@@ -63,13 +72,16 @@ function StudentDashboardInner({ onNavigate }) {
   const renderSection = () => {
     const props = { navigateTo };
     switch (activeSection) {
-      case 'home':          return <StudentHome         {...props} />;
-      case 'grades':        return <StudentGrades       {...props} />;
-      case 'report-cards':  return <StudentReportCards  {...props} />;
-      case 'financials':    return <StudentFinancials   {...props} />;
+      case 'home':          return <StudentHome          {...props} />;
+      case 'grades':        return <StudentGrades        {...props} />;
+      case 'report-cards':  return <StudentReportCards   {...props} />;
+      case 'financials':    return <StudentFinancials    {...props} />;
       case 'notifications': return <StudentNotifications {...props} />;
-      case 'profile':       return <StudentProfile      {...props} />;
-      default:              return <StudentHome         {...props} />;
+      case 'profile':       return <StudentProfile       {...props} />;
+      case 'timetable':     return <StudentTimetable     {...props} />;
+      case 'assignments':   return <StudentAssignments   {...props} />;
+      case 'messages':      return <StudentMessages      {...props} />;
+      default:              return <StudentHome          {...props} />;
     }
   };
 

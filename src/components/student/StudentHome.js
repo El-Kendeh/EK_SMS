@@ -8,6 +8,8 @@ import {
   ordinalSuffix,
   getGradeColor,
   formatRelativeTime,
+  getNextClassFromTimetable,
+  formatDueDate,
 } from '../../utils/studentUtils';
 import './StudentHome.css';
 
@@ -189,17 +191,25 @@ export default function StudentHome({ navigateTo }) {
   const [grades, setGrades] = useState([]);
   const [recentNotifs, setRecentNotifs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [nextClass, setNextClass] = useState(null);
+  const [upcomingAssignments, setUpcomingAssignments] = useState([]);
 
   const scrollRef = useRef(null);
 
   const load = useCallback(async () => {
     try {
-      const [term, notifs] = await Promise.all([
+      const [term, notifs, timetable, assignments] = await Promise.all([
         studentApi.getCurrentTerm(),
         studentApi.getNotifications(4),
+        studentApi.getTimetable(),
+        studentApi.getAssignments(),
       ]);
       setCurrentTerm(term);
       setRecentNotifs(notifs);
+      setNextClass(getNextClassFromTimetable(timetable));
+      setUpcomingAssignments(
+        assignments.filter((a) => a.status === 'pending').slice(0, 3)
+      );
 
       const [g, s] = await Promise.all([
         studentApi.getGrades(term.id),
@@ -443,6 +453,107 @@ export default function StudentHome({ navigateTo }) {
         </div>
       </div>
 
+      {/* Quick-info row: Next Class + Upcoming Assignments */}
+      <div className="stu-home__quick-row">
+        {/* Next Class Card */}
+        <div className="stu-next-class-card">
+          <div className="stu-next-class-card__label">
+            <span className="material-symbols-outlined">video_call</span>
+            Next Class
+          </div>
+          {nextClass ? (
+            <>
+              <div className="stu-next-class-card__subject">
+                <span
+                  className="stu-next-class-card__dot"
+                  style={{ background: nextClass.color || 'var(--student-primary)' }}
+                />
+                {nextClass.subject}
+              </div>
+              <div className="stu-next-class-card__meta">
+                <span className="material-symbols-outlined" style={{ fontSize: 15 }}>schedule</span>
+                {nextClass.time} – {nextClass.endTime}
+                &nbsp;·&nbsp;
+                <span className="material-symbols-outlined" style={{ fontSize: 15 }}>door_open</span>
+                {nextClass.room}
+              </div>
+              <div className="stu-next-class-card__teacher">
+                <span className="material-symbols-outlined" style={{ fontSize: 15 }}>person</span>
+                {nextClass.teacher}
+                {nextClass.minutesUntil > 0 && (
+                  <span className="stu-next-class-card__countdown">
+                    in {nextClass.minutesUntil} min
+                  </span>
+                )}
+              </div>
+              {nextClass.link && (
+                <a
+                  href={nextClass.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="stu-next-class-card__join"
+                >
+                  <span className="material-symbols-outlined">videocam</span>
+                  Join Class
+                </a>
+              )}
+            </>
+          ) : (
+            <div className="stu-next-class-card__empty">
+              <span className="material-symbols-outlined">weekend</span>
+              <p>No upcoming class today</p>
+            </div>
+          )}
+          <button
+            className="stu-next-class-card__view"
+            onClick={() => navigateTo('timetable')}
+          >
+            View full timetable
+            <span className="material-symbols-outlined">arrow_forward</span>
+          </button>
+        </div>
+
+        {/* Upcoming Assignments */}
+        <div className="stu-upcoming-asgn-card">
+          <div className="stu-upcoming-asgn-card__header">
+            <span className="stu-upcoming-asgn-card__label">
+              <span className="material-symbols-outlined">assignment</span>
+              Upcoming Assignments
+            </span>
+            <button onClick={() => navigateTo('assignments')}>View all</button>
+          </div>
+          {upcomingAssignments.length === 0 ? (
+            <div className="stu-next-class-card__empty">
+              <span className="material-symbols-outlined">task_alt</span>
+              <p>All caught up!</p>
+            </div>
+          ) : (
+            upcomingAssignments.map((a) => {
+              const due = formatDueDate(a.dueDate);
+              const isUrgent = due.includes('today') || due.includes('tomorrow') || due.includes('overdue');
+              return (
+                <div key={a.id} className="stu-asgn-row" onClick={() => navigateTo('assignments')}>
+                  <div
+                    className="stu-asgn-row__bar"
+                    style={{ background: a.subjectColor }}
+                  />
+                  <div className="stu-asgn-row__body">
+                    <div className="stu-asgn-row__title">{a.title}</div>
+                    <div className="stu-asgn-row__sub">{a.subject}</div>
+                  </div>
+                  <span
+                    className="stu-asgn-row__due"
+                    style={{ color: isUrgent ? 'var(--student-danger)' : 'var(--student-text-secondary)' }}
+                  >
+                    {due}
+                  </span>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
       {/* Bottom: notifications + quick actions */}
       <div className="stu-home__bottom">
         {/* Recent notifications */}
@@ -506,10 +617,12 @@ export default function StudentHome({ navigateTo }) {
             <h4>Quick Shortcuts</h4>
             <div className="stu-shortcuts-grid">
               {[
-                { label: 'Grades',       icon: 'auto_stories', section: 'grades' },
-                { label: 'Report Cards', icon: 'description',  section: 'report-cards' },
-                { label: 'Notifications',icon: 'notifications',section: 'notifications' },
-                { label: 'Profile',      icon: 'person',       section: 'profile' },
+                { label: 'Timetable',    icon: 'calendar_month', section: 'timetable' },
+                { label: 'Assignments',  icon: 'assignment',     section: 'assignments' },
+                { label: 'Messages',     icon: 'chat',           section: 'messages' },
+                { label: 'Grades',       icon: 'auto_stories',   section: 'grades' },
+                { label: 'Report Cards', icon: 'description',    section: 'report-cards' },
+                { label: 'Profile',      icon: 'person',         section: 'profile' },
               ].map(({ label, icon, section }) => (
                 <button
                   key={section}

@@ -3,15 +3,18 @@ import { useLowData } from '../../context/LowDataContext';
 import './StudentSidebar.css';
 
 const NAV_ITEMS = [
-  { section: 'home',           icon: 'dashboard',    label: 'Dashboard' },
-  { section: 'grades',         icon: 'auto_stories', label: 'My Grades' },
-  { section: 'report-cards',   icon: 'description',  label: 'Report Cards' },
-  { section: 'financials',     icon: 'payments',     label: 'Financials' },
-  { section: 'notifications',  icon: 'notifications', label: 'Notifications' },
-  { section: 'profile',        icon: 'person',       label: 'Profile' },
+  { section: 'home',          icon: 'dashboard',    label: 'Dashboard' },
+  { section: 'timetable',     icon: 'calendar_month', label: 'Timetable' },
+  { section: 'assignments',   icon: 'assignment',   label: 'Assignments' },
+  { section: 'grades',        icon: 'auto_stories', label: 'My Grades' },
+  { section: 'report-cards',  icon: 'description',  label: 'Report Cards' },
+  { section: 'messages',      icon: 'chat',         label: 'Messages',    badge: 'messages' },
+  { section: 'financials',    icon: 'payments',     label: 'Financials' },
+  { section: 'notifications', icon: 'notifications', label: 'Notifications' },
+  { section: 'profile',       icon: 'person',       label: 'Profile' },
 ];
 
-export default function StudentSidebar({ activeSection, navigateTo, isOpen, onToggle, onLogout }) {
+export default function StudentSidebar({ activeSection, navigateTo, isOpen, onToggle, onLogout, msgUnread = 0 }) {
   const { unreadCount } = useNotifications();
   const { lowData, toggleLowData } = useLowData();
 
@@ -54,9 +57,12 @@ export default function StudentSidebar({ activeSection, navigateTo, isOpen, onTo
 
       {/* Nav items */}
       <nav className="stu-sidebar__nav">
-        {NAV_ITEMS.map(({ section, icon, label }) => {
+        {NAV_ITEMS.map((item) => {
+          const { section, icon, label } = item;
           const isActive = activeSection === section;
-          const showBadge = section === 'notifications' && unreadCount > 0;
+          const badgeCount = section === 'notifications' ? unreadCount
+            : (item.badge === 'messages' ? msgUnread : 0);
+          const showBadge = badgeCount > 0;
 
           return (
             <button
@@ -70,7 +76,7 @@ export default function StudentSidebar({ activeSection, navigateTo, isOpen, onTo
               <span className="stu-nav-item__label">{label}</span>
               {showBadge && (
                 <span className="stu-nav-item__badge">
-                  {unreadCount > 9 ? '9+' : unreadCount}
+                  {badgeCount > 9 ? '9+' : badgeCount}
                 </span>
               )}
             </button>

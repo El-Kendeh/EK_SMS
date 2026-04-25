@@ -7,8 +7,12 @@ const SECTION_LABELS = {
   home:           'Dashboard',
   grades:         'My Grades',
   'report-cards': 'Report Cards',
+  financials:     'Financials',
   notifications:  'Notifications',
   profile:        'Profile',
+  timetable:      'Timetable',
+  assignments:    'Assignments',
+  messages:       'Messages',
 };
 
 export default function StudentHeader({ onMenuToggle, activeSection, navigateTo, isSidebarOpen }) {
