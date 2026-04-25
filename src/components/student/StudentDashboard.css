@@ -3,28 +3,28 @@
    ============================================================ */
 :root {
   --student-primary: #10B981;
-  --student-primary-dark: #006c49;
+  --student-primary-dark: #059669;
   --student-primary-dim: #4edea3;
   --student-danger: #EF4444;
-  --student-danger-bg: #FEF2F2;
+  --student-danger-bg: rgba(239,68,68,0.12);
   --student-warning: #F59E0B;
-  --student-warning-bg: #FFFBEB;
+  --student-warning-bg: rgba(245,158,11,0.12);
   --student-info: #3B82F6;
-  --student-info-bg: #EFF6FF;
-  --student-sidebar-bg: #101C2E;
+  --student-info-bg: rgba(59,130,246,0.12);
+  --student-sidebar-bg: #0C1829;
   --student-sidebar-width: 240px;
   --student-sidebar-collapsed: 64px;
   --student-header-height: 64px;
-  --student-page-bg: #F8F9FB;
-  --student-card-bg: #FFFFFF;
-  --student-text-primary: #191c1e;
-  --student-text-secondary: #535f74;
-  --student-border: #E5E7EB;
-  --student-surface-low: #F2F4F6;
-  --student-surface: #EDEEF0;
-  --student-surface-high: #E7E8EA;
-  --student-surface-highest: #E1E2E4;
-  --student-bg: #F8F9FB;
+  --student-page-bg: #0D1520;
+  --student-card-bg: #152033;
+  --student-text-primary: #F1F5F9;
+  --student-text-secondary: #94A3B8;
+  --student-border: rgba(255,255,255,0.08);
+  --student-surface-low: #1A2840;
+  --student-surface: #1E2E45;
+  --student-surface-high: #243452;
+  --student-surface-highest: #2A3A58;
+  --student-bg: #0D1520;
   --student-dark-bg: #0F1B2D;
   --student-dark-surface: rgba(255,255,255,0.04);
   --student-dark-border: rgba(255,255,255,0.06);
@@ -92,9 +92,9 @@
 .skeleton {
   background: linear-gradient(
     90deg,
-    #f0f0f0 25%,
-    #e0e0e0 50%,
-    #f0f0f0 75%
+    rgba(255,255,255,0.05) 25%,
+    rgba(255,255,255,0.10) 50%,
+    rgba(255,255,255,0.05) 75%
   );
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;

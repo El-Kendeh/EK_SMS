@@ -116,7 +116,7 @@
   background: var(--student-primary);
   border-radius: 50%;
 }
-.stt__tab--active .stt__tab-dot { background: #fff; }
+.stt__tab--active .stt__tab-dot { background: var(--student-card-bg); }
 
 /* ── Schedule list ── */
 .stt__schedule {
@@ -133,12 +133,12 @@
   background: var(--student-card-bg);
   border-radius: 16px;
   padding: 18px 20px;
-  border: 1px solid rgba(0,0,0,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
   box-shadow: 0 1px 6px rgba(0,0,0,0.04);
   transition: box-shadow 0.18s, transform 0.18s;
 }
 .stt-slot:hover {
-  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  box-shadow: 0 4px 16px rgba(255,255,255,0.08);
   transform: translateY(-1px);
 }
 
@@ -173,7 +173,7 @@
 .stt-slot__pulse {
   width: 6px;
   height: 6px;
-  background: #fff;
+  background: var(--student-card-bg);
   border-radius: 50%;
   flex-shrink: 0;
   animation: stt-pulse 1.4s ease-in-out infinite;

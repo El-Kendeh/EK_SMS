@@ -7,7 +7,7 @@
   right: 0;
   left: var(--student-sidebar-width);
   height: var(--student-header-height);
-  background: rgba(248,249,251,0.88);
+  background: rgba(13,21,32,0.92);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--student-border);
@@ -77,8 +77,8 @@
 
 .stu-header__class-badge {
   padding: 4px 12px;
-  background: #D4E0F9;
-  color: #3c475b;
+  background: rgba(59,130,246,0.15);
+  color: #93C5FD;
   border-radius: 999px;
   font-size: 11px;
   font-weight: 800;

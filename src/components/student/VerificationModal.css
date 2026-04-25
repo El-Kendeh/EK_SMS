@@ -71,12 +71,12 @@
 }
 
 .vmod-status--valid {
-  background: #ECFDF5;
+  background: rgba(16,185,129,0.12);
   color: #065F46;
 }
 
 .vmod-status--invalid {
-  background: #FEF2F2;
+  background: rgba(239,68,68,0.12);
   color: #991B1B;
 }
 
@@ -100,7 +100,7 @@
 .vmod-qr-box {
   width: 160px;
   height: 160px;
-  background: #fff;
+  background: var(--student-card-bg);
   border: 2px solid var(--student-border);
   border-radius: 12px;
   display: flex;

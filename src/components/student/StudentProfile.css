@@ -12,7 +12,7 @@
 
 /* ── Avatar header ── */
 .sprof-hero {
-  background: #fff;
+  background: var(--student-card-bg);
   border-radius: 20px;
   padding: 28px 24px;
   display: flex;
@@ -84,7 +84,7 @@
   padding: 4px 12px;
   border-radius: 999px;
 }
-.sprof-tag--class { background: #D4E0F9; color: #3C475B; }
+.sprof-tag--class { background: rgba(59,130,246,0.15); color: #93C5FD; }
 .sprof-tag--active { background: rgba(16,185,129,0.12); color: var(--student-primary-dark); }
 
 /* ── Warning banner ── */
@@ -137,7 +137,7 @@
 }
 
 .sprof-info-tile {
-  background: #F2F4F6;
+  background: var(--student-surface-low);
   border-radius: 14px;
   padding: 14px 16px;
 }
@@ -170,7 +170,7 @@
 
 /* ── Info list ── */
 .sprof-info-list {
-  background: #fff;
+  background: var(--student-card-bg);
   border-radius: 14px;
   overflow: hidden;
   box-shadow: 0 2px 12px rgba(0,0,0,0.03);
@@ -207,7 +207,7 @@
 
 /* ── Guardian card ── */
 .sprof-guardian-card {
-  background: #F2F4F6;
+  background: var(--student-surface-low);
   border-radius: 14px;
   padding: 18px;
   position: relative;
@@ -253,7 +253,7 @@
 
 /* ── Account security cards ── */
 .sprof-acct-card {
-  background: #fff;
+  background: var(--student-card-bg);
   border-radius: 14px;
   padding: 16px 18px;
   margin-bottom: 12px;
@@ -329,7 +329,7 @@
 
 /* ── Change password ── */
 .sprof-change-pw {
-  background: #fff;
+  background: var(--student-card-bg);
   border-radius: 16px;
   padding: 20px;
   box-shadow: 0 2px 12px rgba(0,0,0,0.04);
@@ -371,7 +371,7 @@
   border: 1px solid #E1E2E4;
   border-radius: 10px;
   font-size: 14px;
-  background: #F8F9FB;
+  background: var(--student-page-bg);
   color: var(--student-text-primary);
   outline: none;
   font-family: 'Inter', sans-serif;
@@ -440,7 +440,7 @@
 
 /* ── Security Health ── */
 .sprof-sec-strength {
-  background: #fff;
+  background: var(--student-card-bg);
   border-radius: 14px;
   padding: 20px;
   margin-bottom: 14px;
@@ -459,7 +459,7 @@
   font-family: 'Manrope', sans-serif;
   font-size: 16px;
   font-weight: 800;
-  color: #191C1E;
+  color: var(--student-text-primary);
   margin-bottom: 4px;
 }
 
@@ -493,7 +493,7 @@
 
 .sprof-sec-gauge {
   height: 10px;
-  background: #F2F4F6;
+  background: var(--student-surface-low);
   border-radius: 20px;
   overflow: hidden;
 }
@@ -580,7 +580,7 @@
 .sprof-2fa-dark__btn:hover { opacity: 0.9; }
 
 .sprof-devices {
-  background: #F2F4F6;
+  background: var(--student-surface-low);
   border-radius: 14px;
   padding: 16px;
   margin-bottom: 14px;
@@ -597,7 +597,7 @@
   font-family: 'Manrope', sans-serif;
   font-size: 14px;
   font-weight: 800;
-  color: #191C1E;
+  color: var(--student-text-primary);
 }
 
 .sprof-devices__revoke-all {
@@ -614,7 +614,7 @@
 .sprof-devices__list { display: flex; flex-direction: column; gap: 10px; }
 
 .sprof-device {
-  background: #fff;
+  background: var(--student-card-bg);
   border-radius: 12px;
   padding: 14px;
   display: flex;
@@ -626,7 +626,7 @@
   width: 42px;
   height: 42px;
   border-radius: 10px;
-  background: #E7E8EA;
+  background: var(--student-surface-high);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -641,7 +641,7 @@
 .sprof-device__name {
   font-size: 13px;
   font-weight: 700;
-  color: #191C1E;
+  color: var(--student-text-primary);
   margin-bottom: 2px;
 }
 
@@ -676,7 +676,7 @@
 .sprof-device__revoke:disabled { opacity: 0.4; cursor: default; }
 
 .sprof-logins {
-  background: #fff;
+  background: var(--student-card-bg);
   border-radius: 14px;
   padding: 16px;
   border: 1px solid #E5E7EB;
@@ -686,7 +686,7 @@
   font-family: 'Manrope', sans-serif;
   font-size: 14px;
   font-weight: 800;
-  color: #191C1E;
+  color: var(--student-text-primary);
   margin-bottom: 4px;
 }
 
@@ -721,7 +721,7 @@
 .sprof-login__location {
   font-size: 13px;
   font-weight: 700;
-  color: #191C1E;
+  color: var(--student-text-primary);
   margin-bottom: 2px;
 }
 
@@ -760,7 +760,7 @@
 }
 
 .sprof-parental__list {
-  background: #fff;
+  background: var(--student-card-bg);
   border-radius: 14px;
   padding: 4px 0;
   border: 1px solid #E5E7EB;
@@ -775,7 +775,7 @@
   transition: background 0.12s;
 }
 .sprof-parental-row:last-child { border-bottom: none; }
-.sprof-parental-row:hover { background: #F8F9FB; }
+.sprof-parental-row:hover { background: var(--student-page-bg); }
 
 .sprof-parental-row__icon {
   width: 36px;
@@ -794,7 +794,7 @@
 .sprof-parental-row__action {
   font-size: 13px;
   font-weight: 700;
-  color: #191C1E;
+  color: var(--student-text-primary);
   margin-bottom: 2px;
 }
 

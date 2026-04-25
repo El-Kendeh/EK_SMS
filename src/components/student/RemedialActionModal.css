@@ -14,7 +14,7 @@
 }
 
 .ram-panel {
-  background: #F8F9FB;
+  background: var(--student-page-bg);
   border-radius: 20px;
   width: 100%;
   max-width: 720px;
@@ -26,7 +26,7 @@
 
 /* Header */
 .ram-header {
-  background: #fff;
+  background: var(--student-card-bg);
   padding: 20px 24px;
   display: flex;
   align-items: center;
@@ -50,11 +50,11 @@
   font-family: 'Manrope', sans-serif;
   font-size: 20px;
   font-weight: 900;
-  color: #191C1E;
+  color: var(--student-text-primary);
 }
 
 .ram-close {
-  background: #F2F4F6;
+  background: var(--student-surface-low);
   border: none;
   border-radius: 8px;
   width: 34px;
@@ -63,10 +63,10 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: #535F74;
+  color: var(--student-text-secondary);
   transition: background 0.15s;
 }
-.ram-close:hover { background: #E7E8EA; }
+.ram-close:hover { background: var(--student-surface-high); }
 .ram-close span { font-size: 18px; }
 
 .ram-body { padding: 24px; }
@@ -112,7 +112,7 @@
   font-family: 'Manrope', sans-serif;
   font-size: 42px;
   font-weight: 900;
-  color: #191C1E;
+  color: var(--student-text-primary);
   line-height: 1;
 }
 
@@ -125,7 +125,7 @@
 
 .ram-status-card__subject {
   font-size: 12px;
-  color: #535F74;
+  color: var(--student-text-secondary);
   font-weight: 600;
   line-height: 1.4;
 }
@@ -140,7 +140,7 @@
 }
 
 .ram-note-card {
-  background: #fff;
+  background: var(--student-card-bg);
   border-radius: 16px;
   padding: 20px;
   display: flex;
@@ -158,13 +158,13 @@
   font-family: 'Manrope', sans-serif;
   font-size: 14px;
   font-weight: 800;
-  color: #191C1E;
+  color: var(--student-text-primary);
   margin-bottom: 8px;
 }
 
 .ram-note-card__text {
   font-size: 13px;
-  color: #535F74;
+  color: var(--student-text-secondary);
   line-height: 1.6;
   font-style: italic;
 }
@@ -183,7 +183,7 @@
   font-family: 'Manrope', sans-serif;
   font-size: 16px;
   font-weight: 800;
-  color: #191C1E;
+  color: var(--student-text-primary);
   margin-bottom: 12px;
 }
 
@@ -191,7 +191,7 @@
 .ram-sessions { display: flex; flex-direction: column; gap: 10px; }
 
 .ram-session {
-  background: #F2F4F6;
+  background: var(--student-surface-low);
   border-radius: 14px;
   padding: 14px 16px;
   display: flex;
@@ -199,26 +199,26 @@
   gap: 14px;
   transition: background 0.15s;
 }
-.ram-session:hover { background: #E7E8EA; }
+.ram-session:hover { background: var(--student-surface-high); }
 
 .ram-session__date {
   width: 52px;
   height: 52px;
-  background: #fff;
+  background: var(--student-card-bg);
   border-radius: 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  box-shadow: 0 1px 3px rgba(255,255,255,0.08);
 }
 
 .ram-session__month {
   font-size: 9px;
   font-weight: 700;
   text-transform: uppercase;
-  color: #535F74;
+  color: var(--student-text-secondary);
 }
 
 .ram-session__day {
@@ -234,7 +234,7 @@
 .ram-session__name {
   font-size: 13px;
   font-weight: 700;
-  color: #191C1E;
+  color: var(--student-text-primary);
   margin-bottom: 4px;
 }
 
@@ -242,7 +242,7 @@
   display: flex;
   gap: 12px;
   font-size: 11px;
-  color: #535F74;
+  color: var(--student-text-secondary);
 }
 .ram-session__meta span {
   display: flex;
@@ -252,15 +252,15 @@
 .ram-session__meta .material-symbols-outlined { font-size: 13px; }
 
 .ram-session__btn {
-  background: #fff;
+  background: var(--student-card-bg);
   border: none;
   border-radius: 8px;
   padding: 8px 14px;
   font-size: 12px;
   font-weight: 700;
-  color: #191C1E;
+  color: var(--student-text-primary);
   cursor: pointer;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 3px rgba(255,255,255,0.10);
   transition: all 0.15s;
   display: flex;
   align-items: center;
@@ -278,7 +278,7 @@
 
 /* Resources */
 .ram-resources {
-  background: #F2F4F6;
+  background: var(--student-surface-low);
   border-radius: 14px;
   padding: 12px;
   display: flex;
@@ -287,7 +287,7 @@
 }
 
 .ram-resource {
-  background: #fff;
+  background: var(--student-card-bg);
   border-radius: 10px;
   padding: 12px 14px;
   display: flex;
@@ -296,7 +296,7 @@
   cursor: pointer;
   transition: box-shadow 0.15s;
 }
-.ram-resource:hover { box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+.ram-resource:hover { box-shadow: 0 2px 10px rgba(255,255,255,0.08); }
 
 .ram-resource--locked {
   opacity: 0.5;
@@ -315,7 +315,7 @@
   flex: 1;
   font-size: 13px;
   font-weight: 600;
-  color: #191C1E;
+  color: var(--student-text-primary);
 }
 
 .ram-resource__action {
@@ -327,7 +327,7 @@
 
 .ram-resource__lock {
   font-size: 16px;
-  color: #535F74;
+  color: var(--student-text-secondary);
 }
 
 /* Progress banner */

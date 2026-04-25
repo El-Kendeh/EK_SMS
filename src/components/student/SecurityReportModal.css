@@ -14,7 +14,7 @@
 }
 
 .srm-panel {
-  background: #fff;
+  background: var(--student-card-bg);
   border-radius: 20px;
   width: 100%;
   max-width: 680px;
@@ -71,7 +71,7 @@
 .srm-section__eyebrow {
   font-size: 11px;
   font-weight: 700;
-  color: #535F74;
+  color: var(--student-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.1em;
   margin-bottom: 6px;
@@ -81,7 +81,7 @@
   font-family: 'Manrope', sans-serif;
   font-size: 22px;
   font-weight: 900;
-  color: #191C1E;
+  color: var(--student-text-primary);
   line-height: 1.2;
   margin-bottom: 16px;
 }
@@ -93,7 +93,7 @@
 }
 
 .srm-incident-tile {
-  background: #F2F4F6;
+  background: var(--student-surface-low);
   border-radius: 12px;
   padding: 14px 16px;
   border-left: 4px solid var(--student-primary-dark);
@@ -102,7 +102,7 @@
 .srm-incident-tile__label {
   font-size: 10px;
   font-weight: 700;
-  color: #535F74;
+  color: var(--student-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.1em;
   margin-bottom: 4px;
@@ -112,7 +112,7 @@
   font-family: 'Manrope', sans-serif;
   font-size: 14px;
   font-weight: 800;
-  color: #191C1E;
+  color: var(--student-text-primary);
 }
 
 /* Protocol banner */
@@ -166,7 +166,7 @@
 
 /* Origins */
 .srm-origins {
-  background: #fff;
+  background: var(--student-card-bg);
   border: 1px solid #E5E7EB;
   border-radius: 14px;
   padding: 18px;
@@ -177,7 +177,7 @@
   font-family: 'Manrope', sans-serif;
   font-size: 15px;
   font-weight: 800;
-  color: #191C1E;
+  color: var(--student-text-primary);
   margin-bottom: 14px;
 }
 
@@ -193,17 +193,17 @@
   width: 40px;
   height: 40px;
   border-radius: 10px;
-  background: #F2F4F6;
+  background: var(--student-surface-low);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
-.srm-origin-item__icon span { font-size: 20px; color: #535F74; }
+.srm-origin-item__icon span { font-size: 20px; color: var(--student-text-secondary); }
 
 .srm-origin-item__label {
   font-size: 11px;
-  color: #535F74;
+  color: var(--student-text-secondary);
   font-weight: 600;
   margin-bottom: 2px;
 }
@@ -211,7 +211,7 @@
 .srm-origin-item__value {
   font-size: 14px;
   font-weight: 700;
-  color: #191C1E;
+  color: var(--student-text-primary);
   font-family: monospace;
 }
 
@@ -224,7 +224,7 @@
 }
 
 .srm-restricted-tile {
-  background: #F2F4F6;
+  background: var(--student-surface-low);
   border-radius: 10px;
   padding: 12px 8px;
   display: flex;
@@ -237,13 +237,13 @@
 
 .srm-restricted-tile span.material-symbols-outlined {
   font-size: 18px;
-  color: #535F74;
+  color: var(--student-text-secondary);
 }
 
 .srm-restricted-tile span:not(.material-symbols-outlined) {
   font-size: 11px;
   font-weight: 700;
-  color: #191C1E;
+  color: var(--student-text-primary);
   text-align: center;
 }
 
@@ -252,7 +252,7 @@
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #535F74;
+  color: var(--student-text-secondary);
 }
 
 /* Actions */
@@ -283,8 +283,8 @@
 .srm-btn--primary:hover { transform: translateY(-1px); }
 
 .srm-btn--ghost {
-  background: #E7E8EA;
-  color: #191C1E;
+  background: var(--student-surface-high);
+  color: var(--student-text-primary);
 }
 .srm-btn--ghost:hover { background: #DCDFE3; }
 

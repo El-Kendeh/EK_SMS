@@ -14,7 +14,7 @@
 }
 
 .cert-panel {
-  background: #F8F9FB;
+  background: var(--student-page-bg);
   width: 100%;
   max-width: 860px;
   min-height: 100vh;
@@ -25,7 +25,7 @@
 
 /* Top bar */
 .cert-topbar {
-  background: #F8F9FB;
+  background: var(--student-page-bg);
   border-bottom: 1px solid #E5E7EB;
   padding: 14px 20px;
   display: flex;
@@ -43,7 +43,7 @@
   font-family: 'Manrope', sans-serif;
   font-size: 14px;
   font-weight: 700;
-  color: #191C1E;
+  color: var(--student-text-primary);
 }
 .cert-topbar__left .material-symbols-outlined {
   font-size: 20px;
@@ -83,7 +83,7 @@
 .cert-topbar__btn--ghost:hover { background: #3C4A58; }
 
 .cert-topbar__close {
-  background: #F2F4F6;
+  background: var(--student-surface-low);
   border: none;
   border-radius: 50%;
   width: 34px;
@@ -95,7 +95,7 @@
   color: #535F74;
   transition: background 0.15s;
 }
-.cert-topbar__close:hover { background: #E7E8EA; }
+.cert-topbar__close:hover { background: var(--student-surface-high); }
 .cert-topbar__close span { font-size: 18px; }
 
 /* Scroll area */
@@ -116,7 +116,7 @@
   border-radius: 16px;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 8px 40px rgba(0,0,0,0.06);
+  box-shadow: 0 8px 40px rgba(255,255,255,0.08);
   border: 1px solid #E5E7EB;
 }
 
@@ -130,7 +130,7 @@
   pointer-events: none;
   opacity: 0.025;
 }
-.cert-watermark .material-symbols-outlined { font-size: 400px; color: #191C1E; }
+.cert-watermark .material-symbols-outlined { font-size: 400px; color: var(--student-text-primary); }
 
 /* Header */
 .cert-doc__header {
@@ -201,7 +201,7 @@
   font-family: 'Manrope', sans-serif;
   font-size: 28px;
   font-weight: 900;
-  color: #191C1E;
+  color: var(--student-text-primary);
   line-height: 1.25;
   margin-bottom: 14px;
 }
@@ -265,7 +265,7 @@
 }
 
 .cert-grades {
-  background: #F2F4F6;
+  background: var(--student-surface-low);
   border-radius: 14px;
   padding: 24px;
 }
@@ -274,7 +274,7 @@
   font-family: 'Manrope', sans-serif;
   font-size: 14px;
   font-weight: 800;
-  color: #191C1E;
+  color: var(--student-text-primary);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -289,14 +289,14 @@
   align-items: center;
   justify-content: space-between;
   padding: 10px 0;
-  border-bottom: 1px solid rgba(0,0,0,0.06);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
 }
 .cert-grade-row:last-child { border-bottom: none; }
 
 .cert-grade-row--total {
   padding-top: 14px;
   margin-top: 4px;
-  border-top: 1px solid rgba(0,0,0,0.1);
+  border-top: 1px solid rgba(255,255,255,0.10);
   border-bottom: none;
 }
 
@@ -402,7 +402,7 @@
   font-family: 'Manrope', sans-serif;
   font-size: 14px;
   font-weight: 800;
-  color: #191C1E;
+  color: var(--student-text-primary);
   margin-bottom: 3px;
 }
 

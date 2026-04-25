@@ -372,7 +372,7 @@
 }
 
 .sfin__scholarship-btn--primary {
-  background: #fff;
+  background: var(--student-card-bg);
   color: var(--student-primary);
   border: none;
   border-radius: 8px;

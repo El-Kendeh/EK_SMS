@@ -189,7 +189,7 @@
 .sres-subject-card {
   background: var(--student-card-bg);
   border-radius: 16px;
-  border: 1px solid rgba(0,0,0,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
   box-shadow: 0 2px 8px rgba(0,0,0,0.05);
   overflow: hidden;
   display: flex;
@@ -202,7 +202,7 @@
   align-items: flex-start;
   padding: 18px 20px 14px;
   border-bottom: 1px solid var(--student-border);
-  background: rgba(0,0,0,0.015);
+  background: rgba(255,255,255,0.03);
 }
 
 .sres-subject-card__code {
@@ -254,7 +254,7 @@
 .sres-file:hover {
   border-color: rgba(16,185,129,0.3);
   background: rgba(16,185,129,0.03);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  box-shadow: 0 2px 8px rgba(255,255,255,0.08);
 }
 
 .sres-file--locked {
