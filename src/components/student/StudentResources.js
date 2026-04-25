@@ -61,9 +61,13 @@ function ResourceFile({ file }) {
 }
 
 function SubjectCard({ subject, filter, search, index }) {
+  const q = search.toLowerCase();
+  const subjectMatches = q &&
+    (subject.subjectCode.toLowerCase().includes(q) ||
+     subject.subject.toLowerCase().includes(q));
   const files = subject.files.filter((f) => {
     const matchesFilter = filter === 'all' || f.category === filter;
-    const matchesSearch = !search || f.title.toLowerCase().includes(search.toLowerCase());
+    const matchesSearch = !search || subjectMatches || f.title.toLowerCase().includes(q);
     return matchesFilter && matchesSearch;
   });
 
