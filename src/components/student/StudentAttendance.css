@@ -1,0 +1,301 @@
+/* ============================================================
+   STUDENT ATTENDANCE
+   ============================================================ */
+.satd {
+  padding: 32px 40px 48px;
+  min-height: calc(100vh - var(--student-header-height));
+  background: var(--student-page-bg);
+}
+
+/* ── Header ── */
+.satd__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+}
+
+.satd__title {
+  font-family: 'Manrope', 'Inter', sans-serif;
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--student-text-primary);
+  letter-spacing: -0.02em;
+  margin: 0 0 4px;
+}
+
+.satd__sub {
+  font-size: 14px;
+  color: var(--student-text-secondary);
+  margin: 0;
+}
+
+.satd__rate-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 99px;
+  font-size: 14px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+.satd__rate-badge span { font-size: 18px; }
+
+/* ── Stat cards row ── */
+.satd__stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.satd-stat {
+  background: var(--student-card-bg);
+  border-radius: 16px;
+  border: 1px solid rgba(0,0,0,0.06);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  padding: 20px 22px 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.satd-stat__icon-wrap {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.satd-stat__icon {
+  font-size: 26px;
+}
+
+.satd-stat__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--student-text-secondary);
+  margin-bottom: 6px;
+}
+
+.satd-stat__value {
+  font-family: 'Manrope', sans-serif;
+  font-size: 36px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+/* ── Attendance rate card ── */
+.satd__rate-card {
+  background: var(--student-card-bg);
+  border-radius: 16px;
+  border: 1px solid rgba(0,0,0,0.06);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  padding: 22px 24px;
+  margin-bottom: 24px;
+}
+
+.satd__rate-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.satd__rate-card__label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--student-text-primary);
+  margin-bottom: 3px;
+}
+
+.satd__rate-card__period {
+  font-size: 12.5px;
+  color: var(--student-text-secondary);
+}
+
+.satd__rate-card__pct {
+  font-family: 'Manrope', sans-serif;
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  flex-shrink: 0;
+}
+
+/* Progress bar */
+.satd__rate-track {
+  height: 10px;
+  background: var(--student-surface-low, #F3F4F6);
+  border-radius: 99px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.satd__rate-fill {
+  height: 100%;
+  border-radius: 99px;
+  will-change: width;
+}
+
+/* Legend */
+.satd__rate-legend {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  font-size: 12.5px;
+  color: var(--student-text-secondary);
+  font-weight: 600;
+}
+
+/* Warning */
+.satd__rate-warn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 10px 14px;
+  background: rgba(239,68,68,0.07);
+  border: 1px solid rgba(239,68,68,0.2);
+  border-left: 4px solid var(--student-danger);
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--student-danger);
+}
+.satd__rate-warn span { font-size: 17px; }
+
+/* ── Recent log ── */
+.satd__log {
+  background: var(--student-card-bg);
+  border-radius: 16px;
+  border: 1px solid rgba(0,0,0,0.06);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  overflow: hidden;
+}
+
+.satd__log-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--student-border);
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.satd__section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: 'Manrope', sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--student-text-primary);
+}
+
+.satd__section-title__bar {
+  width: 4px;
+  height: 18px;
+  background: var(--student-primary);
+  border-radius: 99px;
+}
+
+.satd__log-legend {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.satd__log-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--student-text-secondary);
+}
+
+.satd__log-grid {
+  padding: 8px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* ── Log row ── */
+.satd-log-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 8px;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+.satd-log-row:hover { background: var(--student-surface-low, rgba(0,0,0,0.02)); }
+
+.satd-log-row__date {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--student-text-primary);
+}
+
+.satd-log-row__status {
+  display: flex;
+  align-items: center;
+}
+
+.satd-log-row__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* ── Empty state ── */
+.satd__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 80px 20px;
+  color: var(--student-text-secondary);
+  text-align: center;
+}
+.satd__empty span { font-size: 48px; opacity: 0.3; }
+.satd__empty p { font-size: 15px; margin: 0; }
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .satd { padding: 24px 20px 40px; }
+  .satd__header { flex-direction: column; }
+}
+
+@media (max-width: 600px) {
+  .satd { padding: 20px 14px 36px; }
+  .satd__title { font-size: 22px; }
+  .satd__stats { grid-template-columns: 1fr; gap: 12px; }
+  .satd-stat { flex-direction: row; align-items: center; gap: 16px; padding: 16px 18px; }
+  .satd-stat__icon-wrap { margin-bottom: 0; flex-shrink: 0; }
+  .satd-stat__value { font-size: 28px; }
+  .satd__rate-card__pct { font-size: 22px; }
+  .satd__rate-legend { gap: 12px; font-size: 11.5px; }
+  .satd-log-row__date { font-size: 12.5px; }
+}
+
+@media (max-width: 400px) {
+  .satd__stats { gap: 10px; }
+  .satd-stat__value { font-size: 24px; }
+}

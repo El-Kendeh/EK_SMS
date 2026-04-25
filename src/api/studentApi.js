@@ -17,6 +17,8 @@ import {
   mockTimetable,
   mockAssignments,
   mockMessages,
+  mockResources,
+  mockAttendance,
 } from '../mock/studentMockData';
 
 const USE_MOCK = process.env.REACT_APP_USE_MOCK_DATA === 'true';
@@ -351,5 +353,17 @@ export const studentApi = {
       return { id: `msg-${Date.now()}`, sender: 'student', text, sentAt: new Date().toISOString() };
     }
     return apiClient.post(`/api/student/messages/${conversationId}/`, { text });
+  },
+
+  // ── Resources ─────────────────────────────────────────────────────────────
+  async getResources() {
+    if (USE_MOCK) { await delay(500); return mockResources; }
+    return apiClient.get('/api/student/resources/');
+  },
+
+  // ── Attendance ────────────────────────────────────────────────────────────
+  async getAttendance() {
+    if (USE_MOCK) { await delay(400); return mockAttendance; }
+    return apiClient.get('/api/student/attendance/');
   },
 };

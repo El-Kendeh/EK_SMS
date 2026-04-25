@@ -46,57 +46,77 @@
 }
 .stt__today-badge span { font-size: 17px; }
 
-/* ── Day tabs ── */
+/* ── Day tabs with date numbers ── */
 .stt__tabs {
   display: flex;
   gap: 8px;
   margin-bottom: 24px;
   overflow-x: auto;
   padding-bottom: 4px;
+  scrollbar-width: none;
 }
 .stt__tabs::-webkit-scrollbar { display: none; }
-.stt__tabs { scrollbar-width: none; }
 
 .stt__tab {
   position: relative;
-  flex-shrink: 0;
-  padding: 10px 22px;
-  border-radius: 10px;
+  flex: 1;
+  min-width: 72px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 10px 12px 10px;
+  border-radius: 14px;
   border: 2px solid var(--student-border);
   background: var(--student-card-bg);
-  font-family: 'Manrope', sans-serif;
-  font-size: 13.5px;
-  font-weight: 700;
-  color: var(--student-text-secondary);
   cursor: pointer;
   transition: all 0.18s ease;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
 }
 .stt__tab:hover {
   border-color: var(--student-primary);
-  color: var(--student-primary);
 }
 .stt__tab--active {
   background: var(--student-primary);
   border-color: var(--student-primary);
-  color: #fff;
+  box-shadow: 0 4px 14px rgba(16,185,129,0.25);
 }
 .stt__tab--today:not(.stt__tab--active) {
   border-color: var(--student-primary);
-  color: var(--student-primary);
 }
+
+.stt__tab-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--student-text-secondary);
+  line-height: 1;
+}
+.stt__tab--active .stt__tab-label { color: rgba(255,255,255,0.8); }
+.stt__tab--today:not(.stt__tab--active) .stt__tab-label { color: var(--student-primary); }
+
+.stt__tab-date {
+  font-family: 'Manrope', sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--student-text-primary);
+}
+.stt__tab--active .stt__tab-date { color: #fff; }
+.stt__tab--today:not(.stt__tab--active) .stt__tab-date { color: var(--student-primary); }
 
 .stt__tab-dot {
   position: absolute;
-  top: 5px;
-  right: 5px;
-  width: 7px;
-  height: 7px;
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 5px;
+  height: 5px;
   background: var(--student-primary);
   border-radius: 50%;
 }
 .stt__tab--active .stt__tab-dot { background: #fff; }
-
-.stt__tab-short { display: none; }
 
 /* ── Schedule list ── */
 .stt__schedule {
@@ -111,8 +131,8 @@
   align-items: center;
   gap: 16px;
   background: var(--student-card-bg);
-  border-radius: 14px;
-  padding: 16px 20px;
+  border-radius: 16px;
+  padding: 18px 20px;
   border: 1px solid rgba(0,0,0,0.06);
   box-shadow: 0 1px 6px rgba(0,0,0,0.04);
   transition: box-shadow 0.18s, transform 0.18s;
@@ -123,8 +143,45 @@
 }
 
 .stt-slot--now {
+  position: relative;
   border-left: 4px solid var(--student-primary);
   background: rgba(16,185,129,0.04);
+  border-top: 2px solid rgba(16,185,129,0.2);
+  border-right: 1px solid rgba(16,185,129,0.12);
+  border-bottom: 1px solid rgba(16,185,129,0.12);
+}
+
+/* IN PROGRESS badge */
+.stt-slot__in-progress {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  background: var(--student-primary);
+  color: #fff;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  z-index: 1;
+}
+
+.stt-slot__pulse {
+  width: 6px;
+  height: 6px;
+  background: #fff;
+  border-radius: 50%;
+  flex-shrink: 0;
+  animation: stt-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes stt-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.35; transform: scale(0.7); }
 }
 
 /* Break slot */
@@ -132,8 +189,18 @@
   background: var(--student-surface-low);
   border-style: dashed;
   box-shadow: none;
+  justify-content: flex-start;
+  gap: 20px;
 }
 .stt-slot--break:hover { transform: none; box-shadow: none; }
+
+.stt-slot__break-time {
+  font-family: 'Manrope', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--student-text-secondary);
+  min-width: 120px;
+}
 
 .stt-slot__break-label {
   display: flex;
@@ -151,7 +218,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  min-width: 60px;
+  min-width: 58px;
   flex-shrink: 0;
 }
 
@@ -167,18 +234,6 @@
   color: var(--student-text-secondary);
   font-weight: 500;
   margin-top: 2px;
-}
-
-.stt-slot__now-pill {
-  margin-top: 4px;
-  padding: 2px 8px;
-  background: var(--student-primary);
-  color: #fff;
-  border-radius: 99px;
-  font-size: 10px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
 
 /* Colored left bar */
@@ -211,7 +266,7 @@
 
 .stt-slot__subject {
   font-family: 'Manrope', sans-serif;
-  font-size: 15.5px;
+  font-size: 15px;
   font-weight: 800;
   color: var(--student-text-primary);
 }
@@ -245,7 +300,7 @@
   font-weight: 700;
   text-decoration: none;
   flex-shrink: 0;
-  transition: background 0.15s;
+  transition: background 0.15s, color 0.15s;
   white-space: nowrap;
 }
 .stt-slot__join:hover {
@@ -267,6 +322,94 @@
 }
 .stt__empty span { font-size: 48px; opacity: 0.4; }
 .stt__empty p { font-size: 15px; margin: 0; }
+
+/* ── Tomorrow's Focus ── */
+.stt__tomorrow {
+  margin-top: 28px;
+  background: #0F172A;
+  border-radius: 20px;
+  padding: 28px 32px;
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.stt__tomorrow-glow {
+  position: absolute;
+  top: -60px;
+  right: -60px;
+  width: 220px;
+  height: 220px;
+  background: rgba(16,185,129,0.18);
+  border-radius: 50%;
+  filter: blur(60px);
+  pointer-events: none;
+}
+
+.stt__tomorrow-content { flex: 1; min-width: 0; position: relative; z-index: 1; }
+
+.stt__tomorrow-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--student-primary);
+  margin-bottom: 8px;
+}
+.stt__tomorrow-label span { font-size: 16px; }
+
+.stt__tomorrow-subject {
+  font-family: 'Manrope', sans-serif;
+  font-size: 21px;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stt__tomorrow-meta {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  color: #94A3B8;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.stt__tomorrow-meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.stt__tomorrow-meta > span > span { font-size: 15px; }
+
+.stt__tomorrow-join {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  background: var(--student-primary);
+  color: #fff;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+  transition: opacity 0.15s, transform 0.15s;
+}
+.stt__tomorrow-join:hover { opacity: 0.88; transform: translateY(-1px); }
+.stt__tomorrow-join span { font-size: 18px; }
 
 /* ── Legend ── */
 .stt__legend {
@@ -295,16 +438,20 @@
 /* ── Responsive ── */
 @media (max-width: 900px) {
   .stt { padding: 24px 20px 40px; }
-  .stt__tab-full { display: none; }
-  .stt__tab-short { display: inline; }
-  .stt__tab { padding: 10px 16px; }
+  .stt__tab { min-width: 58px; padding: 8px 10px; }
+  .stt__tab-date { font-size: 17px; }
+  .stt__tomorrow { flex-direction: column; align-items: flex-start; padding: 22px 20px; gap: 16px; }
+  .stt__tomorrow-join { width: 100%; justify-content: center; }
+  .stt__header { flex-direction: column; }
 }
 
 @media (max-width: 600px) {
   .stt { padding: 20px 14px 36px; }
   .stt__title { font-size: 22px; }
-  .stt-slot { flex-wrap: wrap; gap: 10px; }
+  .stt__tab-date { font-size: 15px; }
+  .stt-slot { flex-wrap: wrap; gap: 10px; padding: 14px 16px; }
   .stt-slot__time-col { flex-direction: row; align-items: center; gap: 8px; min-width: auto; }
   .stt-slot__join { width: 100%; justify-content: center; margin-top: 4px; }
-  .stt__header { flex-direction: column; }
+  .stt-slot__in-progress { top: 8px; right: 12px; font-size: 9px; }
+  .stt__tomorrow-subject { font-size: 17px; white-space: normal; }
 }

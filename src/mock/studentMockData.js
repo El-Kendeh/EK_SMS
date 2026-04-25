@@ -652,3 +652,106 @@ export const mockFinancials = {
     { id: 'txn-004', description: 'PTA Levy',           icon: 'groups',         date: '2024-10-01', amount: 100000,  status: 'pending',  receiptId: null },
   ],
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RESOURCES
+// ─────────────────────────────────────────────────────────────────────────────
+export const mockResources = [
+  {
+    id: 'res-math',
+    subject: 'Mathematics',
+    subjectCode: 'MAT',
+    color: '#3B82F6',
+    files: [
+      { id: 'rf-1',  title: 'Term 1 Syllabus',               type: 'pdf',  size: '2.1 MB',  category: 'syllabus',       locked: false },
+      { id: 'rf-2',  title: 'Chapter 4: Quadratic Equations', type: 'pdf',  size: '1.4 MB',  category: 'lecture-notes',  locked: false },
+      { id: 'rf-3',  title: 'Mid-Term Practice Paper',        type: 'pdf',  size: '890 KB',  category: 'exams',          locked: false },
+      { id: 'rf-4',  title: 'Final Exam Paper 2024',          type: 'pdf',  size: '1.1 MB',  category: 'exams',          locked: true, availableDate: 'May 20' },
+    ],
+  },
+  {
+    id: 'res-bio',
+    subject: 'Biology',
+    subjectCode: 'BIO',
+    color: '#10B981',
+    files: [
+      { id: 'rf-5',  title: 'Course Overview & Syllabus',     type: 'pdf',  size: '3.8 MB',  category: 'syllabus',       locked: false },
+      { id: 'rf-6',  title: 'Cell Division — Lecture Slides', type: 'pptx', size: '15.4 MB', category: 'lecture-notes',  locked: false },
+      { id: 'rf-7',  title: 'Lab Report Template',            type: 'docx', size: '245 KB',  category: 'handouts',       locked: false },
+    ],
+  },
+  {
+    id: 'res-eng',
+    subject: 'English Literature',
+    subjectCode: 'ENG',
+    color: '#8B5CF6',
+    files: [
+      { id: 'rf-8',  title: 'The Great Gatsby — Study Guide', type: 'pdf',  size: '1.8 MB',  category: 'lecture-notes',  locked: false },
+      { id: 'rf-9',  title: 'Essay Writing Rubric',           type: 'pdf',  size: '420 KB',  category: 'handouts',       locked: false },
+    ],
+  },
+  {
+    id: 'res-chem',
+    subject: 'Chemistry',
+    subjectCode: 'CHM',
+    color: '#EF4444',
+    files: [
+      { id: 'rf-10', title: 'Lab Safety Guidelines',          type: 'pdf',  size: '1.2 MB',  category: 'handouts',       locked: false },
+      { id: 'rf-11', title: 'Titration Lab Notes',            type: 'docx', size: '890 KB',  category: 'lecture-notes',  locked: false },
+      { id: 'rf-12', title: 'Final Exam 2024',                type: 'pdf',  size: '2.3 MB',  category: 'exams',          locked: true, availableDate: 'Jun 1' },
+    ],
+  },
+  {
+    id: 'res-phy',
+    subject: 'Physics',
+    subjectCode: 'PHY',
+    color: '#06B6D4',
+    featured: true,
+    featuredLabel: 'NEW MATERIAL ADDED',
+    files: [
+      { id: 'rf-13', title: "Newton's Laws — Lecture Notes",  type: 'pdf',  size: '2.7 MB',  category: 'lecture-notes',  locked: false },
+      { id: 'rf-14', title: 'Forces & Motion Formula Sheet',  type: 'pdf',  size: '380 KB',  category: 'handouts',       locked: false },
+      { id: 'rf-15', title: 'Forces & Motion Quiz — 2024',    type: 'pdf',  size: '760 KB',  category: 'exams',          locked: false },
+    ],
+  },
+  {
+    id: 'res-hist',
+    subject: 'History',
+    subjectCode: 'HIS',
+    color: '#6366F1',
+    files: [
+      { id: 'rf-16', title: 'WWII — Causes & Consequences',   type: 'pdf',  size: '3.1 MB',  category: 'lecture-notes',  locked: false },
+      { id: 'rf-17', title: 'Essay Marking Scheme',           type: 'pdf',  size: '310 KB',  category: 'handouts',       locked: false },
+    ],
+  },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ATTENDANCE
+// ─────────────────────────────────────────────────────────────────────────────
+export const mockAttendance = {
+  rate: 92,
+  presentDays: 148,
+  absentDays: 12,
+  tardyDays: 4,
+  totalDays: 164,
+  academicYear: '2024-2025',
+  term: 'First Term 2025',
+  recentLog: [
+    { date: '2026-04-25', status: 'present' },
+    { date: '2026-04-24', status: 'present' },
+    { date: '2026-04-23', status: 'absent' },
+    { date: '2026-04-22', status: 'present' },
+    { date: '2026-04-21', status: 'tardy' },
+    { date: '2026-04-18', status: 'present' },
+    { date: '2026-04-17', status: 'present' },
+    { date: '2026-04-16', status: 'present' },
+    { date: '2026-04-15', status: 'absent' },
+    { date: '2026-04-14', status: 'present' },
+    { date: '2026-04-11', status: 'present' },
+    { date: '2026-04-10', status: 'tardy' },
+    { date: '2026-04-09', status: 'present' },
+    { date: '2026-04-08', status: 'absent' },
+    { date: '2026-04-07', status: 'present' },
+  ],
+};

@@ -13,6 +13,8 @@ const SECTION_LABELS = {
   timetable:      'Timetable',
   assignments:    'Assignments',
   messages:       'Messages',
+  resources:      'Learning Materials',
+  attendance:     'Attendance Overview',
 };
 
 export default function StudentHeader({ onMenuToggle, activeSection, navigateTo, isSidebarOpen }) {

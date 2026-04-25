@@ -13,6 +13,8 @@ import StudentFinancials from './StudentFinancials';
 import StudentTimetable from './StudentTimetable';
 import StudentAssignments from './StudentAssignments';
 import StudentMessages from './StudentMessages';
+import StudentResources from './StudentResources';
+import StudentAttendance from './StudentAttendance';
 import './StudentDashboard.css';
 
 const SECTION_PATHS = {
@@ -25,6 +27,8 @@ const SECTION_PATHS = {
   timetable:      '/student/timetable',
   assignments:    '/student/assignments',
   messages:       '/student/messages',
+  resources:      '/student/resources',
+  attendance:     '/student/attendance',
 };
 
 function getInitialSection() {
@@ -37,6 +41,8 @@ function getInitialSection() {
   if (path.includes('/student/timetable'))      return 'timetable';
   if (path.includes('/student/assignments'))    return 'assignments';
   if (path.includes('/student/messages'))       return 'messages';
+  if (path.includes('/student/resources'))      return 'resources';
+  if (path.includes('/student/attendance'))     return 'attendance';
   return 'home';
 }
 
@@ -95,6 +101,8 @@ function StudentDashboardInner({ onNavigate }) {
       case 'timetable':     return <StudentTimetable     {...props} />;
       case 'assignments':   return <StudentAssignments   {...props} />;
       case 'messages':      return <StudentMessages      {...props} />;
+      case 'resources':     return <StudentResources     {...props} />;
+      case 'attendance':    return <StudentAttendance    {...props} />;
       default:              return <StudentHome          {...props} />;
     }
   };

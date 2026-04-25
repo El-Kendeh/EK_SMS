@@ -8,6 +8,8 @@ const NAV_ITEMS = [
   { section: 'assignments',   icon: 'assignment',   label: 'Assignments' },
   { section: 'grades',        icon: 'auto_stories', label: 'My Grades' },
   { section: 'report-cards',  icon: 'description',  label: 'Report Cards' },
+  { section: 'attendance',    icon: 'fact_check',   label: 'Attendance' },
+  { section: 'resources',     icon: 'folder_open',  label: 'Resources' },
   { section: 'messages',      icon: 'chat',         label: 'Messages',    badge: 'messages' },
   { section: 'financials',    icon: 'payments',     label: 'Financials' },
   { section: 'notifications', icon: 'notifications', label: 'Notifications' },
