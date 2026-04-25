@@ -1,9 +1,16 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { studentApi } from '../../api/studentApi';
+import { ordinalSuffix } from '../../utils/studentUtils';
 import VerificationModal from './VerificationModal';
 import CertificateModal from './CertificateModal';
 import './StudentReportCards.css';
+
+function formatGeneratedDate(iso) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
 
 function MiniQR({ hash, size = 60 }) {
   const canvasRef = useRef(null);
@@ -149,16 +156,35 @@ export default function StudentReportCards() {
 
           {/* Mid */}
           <div className="srep-card__mid">
-            <div>
-              <div className="srep-avg-label">Term Average</div>
-              <div className="srep-avg-value">
-                {card.average != null ? `${card.average.toFixed(1)}%` : 'N/A'}
+            <div className="srep-card__mid-stats">
+              <div className="srep-stat">
+                <div className="srep-avg-label">Term Average</div>
+                <div className="srep-avg-value">
+                  {card.average != null ? `${card.average.toFixed(1)}%` : 'N/A'}
+                </div>
+              </div>
+              <div className="srep-stat-divider" />
+              <div className="srep-stat">
+                <div className="srep-avg-label">Class Rank</div>
+                <div className="srep-avg-value srep-avg-value--rank">
+                  {card.classRank != null
+                    ? <>{ordinalSuffix(card.classRank)}<span className="srep-rank-of"> / {card.totalStudentsInClass}</span></>
+                    : 'N/A'}
+                </div>
               </div>
             </div>
             <div className="srep-qr-wrap">
               <MiniQR hash={card.verificationHash} size={60} />
             </div>
           </div>
+
+          {/* Generated date */}
+          {card.generatedAt && (
+            <div className="srep-generated-row">
+              <span className="material-symbols-outlined">event_available</span>
+              Issued {formatGeneratedDate(card.generatedAt)}
+            </div>
+          )}
 
           {/* Hash */}
           <div className="srep-hash-row">

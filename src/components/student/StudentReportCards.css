@@ -93,11 +93,58 @@
 .srep-card__mid {
   display: flex;
   align-items: center;
-  gap: 32px;
+  gap: 16px;
   padding: 16px 0;
-  margin-bottom: 16px;
+  margin-bottom: 0;
   border-top: 1px solid #F2F4F6;
+  border-bottom: none;
+}
+
+.srep-card__mid-stats {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+}
+
+.srep-stat {
+  flex: 1;
+}
+
+.srep-stat-divider {
+  width: 1px;
+  height: 40px;
+  background: #E2E8F0;
+  flex-shrink: 0;
+}
+
+.srep-avg-value--rank {
+  font-size: 28px;
+}
+
+.srep-rank-of {
+  font-size: 14px;
+  font-weight: 500;
+  color: #94A3B8;
+  margin-left: 2px;
+}
+
+/* Generated date row */
+.srep-generated-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 0 14px;
   border-bottom: 1px solid #F2F4F6;
+  margin-bottom: 16px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #94A3B8;
+  letter-spacing: 0.04em;
+}
+.srep-generated-row span {
+  font-size: 14px;
+  color: #CBD5E1;
 }
 
 .srep-avg-label {
@@ -138,6 +185,7 @@
   background: #F2F4F6;
   border-radius: 8px;
   padding: 8px 12px;
+  margin-top: 16px;
   margin-bottom: 16px;
 }
 
@@ -328,6 +376,13 @@
 @media (max-width: 600px) {
   .srep { padding: 20px 14px 72px; }
   .srep__title { font-size: 22px; }
-  .srep-avg-value { font-size: 28px; }
+  .srep-avg-value { font-size: 26px; }
+  .srep-avg-value--rank { font-size: 22px; }
   .srep-card { padding: 18px; }
+  .srep-card__mid-stats { gap: 12px; }
+}
+
+@media (max-width: 400px) {
+  .srep-avg-value { font-size: 22px; }
+  .srep-avg-value--rank { font-size: 20px; }
 }

@@ -14,7 +14,7 @@ import './StudentGrades.css';
 export default function StudentGrades({ navigateTo }) {
   const [terms, setTerms] = useState([]);
   const [selectedTermId, setSelectedTermId] = useState(
-    () => sessionStorage.getItem('stu_selected_term') || null
+    () => new URLSearchParams(window.location.search).get('term') || null
   );
   const [selectedGrade, setSelectedGrade] = useState(null);
   const [securityGrade, setSecurityGrade] = useState(null);
@@ -35,9 +35,11 @@ export default function StudentGrades({ navigateTo }) {
         } catch {
           setTerms([current]);
         }
-        if (!sessionStorage.getItem('stu_selected_term')) {
+        if (!new URLSearchParams(window.location.search).get('term')) {
           setSelectedTermId(current.id);
-          sessionStorage.setItem('stu_selected_term', current.id);
+          const u = new URL(window.location.href);
+          u.searchParams.set('term', current.id);
+          window.history.replaceState({}, '', u.toString());
         }
       })
       .catch(() => {});
@@ -45,7 +47,9 @@ export default function StudentGrades({ navigateTo }) {
 
   const handleTermSelect = (id) => {
     setSelectedTermId(id);
-    sessionStorage.setItem('stu_selected_term', id);
+    const u = new URL(window.location.href);
+    u.searchParams.set('term', id);
+    window.history.pushState({}, '', u.toString());
   };
 
   const { grades, summary, loading, error } = useStudentGrades(selectedTermId);

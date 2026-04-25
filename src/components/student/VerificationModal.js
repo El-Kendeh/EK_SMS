@@ -145,6 +145,20 @@ export default function VerificationModal({ reportCard, onClose }) {
                   <span>Status</span>
                   <span>{reportCard.status === 'published' ? 'Published' : 'Draft'}</span>
                 </div>
+                {reportCard.verificationUrl && (
+                  <div className="vmod-info-row vmod-info-row--url">
+                    <span>Verification URL</span>
+                    <a
+                      href={reportCard.verificationUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="vmod-verify-link"
+                    >
+                      <span className="material-symbols-outlined">open_in_new</span>
+                      Open verification page
+                    </a>
+                  </div>
+                )}
               </div>
 
               {/* QR code */}

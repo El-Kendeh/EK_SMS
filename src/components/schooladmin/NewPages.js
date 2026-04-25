@@ -1809,7 +1809,7 @@ function _studentAvatarLetters(first, last) {
   return (a + b).toUpperCase() || '?';
 }
 
-function AddStudentWizard({ school, classes, onSave, onCancel }) {
+function AddStudentWizard({ school, classes, classesLoading = false, onSave, onCancel }) {
   const [step,           setStep]          = useState(0);
   const [saving,         setSaving]        = useState(false);
   const [error,          setError]         = useState('');
@@ -2120,10 +2120,22 @@ function AddStudentWizard({ school, classes, onSave, onCancel }) {
                   </label>
                   <label className="ska-form-group" style={{ margin: 0 }}>
                     <span>Class</span>
-                    <select className="ska-input" value={form.classroom_id} onChange={e => set('classroom_id', e.target.value)}>
-                      <option value="">— Assign later —</option>
-                      {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </select>
+                    {classesLoading ? (
+                      <div style={{
+                        height: 40, borderRadius: 8, background: 'var(--ska-surface-high)',
+                        animation: 'ska-pulse 1.4s ease-in-out infinite',
+                        display: 'flex', alignItems: 'center', paddingLeft: 12,
+                        fontSize: '0.8125rem', color: 'var(--ska-text-3)', gap: 8,
+                      }}>
+                        <span className="material-symbols-rounded" style={{ fontSize: 14, animation: 'ska-spin 0.8s linear infinite', display: 'inline-block' }}>autorenew</span>
+                        Loading classes…
+                      </div>
+                    ) : (
+                      <select className="ska-input" value={form.classroom_id} onChange={e => set('classroom_id', e.target.value)}>
+                        <option value="">— Assign later —</option>
+                        {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      </select>
+                    )}
                   </label>
                 </div>
                 <label className="ska-form-group" style={{ margin: 0 }}>
@@ -2224,7 +2236,12 @@ function AddStudentWizard({ school, classes, onSave, onCancel }) {
             </button>
             {step < STUDENT_WIZARD_STEPS.length - 1
               ? <button className="ska-btn ska-btn--primary" disabled={!canNext} onClick={() => setStep(s => s + 1)}>Next <Ic name="arrow_forward" size="sm" /></button>
-              : <button className="ska-btn ska-btn--primary" disabled={saving || !canNext} onClick={handleSave}><Ic name="person_add" size="sm" /> {saving ? 'Enrolling…' : 'Enroll Student'}</button>
+              : <button className="ska-btn ska-btn--primary" disabled={saving || !canNext} onClick={handleSave}>
+                  {saving
+                    ? <><span className="material-symbols-rounded" style={{ fontSize: 16, animation: 'ska-spin 0.8s linear infinite', display: 'inline-block' }}>autorenew</span> Enrolling…</>
+                    : <><Ic name="person_add" size="sm" /> Enroll Student</>
+                  }
+                </button>
             }
           </div>
         </div>
@@ -2471,6 +2488,7 @@ export function StudentsPage({ school, openAddSignal }) {
   const [students,       setStudents]       = useState([]);
   const [stats,          setStats]          = useState(null);
   const [classes,        setClasses]        = useState([]);
+  const [classesLoading, setClassesLoading] = useState(true);
   const [loading,        setLoading]        = useState(true);
   const [search,         setSearch]         = useState('');
   const [activeFilter,   setActiveFilter]   = useState('all');
@@ -2497,7 +2515,10 @@ export function StudentsPage({ school, openAddSignal }) {
   useEffect(() => {
     load();
     ApiClient.get('/api/school/student-stats/').then(d => setStats(d)).catch(() => {});
-    ApiClient.get('/api/school/classes/').then(d => setClasses(d.classes || [])).catch(() => {});
+    ApiClient.get('/api/school/classes/')
+      .then(d => setClasses(d.classes || []))
+      .catch(() => {})
+      .finally(() => setClassesLoading(false));
   }, [load]);
 
   const handleSearch = e => {
@@ -2517,7 +2538,7 @@ export function StudentsPage({ school, openAddSignal }) {
 
   if (subView === 'add') {
     return (
-      <AddStudentWizard school={school} classes={classes}
+      <AddStudentWizard school={school} classes={classes} classesLoading={classesLoading}
         onSave={() => { setBanner({ type: 'ok', text: 'Student added.' }); setSubView('list'); load(); ApiClient.get('/api/school/student-stats/').then(d => setStats(d)).catch(() => {}); }}
         onCancel={() => setSubView('list')}
       />

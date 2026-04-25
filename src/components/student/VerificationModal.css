@@ -164,6 +164,25 @@
 .vmod-info-row span:first-child { color: var(--student-text-secondary); }
 .vmod-info-row span:last-child { font-weight: 700; color: var(--student-text-primary); }
 
+.vmod-info-row--url {
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.vmod-verify-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--student-primary-dark);
+  font-weight: 700;
+  font-size: 12px;
+  text-decoration: none;
+  transition: opacity 0.15s;
+}
+.vmod-verify-link:hover { opacity: 0.75; text-decoration: underline; }
+.vmod-verify-link span { font-size: 14px; }
+
 /* Info block */
 .vmod-info-block {
   background: var(--student-surface-low);

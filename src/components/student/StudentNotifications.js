@@ -29,6 +29,18 @@ function getFilterCategory(notification) {
   return 'system';
 }
 
+function getNavigationTarget(notification) {
+  const t = (notification.type || '').toUpperCase();
+  if (t.includes('REPORT') || notification.relatedEntityType === 'report_card') return 'report-cards';
+  if (
+    t.includes('GRADE') ||
+    t.includes('MODIFICATION') ||
+    t.includes('LOCK') ||
+    notification.relatedEntityType === 'grade'
+  ) return 'grades';
+  return null;
+}
+
 export default function StudentNotifications({ navigateTo }) {
   const [activeFilter, setActiveFilter] = useState('all');
   const { notifications, loading, markRead, markAllRead, hasUnread } = useStudentNotifications();
@@ -101,17 +113,31 @@ export default function StudentNotifications({ navigateTo }) {
                 const colorClass = getItemColorClass(notif.type);
                 const icon = getNotificationIcon(notif.type);
                 const isUnread = !notif.isRead;
+                const navTarget = getNavigationTarget(notif);
+
+                const handleItemClick = () => {
+                  markRead(notif.id);
+                  if (navTarget && navigateTo) navigateTo(navTarget);
+                };
+
+                const ctaLabel = colorClass === 'critical'
+                  ? 'View Audit Trail'
+                  : navTarget === 'report-cards'
+                    ? 'View Report Card'
+                    : navTarget === 'grades'
+                      ? 'View Grades'
+                      : null;
 
                 return (
                   <motion.div
                     key={notif.id}
-                    className={`snotif-item snotif-item--${colorClass} ${isUnread ? 'snotif-item--unread' : ''}`}
+                    className={`snotif-item snotif-item--${colorClass} ${isUnread ? 'snotif-item--unread' : ''} ${navTarget ? 'snotif-item--clickable' : ''}`}
                     custom={idx}
                     variants={itemVariants}
                     initial="hidden"
                     animate="visible"
                     exit="exit"
-                    onClick={() => markRead(notif.id)}
+                    onClick={handleItemClick}
                   >
                     <div className="snotif-item__inner">
                       {/* Icon */}
@@ -132,13 +158,13 @@ export default function StudentNotifications({ navigateTo }) {
                         </div>
                         <p className="snotif-item__body">{notif.message}</p>
 
-                        {/* CTA for critical alert */}
-                        {colorClass === 'critical' && (
+                        {/* CTA for navigable notifications */}
+                        {ctaLabel && (
                           <button
                             className="snotif-item__action"
-                            onClick={(e) => { e.stopPropagation(); if (navigateTo) navigateTo('grades'); }}
+                            onClick={(e) => { e.stopPropagation(); markRead(notif.id); if (navigateTo) navigateTo(navTarget); }}
                           >
-                            View Audit Trail
+                            {ctaLabel}
                             <span className="material-symbols-outlined">arrow_forward</span>
                           </button>
                         )}
