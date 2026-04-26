@@ -11,7 +11,7 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from eksms_core.models import (
     School, SchoolAdmin, GradeChangeAlert, Grade, Student, Teacher,
-    Parent, ParentStudent, SchoolApplicationEvent, ForensicEvent, AlertBroadcast, AdminSetting,
+    Parent, ParentStudent, StudentDocument, SchoolApplicationEvent, ForensicEvent, AlertBroadcast, AdminSetting,
     SecurityLogEntry, AcademicYear, ClassRoom, SystemWideAlert,
     Subject, Term,
 )
@@ -84,6 +84,13 @@ def _get_request_data(request):
         return json.loads(request.body)
     except json.JSONDecodeError:
         return {}
+
+
+def _is_valid_document_file(uploaded_file):
+    if uploaded_file is None:
+        return False
+    name = uploaded_file.name.lower()
+    return name.endswith('.pdf') or name.endswith('.doc') or name.endswith('.docx')
 
 
 def _log_security_event(event_type, description, severity='info',
@@ -2255,6 +2262,8 @@ def api_students(request):
             'date_of_birth': str(s.date_of_birth) if s.date_of_birth else None,
             'phone_number': s.phone_number,
             'admission_date': str(s.admission_date),
+            'disciplinary_history': s.disciplinary_history,
+            'disciplinary_notes': s.disciplinary_notes,
         } for s in qs]
         return JsonResponse({'success': True, 'students': data, 'count': len(data)})
 
@@ -2269,6 +2278,8 @@ def api_students(request):
         date_of_birth    = body.get('date_of_birth') or None
         phone_number     = body.get('phone_number', '')
         profile_photo    = request.FILES.get('profile_photo')
+        document_type    = body.get('document_type', '').strip()
+        document_file    = request.FILES.get('document_file')
 
         father_name      = body.get('father_name', '').strip()
         father_email     = body.get('father_email', '').strip()
@@ -2317,7 +2328,23 @@ def api_students(request):
             classroom=classroom, academic_year=active_year,
             date_of_birth=date_of_birth, phone_number=phone_number,
             passport_picture=profile_photo if profile_photo else None,
+            disciplinary_history=disciplinary_history,
+            disciplinary_notes=disciplinary_notes if disciplinary_history else '',
         )
+
+        if document_file:
+            if not document_type:
+                return JsonResponse({'success': False, 'message': 'Document type is required when uploading a document.'}, status=400)
+            if not _is_valid_document_file(document_file):
+                return JsonResponse({'success': False, 'message': 'Only PDF and DOC/DOCX documents are allowed.'}, status=400)
+            doc, created = StudentDocument.objects.get_or_create(
+                student=student,
+                document_type=document_type,
+                defaults={'file': document_file}
+            )
+            if not created:
+                doc.file = document_file
+                doc.save(update_fields=['file'])
 
         def _create_parent(name, email, phone, occupation, username, password, relationship, is_primary):
             if not name and not email and not phone and not username:
@@ -2446,16 +2473,17 @@ def api_student_detail(request, student_id):
             'email': student.user.email, 'classroom': student.classroom.name if student.classroom else None,
             'classroom_id': student.classroom_id,
             'date_of_birth': str(student.date_of_birth) if student.date_of_birth else None,
-            'phone_number': student.phone_number, 'admission_date': str(student.admission_date)})
-
-    if request.method == 'PUT':
-        try:
-            body = json.loads(request.body)
-        except json.JSONDecodeError:
-            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
-        u = student.user
-        u.first_name = body.get('first_name', u.first_name)
-        u.last_name  = body.get('last_name', u.last_name)
+            'phone_number': student.phone_number, 'admission_date': str(student.admission_date),
+            'disciplinary_history': student.disciplinary_history,
+            'disciplinary_notes': student.disciplinary_notes,
+            'documents': [
+                {
+                    'id': doc.id,
+                    'document_type': doc.document_type,
+                    'file_url': request.build_absolute_uri(doc.file.url) if doc.file else None,
+                    'uploaded_at': str(doc.uploaded_at),
+                } for doc in student.documents.all()
+            ],
         u.email      = body.get('email', u.email)
         u.save(update_fields=['first_name', 'last_name', 'email'])
         if 'classroom_id' in body:
@@ -2468,6 +2496,29 @@ def api_student_detail(request, student_id):
             student.date_of_birth = body['date_of_birth'] or None
         if 'phone_number' in body:
             student.phone_number = body['phone_number']
+        if 'disciplinary_history' in body:
+            student.disciplinary_history = _parse_bool(body['disciplinary_history'])
+            if not student.disciplinary_history:
+                student.disciplinary_notes = ''
+        if 'disciplinary_notes' in body:
+            student.disciplinary_notes = body['disciplinary_notes'].strip()
+
+        document_type    = body.get('document_type', '').strip()
+        document_file    = request.FILES.get('document_file')
+        if document_file:
+            if not document_type:
+                return JsonResponse({'success': False, 'message': 'Document type is required when uploading a document.'}, status=400)
+            if not _is_valid_document_file(document_file):
+                return JsonResponse({'success': False, 'message': 'Only PDF and DOC/DOCX documents are allowed.'}, status=400)
+            doc, created = StudentDocument.objects.get_or_create(
+                student=student,
+                document_type=document_type,
+                defaults={'file': document_file}
+            )
+            if not created:
+                doc.file = document_file
+                doc.save(update_fields=['file'])
+
         student.save()
         return JsonResponse({'success': True, 'message': 'Student updated.'})
 

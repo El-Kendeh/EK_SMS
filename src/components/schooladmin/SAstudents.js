@@ -81,17 +81,7 @@ export default function StudentsPage({ school, openAddSignal }) {
       emergency_name: '', emergency_relationship: '', emergency_phone: '', emergency_address: '',
       blood_group: '', allergies: '', medical_conditions: '', doctor_name: '', doctor_phone: '',
       disciplinary_history: false, disciplinary_notes: '',
-      documents_birth_certificate: false, documents_passport_photo: false, documents_previous_school_report: false,
-      documents_transfer_letter: false, documents_medical_report: false, documents_other: false,
-      profile_photo: null,
-    });
-    setProfilePhotoPreview(null);
-    setError(''); setModal('add');
-  }, []);
-
-  useEffect(() => {
-    if (openAddSignal !== prevSignal.current && prevSignal.current !== undefined) {
-      openAdd();
+      document_type: '', document_file: null,
     }
     prevSignal.current = openAddSignal;
   }, [openAddSignal, openAdd]);
@@ -140,12 +130,8 @@ export default function StudentsPage({ school, openAddSignal }) {
       doctor_phone: s.doctor_phone || '',
       disciplinary_history: !!s.disciplinary_history,
       disciplinary_notes: s.disciplinary_notes || '',
-      documents_birth_certificate: !!s.documents_birth_certificate,
-      documents_passport_photo: !!s.documents_passport_photo,
-      documents_previous_school_report: !!s.documents_previous_school_report,
-      documents_transfer_letter: !!s.documents_transfer_letter,
-      documents_medical_report: !!s.documents_medical_report,
-      documents_other: !!s.documents_other,
+      document_type: '',
+      document_file: null,
       profile_photo: null,
     });
     setProfilePhotoPreview(s.profile_photo_url || s.profile_photo || null);
@@ -172,7 +158,8 @@ export default function StudentsPage({ school, openAddSignal }) {
   };
 
   const buildPayload = data => {
-    if (data.profile_photo instanceof File || data.profile_photo instanceof Blob) {
+    const hasFile = Object.values(data).some(value => value instanceof File || value instanceof Blob);
+    if (hasFile) {
       const formData = new FormData();
       Object.entries(data).forEach(([key, value]) => {
         if (value === undefined || value === null) return;
@@ -630,34 +617,56 @@ export default function StudentsPage({ school, openAddSignal }) {
 
           <div className="ska-card ska-card-pad" style={{ marginTop: 16 }}>
             <h3 className="ska-card-title" style={{ marginBottom: 12 }}>Student Conduct & Discipline</h3>
-            <div style={{ display: 'grid', gap: 12 }}>
-              <label className="ska-form-group" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <input type="checkbox" checked={form.disciplinary_history} onChange={e => setForm(f => ({ ...f, disciplinary_history: e.target.checked }))} />
-                <span>Has the student ever been suspended/expelled?</span>
-              </label>
+            <div className="ska-form-grid" style={{ gridTemplateColumns: '1fr', gap: 12 }}>
               <label className="ska-form-group">
-                <span>If yes, explain</span>
-                <input className="ska-input" value={form.disciplinary_notes} onChange={e => setForm(f => ({ ...f, disciplinary_notes: e.target.value }))} />
+                <span>Has the student ever been suspended/expelled?</span>
+                <select className="ska-input" value={form.disciplinary_history ? 'yes' : 'no'} onChange={e => setForm(f => ({
+                  ...f,
+                  disciplinary_history: e.target.value === 'yes',
+                  disciplinary_notes: e.target.value === 'yes' ? f.disciplinary_notes : '',
+                }))}>
+                  <option value="no">No</option>
+                  <option value="yes">Yes</option>
+                </select>
               </label>
+              {form.disciplinary_history && (
+                <label className="ska-form-group">
+                  <span>Please explain the incident</span>
+                  <textarea className="ska-input" rows="3" value={form.disciplinary_notes} onChange={e => setForm(f => ({ ...f, disciplinary_notes: e.target.value }))} />
+                </label>
+              )}
             </div>
           </div>
 
           <div className="ska-card ska-card-pad" style={{ marginTop: 16 }}>
             <h3 className="ska-card-title" style={{ marginBottom: 12 }}>Documents Submitted</h3>
-            <div style={{ display: 'grid', gap: 10 }}>
-              {[
-                ['documents_birth_certificate', 'Birth Certificate'],
-                ['documents_passport_photo', 'Passport Photograph'],
-                ['documents_previous_school_report', 'Previous School Report'],
-                ['documents_transfer_letter', 'Transfer Letter'],
-                ['documents_medical_report', 'Medical Report'],
-                ['documents_other', 'Others'],
-              ].map(([key, label]) => (
-                <label key={key} className="ska-form-group" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <input type="checkbox" checked={form[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.checked }))} />
-                  <span>{label}</span>
-                </label>
-              ))}
+            <div className="ska-form-grid">
+              <label className="ska-form-group">
+                <span>Document Type</span>
+                <select className="ska-input" value={form.document_type} onChange={e => setForm(f => ({ ...f, document_type: e.target.value }))}>
+                  <option value="">Select a document type</option>
+                  <option value="birth_certificate">Birth Certificate</option>
+                  <option value="passport_photo">Passport Photograph</option>
+                  <option value="previous_school_report">Previous School Report</option>
+                  <option value="transfer_letter">Transfer Letter</option>
+                  <option value="medical_report">Medical Report</option>
+                  <option value="other">Other Document</option>
+                </select>
+              </label>
+              <label className="ska-form-group">
+                <span>Upload Document (PDF / DOC / DOCX)</span>
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx"
+                  className="ska-input"
+                  onChange={e => setForm(f => ({ ...f, document_file: e.target.files?.[0] || null }))}
+                />
+                {form.document_file && (
+                  <div style={{ marginTop: 6, color: '#444', fontSize: '0.95rem' }}>
+                    Selected file: {form.document_file.name}
+                  </div>
+                )}
+              </label>
             </div>
           </div>
 

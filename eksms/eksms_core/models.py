@@ -228,6 +228,8 @@ class Student(models.Model):
     date_of_birth = models.DateField(blank=True, null=True)
     phone_number = models.CharField(max_length=20, blank=True)
     passport_picture = models.ImageField(upload_to='student_passports/', blank=True, null=True, help_text="Student passport/ID photo")
+    disciplinary_history = models.BooleanField(default=False, help_text="Has the student ever been suspended or expelled?")
+    disciplinary_notes = models.TextField(blank=True, help_text="Details about disciplinary incidents, if any.")
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -238,6 +240,32 @@ class Student(models.Model):
 
     def __str__(self):
         return f"{self.user.get_full_name()} ({self.admission_number})"
+
+
+class StudentDocument(models.Model):
+    """Uploaded student document for admissions and records."""
+    DOCUMENT_TYPE_CHOICES = [
+        ('birth_certificate', 'Birth Certificate'),
+        ('passport_photo', 'Passport Photograph'),
+        ('previous_school_report', 'Previous School Report'),
+        ('transfer_letter', 'Transfer Letter'),
+        ('medical_report', 'Medical Report'),
+        ('other', 'Other Document'),
+    ]
+
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='documents')
+    document_type = models.CharField(max_length=50, choices=DOCUMENT_TYPE_CHOICES)
+    file = models.FileField(upload_to='student_documents/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('student', 'document_type')
+        ordering = ['student', 'document_type']
+        verbose_name = 'Student Document'
+        verbose_name_plural = 'Student Documents'
+
+    def __str__(self):
+        return f"{self.student} - {self.get_document_type_display()}"
 
 
 class Parent(models.Model):
@@ -1093,4 +1121,4 @@ class SecurityLogEntry(models.Model):
 
     def __str__(self):
         label = self.actor_label or (self.actor.username if self.actor else 'anonymous')
-        return f"{self.get_event_type_display()} by {label} at {self.created_at}"
+        return f"{self.get_event_type_display()} by {label} at {self.created_at}"
