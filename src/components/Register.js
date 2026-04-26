@@ -1060,14 +1060,15 @@ function Register({ onNavigate }) {
     setOtpLoading(true);
     setOtpError('');
     try {
-      await ApiClient.post('/api/send-otp/', { 
-        email: form.adminEmail 
+      await ApiClient.post('/api/send-otp/', {
+        email: form.adminEmail
       });
+      // success: true whether newly sent or already sent — show the input
       setOtpSent(true);
       setOtpResendTimer(60);
     } catch (err) {
       if (err.status === 429) {
-        // CODE ALREADY SENT: Server has an active OTP but cooldown is on. 
+        // CODE ALREADY SENT: Server has an active OTP but cooldown is on.
         // We SHOULD show the input field so they can enter the code already in their inbox.
         setOtpSent(true);
         if (err.data?.retry_after) setOtpResendTimer(err.data.retry_after);
@@ -1090,9 +1091,10 @@ function Register({ onNavigate }) {
     setOtpError('');
     setOtpInput('');
     try {
-      await ApiClient.post('/api/resend-otp/', { 
-        email: form.adminEmail 
+      await ApiClient.post('/api/resend-otp/', {
+        email: form.adminEmail
       });
+      setOtpSent(true);
       setOtpResendTimer(60);
     } catch (err) {
       // If server says cooldown is still active, sync the timer
@@ -1797,7 +1799,7 @@ function Register({ onNavigate }) {
             {!otpLoading && !otpSent && otpError && (
               <div className="otp-unavailable">
                 <p className="otp-unavailable-msg">{otpError}</p>
-                <button type="button" className="btn-send-otp" onClick={sendOtp} disabled={otpLoading}>
+                <button type="button" className="btn-send-otp" onClick={resendOtp} disabled={otpLoading}>
                   Try Again
                 </button>
                 <div className="otp-skip-wrap">

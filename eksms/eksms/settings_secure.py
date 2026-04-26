@@ -315,3 +315,7 @@ DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='PRUH-SMS <noreply@elk
 
 # OTP settings
 OTP_EXPIRY_MINUTES = config('OTP_EXPIRY_MINUTES', default=10, cast=int)
+
+# Africa's Talking SMS Gateway
+AFRICAS_TALKING_API_KEY  = config('AFRICAS_TALKING_API_KEY', default='')
+AFRICAS_TALKING_USERNAME = config('AFRICAS_TALKING_USERNAME', default='sandbox')

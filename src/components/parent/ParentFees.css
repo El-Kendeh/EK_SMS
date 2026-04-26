@@ -1,0 +1,256 @@
+.par-fees__summary {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 20px;
+  margin-bottom: 28px;
+}
+@media (max-width: 768px) { .par-fees__summary { grid-template-columns: 1fr; } }
+
+/* Balance card */
+.par-fees__balance-card {
+  position: relative;
+  overflow: hidden;
+}
+.par-fees__wallet-bg {
+  position: absolute;
+  top: 0; right: 0;
+  padding: 16px;
+  font-size: 80px !important;
+  color: rgba(16,185,129,0.08);
+  pointer-events: none;
+}
+.par-fees__balance-inner { position: relative; z-index: 1; }
+.par-fees__label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--par-text-secondary);
+  margin: 0 0 4px;
+}
+.par-fees__student-name {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--par-text-primary);
+  margin: 0 0 20px;
+}
+.par-fees__balance-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.par-fees__balance-divider {
+  width: 1px;
+  height: 40px;
+  background: var(--par-border);
+}
+.par-fees__balance-label {
+  font-size: 12px;
+  color: var(--par-text-secondary);
+  margin: 0 0 4px;
+}
+.par-fees__balance-paid {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--par-primary);
+  margin: 0;
+}
+.par-fees__balance-due {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--par-error);
+  margin: 0;
+}
+
+/* Integrity card */
+.par-fees__integrity-card {
+  background: #1E293B;
+  border-radius: 16px;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+.par-fees__integrity-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(16,185,129,0.15) 0%, transparent 70%);
+}
+.par-fees__integrity-icon {
+  font-size: 40px !important;
+  color: var(--par-primary);
+  margin-bottom: 12px;
+  position: relative;
+  z-index: 1;
+}
+.par-fees__integrity-title {
+  font-size: 16px;
+  font-weight: 800;
+  margin: 0 0 6px;
+  position: relative; z-index: 1;
+}
+.par-fees__integrity-sub {
+  font-size: 12px;
+  color: #64748B;
+  margin: 0 0 14px;
+  position: relative; z-index: 1;
+}
+.par-fees__integrity-chip {
+  background: rgba(16,185,129,0.2);
+  border: 1px solid rgba(16,185,129,0.3);
+  border-radius: 20px;
+  padding: 3px 12px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--par-primary);
+  position: relative; z-index: 1;
+}
+
+/* Transactions */
+.par-fees__tx-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.par-fees__tx-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--par-text-primary);
+  margin: 0;
+}
+.par-fees__tx-title .material-symbols-outlined { color: var(--par-primary); }
+.par-fees__audit-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--par-primary);
+  color: white;
+  border: none;
+  padding: 9px 16px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.par-fees__audit-btn:hover { opacity: 0.88; }
+.par-fees__audit-btn .material-symbols-outlined { font-size: 16px; }
+
+.par-fees__tx-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+
+.par-fees__tx-item {
+  background: var(--par-surface);
+  border-radius: 14px;
+  border: 1px solid var(--par-border);
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  transition: box-shadow 0.15s;
+}
+.par-fees__tx-item:hover { box-shadow: 0 4px 16px rgba(15,27,45,0.07); }
+.par-fees__tx-item--pending {
+  background: var(--par-surface-low);
+  border-style: dashed;
+  opacity: 0.85;
+}
+
+.par-fees__tx-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  min-width: 0;
+}
+.par-fees__tx-icon {
+  width: 48px; height: 48px;
+  border-radius: 12px;
+  background: var(--par-surface-low);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--par-primary);
+  flex-shrink: 0;
+}
+.par-fees__tx-desc {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--par-text-primary);
+  margin: 0 0 3px;
+}
+.par-fees__tx-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--par-text-secondary);
+}
+.par-fees__tx-dot {
+  width: 3px; height: 3px;
+  border-radius: 50%;
+  background: var(--par-border);
+}
+
+.par-fees__tx-right { text-align: right; flex-shrink: 0; }
+.par-fees__tx-amount {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--par-primary);
+  margin: 0 0 4px;
+}
+.par-fees__tx-amount--pending { color: var(--par-text-secondary); }
+.par-fees__tx-verified {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--par-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  justify-content: flex-end;
+}
+.par-fees__pay-btn {
+  background: transparent;
+  border: none;
+  color: var(--par-primary);
+  font-size: 11px;
+  font-weight: 800;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Footnote */
+.par-fees__footnote {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: var(--par-surface-low);
+  border-radius: 12px;
+  padding: 16px;
+}
+.par-fees__footnote-icon {
+  width: 32px; height: 32px;
+  background: var(--par-surface-high);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  color: var(--par-text-secondary);
+}
+.par-fees__footnote p {
+  font-size: 12px;
+  color: var(--par-text-secondary);
+  line-height: 1.6;
+  margin: 0;
+}

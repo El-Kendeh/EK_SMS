@@ -1,0 +1,380 @@
+/* ============================================================
+   GRADE HISTORY PANEL — slide-in drawer
+   ============================================================ */
+.ghp-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  z-index: 200;
+}
+
+.ghp-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  width: 420px;
+  max-width: 100vw;
+  background: #0F1B2D;
+  border-left: 1px solid rgba(255,255,255,0.08);
+  z-index: 201;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Header */
+.ghp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22px 24px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  flex-shrink: 0;
+}
+
+.ghp-header__info h3 {
+  font-family: 'Manrope', sans-serif;
+  font-size: 17px;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 2px;
+}
+
+.ghp-header__info p {
+  font-size: 12px;
+  color: #94A3B8;
+}
+
+.ghp-close {
+  background: rgba(255,255,255,0.06);
+  border: none;
+  border-radius: 8px;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #94A3B8;
+  transition: background 0.15s, color 0.15s;
+}
+.ghp-close:hover { background: rgba(255,255,255,0.12); color: #fff; }
+.ghp-close span { font-size: 20px; }
+
+/* Grade badge */
+.ghp-grade-badge {
+  margin: 20px 24px 0;
+  padding: 16px 20px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.ghp-grade-badge__left h4 {
+  font-family: 'Manrope', sans-serif;
+  font-size: 13px;
+  color: #94A3B8;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.ghp-grade-badge__score {
+  font-family: 'Manrope', sans-serif;
+  font-size: 36px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.ghp-grade-badge__letter {
+  font-family: 'Manrope', sans-serif;
+  font-size: 28px;
+  font-weight: 900;
+}
+
+/* Security alert */
+.ghp-security-alert {
+  margin: 16px 24px 0;
+  padding: 14px 16px;
+  background: rgba(239,68,68,0.12);
+  border: 1px solid rgba(239,68,68,0.3);
+  border-radius: 10px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.ghp-security-alert span.material-symbols-outlined {
+  color: var(--student-danger);
+  font-size: 20px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.ghp-security-alert p {
+  font-size: 12.5px;
+  color: #FCA5A5;
+  line-height: 1.5;
+}
+
+/* Timeline */
+.ghp-timeline {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px 32px;
+}
+
+.ghp-timeline::-webkit-scrollbar { width: 4px; }
+.ghp-timeline::-webkit-scrollbar-track { background: transparent; }
+.ghp-timeline::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+
+.ghp-timeline__title {
+  font-size: 10px;
+  font-weight: 800;
+  color: #64748B;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+
+.ghp-event {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 0;
+  position: relative;
+}
+
+/* Vertical line connecting events */
+.ghp-event:not(:last-child) .ghp-event__line {
+  position: absolute;
+  left: 15px;
+  top: 32px;
+  bottom: -24px;
+  width: 2px;
+  background: rgba(255,255,255,0.07);
+}
+
+.ghp-event__dot-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.ghp-event__dot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  z-index: 1;
+}
+
+.ghp-event__dot span { font-size: 16px; }
+
+.ghp-event__body {
+  flex: 1;
+  padding-bottom: 24px;
+}
+
+.ghp-event__type {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 4px;
+}
+
+.ghp-event__by {
+  font-size: 13px;
+  color: #CBD5E1;
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+
+.ghp-event__time {
+  font-size: 11px;
+  color: #64748B;
+}
+
+.ghp-event__score {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Security event styling */
+.ghp-event--security .ghp-event__dot {
+  background: rgba(239,68,68,0.15);
+}
+.ghp-event--security .ghp-event__type { color: #F87171; }
+.ghp-event--security .ghp-event__reason {
+  font-size: 12px;
+  color: #FCA5A5;
+  margin-top: 4px;
+  line-height: 1.5;
+}
+
+/* Empty state */
+.ghp-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: #64748B;
+  font-size: 14px;
+}
+
+/* ── Tabs ── */
+.ghp-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 16px 24px 0;
+  flex-shrink: 0;
+}
+
+.ghp-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 700;
+  font-family: 'Manrope', sans-serif;
+  background: rgba(255,255,255,0.05);
+  color: #64748B;
+  transition: background 0.15s, color 0.15s;
+}
+
+.ghp-tab span { font-size: 16px; }
+.ghp-tab:hover { background: rgba(255,255,255,0.08); color: #94A3B8; }
+
+.ghp-tab--active {
+  background: rgba(16,185,129,0.12);
+  color: var(--student-primary);
+}
+
+/* ── Weight Breakdown ── */
+.ghp-breakdown {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px 32px;
+}
+
+.ghp-breakdown::-webkit-scrollbar { width: 4px; }
+.ghp-breakdown::-webkit-scrollbar-track { background: transparent; }
+.ghp-breakdown::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+
+.ghp-breakdown__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  font-weight: 800;
+  color: #64748B;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+
+.ghp-breakdown__title span { font-size: 14px; }
+
+.ghp-breakdown__item {
+  margin-bottom: 16px;
+}
+
+.ghp-breakdown__row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.ghp-breakdown__label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #CBD5E1;
+  flex: 1;
+}
+
+.ghp-breakdown__weight {
+  font-size: 11px;
+  color: #64748B;
+  margin-right: 10px;
+}
+
+.ghp-breakdown__score {
+  font-size: 13px;
+  font-weight: 800;
+  color: #fff;
+}
+
+.ghp-breakdown__track {
+  height: 8px;
+  background: rgba(255,255,255,0.07);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.ghp-breakdown__track--thin {
+  height: 5px;
+}
+
+.ghp-breakdown__fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.8s ease;
+}
+
+.ghp-breakdown__fill--primary {
+  background: var(--student-primary);
+}
+
+.ghp-breakdown__fill--secondary {
+  background: rgba(16,185,129,0.4);
+}
+
+.ghp-breakdown__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.ghp-breakdown__composite {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 20px;
+  padding: 14px 18px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+}
+
+.ghp-breakdown__composite-label {
+  font-size: 12px;
+  color: #94A3B8;
+  font-weight: 600;
+}
+
+.ghp-breakdown__composite-value {
+  font-size: 16px;
+  font-weight: 900;
+  font-family: 'Manrope', sans-serif;
+}
+
+@media (max-width: 480px) {
+  .ghp-panel { width: 100vw; }
+  .ghp-breakdown__grid { grid-template-columns: 1fr; }
+}

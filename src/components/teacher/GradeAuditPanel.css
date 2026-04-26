@@ -1,0 +1,26 @@
+.gap-grade-summary {
+  background: var(--tch-surface-low);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.gap-grade-summary__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--tch-text-secondary);
+}
+.gap-grade-summary__row strong { color: var(--tch-text-primary); }
+
+.gap-section-label {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--tch-text-secondary);
+  margin: 0 0 16px;
+}

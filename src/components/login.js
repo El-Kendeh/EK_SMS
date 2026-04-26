@@ -103,6 +103,10 @@ function Login({ onNavigate }) {
           onNavigate('superadmindashboard');
         } else if (user.role === 'school_admin') {
           onNavigate('sa-dashboard');
+        } else if (user.role === 'teacher') {
+          onNavigate('teacher-dashboard');
+        } else if (user.role === 'student') {
+          onNavigate('student-dashboard');
         } else if (user.role === 'parent') {
           onNavigate('parentdashboard');
         } else {
@@ -146,13 +150,21 @@ function Login({ onNavigate }) {
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       const user = data.user;
-      const isSuper = user.is_superuser || user.role === 'superadmin' || user.role === 'admin' || user.role === 'superuser';
 
       if (onNavigate) {
+        if (data.must_change_password) {
+          onNavigate('force-change-password');
+          return;
+        }
+        const isSuper = user.is_superuser || user.role === 'superadmin' || user.role === 'admin' || user.role === 'superuser';
         if (isSuper) {
           onNavigate('superadmindashboard');
         } else if (user.role === 'school_admin') {
           onNavigate('sa-dashboard');
+        } else if (user.role === 'teacher') {
+          onNavigate('teacher-dashboard');
+        } else if (user.role === 'student') {
+          onNavigate('student-dashboard');
         } else if (user.role === 'parent') {
           onNavigate('parentdashboard');
         } else {

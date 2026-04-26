@@ -100,13 +100,10 @@
   top: 0;
   left: 0;
   z-index: 200;
-  overflow-y: auto;
-  overflow-x: hidden;
-  scrollbar-width: none;
+  overflow: hidden;
   flex-shrink: 0;
   transition: transform 0.25s ease;
 }
-.ska-sidebar::-webkit-scrollbar { display: none; }
 
 .ska-sidebar-head {
   padding: 28px 24px 20px;
@@ -152,7 +149,22 @@
 }
 
 /* ---- Nav ---- */
-.ska-nav { flex: 1; padding: 12px 12px; display: flex; flex-direction: column; gap: 2px; }
+.ska-nav {
+  flex: 1;
+  min-height: 0;
+  padding: 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.14) transparent;
+}
+.ska-nav::-webkit-scrollbar { width: 4px; }
+.ska-nav::-webkit-scrollbar-track { background: transparent; }
+.ska-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.14); border-radius: 4px; }
+.ska-nav::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.26); }
 .ska-nav-section { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--ska-border); display: flex; flex-direction: column; gap: 2px; }
 .ska-nav-section-label {
   font-size: 0.6rem;
@@ -212,12 +224,13 @@
 
 /* ---- Sidebar footer ---- */
 .ska-sidebar-footer {
-  padding: 16px;
+  padding: 12px 16px;
   border-top: 1px solid var(--ska-border);
   background: var(--ska-surface-lowest);
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  flex-shrink: 0;
 }
 
 .ska-sidebar-footer-avatar {
@@ -250,6 +263,31 @@
   text-transform: uppercase;
   letter-spacing: 0.07em;
 }
+
+/* Logout button in sidebar footer */
+.ska-logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--ska-error-dim);
+  border: 1px solid rgba(255,180,171,0.22);
+  border-radius: var(--ska-radius-sm);
+  color: var(--ska-error);
+  font-family: var(--ska-font-headline);
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s;
+}
+.ska-logout-btn:hover {
+  background: rgba(255,180,171,0.22);
+  border-color: rgba(255,180,171,0.35);
+}
+.ska-logout-btn .ska-icon { font-size: 15px; }
 
 /* ---- Topbar ---- */
 .ska-topbar {
@@ -348,6 +386,7 @@
   background: none;
 }
 .ska-topbar-profile:hover { background: var(--ska-surface-card); }
+.ska-topbar-profile.active { background: var(--ska-surface-card); }
 
 .ska-topbar-avatar {
   width: 32px;
@@ -367,6 +406,107 @@
   font-weight: 600;
   color: var(--ska-text-2);
 }
+
+/* ---- Profile dropdown ---- */
+.ska-profile-dropdown {
+  position: relative;
+}
+
+@keyframes ska-drop-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.ska-profile-drop-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 240px;
+  background: var(--ska-surface-low);
+  border: 1px solid var(--ska-border);
+  border-radius: var(--ska-radius);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.45);
+  z-index: 500;
+  overflow: hidden;
+  animation: ska-drop-in 0.15s ease;
+}
+
+.ska-profile-drop-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+}
+
+.ska-profile-drop-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--ska-primary-container), var(--ska-secondary));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1rem;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.ska-profile-drop-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.ska-profile-drop-name {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--ska-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ska-profile-drop-email {
+  font-size: 0.75rem;
+  color: var(--ska-text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.ska-profile-drop-divider {
+  height: 1px;
+  background: var(--ska-border);
+  margin: 4px 0;
+}
+
+.ska-profile-drop-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--ska-text-3);
+  font-family: var(--ska-font-headline);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-align: left;
+  transition: background 0.12s, color 0.12s;
+}
+.ska-profile-drop-item:hover {
+  background: var(--ska-surface-card);
+  color: var(--ska-text);
+}
+.ska-profile-drop-item--danger { color: var(--ska-error); }
+.ska-profile-drop-item--danger:hover {
+  background: var(--ska-error-dim);
+  color: var(--ska-error);
+}
+.ska-profile-drop-item .ska-icon { font-size: 18px; }
 
 /* ---- Main content ---- */
 .ska-main {
@@ -1199,6 +1339,27 @@
   display: flex; gap: 10px; justify-content: flex-end;
   padding-top: 20px; border-top: 1px solid var(--ska-border); margin-top: 20px;
 }
+.ska-modal--wide { max-width: 640px; }
+
+/* ── Parent Link Cards ─────────────────────────────────────── */
+.ska-parent-card {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 16px; border-radius: 12px;
+  border: 1.5px solid var(--ska-border);
+  background: var(--ska-surface-high);
+  transition: border-color 0.15s;
+  position: relative;
+}
+.ska-parent-card--primary { border-color: var(--ska-green); background: var(--ska-green-dim); }
+.ska-parent-card__info { flex: 1; min-width: 0; }
+.ska-parent-card__name { margin: 0; font-weight: 700; font-size: 0.9rem; color: var(--ska-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ska-parent-card__meta { margin: 3px 0 0; font-size: 0.75rem; color: var(--ska-text-3); display: flex; flex-wrap: wrap; gap: 6px; }
+.ska-parent-card__actions { display: flex; gap: 6px; flex-shrink: 0; }
+@media (max-width: 600px) {
+  .ska-modal--wide { max-width: 100%; }
+  .ska-parent-card { flex-wrap: wrap; }
+  .ska-parent-card__actions { margin-left: auto; }
+}
 
 /* ── Form ── */
 .ska-form-grid {
@@ -1320,6 +1481,7 @@ textarea.ska-input { height: auto; padding: 10px 12px; }
   .ska-topbar-school       { display: none; }
   .ska-topbar-divider      { display: none; }
   .ska-topbar { padding: 0 10px; gap: 6px; }
+  .ska-profile-drop-panel  { right: -8px; width: 220px; }
 
   /* Page head: tighter font */
   .ska-page-head .ska-page-title { font-size: 1.125rem; }
@@ -1390,3 +1552,50 @@ textarea.ska-input { height: auto; padding: 10px 12px; }
 }
 .logo-dropzone:hover { border-color: var(--ska-primary); background: var(--ska-primary-dim); }
 .logo-dropzone.active { border-color: var(--ska-primary); background: var(--ska-primary-dim); }
+
+@keyframes ska-pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+@keyframes ska-spin  { to { transform: rotate(360deg); } }
+
+/* ── Academic Year Pill Filter ─────────────────────────────── */
+.ska-year-filter { display: flex; flex-direction: column; gap: 6px; }
+.ska-year-filter__pills {
+  display: flex; flex-wrap: wrap; gap: 7px;
+}
+.ska-year-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 16px; border-radius: 100px;
+  font-size: 0.8125rem; font-weight: 600; font-family: var(--ska-font-body);
+  border: 1.5px solid var(--ska-border);
+  background: var(--ska-surface-high);
+  color: var(--ska-text-2);
+  cursor: pointer; transition: border-color 0.15s, background 0.15s, color 0.15s, box-shadow 0.15s;
+  white-space: nowrap; line-height: 1;
+}
+.ska-year-pill:hover:not(.ska-year-pill--skeleton) {
+  border-color: var(--ska-primary); color: var(--ska-primary);
+  background: var(--ska-primary-dim);
+}
+.ska-year-pill--active {
+  background: var(--ska-primary) !important; border-color: var(--ska-primary) !important;
+  color: #fff !important;
+  box-shadow: 0 2px 10px rgba(27,63,175,0.25);
+}
+.ska-year-pill--current:not(.ska-year-pill--active) {
+  border-color: var(--ska-green); color: var(--ska-green);
+  background: var(--ska-green-dim);
+}
+.ska-year-pill__dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: currentColor; opacity: 0.75; flex-shrink: 0;
+}
+.ska-year-pill--skeleton {
+  width: 78px; height: 32px; border-radius: 100px;
+  background: var(--ska-surface-high);
+  animation: ska-pulse 1.4s ease-in-out infinite;
+  pointer-events: none; border-color: transparent; cursor: default;
+}
+@media (max-width: 600px) {
+  .ska-year-filter__pills { gap: 6px; }
+  .ska-year-pill { padding: 5px 12px; font-size: 0.75rem; }
+  .ska-year-pill--skeleton { width: 64px; height: 30px; }
+}

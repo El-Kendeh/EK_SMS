@@ -81,11 +81,20 @@ class SchoolAdmin(models.Model):
     can_view_audit_logs = models.BooleanField(default=False, help_text="Can view audit logs")
     
     # Status
+<<<<<<< HEAD
     is_active = models.BooleanField(default=True)
     
     # Metadata
     appointed_date = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+=======
+    is_active            = models.BooleanField(default=True)
+    must_change_password = models.BooleanField(default=False, help_text="Force password change on next login")
+
+    # Metadata
+    appointed_date = models.DateTimeField(auto_now_add=True)
+    updated_at     = models.DateTimeField(auto_now=True)
+>>>>>>> 5c35a02602b594f1606dd7154a3e035cf240658d
 
     class Meta:
         verbose_name = "School Admin"
@@ -102,6 +111,11 @@ class AcademicYear(models.Model):
     start_date = models.DateField(help_text="Academic year start date")
     end_date = models.DateField(help_text="Academic year end date")
     is_active = models.BooleanField(default=False, help_text="Only one year should be active at a time")
+<<<<<<< HEAD
+=======
+    is_archived = models.BooleanField(default=False, help_text="Archived years are read-only historical records")
+    archived_at = models.DateTimeField(null=True, blank=True)
+>>>>>>> 5c35a02602b594f1606dd7154a3e035cf240658d
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -121,6 +135,7 @@ class Term(models.Model):
         ('TERM2', 'Term 2'),
         ('TERM3', 'Term 3'),
     ]
+<<<<<<< HEAD
     
     academic_year = models.ForeignKey(AcademicYear, on_delete=models.CASCADE, related_name='terms')
     name = models.CharField(max_length=20, choices=TERM_CHOICES)
@@ -129,6 +144,25 @@ class Term(models.Model):
     is_active = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+=======
+    STATUS_CHOICES = [
+        ('draft',    'Draft'),
+        ('open',     'Open'),
+        ('closed',   'Closed'),
+        ('archived', 'Archived'),
+    ]
+
+    academic_year        = models.ForeignKey(AcademicYear, on_delete=models.CASCADE, related_name='terms')
+    name                 = models.CharField(max_length=20, choices=TERM_CHOICES)
+    start_date           = models.DateField()
+    end_date             = models.DateField()
+    is_active            = models.BooleanField(default=False)
+    status               = models.CharField(max_length=10, choices=STATUS_CHOICES, default='draft')
+    grade_entry_open     = models.BooleanField(default=False, help_text="Teachers can enter grades when True")
+    grade_entry_deadline = models.DateTimeField(null=True, blank=True, help_text="Hard deadline for grade entry")
+    created_at           = models.DateTimeField(auto_now_add=True)
+    updated_at           = models.DateTimeField(auto_now=True)
+>>>>>>> 5c35a02602b594f1606dd7154a3e035cf240658d
 
     class Meta:
         unique_together = ('academic_year', 'name')
@@ -184,10 +218,20 @@ class Teacher(models.Model):
     employee_id = models.CharField(max_length=50, help_text="Must be unique per school")
     phone_number = models.CharField(max_length=20, blank=True)
     qualification = models.CharField(max_length=255, blank=True)
+<<<<<<< HEAD
     hire_date = models.DateField(default=timezone.now)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+=======
+    profile_picture = models.ImageField(upload_to='teacher_photos/', blank=True, null=True, help_text="Teacher profile photo")
+    hire_date            = models.DateField(default=timezone.now)
+    is_active            = models.BooleanField(default=True)
+    must_change_password    = models.BooleanField(default=False)
+    is_examination_officer  = models.BooleanField(default=False, help_text="Can generate and publish report cards")
+    created_at              = models.DateTimeField(auto_now_add=True)
+    updated_at              = models.DateTimeField(auto_now=True)
+>>>>>>> 5c35a02602b594f1606dd7154a3e035cf240658d
 
     class Meta:
         ordering = ['user__last_name', 'user__first_name']
@@ -227,12 +271,25 @@ class Student(models.Model):
     admission_date = models.DateField(default=timezone.now)
     date_of_birth = models.DateField(blank=True, null=True)
     phone_number = models.CharField(max_length=20, blank=True)
+<<<<<<< HEAD
     passport_picture = models.ImageField(upload_to='student_passports/', blank=True, null=True, help_text="Student passport/ID photo")
     disciplinary_history = models.BooleanField(default=False, help_text="Has the student ever been suspended or expelled?")
     disciplinary_notes = models.TextField(blank=True, help_text="Details about disciplinary incidents, if any.")
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+=======
+    gender = models.CharField(max_length=1, choices=[('M', 'Male'), ('F', 'Female')], blank=True)
+    passport_picture     = models.ImageField(upload_to='student_passports/', blank=True, null=True)
+    # Medical information
+    blood_type           = models.CharField(max_length=5, blank=True, help_text="e.g., A+, O-")
+    allergies            = models.TextField(blank=True, help_text="Known allergies")
+    medical_notes        = models.TextField(blank=True, help_text="General medical notes / conditions")
+    is_active            = models.BooleanField(default=True)
+    must_change_password = models.BooleanField(default=False)
+    created_at           = models.DateTimeField(auto_now_add=True)
+    updated_at           = models.DateTimeField(auto_now=True)
+>>>>>>> 5c35a02602b594f1606dd7154a3e035cf240658d
 
     class Meta:
         ordering = ['classroom', 'user__last_name', 'user__first_name']
@@ -242,6 +299,7 @@ class Student(models.Model):
         return f"{self.user.get_full_name()} ({self.admission_number})"
 
 
+<<<<<<< HEAD
 class StudentDocument(models.Model):
     """Uploaded student document for admissions and records."""
     DOCUMENT_TYPE_CHOICES = [
@@ -268,16 +326,28 @@ class StudentDocument(models.Model):
         return f"{self.student} - {self.get_document_type_display()}"
 
 
+=======
+>>>>>>> 5c35a02602b594f1606dd7154a3e035cf240658d
 class Parent(models.Model):
     """Represents a parent/guardian"""
     school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='parents', null=True, blank=True)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='parent_profile')
+<<<<<<< HEAD
     phone_number = models.CharField(max_length=20)
     relationship = models.CharField(max_length=50, help_text="e.g., Father, Mother, Guardian")
     occupation = models.CharField(max_length=100, blank=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+=======
+    phone_number         = models.CharField(max_length=20)
+    relationship         = models.CharField(max_length=50, help_text="e.g., Father, Mother, Guardian")
+    occupation           = models.CharField(max_length=100, blank=True)
+    is_active            = models.BooleanField(default=True)
+    must_change_password = models.BooleanField(default=False)
+    created_at           = models.DateTimeField(auto_now_add=True)
+    updated_at           = models.DateTimeField(auto_now=True)
+>>>>>>> 5c35a02602b594f1606dd7154a3e035cf240658d
 
     class Meta:
         ordering = ['user__last_name', 'user__first_name']
@@ -292,6 +362,10 @@ class ParentStudent(models.Model):
     parent = models.ForeignKey(Parent, on_delete=models.CASCADE, related_name='student_links')
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='parent_links')
     is_primary_contact = models.BooleanField(default=False, help_text="Primary contact for emergencies")
+<<<<<<< HEAD
+=======
+    relationship_type  = models.CharField(max_length=50, blank=True, help_text="e.g., Mother, Father, Guardian")
+>>>>>>> 5c35a02602b594f1606dd7154a3e035cf240658d
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -303,6 +377,7 @@ class ParentStudent(models.Model):
         return f"{self.student} - {self.parent}"
 
 
+<<<<<<< HEAD
 class Grade(models.Model):
     """Student grades for subjects"""
     GRADE_SCALE = [
@@ -312,6 +387,37 @@ class Grade(models.Model):
         ('D', 'D (60-69)'),
         ('E', 'E (0-59)'),
         ('I', 'Incomplete'),
+=======
+class ParentNotificationPreference(models.Model):
+    """Stores per-parent notification channel and category preferences"""
+    parent          = models.OneToOneField(Parent, on_delete=models.CASCADE, related_name='notification_preferences')
+    email_enabled   = models.BooleanField(default=True)
+    sms_enabled     = models.BooleanField(default=False)
+    push_enabled    = models.BooleanField(default=False)
+    grade_alerts    = models.BooleanField(default=True)
+    attendance_alerts = models.BooleanField(default=True)
+    fee_alerts      = models.BooleanField(default=True)
+    updated_at      = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Parent Notification Preference"
+        verbose_name_plural = "Parent Notification Preferences"
+
+    def __str__(self):
+        return f"Notification prefs for {self.parent}"
+
+
+class Grade(models.Model):
+    """Student grades for subjects"""
+    GRADE_SCALE = [
+        ('A+', 'A+ (90-100)'),
+        ('A',  'A  (80-89)'),
+        ('B',  'B  (70-79)'),
+        ('C',  'C  (60-69)'),
+        ('D',  'D  (50-59)'),
+        ('F',  'F  (0-49)'),
+        ('I',  'Incomplete'),
+>>>>>>> 5c35a02602b594f1606dd7154a3e035cf240658d
     ]
     
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='grades')
@@ -342,7 +448,11 @@ class Grade(models.Model):
         help_text="Auto-calculated: CA + Mid-term + Final (max 100)"
     )
     grade_letter = models.CharField(
+<<<<<<< HEAD
         max_length=1, choices=GRADE_SCALE, default='I',
+=======
+        max_length=2, choices=GRADE_SCALE, default='I',
+>>>>>>> 5c35a02602b594f1606dd7154a3e035cf240658d
         help_text="Auto-calculated letter grade"
     )
     
@@ -382,6 +492,7 @@ class Grade(models.Model):
         return self.total_score
 
     def calculate_grade_letter(self):
+<<<<<<< HEAD
         """Convert score to letter grade"""
         if self.total_score >= 90:
             self.grade_letter = 'A'
@@ -395,6 +506,37 @@ class Grade(models.Model):
             self.grade_letter = 'E'
         else:
             self.grade_letter = 'I'
+=======
+        """Convert score to letter grade using the school's GradingScheme when available."""
+        # Caller may pre-set _boundaries to avoid extra DB queries in batch saves
+        boundaries = getattr(self, '_boundaries', None)
+        if boundaries is None:
+            try:
+                boundaries = sorted(
+                    self.student.school.grading_scheme.boundaries,
+                    key=lambda b: -b['min'],
+                )
+            except Exception:
+                boundaries = None
+
+        s = float(self.total_score)
+        if boundaries:
+            for b in boundaries:
+                if s >= b['min']:
+                    self.grade_letter = b['letter']
+                    return
+            self.grade_letter = boundaries[-1]['letter'] if boundaries else 'I'
+            return
+
+        # Hardcoded fallback (used when no GradingScheme exists yet)
+        if s >= 90:   self.grade_letter = 'A+'
+        elif s >= 80: self.grade_letter = 'A'
+        elif s >= 70: self.grade_letter = 'B'
+        elif s >= 60: self.grade_letter = 'C'
+        elif s >= 50: self.grade_letter = 'D'
+        elif s > 0:   self.grade_letter = 'F'
+        else:         self.grade_letter = 'I'
+>>>>>>> 5c35a02602b594f1606dd7154a3e035cf240658d
 
     def save(self, *args, **kwargs):
         if not self.is_locked:
@@ -449,6 +591,7 @@ class ClassRanking(models.Model):
 class GradeAuditLog(models.Model):
     """Immutable audit trail for all grade changes - Event Sourcing"""
     ACTION_CHOICES = [
+<<<<<<< HEAD
         ('CREATE', 'Grade Created'),
         ('UPDATE', 'Grade Updated'),
         ('LOCK', 'Grade Locked'),
@@ -456,6 +599,20 @@ class GradeAuditLog(models.Model):
         ('VIEW', 'Grade Viewed'),
         ('DELETE_ATTEMPT', 'Delete Attempt'),
         ('ARCHIVE', 'Grade Archived'),
+=======
+        ('CREATE',               'Grade Created'),
+        ('UPDATE',               'Grade Updated'),
+        ('SUBMIT',               'Submitted for Locking'),
+        ('LOCK',                 'Grade Locked'),
+        ('UNLOCK',               'Grade Unlocked'),
+        ('VIEW',                 'Grade Viewed'),
+        ('MODIFICATION_ATTEMPT', 'Unauthorised Modification Attempt'),
+        ('MOD_REQUEST',          'Modification Request Submitted'),
+        ('MOD_APPROVED',         'Modification Request Approved'),
+        ('MOD_REJECTED',         'Modification Request Rejected'),
+        ('DELETE_ATTEMPT',       'Delete Attempt'),
+        ('ARCHIVE',              'Grade Archived'),
+>>>>>>> 5c35a02602b594f1606dd7154a3e035cf240658d
     ]
     
     grade = models.ForeignKey(Grade, on_delete=models.CASCADE, related_name='audit_logs')
@@ -748,8 +905,14 @@ class ReportCard(models.Model):
     class_size = models.IntegerField(default=0)
     
     # PDF generation
+<<<<<<< HEAD
     pdf_file = models.FileField(upload_to='report_cards/', null=True, blank=True)
     qr_code = models.CharField(max_length=255, null=True, blank=True, help_text="QR code for verification")
+=======
+    pdf_file          = models.FileField(upload_to='report_cards/', null=True, blank=True)
+    qr_code           = models.CharField(max_length=255, null=True, blank=True)
+    verification_hash = models.CharField(max_length=64, blank=True, help_text="SHA256 of report card data")
+>>>>>>> 5c35a02602b594f1606dd7154a3e035cf240658d
     
     # Status
     generated_at = models.DateTimeField(auto_now_add=True)
@@ -757,6 +920,13 @@ class ReportCard(models.Model):
     is_published = models.BooleanField(default=False, help_text="Can parents view this report card?")
     published_at = models.DateTimeField(null=True, blank=True)
 
+<<<<<<< HEAD
+=======
+    # Comments
+    teacher_comment   = models.TextField(blank=True, help_text="Class teacher's comments")
+    principal_comment = models.TextField(blank=True, help_text="Principal's comments")
+
+>>>>>>> 5c35a02602b594f1606dd7154a3e035cf240658d
     class Meta:
         unique_together = ('student', 'term', 'academic_year')
         ordering = ['-academic_year', '-term']
@@ -780,6 +950,10 @@ class SchoolStaffAccount(models.Model):
         ('PARENT', 'Parent/Guardian'),
         ('STAFF', 'Administrative Staff'),
         ('ACCOUNTANT', 'Accountant'),
+<<<<<<< HEAD
+=======
+        ('PRINCIPAL', 'Principal'),
+>>>>>>> 5c35a02602b594f1606dd7154a3e035cf240658d
         ('REGISTRAR', 'Registrar'),
         ('LIBRARIAN', 'Librarian'),
         ('COUNSELOR', 'Counselor'),
@@ -1094,6 +1268,11 @@ class SecurityLogEntry(models.Model):
         ('suspicious_activity', 'Suspicious Activity'),
         ('api_rate_limited', 'API Rate Limited'),
         ('profile_updated', 'Profile Updated'),
+<<<<<<< HEAD
+=======
+        ('student_transfer', 'Student Transfer'),
+        ('academic_year_archived', 'Academic Year Archived'),
+>>>>>>> 5c35a02602b594f1606dd7154a3e035cf240658d
     ]
     SEVERITY_CHOICES = [
         ('info', 'Info'),
@@ -1122,3 +1301,398 @@ class SecurityLogEntry(models.Model):
     def __str__(self):
         label = self.actor_label or (self.actor.username if self.actor else 'anonymous')
         return f"{self.get_event_type_display()} by {label} at {self.created_at}"
+<<<<<<< HEAD
+=======
+
+
+# ─────────────────────────────────────────────────────────────────
+# ATTENDANCE
+# ─────────────────────────────────────────────────────────────────
+
+class Attendance(models.Model):
+    STATUS_CHOICES = [
+        ('present', 'Present'),
+        ('absent',  'Absent'),
+        ('late',    'Late'),
+        ('excused', 'Excused'),
+    ]
+    school      = models.ForeignKey(School, on_delete=models.CASCADE, related_name='attendance_records')
+    student     = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='attendance')
+    classroom   = models.ForeignKey(ClassRoom, on_delete=models.CASCADE, related_name='attendance_records')
+    date        = models.DateField()
+    status      = models.CharField(max_length=10, choices=STATUS_CHOICES, default='present')
+    recorded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                    related_name='recorded_attendance')
+    notes       = models.TextField(blank=True)
+    created_at  = models.DateTimeField(auto_now_add=True)
+    updated_at  = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('student', 'date')
+        ordering = ['-date', 'classroom', 'student']
+        indexes = [
+            models.Index(fields=['school', 'date']),
+            models.Index(fields=['classroom', 'date']),
+        ]
+
+    def __str__(self):
+        return f"{self.student} — {self.date} — {self.status}"
+
+
+# ─────────────────────────────────────────────────────────────────
+# FINANCE
+# ─────────────────────────────────────────────────────────────────
+
+class FeeRecord(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('partial', 'Partial'),
+        ('paid',    'Paid'),
+        ('overdue', 'Overdue'),
+        ('waived',  'Waived'),
+    ]
+    school       = models.ForeignKey(School, on_delete=models.CASCADE, related_name='fee_records')
+    student      = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='fees')
+    term         = models.ForeignKey(Term, on_delete=models.SET_NULL, null=True, blank=True)
+    description  = models.CharField(max_length=200, default='School Fees')
+    amount       = models.DecimalField(max_digits=10, decimal_places=2)
+    amount_paid  = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    due_date     = models.DateField(null=True, blank=True)
+    paid_date    = models.DateField(null=True, blank=True)
+    status       = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    notes        = models.TextField(blank=True)
+    recorded_by  = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                     related_name='recorded_fees')
+    created_at   = models.DateTimeField(auto_now_add=True)
+    updated_at   = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes  = [models.Index(fields=['school', 'status'])]
+
+    def __str__(self):
+        return f"{self.student} — {self.description} ({self.status})"
+
+    @property
+    def balance(self):
+        return self.amount - self.amount_paid
+
+
+class Expense(models.Model):
+    CATEGORY_CHOICES = [
+        ('salaries',    'Salaries'),
+        ('utilities',   'Utilities'),
+        ('supplies',    'Supplies'),
+        ('maintenance', 'Maintenance'),
+        ('events',      'Events'),
+        ('technology',  'Technology'),
+        ('other',       'Other'),
+    ]
+    school       = models.ForeignKey(School, on_delete=models.CASCADE, related_name='expenses')
+    title        = models.CharField(max_length=200)
+    amount       = models.DecimalField(max_digits=10, decimal_places=2)
+    category     = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='other')
+    date         = models.DateField()
+    description  = models.TextField(blank=True)
+    recorded_by  = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                     related_name='recorded_expenses')
+    created_at   = models.DateTimeField(auto_now_add=True)
+    updated_at   = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-date']
+        indexes  = [models.Index(fields=['school', 'date'])]
+
+    def __str__(self):
+        return f"{self.school} — {self.title} ({self.amount})"
+
+
+# ─────────────────────────────────────────────────────────────────
+# MESSAGING
+# ─────────────────────────────────────────────────────────────────
+
+class Message(models.Model):
+    school         = models.ForeignKey(School, on_delete=models.CASCADE, related_name='messages')
+    sender         = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_school_messages')
+    recipient_role = models.CharField(max_length=20, default='all',
+                                      help_text='all | staff | students | parents')
+    subject        = models.CharField(max_length=200, blank=True)
+    body           = models.TextField()
+    is_broadcast   = models.BooleanField(default=True)
+    created_at     = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes  = [models.Index(fields=['school', '-created_at'])]
+
+    def __str__(self):
+        return f"[{self.recipient_role}] {self.subject or 'No Subject'} — {self.sender}"
+
+# ─────────────────────────────────────────────────────────────────
+# EXAM SYSTEM
+# ─────────────────────────────────────────────────────────────────
+
+class Exam(models.Model):
+    EXAM_TYPES = [
+        ('ca',      'Continuous Assessment'),
+        ('midterm', 'Mid-Term'),
+        ('final',   'Final Exam'),
+        ('mock',    'Mock Exam'),
+        ('quiz',    'Quiz'),
+    ]
+    school      = models.ForeignKey(School, on_delete=models.CASCADE, related_name='exams')
+    classroom   = models.ForeignKey(ClassRoom, on_delete=models.CASCADE, related_name='exams')
+    subject     = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='exams')
+    term        = models.ForeignKey(Term, on_delete=models.SET_NULL, null=True, blank=True, related_name='exams')
+    name        = models.CharField(max_length=200)
+    exam_type   = models.CharField(max_length=10, choices=EXAM_TYPES, default='final')
+    total_marks = models.DecimalField(max_digits=6, decimal_places=2, default=100)
+    date        = models.DateField()
+    is_active   = models.BooleanField(default=True)
+    created_by  = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='created_exams')
+    created_at  = models.DateTimeField(auto_now_add=True)
+    updated_at  = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-date']
+        indexes  = [models.Index(fields=['school', '-date'])]
+
+    def __str__(self):
+        return f"{self.name} — {self.classroom} ({self.subject})"
+
+
+class ExamResult(models.Model):
+    exam            = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name='results')
+    student         = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='exam_results')
+    marks_obtained  = models.DecimalField(max_digits=6, decimal_places=2, default=0)
+    grade_letter    = models.CharField(max_length=2, blank=True)
+    remarks         = models.TextField(blank=True)
+    graded_by       = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='graded_results')
+    created_at      = models.DateTimeField(auto_now_add=True)
+    updated_at      = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('exam', 'student')
+        ordering        = ['student']
+
+    def save(self, *args, **kwargs):
+        if self.exam_id and self.exam.total_marks:
+            pct = float(self.marks_obtained) / float(self.exam.total_marks) * 100
+            self.grade_letter = ('A' if pct >= 80 else 'B' if pct >= 65 else
+                                 'C' if pct >= 50 else 'D' if pct >= 40 else 'F')
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.student} — {self.exam.name}: {self.marks_obtained}/{self.exam.total_marks}"
+
+
+# ─────────────────────────────────────────────────────────────────
+# NOTIFICATION SYSTEM
+# ─────────────────────────────────────────────────────────────────
+
+class Notification(models.Model):
+    TYPE_CHOICES = [
+        ('info',    'Info'),
+        ('success', 'Success'),
+        ('warning', 'Warning'),
+        ('alert',   'Alert'),
+    ]
+    school          = models.ForeignKey(School, on_delete=models.CASCADE, null=True, blank=True, related_name='notifications')
+    title           = models.CharField(max_length=200)
+    body            = models.TextField()
+    notif_type      = models.CharField(max_length=10, choices=TYPE_CHOICES, default='info')
+    recipient_role  = models.CharField(max_length=20, default='all',
+                                       help_text='all | staff | students | parents')
+    recipient_user  = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                        related_name='personal_notifications',
+                                        help_text='If set, only this user sees the notification')
+    sender          = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='sent_notifications')
+    is_active       = models.BooleanField(default=True)
+    created_at      = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes  = [models.Index(fields=['school', '-created_at'])]
+
+    def __str__(self):
+        return f"[{self.notif_type.upper()}] {self.title}"
+
+
+class NotificationRead(models.Model):
+    notification = models.ForeignKey(Notification, on_delete=models.CASCADE, related_name='reads')
+    user         = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notification_reads')
+    read_at      = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('notification', 'user')
+
+    def __str__(self):
+        return f"{self.user} read {self.notification}"
+
+
+# ─────────────────────────────────────────────────────────────────
+# TIMETABLE
+# ─────────────────────────────────────────────────────────────────
+
+class TimetableSlot(models.Model):
+    DAY_CHOICES = [
+        (0, 'Monday'), (1, 'Tuesday'), (2, 'Wednesday'),
+        (3, 'Thursday'), (4, 'Friday'),
+    ]
+    school        = models.ForeignKey(School, on_delete=models.CASCADE, related_name='timetable_slots')
+    academic_year = models.ForeignKey(AcademicYear, on_delete=models.SET_NULL, null=True, blank=True, related_name='timetable_slots')
+    classroom     = models.ForeignKey(ClassRoom, on_delete=models.CASCADE, related_name='timetable_slots')
+    subject       = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='timetable_slots')
+    teacher       = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True, blank=True, related_name='timetable_slots')
+    day_of_week   = models.IntegerField(choices=DAY_CHOICES)
+    period_number = models.IntegerField(help_text='Period 1–8')
+    start_time    = models.TimeField(null=True, blank=True)
+    end_time      = models.TimeField(null=True, blank=True)
+    created_at    = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('classroom', 'day_of_week', 'period_number')
+        ordering        = ['classroom', 'day_of_week', 'period_number']
+
+    def __str__(self):
+        return f"{self.classroom} | Day {self.day_of_week} P{self.period_number} — {self.subject}"
+
+
+# ─────────────────────────────────────────────────────────────────
+# CLASS-SUBJECT ALLOCATION
+# ─────────────────────────────────────────────────────────────────
+
+class ClassSubject(models.Model):
+    """Which subjects a class offers in a given academic year (independent of teacher assignment)."""
+    classroom     = models.ForeignKey(ClassRoom, on_delete=models.CASCADE, related_name='class_subjects')
+    subject       = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='class_allocations')
+    academic_year = models.ForeignKey(AcademicYear, on_delete=models.CASCADE, related_name='class_subjects')
+    is_active     = models.BooleanField(default=True)
+    created_at    = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('classroom', 'subject', 'academic_year')
+        ordering        = ['classroom', 'subject__name']
+        verbose_name        = 'Class Subject'
+        verbose_name_plural = 'Class Subjects'
+
+    def __str__(self):
+        return f"{self.classroom.name} — {self.subject.name} ({self.academic_year.name})"
+
+
+# ─────────────────────────────────────────────────────────────────
+# GRADE MODIFICATION REQUESTS
+# ─────────────────────────────────────────────────────────────────
+
+class GradeModificationRequest(models.Model):
+    STATUS_CHOICES = [
+        ('pending',   'Pending Admin Review'),
+        ('approved',  'Approved'),
+        ('rejected',  'Rejected'),
+        ('withdrawn', 'Withdrawn'),
+    ]
+    grade          = models.ForeignKey(Grade, on_delete=models.CASCADE, related_name='modification_requests')
+    requested_by   = models.ForeignKey(User, on_delete=models.CASCADE, related_name='grade_mod_requests')
+    current_score  = models.DecimalField(max_digits=5, decimal_places=2)
+    proposed_score = models.DecimalField(max_digits=5, decimal_places=2)
+    reason         = models.TextField(help_text="Detailed reason for the modification request")
+    evidence_file  = models.FileField(upload_to='mod_evidence/', null=True, blank=True)
+    status         = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending', db_index=True)
+    reviewed_by    = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                       related_name='grade_mod_reviews')
+    review_reason  = models.TextField(blank=True)
+    created_at     = models.DateTimeField(auto_now_add=True, db_index=True)
+    reviewed_at    = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering            = ['-created_at']
+        verbose_name        = 'Grade Modification Request'
+        verbose_name_plural = 'Grade Modification Requests'
+
+    def __str__(self):
+        return f"ModRequest #{self.id} — {self.grade} [{self.status}]"
+
+
+# ─────────────────────────────────────────────────────────────────
+# USER SESSION TOKENS  (for logout-all-sessions)
+# ─────────────────────────────────────────────────────────────────
+
+class UserToken(models.Model):
+    """Tracks active login tokens so we can invalidate all sessions for a user."""
+    user       = models.ForeignKey(User, on_delete=models.CASCADE, related_name='active_tokens')
+    token      = models.CharField(max_length=200, unique=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_used  = models.DateTimeField(auto_now=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True)
+
+    class Meta:
+        ordering            = ['-created_at']
+        verbose_name        = 'User Token'
+        verbose_name_plural = 'User Tokens'
+
+    def __str__(self):
+        return f"{self.user.username} — token …{self.token[-8:]}"
+
+
+# ─────────────────────────────────────────────────────────────────
+# ROOMS  (physical spaces for timetabling)
+# ─────────────────────────────────────────────────────────────────
+
+class Room(models.Model):
+    ROOM_TYPES = [
+        ('classroom',   'Classroom'),
+        ('laboratory',  'Laboratory'),
+        ('library',     'Library'),
+        ('hall',        'Assembly Hall'),
+        ('gymnasium',   'Gymnasium'),
+        ('other',       'Other'),
+    ]
+    school      = models.ForeignKey(School, on_delete=models.CASCADE, related_name='rooms')
+    name        = models.CharField(max_length=100)
+    code        = models.CharField(max_length=20, blank=True)
+    room_type   = models.CharField(max_length=20, choices=ROOM_TYPES, default='classroom')
+    capacity    = models.PositiveIntegerField(default=30)
+    is_active   = models.BooleanField(default=True)
+    notes       = models.TextField(blank=True)
+    created_at  = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('school', 'name')
+        ordering = ['name']
+        verbose_name = 'Room'
+        verbose_name_plural = 'Rooms'
+
+    def __str__(self):
+        return f"{self.name} ({self.school.name})"
+
+
+# ─────────────────────────────────────────────────────────────────
+# GRADING SCHEME  (configurable grade boundaries per school)
+# ─────────────────────────────────────────────────────────────────
+
+class GradingScheme(models.Model):
+    school      = models.OneToOneField(School, on_delete=models.CASCADE, related_name='grading_scheme')
+    pass_mark   = models.PositiveSmallIntegerField(default=50, help_text="Minimum score to pass (out of 100)")
+    # JSON list of {letter, min, max, color, gpa} objects, ordered highest→lowest
+    boundaries  = models.JSONField(default=list, help_text="Grade boundary definitions")
+    updated_at  = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Grading Scheme'
+        verbose_name_plural = 'Grading Schemes'
+
+    def __str__(self):
+        return f"Grading scheme — {self.school.name}"
+
+    @classmethod
+    def default_boundaries(cls):
+        return [
+            {'letter': 'A+', 'min': 90, 'max': 100, 'color': '#22c55e', 'gpa': 4.0},
+            {'letter': 'A',  'min': 80, 'max': 89,  'color': '#4ade80', 'gpa': 4.0},
+            {'letter': 'B',  'min': 65, 'max': 79,  'color': '#3b82f6', 'gpa': 3.0},
+            {'letter': 'C',  'min': 50, 'max': 64,  'color': '#f59e0b', 'gpa': 2.0},
+            {'letter': 'D',  'min': 40, 'max': 49,  'color': '#f97316', 'gpa': 1.0},
+            {'letter': 'F',  'min': 0,  'max': 39,  'color': '#ef4444', 'gpa': 0.0},
+        ]
+>>>>>>> 5c35a02602b594f1606dd7154a3e035cf240658d

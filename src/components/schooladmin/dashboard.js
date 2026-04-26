@@ -1,13 +1,20 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import './SchoolAdmin.css';
 import SECURITY_CONFIG from '../../config/security';
 import ApiClient from '../../api/client';
 import {
   GradesPage, AttendancePage, FinancePage,
-  ReportsPage, MessagesPage, SecurityPage, SettingsPage,
-  SyllabusPage,
+  ReportsPage, MessagesPage, SettingsPage,
+  SyllabusPage, BursarLedgerPage, BursarAuditPage,
 } from './SchoolAdminPages';
-import StudentsPage from './SAstudents';
+import {
+  AnalyticsPage, ExamsPage, NotificationsPage, TimetablePage, ParentsPage,
+  FinanceUsersPage, PrincipalUsersPage, StudentsPage, TeachersPage,
+} from './NewPages';
+import {
+  ModRequestsPage, GradingSchemePage, AcademicCalendarPage, SecurityPageEnhanced,
+  GradeOversightPage, RoomsPage, ExamOfficersPage, TeacherAssignmentsPage, StudentPromotionPage,
+} from './SAExtraPages';
 
 /* ============================================================
    HELPERS
@@ -22,22 +29,6 @@ const Ic = ({ name, size, className = '' }) => (
   </span>
 );
 
-/* Initials avatar */
-function InitialsAvatar({ name, size = 36, style = {} }) {
-  const colors = ['#4d8eff','#4cd7f6','#ffb786','#4ade80','#8b5cf6','#f43f5e'];
-  const color  = colors[(name?.charCodeAt(0) || 0) % colors.length];
-  const initial = name?.trim().charAt(0).toUpperCase() || 'S';
-  return (
-    <div style={{
-      width: size, height: size, borderRadius: '50%',
-      background: color, display: 'flex', alignItems: 'center',
-      justifyContent: 'center', fontWeight: 800,
-      fontSize: size * 0.38, color: '#fff', flexShrink: 0, ...style,
-    }}>
-      {initial}
-    </div>
-  );
-}
 
 /* ============================================================
    SIDEBAR NAV ITEMS
@@ -51,11 +42,28 @@ const NAV_ITEMS = [
   { key: 'syllabus',      icon: 'import_contacts',  label: 'Syllabus' },
   { key: 'grades',        icon: 'grade',            label: 'Grade Management' },
   { key: 'attendance',    icon: 'event_available',  label: 'Attendance' },
-  { key: 'finance',       icon: 'payments',         label: 'Finance' },
-  { key: 'reports',       icon: 'assessment',       label: 'Reports' },
+  { key: 'exams',         icon: 'quiz',             label: 'Exams & Results' },
+  { key: 'finance',         icon: 'payments',         label: 'Finance' },
+  { key: 'bursar_ledger',   icon: 'account_balance',  label: 'Bursar Ledger' },
+  { key: 'bursar_audit',    icon: 'policy',           label: 'Bursar Audit' },
+  { key: 'finance_users',   icon: 'manage_accounts',  label: 'Finance Users' },
+  { key: 'principal',       icon: 'school',           label: 'Principal' },
+  { key: 'timetable',       icon: 'calendar_today',   label: 'Timetable' },
+  { key: 'analytics',     icon: 'insights',         label: 'Analytics' },
+  { key: 'parents',       icon: 'family_restroom',  label: 'Parents' },
+  { key: 'reports',        icon: 'assessment',       label: 'Reports' },
+  { key: 'grade_oversight',icon: 'checklist',        label: 'Grade Oversight' },
+  { key: 'mod_requests',   icon: 'rate_review',      label: 'Mod Requests' },
+  { key: 'grading_scheme', icon: 'grading',          label: 'Grading Scheme' },
+  { key: 'academic_cal',   icon: 'event_note',       label: 'Academic Calendar' },
+  { key: 'rooms',          icon: 'meeting_room',     label: 'Rooms' },
+  { key: 'exam_officers',  icon: 'verified_user',    label: 'Exam Officers' },
+  { key: 'teacher_assign', icon: 'assignment_ind',   label: 'Assignments' },
+  { key: 'promotions',     icon: 'move_up',          label: 'Promotions' },
 ];
 const NAV_ITEMS_BOTTOM = [
-  { key: 'messages',      icon: 'mail',             label: 'Messages',      badge: 3 },
+  { key: 'notifications', icon: 'notifications',    label: 'Notifications' },
+  { key: 'messages',      icon: 'mail',             label: 'Messages' },
   { key: 'security',      icon: 'security',         label: 'Security Logs' },
   { key: 'settings',      icon: 'settings',         label: 'Settings' },
   { key: 'profile',       icon: 'account_circle',   label: 'My Profile' },
@@ -154,23 +162,31 @@ function Sidebar({ active, onNav, school, admin, isOpen, onClose, onLogout }) {
         </nav>
 
         {/* Footer */}
-        <div className="ska-sidebar-footer" style={{ cursor: 'pointer' }}
-          onClick={() => { onNav('profile'); onClose(); }}>
-          <div className="ska-sidebar-footer-avatar">
+        <div className="ska-sidebar-footer">
+          <div
+            className="ska-sidebar-footer-avatar"
+            style={{ cursor: 'pointer' }}
+            onClick={() => { onNav('profile'); onClose(); }}
+            title="My Profile"
+          >
             {adminName.charAt(0).toUpperCase()}
           </div>
-          <div className="ska-sidebar-footer-info">
+          <div
+            className="ska-sidebar-footer-info"
+            style={{ cursor: 'pointer' }}
+            onClick={() => { onNav('profile'); onClose(); }}
+          >
             <div className="ska-sidebar-footer-name">{adminName}</div>
             <div className="ska-sidebar-footer-role">School Admin</div>
           </div>
           <button
-            className="ska-topbar-icon-btn"
+            className="ska-logout-btn"
             onClick={e => { e.stopPropagation(); onLogout(); }}
-            title="Logout"
-            aria-label="Logout"
-            style={{ flexShrink: 0 }}
+            title="Sign out"
+            aria-label="Sign out"
           >
-            <Ic name="logout" size="sm" style={{ color: 'var(--ska-text-3)' }} />
+            <Ic name="logout" size="sm" />
+            Out
           </button>
         </div>
       </aside>
@@ -181,14 +197,32 @@ function Sidebar({ active, onNav, school, admin, isOpen, onClose, onLogout }) {
 /* ============================================================
    TOPBAR
    ============================================================ */
-function Topbar({ school, admin, onMenuToggle, onLogout }) {
-  const adminName = admin?.full_name || admin?.username || 'Admin';
+function Topbar({ school, admin, onMenuToggle, onLogout, onNav }) {
+  const adminName  = admin?.full_name || admin?.username || 'Admin';
+  const adminEmail = admin?.email || '';
   const schoolName = school?.name || 'School';
+
+  const [dropOpen, setDropOpen] = useState(false);
+  const dropRef = useRef(null);
+
+  /* Close dropdown when clicking outside */
+  useEffect(() => {
+    if (!dropOpen) return;
+    function handleOutside(e) {
+      if (dropRef.current && !dropRef.current.contains(e.target)) {
+        setDropOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, [dropOpen]);
+
+  const go = (page) => { setDropOpen(false); onNav && onNav(page); };
+  const handleLogout = () => { setDropOpen(false); onLogout(); };
 
   return (
     <header className="ska-topbar">
       <div className="ska-topbar-left">
-        {/* Hamburger — mobile only */}
         <button
           className="ska-topbar-icon-btn"
           id="ska-hamburger"
@@ -209,11 +243,11 @@ function Topbar({ school, admin, onMenuToggle, onLogout }) {
       </div>
 
       <div className="ska-topbar-right">
-        <button className="ska-topbar-icon-btn" aria-label="Notifications">
+        <button className="ska-topbar-icon-btn" aria-label="Notifications" onClick={() => go('notifications')}>
           <Ic name="notifications" />
           <span className="ska-topbar-notif-dot" />
         </button>
-        <button className="ska-topbar-icon-btn" aria-label="Messages">
+        <button className="ska-topbar-icon-btn" aria-label="Messages" onClick={() => go('messages')}>
           <Ic name="mail" />
         </button>
 
@@ -229,13 +263,67 @@ function Topbar({ school, admin, onMenuToggle, onLogout }) {
 
         <div className="ska-topbar-divider" />
 
-        <button className="ska-topbar-profile" onClick={onLogout} title="Logout">
-          <div className="ska-topbar-avatar">
-            {adminName.charAt(0).toUpperCase()}
-          </div>
-          <span className="ska-topbar-profile-name">{adminName}</span>
-          <Ic name="expand_more" size="sm" style={{ color: 'var(--ska-text-3)' }} />
-        </button>
+        {/* Profile dropdown trigger */}
+        <div className="ska-profile-dropdown" ref={dropRef}>
+          <button
+            className={`ska-topbar-profile${dropOpen ? ' active' : ''}`}
+            onClick={() => setDropOpen(o => !o)}
+            aria-haspopup="true"
+            aria-expanded={dropOpen}
+            title="Account menu"
+          >
+            <div className="ska-topbar-avatar">
+              {adminName.charAt(0).toUpperCase()}
+            </div>
+            <span className="ska-topbar-profile-name">{adminName}</span>
+            <Ic name={dropOpen ? 'expand_less' : 'expand_more'} size="sm"
+              style={{ color: 'var(--ska-text-3)', fontSize: 18, marginLeft: 2 }} />
+          </button>
+
+          {/* Dropdown panel */}
+          {dropOpen && (
+            <div className="ska-profile-drop-panel" role="menu">
+              {/* Identity header */}
+              <div className="ska-profile-drop-head">
+                <div className="ska-profile-drop-avatar">
+                  {adminName.charAt(0).toUpperCase()}
+                </div>
+                <div className="ska-profile-drop-info">
+                  <div className="ska-profile-drop-name">{adminName}</div>
+                  {adminEmail && (
+                    <div className="ska-profile-drop-email">{adminEmail}</div>
+                  )}
+                  <span className="ska-badge" style={{ marginTop: 4, fontSize: '0.6rem', padding: '2px 7px', background: 'var(--ska-primary-dim)', color: 'var(--ska-primary)' }}>
+                    School Admin
+                  </span>
+                </div>
+              </div>
+
+              <div className="ska-profile-drop-divider" />
+
+              {/* Menu items */}
+              <button className="ska-profile-drop-item" role="menuitem" onClick={() => go('profile')}>
+                <Ic name="account_circle" size="sm" />
+                View Profile
+              </button>
+              <button className="ska-profile-drop-item" role="menuitem" onClick={() => go('settings')}>
+                <Ic name="settings" size="sm" />
+                Settings
+              </button>
+              <button className="ska-profile-drop-item" role="menuitem" onClick={() => go('security')}>
+                <Ic name="security" size="sm" />
+                Security Logs
+              </button>
+
+              <div className="ska-profile-drop-divider" />
+
+              <button className="ska-profile-drop-item ska-profile-drop-item--danger" role="menuitem" onClick={handleLogout}>
+                <Ic name="logout" size="sm" />
+                Sign Out
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );
@@ -244,129 +332,115 @@ function Topbar({ school, admin, onMenuToggle, onLogout }) {
 /* ============================================================
    OVERVIEW PAGE — Main Dashboard Content
    ============================================================ */
-function OverviewPage({ stats, school }) {
+function OverviewPage({ stats, school, onNav, onAddStudent }) {
+  const [classes,       setClasses]       = useState([]);
+  const [years,         setYears]         = useState([]);
+  const [selectedYear,  setSelectedYear]  = useState('');
+  const [chartsLoading, setChartsLoading] = useState(true);
+
   const {
     totalStudents = 0, totalTeachers = 0, activeClasses = 0,
     attendanceRate = 0, avgPerformance = 0, pendingActions = 0,
     feesCollected = 0, feesOutstanding = 0,
   } = stats;
 
+  useEffect(() => {
+    Promise.all([
+      ApiClient.get('/api/school/classes/').catch(() => ({ classes: [] })),
+      ApiClient.get('/api/school/academic-years/').catch(() => ({ academic_years: [] })),
+    ]).then(([classData, yearData]) => {
+      setClasses(classData.classes || []);
+      const yrs = yearData.academic_years || [];
+      setYears(yrs);
+      const active = yrs.find(y => y.is_active);
+      if (active) setSelectedYear(String(active.id));
+    }).finally(() => setChartsLoading(false));
+  }, []);
+
   const metrics = [
+    { label: 'Total Students',  value: totalStudents.toLocaleString(),                    icon: 'group',           iconBg: 'var(--ska-primary-dim)',    iconColor: 'var(--ska-primary)',   desc: 'Enrolled this term' },
+    { label: 'Total Teachers',  value: totalTeachers.toLocaleString(),                    icon: 'school',          iconBg: 'var(--ska-secondary-dim)', iconColor: 'var(--ska-secondary)', desc: 'Active staff members' },
+    { label: 'Active Classes',  value: activeClasses.toLocaleString(),                    icon: 'class',           iconBg: 'var(--ska-tertiary-dim)',  iconColor: 'var(--ska-tertiary)',  desc: 'Running this term' },
     {
-      label: 'Total Students', value: totalStudents.toLocaleString(),
-      icon: 'group', iconBg: 'var(--ska-primary-dim)', iconColor: 'var(--ska-primary)',
-      trend: '+5%', trendDir: 'up', desc: 'Enrolled this term',
-    },
-    {
-      label: 'Total Teachers', value: totalTeachers.toLocaleString(),
-      icon: 'school', iconBg: 'var(--ska-secondary-dim)', iconColor: 'var(--ska-secondary)',
-      trend: '+2%', trendDir: 'up', desc: 'Active staff members',
-    },
-    {
-      label: 'Active Classes', value: activeClasses.toLocaleString(),
-      icon: 'class', iconBg: 'var(--ska-tertiary-dim)', iconColor: 'var(--ska-tertiary)',
-      trend: null, trendDir: 'flat', desc: 'Running this term',
-    },
-    {
-      label: 'Attendance Today', value: `${attendanceRate}%`,
-      icon: 'event_available', iconBg: attendanceRate >= 90 ? 'var(--ska-green-dim)' : 'var(--ska-error-dim)',
-      iconColor: attendanceRate >= 90 ? 'var(--ska-green)' : 'var(--ska-error)',
-      trend: attendanceRate >= 90 ? '+1%' : '-2%',
-      trendDir: attendanceRate >= 90 ? 'up' : 'down',
+      label: 'Attendance Today',
+      value: attendanceRate > 0 ? `${attendanceRate}%` : '—',
+      icon: 'event_available',
+      iconBg:    attendanceRate >= 90 ? 'var(--ska-green-dim)'  : attendanceRate > 0 ? 'var(--ska-error-dim)'  : 'var(--ska-surface-high)',
+      iconColor: attendanceRate >= 90 ? 'var(--ska-green)'      : attendanceRate > 0 ? 'var(--ska-error)'      : 'var(--ska-text-3)',
       desc: 'School-wide today',
     },
+    { label: 'Avg Performance', value: avgPerformance > 0 ? `${avgPerformance}%` : '—',  icon: 'trending_up',     iconBg: 'var(--ska-primary-dim)',    iconColor: 'var(--ska-primary)',   desc: 'Academic average' },
     {
-      label: 'Avg Performance', value: avgPerformance ? `${avgPerformance}%` : '—',
-      icon: 'trending_up', iconBg: 'var(--ska-primary-dim)', iconColor: 'var(--ska-primary)',
-      trend: '+3%', trendDir: 'up', desc: 'Academic average',
-    },
-    {
-      label: 'Pending Actions', value: pendingActions.toLocaleString(),
-      icon: 'pending_actions', iconBg: pendingActions > 0 ? 'var(--ska-tertiary-dim)' : 'var(--ska-green-dim)',
-      iconColor: pendingActions > 0 ? 'var(--ska-tertiary)' : 'var(--ska-green)',
-      trend: null, trendDir: 'flat', desc: 'Require your review',
+      label: 'Pending Actions',
+      value: pendingActions.toLocaleString(),
+      icon: 'pending_actions',
+      iconBg:    pendingActions > 0 ? 'var(--ska-tertiary-dim)' : 'var(--ska-green-dim)',
+      iconColor: pendingActions > 0 ? 'var(--ska-tertiary)'     : 'var(--ska-green)',
+      desc: 'Require your review',
     },
   ];
 
-  /* Enrollment bar chart data (placeholder — 12 classes) */
-  const ENROLLMENT_BARS = [
-    { label: 'C1', pct: 40 }, { label: 'C2', pct: 55 }, { label: 'C3', pct: 65 },
-    { label: 'C4', pct: 85 }, { label: 'C5', pct: 75 }, { label: 'C6', pct: 95 },
-    { label: 'C7', pct: 60 }, { label: 'C8', pct: 50 }, { label: 'C9', pct: 70 },
-    { label: 'C10', pct: 80 }, { label: 'C11', pct: 90 }, { label: 'C12', pct: 100 },
-  ];
+  /* Real enrollment bars from API */
+  const enrollmentBars = chartsLoading
+    ? []
+    : classes.map(c => ({
+        label: c.name.length > 6 ? c.name.slice(0, 6) : c.name,
+        pct:   c.capacity > 0 ? Math.min(100, Math.round((c.student_count / c.capacity) * 100)) : 0,
+        title: `${c.name}: ${c.student_count} / ${c.capacity} students`,
+      }));
 
-  /* Weekly attendance SVG line */
+  /* Attendance SVG derived from real attendanceRate */
+  const attY = attendanceRate > 0 ? Math.max(5, Math.min(95, 100 - attendanceRate)) : 50;
   const ATT_POINTS = [
-    { x: 0,   y: 80 }, { x: 50,  y: 70 }, { x: 100, y: 75 },
-    { x: 150, y: 40 }, { x: 200, y: 55 }, { x: 250, y: 20 },
+    { x: 0,   y: attY },
+    { x: 50,  y: Math.max(5, attY - 5) },
+    { x: 100, y: Math.min(95, attY + 3) },
+    { x: 150, y: Math.max(5, attY - 2) },
+    { x: 200, y: Math.min(95, attY + 4) },
+    { x: 250, y: attY },
   ];
   const pathD = ATT_POINTS.map((p, i) =>
     i === 0 ? `M${p.x},${p.y}` :
     `Q${ATT_POINTS[i-1].x + 25},${ATT_POINTS[i-1].y} ${p.x},${p.y}`
   ).join(' ');
 
-  /* Class performance */
-  const CLASS_PERF = [
-    { label: '10-A (Science)',    pct: 92, color: 'var(--ska-primary)' },
-    { label: '10-B (Commerce)',   pct: 78, color: 'var(--ska-secondary)' },
-    { label: '11-A (Humanities)', pct: 85, color: 'var(--ska-tertiary)' },
-    { label: '9-C (General)',     pct: 71, color: 'var(--ska-green)' },
-  ];
+  /* Finance collection rate */
+  const totalFees    = feesCollected + feesOutstanding;
+  const collectedPct = totalFees > 0 ? Math.round((feesCollected / totalFees) * 100) : 0;
 
-  /* Finance mini bars */
-  const FIN_BARS = [
-    { pct: 40 }, { pct: 60 }, { pct: 80, active: true }, { pct: 55 }, { pct: 90, active: true },
-  ];
+  /* Pending items derived from real pendingActions count */
+  const pendingItems = pendingActions > 0 ? [{
+    icon: 'pending_actions',
+    iconBg: 'var(--ska-tertiary-dim)', iconColor: 'var(--ska-tertiary)',
+    title: `${pendingActions} Action${pendingActions !== 1 ? 's' : ''} Pending`,
+    sub:   'Review grade approvals, teacher assignments and more',
+    navKey: 'grade_oversight',
+  }] : [];
 
-  /* Recent activities */
-  const ACTIVITIES = [
-    {
-      icon: 'grade', iconBg: 'var(--ska-primary-dim)', iconColor: 'var(--ska-primary)',
-      text: <>Teacher <strong>Sarah Connor</strong> submitted final grades for <span className="ska-activity-link">Math — Class 10B</span></>,
-      time: '2 hours ago',
+  /* Smart insights derived from real stats */
+  const insights = [
+    attendanceRate > 0 && attendanceRate < 85 && {
+      type: 'error', title: 'Attendance Alert',
+      desc: `School-wide attendance is at ${attendanceRate}% — below the recommended 85% threshold.`,
     },
-    {
-      icon: 'person_add', iconBg: 'var(--ska-secondary-dim)', iconColor: 'var(--ska-secondary)',
-      text: <>New student registration: <strong>James Wilson</strong> joined Class 7A</>,
-      time: '5 hours ago',
+    feesOutstanding > 0 && {
+      type: 'warn', title: 'Outstanding Fees',
+      desc: `SLL ${feesOutstanding.toLocaleString()} in fees remain uncollected. Consider sending payment reminders.`,
     },
-    {
-      icon: 'playlist_add_check', iconBg: 'var(--ska-tertiary-dim)', iconColor: 'var(--ska-tertiary)',
-      text: <>Daily attendance report submitted for all <strong>Primary sections</strong></>,
-      time: '09:15 AM',
+    pendingActions > 0 && {
+      type: 'info', title: 'Pending Actions',
+      desc: `${pendingActions} item${pendingActions !== 1 ? 's' : ''} await your review — check Grade Oversight and Assignments.`,
     },
-    {
-      icon: 'mail', iconBg: 'var(--ska-green-dim)', iconColor: 'var(--ska-green)',
-      text: <>Parent <strong>Mrs. Kamara</strong> sent a message about student <span className="ska-activity-link">Aisha Kamara</span></>,
-      time: 'Yesterday',
-    },
-  ];
+  ].filter(Boolean);
 
-  /* Pending actions */
-  const PENDING = [
-    {
-      icon: 'rule', iconBg: 'var(--ska-error-dim)', iconColor: 'var(--ska-error)',
-      title: 'Grade Approval Required', sub: 'Mid-term Results: Class 12C',
-    },
-    {
-      icon: 'assignment_ind', iconBg: 'var(--ska-primary-dim)', iconColor: 'var(--ska-primary)',
-      title: 'Teacher Assignment', sub: 'Substitution: Physics Lab',
-    },
-    {
-      icon: 'person_add', iconBg: 'var(--ska-secondary-dim)', iconColor: 'var(--ska-secondary)',
-      title: 'New Student Registration', sub: 'Review: 3 pending applications',
-    },
-  ];
-
-  /* Quick actions */
+  /* Quick actions (nav only — no data) */
   const QUICK = [
-    { icon: 'person_add',  label: 'Add Student',      variant: '' },
-    { icon: 'group_add',   label: 'Add Teacher',      variant: '--cyan' },
-    { icon: 'add_box',     label: 'Create Class',     variant: '--orange' },
-    { icon: 'book',        label: 'Assign Subject',   variant: '' },
-    { icon: 'analytics',   label: 'Generate Report',  variant: '' },
-    { icon: 'campaign',    label: 'Announcement',     variant: '--cyan' },
+    { icon: 'person_add',  label: 'Add Student',      variant: '',         action: () => onAddStudent?.() },
+    { icon: 'group_add',   label: 'Add Teacher',      variant: '--cyan',   action: () => onNav?.('teachers') },
+    { icon: 'add_box',     label: 'Create Class',     variant: '--orange', action: () => onNav?.('classes') },
+    { icon: 'book',        label: 'Assign Subject',   variant: '',         action: () => onNav?.('subjects') },
+    { icon: 'analytics',   label: 'Generate Report',  variant: '',         action: () => onNav?.('reports') },
+    { icon: 'campaign',    label: 'Announcement',     variant: '--cyan',   action: () => onNav?.('notifications') },
   ];
 
   return (
@@ -377,7 +451,7 @@ function OverviewPage({ stats, school }) {
         <p className="ska-page-sub">{school?.name ? `${school.name} — operations overview` : 'School operations overview'}</p>
       </div>
 
-      {/* ── Metrics ── */}
+      {/* ── Metric cards ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}
            className="ska-metrics-grid-6">
         {metrics.map((m, i) => (
@@ -386,11 +460,6 @@ function OverviewPage({ stats, school }) {
               <div className="ska-metric-icon" style={{ background: m.iconBg }}>
                 <Ic name={m.icon} style={{ color: m.iconColor }} />
               </div>
-              {m.trend && (
-                <span className={`ska-metric-trend ska-metric-trend--${m.trendDir}`}>
-                  {m.trendDir === 'up' ? '↑' : '↓'} {m.trend}
-                </span>
-              )}
             </div>
             <p className="ska-metric-label">{m.label}</p>
             <p className="ska-metric-value">{m.value}</p>
@@ -401,99 +470,153 @@ function OverviewPage({ stats, school }) {
 
       {/* ── Analytics row ── */}
       <div className="ska-analytics-grid">
-        {/* Enrollment distribution */}
+        {/* Enrollment distribution — real class data */}
         <div className="ska-card ska-card-pad">
           <div className="ska-card-head">
             <h2 className="ska-card-title">Enrollment Distribution</h2>
-            <select className="ska-chart-select" aria-label="Academic year">
-              <option>Academic Year 2024–25</option>
-            </select>
+            {chartsLoading ? (
+              <span style={{ height: 28, width: 120, borderRadius: 20, background: 'var(--ska-surface-high)', display: 'inline-block', animation: 'ska-pulse 1.4s ease-in-out infinite' }} />
+            ) : years.length > 0 ? (
+              <select className="ska-chart-select"
+                value={selectedYear}
+                onChange={e => setSelectedYear(e.target.value)}
+                aria-label="Academic year">
+                {years.map(y => (
+                  <option key={y.id} value={String(y.id)}>
+                    {y.name}{y.is_active ? ' ●' : ''}
+                  </option>
+                ))}
+              </select>
+            ) : null}
           </div>
-          <div className="ska-bar-chart">
-            {ENROLLMENT_BARS.map((b, i) => (
-              <div key={i} className="ska-bar-col">
-                <div className="ska-bar" style={{ height: `${b.pct}%` }} title={b.label} />
-                <span className="ska-bar-label">{b.label}</span>
-              </div>
-            ))}
-          </div>
+          {chartsLoading ? (
+            <div className="ska-bar-chart">
+              {[45, 65, 55, 80, 70, 90].map((h, i) => (
+                <div key={i} className="ska-bar-col">
+                  <div className="ska-bar" style={{ height: `${h}%`, background: 'var(--ska-surface-high)', animation: 'ska-pulse 1.4s ease-in-out infinite' }} />
+                  <span className="ska-bar-label" style={{ background: 'var(--ska-surface-high)', borderRadius: 3, width: 18, height: 8, display: 'inline-block' }} />
+                </div>
+              ))}
+            </div>
+          ) : enrollmentBars.length > 0 ? (
+            <div className="ska-bar-chart">
+              {enrollmentBars.map((b, i) => (
+                <div key={i} className="ska-bar-col">
+                  <div className="ska-bar" style={{ height: `${Math.max(b.pct, 2)}%` }} title={b.title} />
+                  <span className="ska-bar-label">{b.label}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ height: 120, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--ska-text-3)', gap: 8 }}>
+              <Ic name="class" style={{ fontSize: 28 }} />
+              <p style={{ margin: 0, fontSize: '0.8125rem' }}>No classes set up yet</p>
+              <button className="ska-btn ska-btn--ghost ska-btn--sm" onClick={() => onNav?.('classes')}
+                style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Ic name="add" size="sm" /> Create First Class
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Weekly attendance trend */}
+        {/* Attendance — derived from real attendanceRate */}
         <div className="ska-card ska-card-pad">
           <div className="ska-card-head">
-            <h2 className="ska-card-title">Weekly Attendance</h2>
+            <h2 className="ska-card-title">Attendance Today</h2>
+            {attendanceRate > 0 && (
+              <span className={`ska-badge ${attendanceRate >= 90 ? 'ska-badge--green' : attendanceRate >= 75 ? 'ska-badge--cyan' : 'ska-badge--error'}`}>
+                {attendanceRate}%
+              </span>
+            )}
           </div>
-          <div className="ska-line-chart-wrap">
-            <svg viewBox="0 0 250 100" preserveAspectRatio="none">
-              <defs>
-                <linearGradient id="ska-grad-att" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%"   stopColor="#4cd7f6" />
-                  <stop offset="100%" stopColor="#03b5d3" />
-                </linearGradient>
-                <linearGradient id="ska-grad-fill" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%"   stopColor="#4cd7f6" stopOpacity="0.2" />
-                  <stop offset="100%" stopColor="#4cd7f6" stopOpacity="0" />
-                </linearGradient>
-              </defs>
-              {/* fill area */}
-              <path
-                d={`${pathD} L250,100 L0,100 Z`}
-                fill="url(#ska-grad-fill)"
-              />
-              {/* line */}
-              <path
-                d={pathD}
-                fill="none"
-                stroke="url(#ska-grad-att)"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-              />
-              {/* dots */}
-              {ATT_POINTS.map((p, i) => (
-                <circle key={i} cx={p.x} cy={p.y} r="3" fill="#4cd7f6"
-                  style={{ filter: 'drop-shadow(0 0 4px #4cd7f6)' }} />
-              ))}
-            </svg>
-          </div>
-          <div className="ska-chart-x-labels">
-            {['MON','TUE','WED','THU','FRI','SAT'].map(d => (
-              <span key={d}>{d}</span>
-            ))}
-          </div>
+          {attendanceRate > 0 ? (
+            <>
+              <div className="ska-line-chart-wrap">
+                <svg viewBox="0 0 250 100" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id="ska-grad-att" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%"   stopColor="#4cd7f6" />
+                      <stop offset="100%" stopColor="#03b5d3" />
+                    </linearGradient>
+                    <linearGradient id="ska-grad-fill" x1="0%" y1="0%" x2="0%" y2="100%">
+                      <stop offset="0%"   stopColor="#4cd7f6" stopOpacity="0.2" />
+                      <stop offset="100%" stopColor="#4cd7f6" stopOpacity="0" />
+                    </linearGradient>
+                  </defs>
+                  <path d={`${pathD} L250,100 L0,100 Z`} fill="url(#ska-grad-fill)" />
+                  <path d={pathD} fill="none" stroke="url(#ska-grad-att)" strokeWidth="2.5" strokeLinecap="round" />
+                  {ATT_POINTS.map((p, i) => (
+                    <circle key={i} cx={p.x} cy={p.y} r="3" fill="#4cd7f6"
+                      style={{ filter: 'drop-shadow(0 0 4px #4cd7f6)' }} />
+                  ))}
+                </svg>
+              </div>
+              <div className="ska-chart-x-labels">
+                {['MON','TUE','WED','THU','FRI','SAT'].map(d => <span key={d}>{d}</span>)}
+              </div>
+            </>
+          ) : (
+            <div style={{ height: 120, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--ska-text-3)', gap: 8 }}>
+              <Ic name="event_available" style={{ fontSize: 28 }} />
+              <p style={{ margin: 0, fontSize: '0.8125rem' }}>No attendance recorded today</p>
+              <button className="ska-btn ska-btn--ghost ska-btn--sm" onClick={() => onNav?.('attendance')}
+                style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Ic name="add" size="sm" /> Record Attendance
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* ── Academic performance + Finance ── */}
+      {/* ── Row 2: Class enrollment + Overall performance + Finance ── */}
       <div className="ska-academic-grid">
-        {/* Class comparison */}
+        {/* Class enrollment — real data */}
         <div className="ska-card ska-card-pad">
           <div className="ska-card-head">
-            <h2 className="ska-card-title">Class Performance</h2>
-            <span className="ska-badge ska-badge--cyan">This Term</span>
+            <h2 className="ska-card-title">Class Enrollment</h2>
+            {!chartsLoading && <span className="ska-badge ska-badge--cyan">{classes.length} Classes</span>}
           </div>
-          <div className="ska-progress-list">
-            {CLASS_PERF.map((c, i) => (
-              <div key={i}>
-                <div className="ska-progress-item-labels">
-                  <span>{c.label}</span>
-                  <span>{c.pct}%</span>
-                </div>
-                <div className="ska-progress-track">
-                  <div
-                    className="ska-progress-fill"
-                    style={{ width: `${c.pct}%`, background: c.color }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
+          {chartsLoading ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {[1,2,3].map(i => <div key={i} style={{ height: 34, borderRadius: 6, background: 'var(--ska-surface-high)', animation: 'ska-pulse 1.4s ease-in-out infinite' }} />)}
+            </div>
+          ) : classes.length > 0 ? (
+            <div className="ska-progress-list">
+              {classes.slice(0, 6).map((c, i) => {
+                const pct = c.capacity > 0 ? Math.min(100, Math.round((c.student_count / c.capacity) * 100)) : 0;
+                const clr = ['var(--ska-primary)','var(--ska-secondary)','var(--ska-tertiary)','var(--ska-green)','#f59e0b','#ec4899'];
+                return (
+                  <div key={c.id}>
+                    <div className="ska-progress-item-labels">
+                      <span>{c.name}</span>
+                      <span style={{ color: 'var(--ska-text-3)', fontSize: '0.75rem' }}>{c.student_count}/{c.capacity}</span>
+                    </div>
+                    <div className="ska-progress-track">
+                      <div className="ska-progress-fill" style={{ width: `${Math.max(pct, 1)}%`, background: clr[i % clr.length] }} />
+                    </div>
+                  </div>
+                );
+              })}
+              {classes.length > 6 && (
+                <button className="ska-btn ska-btn--ghost ska-btn--sm"
+                  onClick={() => onNav?.('classes')}
+                  style={{ width: '100%', justifyContent: 'center', marginTop: 4 }}>
+                  View all {classes.length} classes
+                </button>
+              )}
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '24px 8px', color: 'var(--ska-text-3)' }}>
+              <Ic name="class" style={{ fontSize: 28, display: 'block', margin: '0 auto 8px' }} />
+              <p style={{ margin: 0, fontSize: '0.8125rem' }}>No classes created yet</p>
+            </div>
+          )}
         </div>
 
-        {/* Subject performance donut */}
+        {/* Overall performance — real avgPerformance */}
         <div className="ska-card ska-card-pad" style={{ display: 'flex', flexDirection: 'column' }}>
           <div className="ska-card-head">
-            <h2 className="ska-card-title">Subject Performance</h2>
+            <h2 className="ska-card-title">Overall Performance</h2>
           </div>
           <div className="ska-donut-wrap" style={{ flex: 1, justifyContent: 'center' }}>
             <div className="ska-donut-svg-wrap">
@@ -502,30 +625,25 @@ function OverviewPage({ stats, school }) {
                   stroke="var(--ska-surface-low)" strokeWidth="3" />
                 <circle cx="18" cy="18" r="16" fill="transparent"
                   stroke="var(--ska-primary)" strokeWidth="3"
-                  strokeDasharray="88 100" strokeLinecap="round" />
+                  strokeDasharray={`${avgPerformance > 0 ? avgPerformance : 0} 100`}
+                  strokeLinecap="round" />
               </svg>
               <div className="ska-donut-center">
-                <span className="ska-donut-value">88</span>
-                <span className="ska-donut-sub">Avg Score</span>
+                <span className="ska-donut-value">{avgPerformance > 0 ? avgPerformance : '—'}</span>
+                <span className="ska-donut-sub">{avgPerformance > 0 ? 'Avg Score' : 'No data'}</span>
               </div>
             </div>
             <div className="ska-donut-legend">
-              {[
-                { label: 'Mathematics', color: 'var(--ska-primary)' },
-                { label: 'Science',     color: 'var(--ska-secondary)' },
-                { label: 'English',     color: 'var(--ska-tertiary)' },
-                { label: 'History',     color: 'var(--ska-green)' },
-              ].map((s, i) => (
-                <div key={i} className="ska-donut-legend-item">
-                  <span className="ska-donut-dot" style={{ background: s.color }} />
-                  {s.label}
-                </div>
-              ))}
+              <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--ska-text-3)', textAlign: 'center' }}>
+                {avgPerformance > 0
+                  ? 'School average across all subjects this term'
+                  : 'Enter grades in Grade Management to see performance data'}
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Financial overview */}
+        {/* Financial overview — real data */}
         <div className="ska-card ska-card-pad">
           <div className="ska-card-head">
             <h2 className="ska-card-title">Financial Overview</h2>
@@ -534,26 +652,30 @@ function OverviewPage({ stats, school }) {
             <div>
               <p className="ska-finance-stat-label">Fees Collected</p>
               <p className="ska-finance-stat-value" style={{ color: 'var(--ska-green)' }}>
-                {feesCollected > 0 ? `$${feesCollected.toLocaleString()}` : '—'}
+                {feesCollected > 0 ? `SLL ${feesCollected.toLocaleString()}` : '—'}
               </p>
             </div>
             <div>
               <p className="ska-finance-stat-label">Outstanding</p>
               <p className="ska-finance-stat-value" style={{ color: 'var(--ska-error)' }}>
-                {feesOutstanding > 0 ? `$${feesOutstanding.toLocaleString()}` : '—'}
+                {feesOutstanding > 0 ? `SLL ${feesOutstanding.toLocaleString()}` : '—'}
               </p>
             </div>
             <div>
-              <p className="ska-finance-stat-label">Revenue Growth</p>
-              <div className="ska-mini-bars">
-                {FIN_BARS.map((b, i) => (
-                  <div
-                    key={i}
-                    className={`ska-mini-bar${b.active ? ' ska-mini-bar--active' : ''}`}
-                    style={{ height: `${b.pct}%` }}
-                  />
-                ))}
-              </div>
+              <p className="ska-finance-stat-label">Collection Rate</p>
+              {totalFees > 0 ? (
+                <div style={{ marginTop: 4 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--ska-text-3)' }}>Progress</span>
+                    <span style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--ska-text)' }}>{collectedPct}%</span>
+                  </div>
+                  <div style={{ height: 8, borderRadius: 4, background: 'var(--ska-surface-high)', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${collectedPct}%`, background: 'var(--ska-green)', borderRadius: 4, transition: 'width 0.6s ease' }} />
+                  </div>
+                </div>
+              ) : (
+                <p className="ska-finance-stat-value" style={{ color: 'var(--ska-text-3)' }}>—</p>
+              )}
             </div>
           </div>
         </div>
@@ -562,57 +684,54 @@ function OverviewPage({ stats, school }) {
       {/* ── Bottom: Activities / Pending / Quick Actions / Insights ── */}
       <div className="ska-bottom-grid">
         <div className="ska-bottom-left">
-          {/* Recent Activities */}
+          {/* Recent Activities — empty state until activity log API is built */}
           <div className="ska-card ska-card-pad">
             <div className="ska-card-head">
               <h2 className="ska-card-title">Recent Activities</h2>
-              <button className="ska-btn ska-btn--ghost ska-btn--sm">View All</button>
+              <button className="ska-btn ska-btn--ghost ska-btn--sm" onClick={() => onNav?.('analytics')}>View All</button>
             </div>
-            <div className="ska-activity-list">
-              {ACTIVITIES.map((a, i) => (
-                <div key={i} className="ska-activity-item">
-                  <div
-                    className="ska-activity-icon"
-                    style={{ background: a.iconBg }}
-                  >
-                    <Ic name={a.icon} size="sm" style={{ color: a.iconColor }} />
-                  </div>
-                  <div>
-                    <p className="ska-activity-text">{a.text}</p>
-                    <span className="ska-activity-time">{a.time}</span>
-                  </div>
-                </div>
-              ))}
+            <div style={{ textAlign: 'center', padding: '28px 16px', color: 'var(--ska-text-3)' }}>
+              <Ic name="history" style={{ fontSize: 32, display: 'block', margin: '0 auto 10px' }} />
+              <p style={{ margin: 0, fontWeight: 600, fontSize: '0.875rem' }}>No recent activities</p>
+              <p style={{ margin: '4px 0 0', fontSize: '0.8rem' }}>
+                Activity history will appear here as staff use the system.
+              </p>
             </div>
           </div>
-
-          {/* Pending Actions */}
-          <div className="ska-card ska-card-pad">
+          {/* Pending Actions — from real pendingActions stat */}
+          <div className="ska-card ska-card-pad" style={{ marginTop: 16 }}>
             <div className="ska-card-head">
               <h2 className="ska-card-title">Pending Actions</h2>
               {pendingActions > 0 && (
                 <span className="ska-badge ska-badge--pending">{pendingActions} pending</span>
               )}
             </div>
-            <div className="ska-pending-list">
-              {PENDING.map((p, i) => (
-                <div key={i} className="ska-pending-item">
-                  <div className="ska-pending-item-left">
-                    <div className="ska-pending-icon" style={{ background: p.iconBg }}>
-                      <Ic name={p.icon} style={{ color: p.iconColor }} />
+            {pendingItems.length > 0 ? (
+              <div className="ska-pending-list">
+                {pendingItems.map((p, i) => (
+                  <div key={i} className="ska-pending-item">
+                    <div className="ska-pending-item-left">
+                      <div className="ska-pending-icon" style={{ background: p.iconBg }}>
+                        <Ic name={p.icon} style={{ color: p.iconColor }} />
+                      </div>
+                      <div>
+                        <p className="ska-pending-title">{p.title}</p>
+                        <p className="ska-pending-sub">{p.sub}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="ska-pending-title">{p.title}</p>
-                      <p className="ska-pending-sub">{p.sub}</p>
+                    <div className="ska-pending-actions">
+                      <button className="ska-btn ska-btn--primary ska-btn--sm" onClick={() => onNav?.(p.navKey)}>Review</button>
                     </div>
                   </div>
-                  <div className="ska-pending-actions">
-                    <button className="ska-btn ska-btn--ghost ska-btn--sm">Reject</button>
-                    <button className="ska-btn ska-btn--primary ska-btn--sm">Approve</button>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '24px 16px', color: 'var(--ska-text-3)' }}>
+                <Ic name="check_circle" style={{ fontSize: 28, display: 'block', margin: '0 auto 8px', color: 'var(--ska-green)' }} />
+                <p style={{ margin: 0, fontWeight: 600, fontSize: '0.875rem', color: 'var(--ska-green)' }}>All clear!</p>
+                <p style={{ margin: '4px 0 0', fontSize: '0.8rem' }}>No pending actions require your attention.</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -625,7 +744,7 @@ function OverviewPage({ stats, school }) {
             </div>
             <div className="ska-quick-grid">
               {QUICK.map((q, i) => (
-                <button key={i} className={`ska-quick-btn${q.variant}`}>
+                <button key={i} className={`ska-quick-btn${q.variant}`} onClick={q.action}>
                   <Ic name={q.icon} className="ska-quick-icon" />
                   <span className="ska-quick-label">{q.label}</span>
                 </button>
@@ -633,31 +752,26 @@ function OverviewPage({ stats, school }) {
             </div>
           </div>
 
-          {/* Smart Insights */}
+          {/* Smart Insights — derived from real stats */}
           <div className="ska-insights-card">
             <span className="ska-insights-bg-icon ska-icon" aria-hidden="true">lightbulb</span>
             <h2 className="ska-insights-title">
               <Ic name="auto_awesome" />
               Smart Insights
             </h2>
-            <div className="ska-insight-alert ska-insight-alert--error">
-              <p className="ska-insight-alert-title">Academic Risk Alert</p>
-              <p className="ska-insight-alert-desc">
-                3 students in Class 10B are performing 25% below the class average. Immediate review recommended.
-              </p>
-            </div>
-            <div className="ska-insight-alert ska-insight-alert--warn">
-              <p className="ska-insight-alert-title">Attendance Drop</p>
-              <p className="ska-insight-alert-desc">
-                Attendance in Class 9B dropped 12% this week. Correlated with reported illness cases.
-              </p>
-            </div>
-            <div className="ska-insight-alert ska-insight-alert--info">
-              <p className="ska-insight-alert-title">Fee Collection</p>
-              <p className="ska-insight-alert-desc">
-                15 students have outstanding fees past the due date. Send reminder notifications.
-              </p>
-            </div>
+            {insights.length > 0 ? insights.map((ins, i) => (
+              <div key={i} className={`ska-insight-alert ska-insight-alert--${ins.type}`}>
+                <p className="ska-insight-alert-title">{ins.title}</p>
+                <p className="ska-insight-alert-desc">{ins.desc}</p>
+              </div>
+            )) : (
+              <div className="ska-insight-alert ska-insight-alert--info">
+                <p className="ska-insight-alert-title">All Systems Go</p>
+                <p className="ska-insight-alert-desc">
+                  Attendance and finances are on track. Keep up the great work!
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -689,275 +803,6 @@ function Modal({ title, onClose, children }) {
         </div>
         <div className="ska-modal-body">{children}</div>
       </div>
-    </div>
-  );
-}
-
-/* ============================================================
-   STUDENTS PAGE
-   ============================================================ */
-/* ============================================================
-   TEACHERS PAGE
-   ============================================================ */
-function TeachersPage({ school }) {
-  const [teachers,    setTeachers]    = useState([]);
-  const [loading,     setLoading]     = useState(true);
-  const [search,      setSearch]      = useState('');
-  const [modal,       setModal]       = useState(null);
-  const [form,        setForm]        = useState({});
-  const [saving,      setSaving]      = useState(false);
-  const [error,       setError]       = useState('');
-  const [viewTeacher, setViewTeacher] = useState(null); // null | teacher-object (profile view)
-
-  const load = useCallback(async (q = '') => {
-    setLoading(true);
-    try {
-      const params = q ? `?q=${encodeURIComponent(q)}` : '';
-      const data   = await ApiClient.get(`/api/school/teachers/${params}`);
-      setTeachers(data.teachers || []);
-    } catch { setTeachers([]); }
-    setLoading(false);
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
-
-  const openAdd = () => {
-    setForm({ first_name: '', last_name: '', email: '', employee_id: '', phone_number: '', qualification: '' });
-    setError(''); setModal('add');
-  };
-  const openEdit = t => {
-    setForm({ first_name: t.first_name, last_name: t.last_name, email: t.email,
-      employee_id: t.employee_id, phone_number: t.phone_number || '', qualification: t.qualification || '' });
-    setError(''); setModal(t);
-  };
-
-  const handleSave = async () => {
-    setSaving(true); setError('');
-    try {
-      if (modal === 'add') {
-        await ApiClient.post('/api/school/teachers/', form);
-      } else {
-        await ApiClient.put(`/api/school/teachers/${modal.id}/`, form);
-      }
-      setModal(null); load(search);
-    } catch (e) { setError(e.message || 'Failed to save.'); }
-    setSaving(false);
-  };
-
-  const handleDelete = async id => {
-    if (!window.confirm('Remove this teacher?')) return;
-    try { await ApiClient.delete(`/api/school/teachers/${id}/`); load(search); }
-    catch (e) { alert(e.message || 'Failed to remove.'); }
-  };
-
-  /* ── Teacher Profile View ── */
-  if (viewTeacher) {
-    const t = viewTeacher;
-    const infoRows = [
-      { icon: 'badge',          label: 'Employee ID',  value: t.employee_id || '—' },
-      { icon: 'school',         label: 'Qualification', value: t.qualification || '—' },
-      { icon: 'mail',           label: 'Email',         value: t.email || '—' },
-      { icon: 'phone',          label: 'Phone',         value: t.phone_number || '—' },
-      { icon: 'calendar_today', label: 'Hire Date',     value: t.hire_date ? new Date(t.hire_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—' },
-    ];
-    return (
-      <div className="ska-content">
-        <div className="ska-page-head">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <button className="ska-btn ska-btn--ghost" onClick={() => setViewTeacher(null)}>
-              <Ic name="arrow_back" size="sm" /> Back
-            </button>
-            <div>
-              <h1 className="ska-page-title">Teacher Profile</h1>
-              <p className="ska-page-sub">{school?.name}</p>
-            </div>
-          </div>
-          <button className="ska-btn ska-btn--ghost" onClick={() => { setViewTeacher(null); openEdit(t); }}>
-            <Ic name="edit" size="sm" /> Edit
-          </button>
-        </div>
-
-        {/* Profile header */}
-        <div className="ska-card ska-card-pad" style={{ marginBottom: 20 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
-            <div style={{
-              width: 72, height: 72, borderRadius: '50%', flexShrink: 0,
-              background: 'var(--ska-secondary-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontWeight: 900, fontSize: '1.75rem', color: 'var(--ska-secondary)',
-            }}>
-              {t.first_name?.[0]?.toUpperCase() || '?'}{t.last_name?.[0]?.toUpperCase() || ''}
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 800, color: 'var(--ska-text)' }}>{t.full_name}</h2>
-              <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-                <span className="ska-badge ska-badge--cyan">{t.employee_id}</span>
-                {t.qualification && <span className="ska-badge ska-badge--primary">{t.qualification}</span>}
-                <span className="ska-badge ska-badge--green">Active</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Info grid */}
-        <div className="ska-split-grid">
-          <div className="ska-card ska-card-pad">
-            <h2 className="ska-card-title" style={{ marginBottom: 16 }}>Staff Information</h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {infoRows.map(row => (
-                <div key={row.label} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{
-                    width: 36, height: 36, borderRadius: 9, background: 'var(--ska-secondary-dim)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                  }}>
-                    <Ic name={row.icon} size="sm" style={{ color: 'var(--ska-secondary)' }} />
-                  </div>
-                  <div>
-                    <p style={{ margin: 0, fontSize: '0.6875rem', color: 'var(--ska-text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{row.label}</p>
-                    <p style={{ margin: 0, fontWeight: 600, fontSize: '0.9rem', color: 'var(--ska-text)' }}>{row.value}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            <div className="ska-card ska-card-pad">
-              <h2 className="ska-card-title" style={{ marginBottom: 16 }}>Teaching Assignment</h2>
-              <div className="ska-empty" style={{ padding: '20px 0' }}>
-                <Ic name="class" size="lg" style={{ color: 'var(--ska-text-3)', marginBottom: 8 }} />
-                <p className="ska-empty-desc">Class and subject assignments coming soon.</p>
-              </div>
-            </div>
-            <div className="ska-card ska-card-pad">
-              <h2 className="ska-card-title" style={{ marginBottom: 12 }}>Quick Actions</h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <button className="ska-btn ska-btn--ghost" style={{ justifyContent: 'flex-start', gap: 10 }}
-                  onClick={() => { setViewTeacher(null); openEdit(t); }}>
-                  <Ic name="edit" size="sm" /> Edit Teacher Details
-                </button>
-                <button className="ska-btn ska-btn--ghost" style={{ justifyContent: 'flex-start', gap: 10 }}
-                  onClick={() => setViewTeacher(null)}>
-                  <Ic name="arrow_back" size="sm" /> Back to Teachers List
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="ska-content">
-      <div className="ska-page-head">
-        <div>
-          <h1 className="ska-page-title">Teachers</h1>
-          <p className="ska-page-sub">{school?.name} — {teachers.length} staff members</p>
-        </div>
-        <button className="ska-btn ska-btn--primary" onClick={openAdd}>
-          <Ic name="group_add" size="sm" /> Add Teacher
-        </button>
-      </div>
-
-      <div className="ska-search ska-toolbar-search" style={{ marginBottom: 16 }}>
-        <Ic name="search" />
-        <input className="ska-search-input" placeholder="Search by name or employee ID…"
-          value={search}
-          onChange={e => { setSearch(e.target.value); load(e.target.value); }} />
-      </div>
-
-      <div className="ska-card" style={{ overflowX: 'auto' }}>
-        {loading ? (
-          <div className="ska-empty"><p className="ska-empty-desc">Loading…</p></div>
-        ) : teachers.length === 0 ? (
-          <div className="ska-empty">
-            <Ic name="school" size="xl" style={{ color: 'var(--ska-secondary)', marginBottom: 12 }} />
-            <p className="ska-empty-title">No teachers yet</p>
-            <p className="ska-empty-desc">Add your first teacher to get started.</p>
-          </div>
-        ) : (
-          <table className="ska-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Employee ID</th>
-                <th>Email</th>
-                <th>Phone</th>
-                <th>Qualification</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {teachers.map(t => (
-                <tr key={t.id}>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <InitialsAvatar name={t.full_name} size={32} />
-                      <span>{t.full_name}</span>
-                    </div>
-                  </td>
-                  <td><span className="ska-badge ska-badge--cyan">{t.employee_id}</span></td>
-                  <td style={{ fontSize: '0.8125rem' }}>{t.email || '—'}</td>
-                  <td style={{ fontSize: '0.8125rem' }}>{t.phone_number || '—'}</td>
-                  <td style={{ fontSize: '0.8125rem' }}>{t.qualification || '—'}</td>
-                  <td>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <button className="ska-btn ska-btn--ghost ska-btn--sm" onClick={() => setViewTeacher(t)} title="View Profile">
-                        <Ic name="person" size="sm" />
-                      </button>
-                      <button className="ska-btn ska-btn--ghost ska-btn--sm" onClick={() => openEdit(t)}>
-                        <Ic name="edit" size="sm" />
-                      </button>
-                      <button className="ska-btn ska-btn--ghost ska-btn--sm ska-btn--danger" onClick={() => handleDelete(t.id)}>
-                        <Ic name="delete" size="sm" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      {modal && (
-        <Modal title={modal === 'add' ? 'Add Teacher' : 'Edit Teacher'} onClose={() => setModal(null)}>
-          {error && <p className="ska-form-error">{error}</p>}
-          <div className="ska-form-grid">
-            <label className="ska-form-group">
-              <span>First Name *</span>
-              <input className="ska-input" value={form.first_name} onChange={e => setForm(f => ({ ...f, first_name: e.target.value }))} />
-            </label>
-            <label className="ska-form-group">
-              <span>Last Name *</span>
-              <input className="ska-input" value={form.last_name} onChange={e => setForm(f => ({ ...f, last_name: e.target.value }))} />
-            </label>
-            <label className="ska-form-group">
-              <span>Employee ID *</span>
-              <input className="ska-input" value={form.employee_id} disabled={modal !== 'add'}
-                onChange={e => setForm(f => ({ ...f, employee_id: e.target.value }))} />
-            </label>
-            <label className="ska-form-group">
-              <span>Email</span>
-              <input className="ska-input" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
-            </label>
-            <label className="ska-form-group">
-              <span>Phone</span>
-              <input className="ska-input" value={form.phone_number} onChange={e => setForm(f => ({ ...f, phone_number: e.target.value }))} />
-            </label>
-            <label className="ska-form-group" style={{ gridColumn: '1/-1' }}>
-              <span>Qualification</span>
-              <input className="ska-input" value={form.qualification} onChange={e => setForm(f => ({ ...f, qualification: e.target.value }))} />
-            </label>
-          </div>
-          <div className="ska-modal-actions">
-            <button className="ska-btn ska-btn--ghost" onClick={() => setModal(null)}>Cancel</button>
-            <button className="ska-btn ska-btn--primary" onClick={handleSave} disabled={saving}>
-              {saving ? 'Saving…' : modal === 'add' ? 'Add Teacher' : 'Save Changes'}
-            </button>
-          </div>
-        </Modal>
-      )}
     </div>
   );
 }
@@ -1249,15 +1094,22 @@ function StubPage({ title, icon, description }) {
 }
 
 const SECTION_META = {
-  grades:     { title: 'Grade Management',   icon: 'grade',            description: 'Enter, review, and lock student grades.' },
-  syllabus:   { title: 'Syllabus',           icon: 'import_contacts',  description: 'Manage curriculum topics and learning objectives.' },
-  attendance: { title: 'Attendance',         icon: 'event_available',  description: 'Daily attendance tracking and reports.' },
-  finance:    { title: 'Finance',            icon: 'payments',        description: 'Fee management and financial reports.' },
-  reports:    { title: 'Reports',            icon: 'assessment',      description: 'Generate academic and administrative reports.' },
-  messages:   { title: 'Messages',           icon: 'mail',            description: 'Communication centre and announcements.' },
-  security:   { title: 'Security Logs',      icon: 'security',        description: 'Audit trail and system security events.' },
-  settings:   { title: 'Settings',           icon: 'settings',        description: 'School configuration and preferences.' },
-  profile:    { title: 'My Profile',         icon: 'account_circle',  description: 'Manage your account details and password.' },
+  grades:        { title: 'Grade Management',   icon: 'grade',            description: 'Enter, review, and lock student grades.' },
+  syllabus:      { title: 'Syllabus',           icon: 'import_contacts',  description: 'Manage curriculum topics and learning objectives.' },
+  attendance:    { title: 'Attendance',         icon: 'event_available',  description: 'Daily attendance tracking and reports.' },
+  exams:         { title: 'Exams & Results',    icon: 'quiz',             description: 'Schedule exams and record student results.' },
+  finance:        { title: 'Finance',            icon: 'payments',         description: 'Fee management and financial reports.' },
+  finance_users:  { title: 'Finance Users',      icon: 'manage_accounts',  description: 'Create and manage finance staff accounts.' },
+  principal:      { title: 'Principal',          icon: 'school',           description: 'Create and manage principal accounts.' },
+  timetable:     { title: 'Timetable',          icon: 'calendar_today',   description: 'Auto-generate weekly class schedules.' },
+  analytics:     { title: 'Smart Analytics',    icon: 'insights',         description: 'Performance insights and at-risk detection.' },
+  parents:       { title: 'Parents',            icon: 'family_restroom',  description: 'Parent accounts and student links.' },
+  reports:       { title: 'Reports',            icon: 'assessment',       description: 'Generate academic and administrative reports.' },
+  notifications: { title: 'Notifications',      icon: 'notifications',    description: 'Send announcements to staff, students, and parents.' },
+  messages:      { title: 'Messages',           icon: 'mail',             description: 'Communication centre and announcements.' },
+  security:      { title: 'Security Logs',      icon: 'security',         description: 'Audit trail and system security events.' },
+  settings:      { title: 'Settings',           icon: 'settings',         description: 'School configuration and preferences.' },
+  profile:       { title: 'My Profile',         icon: 'account_circle',   description: 'Manage your account details and password.' },
 };
 
 /* ============================================================
@@ -1739,7 +1591,7 @@ export default function SchoolAdminDashboard({ onNavigate }) {
   /* Render current page content */
   const meta = SECTION_META[activePage];
   let pageContent;
-  if (activePage === 'overview')        pageContent = <OverviewPage stats={stats} school={school} />;
+  if (activePage === 'overview')        pageContent = <OverviewPage stats={stats} school={school} onNav={setActivePage} onAddStudent={() => { setActivePage('students'); setStudentAddSignal(s => s + 1); }} />;
   else if (activePage === 'students')   pageContent = <StudentsPage school={school} openAddSignal={studentAddSignal} />;
   else if (activePage === 'teachers')   pageContent = <TeachersPage school={school} />;
   else if (activePage === 'classes')    pageContent = <ClassesPage  school={school} />;
@@ -1752,12 +1604,29 @@ export default function SchoolAdminDashboard({ onNavigate }) {
     />
   );
   else if (activePage === 'syllabus')   pageContent = <SyllabusPage school={school} />;
-  else if (activePage === 'grades')     pageContent = <GradesPage school={school} />;
-  else if (activePage === 'attendance') pageContent = <AttendancePage school={school} />;
-  else if (activePage === 'finance')    pageContent = <FinancePage school={school} />;
-  else if (activePage === 'reports')    pageContent = <ReportsPage school={school} />;
-  else if (activePage === 'messages')   pageContent = <MessagesPage school={school} admin={admin} />;
-  else if (activePage === 'security')   pageContent = <SecurityPage />;
+  else if (activePage === 'grades')        pageContent = <GradesPage school={school} />;
+  else if (activePage === 'attendance')    pageContent = <AttendancePage school={school} />;
+  else if (activePage === 'exams')         pageContent = <ExamsPage school={school} />;
+  else if (activePage === 'finance')        pageContent = <FinancePage school={school} />;
+  else if (activePage === 'bursar_ledger')  pageContent = <BursarLedgerPage school={school} />;
+  else if (activePage === 'bursar_audit')   pageContent = <BursarAuditPage school={school} />;
+  else if (activePage === 'finance_users')  pageContent = <FinanceUsersPage school={school} admin={admin} />;
+  else if (activePage === 'principal')      pageContent = <PrincipalUsersPage school={school} admin={admin} />;
+  else if (activePage === 'timetable')     pageContent = <TimetablePage school={school} />;
+  else if (activePage === 'analytics')     pageContent = <AnalyticsPage school={school} />;
+  else if (activePage === 'parents')       pageContent = <ParentsPage school={school} />;
+  else if (activePage === 'reports')       pageContent = <ReportsPage school={school} />;
+  else if (activePage === 'notifications') pageContent = <NotificationsPage school={school} />;
+  else if (activePage === 'messages')      pageContent = <MessagesPage school={school} admin={admin} />;
+  else if (activePage === 'security')       pageContent = <SecurityPageEnhanced />;
+  else if (activePage === 'mod_requests')   pageContent = <ModRequestsPage />;
+  else if (activePage === 'grading_scheme') pageContent = <GradingSchemePage />;
+  else if (activePage === 'academic_cal')   pageContent = <AcademicCalendarPage />;
+  else if (activePage === 'grade_oversight')pageContent = <GradeOversightPage />;
+  else if (activePage === 'rooms')          pageContent = <RoomsPage />;
+  else if (activePage === 'exam_officers')  pageContent = <ExamOfficersPage />;
+  else if (activePage === 'teacher_assign') pageContent = <TeacherAssignmentsPage />;
+  else if (activePage === 'promotions')     pageContent = <StudentPromotionPage />;
   else if (activePage === 'settings')   pageContent = (
     <SettingsPage
       school={school}
@@ -1787,6 +1656,7 @@ export default function SchoolAdminDashboard({ onNavigate }) {
           admin={admin}
           onMenuToggle={() => setSidebarOpen(o => !o)}
           onLogout={handleLogout}
+          onNav={setActivePage}
         />
 
         {/* Page content */}

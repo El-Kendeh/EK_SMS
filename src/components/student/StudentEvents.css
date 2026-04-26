@@ -1,0 +1,393 @@
+/* ============================================================
+   STUDENT EVENTS & CALENDAR
+   ============================================================ */
+.sev {
+  padding: 32px 40px 48px;
+  min-height: calc(100vh - var(--student-header-height));
+  background: var(--student-page-bg);
+}
+
+/* ── Header ── */
+.sev__header {
+  margin-bottom: 24px;
+}
+
+.sev__title {
+  font-family: 'Manrope', 'Inter', sans-serif;
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--student-text-primary);
+  letter-spacing: -0.02em;
+  margin: 0 0 4px;
+}
+
+.sev__sub {
+  font-size: 14px;
+  color: var(--student-text-secondary);
+  margin: 0;
+}
+
+/* ── Next Exam Hero Card ── */
+.sev__next-exam {
+  position: relative;
+  background: #0F172A;
+  border-radius: 20px;
+  padding: 28px 32px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  overflow: hidden;
+}
+
+.sev__next-exam-glow {
+  position: absolute;
+  top: -60px;
+  right: -60px;
+  width: 220px;
+  height: 220px;
+  background: rgba(239, 68, 68, 0.18);
+  border-radius: 50%;
+  filter: blur(60px);
+  pointer-events: none;
+}
+
+.sev__next-exam-content {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.sev__next-exam-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #EF4444;
+  margin-bottom: 10px;
+}
+.sev__next-exam-label span { font-size: 16px; }
+
+.sev__next-exam-title {
+  font-family: 'Manrope', sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sev__next-exam-meta {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  color: #94A3B8;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.sev__next-exam-meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.sev__next-exam-meta > span > span { font-size: 15px; }
+
+.sev__next-exam-date {
+  font-size: 12.5px;
+  color: #64748B;
+  font-style: italic;
+}
+
+.sev__next-exam-countdown {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+  min-width: 72px;
+}
+
+.sev__next-exam-days {
+  font-family: 'Manrope', sans-serif;
+  font-size: 52px;
+  font-weight: 900;
+  color: #EF4444;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.sev__next-exam-days-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-top: 2px;
+}
+
+/* ── Filter chips ── */
+.sev__filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.sev__filter {
+  padding: 7px 18px;
+  border-radius: 99px;
+  border: 2px solid var(--student-border);
+  background: var(--student-card-bg);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--student-text-secondary);
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+.sev__filter:hover {
+  border-color: var(--student-primary);
+  color: var(--student-primary);
+}
+.sev__filter--active {
+  background: var(--student-primary);
+  border-color: var(--student-primary);
+  color: #fff;
+}
+
+/* ── Events list ── */
+.sev__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ── Event card ── */
+.sev-card {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: var(--student-card-bg);
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  overflow: hidden;
+  transition: box-shadow 0.18s, transform 0.18s;
+}
+.sev-card:hover {
+  box-shadow: 0 4px 16px rgba(255,255,255,0.08);
+  transform: translateY(-1px);
+}
+
+.sev-card--past {
+  opacity: 0.55;
+}
+.sev-card--past:hover { opacity: 0.7; }
+
+.sev-card--today {
+  border-left: 3px solid var(--student-primary);
+}
+
+/* Date column */
+.sev-card__date-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  flex-shrink: 0;
+  padding: 16px 0;
+  background: var(--student-surface-low);
+}
+
+.sev-card__month {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--student-text-secondary);
+  line-height: 1;
+}
+
+.sev-card__day {
+  font-family: 'Manrope', sans-serif;
+  font-size: 24px;
+  font-weight: 900;
+  color: var(--student-text-primary);
+  line-height: 1.1;
+}
+
+/* Colored left bar */
+.sev-card__bar {
+  width: 4px;
+  min-height: 100%;
+  align-self: stretch;
+  flex-shrink: 0;
+}
+
+/* Body */
+.sev-card__body {
+  flex: 1;
+  min-width: 0;
+  padding: 16px 18px;
+}
+
+.sev-card__top-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.sev-card__type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.sev-card__type-badge span { font-size: 13px; }
+
+/* Status pills */
+.sev-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.sev-pill--today { background: rgba(16,185,129,0.15); color: var(--student-primary); }
+.sev-pill--soon  { background: rgba(239,68,68,0.12); color: #EF4444; }
+.sev-pill--past  { background: var(--student-surface-low); color: var(--student-text-secondary); }
+
+.sev-card__title {
+  font-family: 'Manrope', sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--student-text-primary);
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sev-card__meta {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.sev-card__meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12.5px;
+  color: var(--student-text-secondary);
+  font-weight: 500;
+}
+.sev-card__meta-item span { font-size: 14px; }
+
+.sev-card__notes {
+  font-size: 12px;
+  color: var(--student-text-secondary);
+  line-height: 1.5;
+  padding-top: 6px;
+  border-top: 1px solid var(--student-border);
+  margin-top: 4px;
+}
+
+/* Countdown column */
+.sev-card__countdown-col {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  flex-shrink: 0;
+  padding: 16px 12px;
+}
+
+.sev-card__countdown {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-weight: 800;
+}
+
+.sev-card__countdown--today {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  gap: 2px;
+}
+.sev-card__countdown--today span { font-size: 20px; }
+
+.sev-card__days-num {
+  font-family: 'Manrope', sans-serif;
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.sev-card__days-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--student-text-secondary);
+  margin-top: 1px;
+}
+
+.sev-card__past-icon {
+  font-size: 22px;
+  color: var(--student-border);
+}
+
+/* ── Empty state ── */
+.sev__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 80px 20px;
+  color: var(--student-text-secondary);
+  text-align: center;
+}
+.sev__empty span { font-size: 48px; opacity: 0.3; }
+.sev__empty p { font-size: 15px; margin: 0; }
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .sev { padding: 24px 20px 40px; }
+  .sev__next-exam { flex-direction: column; align-items: flex-start; padding: 22px 20px; gap: 16px; }
+  .sev__next-exam-title { font-size: 18px; white-space: normal; }
+  .sev__next-exam-countdown { flex-direction: row; align-items: baseline; gap: 8px; }
+  .sev__next-exam-days { font-size: 36px; }
+}
+
+@media (max-width: 600px) {
+  .sev { padding: 20px 14px 36px; }
+  .sev__title { font-size: 22px; }
+  .sev-card__title { font-size: 13.5px; white-space: normal; }
+  .sev-card__countdown-col { width: 56px; }
+  .sev-card__days-num { font-size: 22px; }
+  .sev-card__date-col { width: 52px; }
+}

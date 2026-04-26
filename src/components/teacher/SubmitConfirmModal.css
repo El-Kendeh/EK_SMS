@@ -1,0 +1,120 @@
+.scm-modal { }
+
+.scm-header-icon {
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  background: var(--modification-banner-bg);
+  border: 1px solid var(--modification-banner-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.scm-header-icon .material-symbols-outlined {
+  font-size: 24px;
+  color: var(--tch-error);
+}
+
+.scm-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  background: var(--modification-banner-bg);
+  border: 1px solid var(--modification-banner-border);
+  border-radius: 10px;
+  margin-bottom: 16px;
+}
+.scm-warning__icon {
+  font-size: 20px;
+  color: var(--tch-error);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.scm-warning__title {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--tch-error);
+  margin: 0 0 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.scm-warning__text {
+  font-size: 12px;
+  color: var(--tch-text-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.scm-title {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--tch-text-primary);
+  margin: 0 0 4px;
+}
+.scm-sub {
+  font-size: 13px;
+  color: var(--tch-text-secondary);
+  margin: 0 0 12px;
+}
+
+.scm-student-list {
+  border: 1px solid var(--tch-border);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 16px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.scm-student-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--tch-border);
+}
+.scm-student-row:last-child { border-bottom: none; }
+.scm-student-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tch-text-primary);
+}
+.scm-student-grade {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.scm-score {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--tch-primary);
+  font-family: 'Manrope', monospace;
+}
+.scm-letter { font-size: 11px; }
+
+.scm-confirm-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px;
+  background: var(--tch-surface-low);
+  border: 1px solid var(--tch-border);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.scm-checkbox {
+  width: 18px; height: 18px;
+  accent-color: var(--tch-primary);
+  flex-shrink: 0;
+  margin-top: 1px;
+  cursor: pointer;
+}
+.scm-confirm-text {
+  font-size: 12px;
+  color: var(--tch-text-primary);
+  line-height: 1.5;
+  font-weight: 600;
+}
+
+@media (max-width: 600px) {
+  .tch-modal__footer { flex-direction: column; }
+}

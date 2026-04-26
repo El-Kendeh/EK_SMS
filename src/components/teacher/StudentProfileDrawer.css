@@ -1,0 +1,83 @@
+.spd-hero {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.spd-avatar {
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  color: white;
+  font-size: 20px;
+  font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.spd-name {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--tch-text-primary);
+  margin: 0 0 4px;
+}
+.spd-num {
+  font-size: 12px;
+  color: var(--tch-text-secondary);
+  margin: 0 0 6px;
+}
+
+.spd-grade-card {
+  background: var(--tch-surface-low);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+  border: 1px solid var(--tch-border);
+}
+.spd-section-label {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--tch-text-secondary);
+  margin: 0 0 10px;
+}
+.spd-grade-main {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.spd-score {
+  font-size: 36px;
+  font-weight: 900;
+  font-family: 'Manrope', monospace;
+  letter-spacing: -1px;
+}
+.spd-letter {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--tch-text-secondary);
+}
+.spd-remarks {
+  font-size: 12px;
+  color: var(--tch-text-secondary);
+  font-style: italic;
+  margin: 10px 0 0;
+  line-height: 1.5;
+}
+
+.spd-info-list {
+  border: 1px solid var(--tch-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.spd-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--tch-border);
+  font-size: 13px;
+  color: var(--tch-text-secondary);
+}
+.spd-info-row:last-child { border-bottom: none; }
+.spd-info-row strong { color: var(--tch-text-primary); font-weight: 700; }

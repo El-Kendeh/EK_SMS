@@ -1,0 +1,107 @@
+.tp-root { max-width: 700px; }
+
+.tp-hero-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px;
+  background: var(--tch-surface);
+  border: 1px solid var(--tch-border);
+  border-radius: 14px;
+  margin-bottom: 24px;
+  position: relative;
+  flex-wrap: wrap;
+}
+.tp-avatar {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  background: var(--tch-primary);
+  color: white;
+  font-size: 22px;
+  font-weight: 900;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  border: 3px solid var(--tch-primary-light);
+}
+.tp-hero-info { flex: 1; min-width: 0; }
+.tp-name {
+  font-size: 19px;
+  font-weight: 900;
+  color: var(--tch-text-primary);
+  margin: 0 0 4px;
+}
+.tp-role {
+  font-size: 13px;
+  color: var(--tch-text-secondary);
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+.tp-hero-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.tp-status-badge { position: absolute; top: 16px; right: 16px; }
+
+.tp-sections { display: flex; flex-direction: column; gap: 24px; }
+.tp-section {}
+.tp-section-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--tch-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin: 0 0 10px;
+}
+.tp-section-title .material-symbols-outlined { font-size: 16px; }
+
+.tp-info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--tch-border);
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.tp-info-row:last-child { border-bottom: none; }
+.tp-info-label {
+  font-size: 13px;
+  color: var(--tch-text-secondary);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.tp-info-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--tch-text-primary);
+  text-align: right;
+  word-break: break-word;
+}
+
+.tp-2fa-prompt {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  background: var(--tch-warning-bg);
+  border: 1px solid var(--tch-warning);
+  border-radius: 10px;
+  margin-top: 12px;
+}
+.tp-2fa-prompt .material-symbols-outlined { color: var(--tch-warning); font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+.tp-2fa-prompt__title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--tch-text-primary);
+  margin: 0 0 2px;
+}
+.tp-2fa-prompt__text {
+  font-size: 12px;
+  color: var(--tch-text-secondary);
+  margin: 0;
+}
+
+@media (max-width: 600px) {
+  .tp-hero-card { flex-direction: column; }
+  .tp-status-badge { position: static; }
+}

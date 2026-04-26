@@ -3,10 +3,13 @@ import './App.css';
 import { ThemeProvider } from './context/ThemeContext';
 import Login from './components/login';
 import SuperadminDashboard from './components/superadmin/SuperadminDashboard';
-import ParentDashboard from './components/parents/dashboard';
+import ParentDashboard from './components/parent/ParentDashboard';
 import Landing from './components/Landing';
 import Register from './components/Register';
 import SchoolAdminDashboard from './components/schooladmin/dashboard';
+import TeacherDashboard from './components/teacher/TeacherDashboard';
+import StudentDashboard from './components/student/StudentDashboard';
+import ForceChangePassword from './components/ForceChangePassword';
 
 /* ── Impersonation banner (shown when a superadmin is viewing as a school admin) ── */
 function ImpersonationBanner() {
@@ -60,6 +63,8 @@ const PAGE_TO_PATH = {
   register:             '/register',
   superadmindashboard:  '/superadmin',
   'sa-dashboard':       '/dashboard/school-admin',
+  'teacher-dashboard':  '/dashboard/teacher',
+  'student-dashboard':  '/dashboard/student',
   parentdashboard:      '/parent',
 };
 
@@ -69,7 +74,28 @@ const PATH_TO_PAGE = {
   '/register':    'register',
   '/superadmin':  'superadmindashboard',
   '/dashboard/school-admin': 'sa-dashboard',
-  '/parent':      'parentdashboard',
+  '/dashboard/teacher':      'teacher-dashboard',
+  '/dashboard/student':      'student-dashboard',
+  '/parent':                 'parentdashboard',
+  '/parent/children':        'parentdashboard',
+  '/parent/grades':          'parentdashboard',
+  '/parent/report-cards':    'parentdashboard',
+  '/parent/notifications':   'parentdashboard',
+  '/parent/profile':         'parentdashboard',
+  '/parent/attendance':      'parentdashboard',
+  '/parent/behavior':        'parentdashboard',
+  '/parent/fees':            'parentdashboard',
+  '/parent/verification':    'parentdashboard',
+  '/teacher/classes':        'teacher-dashboard',
+  '/teacher/grade-entry':    'teacher-dashboard',
+  '/teacher/grade-history':  'teacher-dashboard',
+  '/teacher/students':       'teacher-dashboard',
+  '/teacher/timetable':      'teacher-dashboard',
+  '/teacher/notifications':  'teacher-dashboard',
+  '/teacher/profile':        'teacher-dashboard',
+  '/teacher/attendance':     'teacher-dashboard',
+  '/teacher/analytics':      'teacher-dashboard',
+  '/teacher/settings':       'teacher-dashboard',
 };
 
 function App() {
@@ -108,6 +134,10 @@ function App() {
           setCurrentPage('superadmindashboard');
         } else if (user.role === 'school_admin') {
           setCurrentPage('sa-dashboard');
+        } else if (user.role === 'teacher') {
+          setCurrentPage('teacher-dashboard');
+        } else if (user.role === 'student') {
+          setCurrentPage('student-dashboard');
         } else if (user.role === 'parent') {
           setCurrentPage('parentdashboard');
         } else {
@@ -140,6 +170,10 @@ function App() {
             setCurrentPage('superadmindashboard');
           } else if (user.role === 'school_admin') {
             setCurrentPage('sa-dashboard');
+          } else if (user.role === 'teacher') {
+            setCurrentPage('teacher-dashboard');
+          } else if (user.role === 'student') {
+            setCurrentPage('student-dashboard');
           } else if (user.role === 'parent') {
             setCurrentPage('parentdashboard');
           } else {
@@ -175,14 +209,17 @@ function App() {
       <div className="App" style={isImpersonating ? { paddingTop: '40px' } : {}}>
         <ImpersonationBanner />
         {currentPage === 'login' && <Login onNavigate={setCurrentPage} />}
+        {currentPage === 'force-change-password' && <ForceChangePassword onNavigate={setCurrentPage} />}
         {currentPage === 'superadmindashboard' && <SuperadminDashboard onNavigate={setCurrentPage} />}
         {currentPage === 'sa-dashboard' && <SchoolAdminDashboard onNavigate={setCurrentPage} />}
+        {currentPage === 'teacher-dashboard' && <TeacherDashboard onNavigate={setCurrentPage} />}
+        {currentPage === 'student-dashboard' && <StudentDashboard onNavigate={setCurrentPage} />}
         {currentPage === 'parentdashboard' && <ParentDashboard onNavigate={setCurrentPage} />}
         {(currentPage === 'home' || currentPage === 'landing') && <Landing onNavigate={setCurrentPage} />}
         {currentPage === 'register' && <Register onNavigate={setCurrentPage} />}
 
         {/* Fallback for unknown pages */}
-        {!['login', 'superadmindashboard', 'sa-dashboard', 'home', 'landing', 'register'].includes(currentPage) && (
+        {!['login', 'force-change-password', 'superadmindashboard', 'sa-dashboard', 'teacher-dashboard', 'student-dashboard', 'parentdashboard', 'home', 'landing', 'register'].includes(currentPage) && (
           <Login onNavigate={setCurrentPage} />
         )}
       </div>
