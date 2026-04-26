@@ -1648,12 +1648,41 @@ def api_get_users(request):
             .values('triggered_by').annotate(n=DjCount('id')).values_list('triggered_by', 'n')
         )
 
-        users = User.objects.all().select_related(
+        # Determine requester role and school
+        actor = _get_authed_user(request)
+        if not actor:
+            return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+            
+        is_super = actor.is_superuser
+        school = None
+        if not is_super:
+            try:
+                sa = SchoolAdmin.objects.get(user=actor)
+                school = sa.school
+            except SchoolAdmin.DoesNotExist:
+                return JsonResponse({'success': False, 'message': 'Forbidden'}, status=403)
+
+        from django.db.models import Q
+        users_qs = User.objects.all().select_related(
             'school_admin_profile', 'school_admin_profile__school',
-            'teacher_profile', 'teacher_profile__school'
+            'teacher_profile', 'teacher_profile__school',
+            'student_profile', 'student_profile__school',
+            'parent_profile', 'parent_profile__school',
+            'school_staff_account', 'school_staff_account__school'
         )
+        
+        if not is_super:
+            # Only show users belonging to the admin's school
+            users_qs = users_qs.filter(
+                Q(school_admin_profile__school=school) |
+                Q(teacher_profile__school=school) |
+                Q(student_profile__school=school) |
+                Q(parent_profile__school=school) |
+                Q(school_staff_account__school=school)
+            ).exclude(is_superuser=True)
+
         user_list = []
-        for u in users:
+        for u in users_qs:
             role = 'User'
             school_name = 'EK-SMS Platform'
             if u.is_superuser:
@@ -1695,6 +1724,19 @@ def api_get_users(request):
 
 def api_get_security_logs(request):
     """Fetch real security log entries from DB. Supports ?limit=N (default 100, max 500)."""
+    actor = _get_authed_user(request)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+
+    is_super = actor.is_superuser
+    school = None
+    if not is_super:
+        try:
+            sa = SchoolAdmin.objects.get(user=actor)
+            school = sa.school
+        except SchoolAdmin.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Forbidden: School Admin access required.'}, status=403)
+
     _STATUS_MAP = {
         'login_failure':       'Blocked',
         'api_rate_limited':    'Throttled',
@@ -1707,6 +1749,8 @@ def api_get_security_logs(request):
         'school_approved':     'Allowed',
         'broadcast_sent':      'Allowed',
         'profile_updated':     'Allowed',
+        'student_transfer':    'Allowed',
+        'academic_year_archived': 'Allowed',
     }
     try:
         limit = min(int(request.GET.get('limit', 100)), 500)
@@ -1714,7 +1758,20 @@ def api_get_security_logs(request):
         limit = 100
 
     try:
-        entries = SecurityLogEntry.objects.select_related('actor').order_by('-created_at')[:limit]
+        from django.db.models import Q
+        qs = SecurityLogEntry.objects.select_related('actor').order_by('-created_at')
+        
+        if not is_super:
+            # School admins only see logs for their school's users and never superadmins
+            qs = qs.filter(
+                Q(actor__school_admin_profile__school=school) |
+                Q(actor__teacher_profile__school=school) |
+                Q(actor__student_profile__school=school) |
+                Q(actor__parent_profile__school=school) |
+                Q(actor__school_staff_account__school=school)
+            ).exclude(actor__is_superuser=True)
+
+        entries = qs[:limit]
         logs = []
         for e in entries:
             actor_name = e.actor_label or (e.actor.username if e.actor else 'system')
@@ -1738,7 +1795,10 @@ def api_get_security_logs(request):
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
 def api_system_health(request):
-    """Real-time system health stats for SASystemHealth.js"""
+    """Real-time system health stats (superadmin only)."""
+    actor = _get_authed_user(request)
+    if not actor or not actor.is_superuser:
+        return JsonResponse({'success': False, 'message': 'Forbidden'}, status=403)
     try:
         cpu_usage = psutil.cpu_percent()
         memory = psutil.virtual_memory()
@@ -1775,7 +1835,7 @@ def api_system_health(request):
             'database': 'connected'
         }, status=200)
     except Exception as e:
-        return JsonResponse({'success': False, 'status': 'partial', 'message': str(e)}, status=200)
+        return JsonResponse({'success': False, 'status': 'partial', 'message': str(e)}, status=500)
 
 def api_get_grade_alerts(request):
     """Fetch grade alerts from database — enriched with student/school/grade context"""
@@ -2067,9 +2127,25 @@ def api_forensic_events(request):
         except Exception as e:
             return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
-    # GET
+    actor = _get_authed_user(request)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+        
+    is_super = actor.is_superuser
+    school = None
+    if not is_super:
+        try:
+            sa = SchoolAdmin.objects.get(user=actor)
+            school = sa.school
+        except SchoolAdmin.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Forbidden'}, status=403)
+
     try:
-        qs = ForensicEvent.objects.select_related('actor', 'school', 'resolved_by').order_by('-created_at')[:200]
+        qs = ForensicEvent.objects.select_related('actor', 'school', 'resolved_by').order_by('-created_at')
+        if not is_super:
+            qs = qs.filter(school=school)
+        
+        entries = qs[:200]
         events = []
         for e in qs:
             events.append({
@@ -2383,6 +2459,19 @@ def api_security_counters(request):
     Real aggregated security counters from the DB.
     Used by the Security dashboard to show threats blocked, sessions, login stats.
     """
+    actor = _get_authed_user(request)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+        
+    is_super = actor.is_superuser
+    school = None
+    if not is_super:
+        try:
+            sa = SchoolAdmin.objects.get(user=actor)
+            school = sa.school
+        except SchoolAdmin.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Forbidden'}, status=403)
+
     try:
         from django.db.models import Count, Q
         from django.utils import timezone as tz
@@ -2391,34 +2480,50 @@ def api_security_counters(request):
         last_24h = now - timezone.timedelta(hours=24)
         last_7d  = now - timezone.timedelta(days=7)
 
+        # Base filter for SecurityLogEntry
+        log_qs = SecurityLogEntry.objects.all()
+        if not is_super:
+            log_qs = log_qs.filter(
+                Q(actor__school_admin_profile__school=school) |
+                Q(actor__teacher_profile__school=school) |
+                Q(actor__student_profile__school=school) |
+                Q(actor__parent_profile__school=school) |
+                Q(actor__school_staff_account__school=school)
+            ).exclude(actor__is_superuser=True)
+
         # Failed logins (threats blocked)
-        failed_24h = SecurityLogEntry.objects.filter(
+        failed_24h = log_qs.filter(
             event_type='login_failure', created_at__gte=last_24h
         ).count()
-        failed_7d = SecurityLogEntry.objects.filter(
+        failed_7d = log_qs.filter(
             event_type='login_failure', created_at__gte=last_7d
         ).count()
 
         # Successful logins
-        success_24h = SecurityLogEntry.objects.filter(
+        success_24h = log_qs.filter(
             event_type='login_success', created_at__gte=last_24h
         ).count()
 
         # Active sessions = unique users who logged in within the last hour
         last_1h = now - timezone.timedelta(hours=1)
-        active_sessions = SecurityLogEntry.objects.filter(
+        active_sessions = log_qs.filter(
             event_type='login_success', created_at__gte=last_1h
         ).values('actor').distinct().count()
 
-        # School approvals / rejections
-        approvals = SecurityLogEntry.objects.filter(event_type='school_approved').count()
-        rejections = SecurityLogEntry.objects.filter(event_type='school_rejected').count()
+        # School approvals / rejections (usually only superadmin sees these globally)
+        if is_super:
+            approvals = SecurityLogEntry.objects.filter(event_type='school_approved').count()
+            rejections = SecurityLogEntry.objects.filter(event_type='school_rejected').count()
+        else:
+            # School admins don't see system-wide school approvals
+            approvals = 0
+            rejections = 0
 
         # Password changes
-        pw_changes = SecurityLogEntry.objects.filter(event_type='password_changed').count()
+        pw_changes = log_qs.filter(event_type='password_changed').count()
 
         # Total log entries
-        total_entries = SecurityLogEntry.objects.count()
+        total_entries = log_qs.count()
 
         return JsonResponse({
             'success': True,
@@ -2731,28 +2836,12 @@ def api_students(request):
                 _Q(user__last_name__icontains=q) |
                 _Q(admission_number__icontains=q)
             )
-<<<<<<< HEAD
-        data = [{
-            'id': s.id,
-            'admission_number': s.admission_number,
-            'first_name': s.user.first_name,
-            'last_name': s.user.last_name,
-            'full_name': s.user.get_full_name(),
-            'email': s.user.email,
-            'classroom': s.classroom.name if s.classroom else None,
-            'classroom_id': s.classroom_id,
-            'date_of_birth': str(s.date_of_birth) if s.date_of_birth else None,
-            'phone_number': s.phone_number,
-            'admission_date': str(s.admission_date),
-            'disciplinary_history': s.disciplinary_history,
-            'disciplinary_notes': s.disciplinary_notes,
-        } for s in qs]
-=======
         if classroom_id:
             try:
                 qs = qs.filter(classroom_id=int(classroom_id))
             except (ValueError, TypeError):
                 pass
+        
         data = []
         for s in qs:
             att_all   = list(s.attendance.all())
@@ -2763,6 +2852,7 @@ def api_students(request):
             avg_grade = round(sum(scores) / len(scores), 1) if scores else None
             is_flagged = (att_rate is not None and att_rate < 70) or (avg_grade is not None and avg_grade < 50)
             stu_pic = request.build_absolute_uri(s.passport_picture.url) if s.passport_picture else ''
+            
             data.append({
                 'id':               s.id,
                 'admission_number': s.admission_number,
@@ -2781,10 +2871,13 @@ def api_students(request):
                 'avg_grade':        avg_grade,
                 'parent_count':     s.parent_links.count(),
                 'is_flagged':       is_flagged,
+                'disciplinary_history': s.disciplinary_history,
+                'disciplinary_notes': s.disciplinary_notes,
             })
+            
         if at_risk:
             data = [d for d in data if d['is_flagged']]
->>>>>>> 5c35a02602b594f1606dd7154a3e035cf240658d
+
         return JsonResponse({'success': True, 'students': data, 'count': len(data)})
 
     if request.method == 'POST':
@@ -2797,14 +2890,13 @@ def api_students(request):
         classroom_id     = body.get('classroom_id')
         date_of_birth    = body.get('date_of_birth') or None
         phone_number     = body.get('phone_number', '')
-<<<<<<< HEAD
-        profile_photo    = request.FILES.get('profile_photo')
+        gender           = body.get('gender', '')
+        passport_picture = request.FILES.get('passport_picture') or request.FILES.get('profile_photo')
         document_type    = body.get('document_type', '').strip()
         document_file    = request.FILES.get('document_file')
-=======
-        gender           = body.get('gender', '')
-        passport_picture = request.FILES.get('passport_picture')
->>>>>>> 5c35a02602b594f1606dd7154a3e035cf240658d
+        disciplinary_history = _parse_bool(body.get('disciplinary_history', False))
+        disciplinary_notes   = body.get('disciplinary_notes', '').strip()
+
 
         father_name      = body.get('father_name', '').strip()
         father_email     = body.get('father_email', '').strip()
@@ -2865,14 +2957,11 @@ def api_students(request):
             school=school, user=student_user, admission_number=admission_number,
             classroom=classroom, academic_year=active_year,
             date_of_birth=date_of_birth, phone_number=phone_number,
-<<<<<<< HEAD
-            passport_picture=profile_photo if profile_photo else None,
-            disciplinary_history=disciplinary_history,
-            disciplinary_notes=disciplinary_notes if disciplinary_history else '',
-=======
             gender=gender,
             passport_picture=passport_picture if passport_picture else None,
->>>>>>> 5c35a02602b594f1606dd7154a3e035cf240658d
+            disciplinary_history=disciplinary_history,
+            disciplinary_notes=disciplinary_notes if disciplinary_history else '',
+
         )
 
         if document_file:
@@ -3062,24 +3151,6 @@ def api_student_detail(request, student_id):
             'success':          True,
             'id':               student.id,
             'admission_number': student.admission_number,
-<<<<<<< HEAD
-            'first_name': student.user.first_name, 'last_name': student.user.last_name,
-            'email': student.user.email, 'classroom': student.classroom.name if student.classroom else None,
-            'classroom_id': student.classroom_id,
-            'date_of_birth': str(student.date_of_birth) if student.date_of_birth else None,
-            'phone_number': student.phone_number, 'admission_date': str(student.admission_date),
-            'disciplinary_history': student.disciplinary_history,
-            'disciplinary_notes': student.disciplinary_notes,
-            'documents': [
-                {
-                    'id': doc.id,
-                    'document_type': doc.document_type,
-                    'file_url': request.build_absolute_uri(doc.file.url) if doc.file else None,
-                    'uploaded_at': str(doc.uploaded_at),
-                } for doc in student.documents.all()
-            ],
-        u.email      = body.get('email', u.email)
-=======
             'first_name':       student.user.first_name,
             'last_name':        student.user.last_name,
             'full_name':        student.user.get_full_name(),
@@ -3094,8 +3165,18 @@ def api_student_detail(request, student_id):
             'attendance_rate':  att_rate,
             'avg_grade':        avg_grade,
             'is_flagged':       is_flagged,
+            'disciplinary_history': student.disciplinary_history,
+            'disciplinary_notes': student.disciplinary_notes,
             'grades':           grades_data,
             'parents':          parents_data,
+            'documents': [
+                {
+                    'id': doc.id,
+                    'document_type': doc.document_type,
+                    'file_url': request.build_absolute_uri(doc.file.url) if doc.file else None,
+                    'uploaded_at': str(doc.uploaded_at),
+                } for doc in student.documents.all()
+            ],
         })
 
     if request.method == 'PUT':
@@ -3109,31 +3190,36 @@ def api_student_detail(request, student_id):
             except json.JSONDecodeError:
                 return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
             passport_picture = None
+
         u = student.user
         u.first_name = data.get('first_name', u.first_name)
         u.last_name  = data.get('last_name', u.last_name)
         u.email      = data.get('email', u.email)
->>>>>>> 5c35a02602b594f1606dd7154a3e035cf240658d
         u.save(update_fields=['first_name', 'last_name', 'email'])
+
         if 'classroom_id' in data:
             cid = data['classroom_id']
             try:
                 student.classroom = ClassRoom.objects.get(id=cid, school=school) if cid else None
             except ClassRoom.DoesNotExist:
                 pass
-<<<<<<< HEAD
-        if 'date_of_birth' in body:
-            student.date_of_birth = body['date_of_birth'] or None
-        if 'phone_number' in body:
-            student.phone_number = body['phone_number']
-        if 'disciplinary_history' in body:
-            student.disciplinary_history = _parse_bool(body['disciplinary_history'])
+
+        if 'date_of_birth' in data:
+            student.date_of_birth = data['date_of_birth'] or None
+        if 'phone_number' in data:
+            student.phone_number = data['phone_number']
+        if 'gender' in data:
+            student.gender = data['gender']
+        if 'disciplinary_history' in data:
+            student.disciplinary_history = _parse_bool(data['disciplinary_history'])
             if not student.disciplinary_history:
                 student.disciplinary_notes = ''
-        if 'disciplinary_notes' in body:
-            student.disciplinary_notes = body['disciplinary_notes'].strip()
+        if 'disciplinary_notes' in data:
+            student.disciplinary_notes = data['disciplinary_notes'].strip()
+        if passport_picture:
+            student.passport_picture = passport_picture
 
-        document_type    = body.get('document_type', '').strip()
+        document_type    = data.get('document_type', '').strip()
         document_file    = request.FILES.get('document_file')
         if document_file:
             if not document_type:
@@ -3149,16 +3235,6 @@ def api_student_detail(request, student_id):
                 doc.file = document_file
                 doc.save(update_fields=['file'])
 
-=======
-        if 'date_of_birth' in data:
-            student.date_of_birth = data['date_of_birth'] or None
-        if 'phone_number' in data:
-            student.phone_number = data['phone_number']
-        if 'gender' in data:
-            student.gender = data['gender']
-        if passport_picture:
-            student.passport_picture = passport_picture
->>>>>>> 5c35a02602b594f1606dd7154a3e035cf240658d
         student.save()
         return JsonResponse({'success': True, 'message': 'Student updated.'})
 
