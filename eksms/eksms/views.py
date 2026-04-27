@@ -936,6 +936,9 @@ def api_register(request):
 
 def api_get_schools(request):
     """Fetch all schools for superadmin dashboard"""
+    actor = _get_authed_user(request)
+    if not actor or not actor.is_superuser:
+        return JsonResponse({'success': False, 'message': 'Superadmin access required.'}, status=403)
     try:
         schools = School.objects.select_related('admin__user').all()
         school_list = []
@@ -1001,12 +1004,14 @@ def api_get_schools(request):
 @csrf_exempt
 def api_approve_school(request):
     """Approve, reject, or request changes for a school"""
+    actor = _get_authed_user(request)
+    if not actor or not actor.is_superuser:
+        return JsonResponse({'success': False, 'message': 'Superadmin access required.'}, status=403)
     try:
         data = json.loads(request.body)
         school_id = data.get('school_id')
         action = data.get('action')
         note = data.get('note', '')
-        actor = _get_authed_user(request)
         ip = request.META.get('REMOTE_ADDR')
 
         if not school_id or not action:
@@ -1839,10 +1844,29 @@ def api_system_health(request):
 
 def api_get_grade_alerts(request):
     """Fetch grade alerts from database — enriched with student/school/grade context"""
+    actor = _get_authed_user(request)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+    
+    is_super = actor.is_superuser
+    school = None
+    if not is_super:
+        try:
+            sa = SchoolAdmin.objects.get(user=actor)
+            school = sa.school
+        except SchoolAdmin.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Forbidden'}, status=403)
+
     try:
-        alerts = GradeChangeAlert.objects.select_related(
+        from django.db.models import Q
+        qs = GradeChangeAlert.objects.select_related(
             'grade__student__school', 'triggered_by', 'acknowledged_by'
-        ).order_by('-triggered_at')[:50]
+        ).order_by('-triggered_at')
+        
+        if not is_super:
+            qs = qs.filter(grade__student__school=school)
+            
+        alerts = qs[:100]
         alert_list = []
         for a in alerts:
             grade = a.grade
@@ -1908,6 +1932,10 @@ def api_system_alerts(request):
     POST — acknowledge or resolve an alert.
          body: { id, action: 'acknowledge'|'resolve', notes: '' }
     """
+    actor = _get_authed_user(request)
+    if not actor or not actor.is_superuser:
+        return JsonResponse({'success': False, 'message': 'Superadmin access required.'}, status=403)
+
     if request.method == 'GET':
         try:
             alerts = SystemWideAlert.objects.select_related(
@@ -2076,6 +2104,9 @@ def api_school_stats(request):
     Per-school headcounts: students, teachers.
     Optional ?school_id=X for a single school.
     """
+    actor = _get_authed_user(request)
+    if not actor or not actor.is_superuser:
+        return JsonResponse({'success': False, 'message': 'Superadmin access required.'}, status=403)
     try:
         school_id = request.GET.get('school_id')
         qs = School.objects.all()
@@ -2176,6 +2207,10 @@ def api_broadcast_alerts(request):
     GET  — list broadcasts (most recent 100)
     POST {title, message, severity, audience, target_school_id?} — send a broadcast
     """
+    actor = _get_authed_user(request)
+    if not actor or not actor.is_superuser:
+        return JsonResponse({'success': False, 'message': 'Superadmin access required.'}, status=403)
+
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
@@ -2609,31 +2644,63 @@ def api_impersonate(request):
 @csrf_exempt
 def api_sa_stats(request):
     """
-    School-admin-only: return live stats for the authenticated admin's school.
-    Returns student_count, teacher_count, classroom_count, academic_year.
+    Returns live stats. 
+    If Superadmin: returns global platform stats.
+    If School Admin: returns stats for their specific school.
     """
     actor = _get_authed_user(request)
     if not actor:
         return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+
+    is_super = actor.is_superuser
+    
     try:
-        school_admin = SchoolAdmin.objects.select_related('school').get(user=actor)
-        school = school_admin.school
-    except SchoolAdmin.DoesNotExist:
-        return JsonResponse({'success': False, 'message': 'No school admin profile found.'}, status=404)
-    try:
-        student_count  = Student.objects.filter(school=school, is_active=True).count()
-        teacher_count  = Teacher.objects.filter(school=school, is_active=True).count()
-        classroom_count = ClassRoom.objects.filter(school=school, is_active=True).count()
-        active_year = AcademicYear.objects.filter(school=school, is_active=True).first()
-        return JsonResponse({
-            'success': True,
-            'student_count':   student_count,
-            'teacher_count':   teacher_count,
-            'classroom_count': classroom_count,
-            'academic_year':   active_year.name if active_year else None,
-            'school_code':     school.code,
-            'school_name':     school.name,
-        })
+        if is_super:
+            # Global Platform Stats
+            total_schools = School.objects.count()
+            pending_schools = School.objects.filter(is_approved=False).count()
+            total_students = Student.objects.filter(is_active=True).count()
+            total_teachers = Teacher.objects.filter(is_active=True).count()
+            total_users = User.objects.count()
+            
+            # Simple finance aggregate for superadmin
+            from django.db.models import Sum
+            total_revenue = FeeRecord.objects.filter(status='paid').aggregate(total=Sum('amount_paid'))['total'] or 0
+            
+            return JsonResponse({
+                'success': True,
+                'is_global': True,
+                'total_schools': total_schools,
+                'pending_approvals': pending_schools,
+                'total_students': total_students,
+                'total_teachers': total_teachers,
+                'total_users': total_users,
+                'total_revenue': float(total_revenue),
+                'platform_version': '1.0.5',
+            })
+        else:
+            # School Admin Specific Stats
+            try:
+                sa = SchoolAdmin.objects.select_related('school').get(user=actor)
+                school = sa.school
+            except SchoolAdmin.DoesNotExist:
+                return JsonResponse({'success': False, 'message': 'No school admin profile found.'}, status=404)
+
+            student_count  = Student.objects.filter(school=school, is_active=True).count()
+            teacher_count  = Teacher.objects.filter(school=school, is_active=True).count()
+            classroom_count = ClassRoom.objects.filter(school=school, is_active=True).count()
+            active_year = AcademicYear.objects.filter(school=school, is_active=True).first()
+            
+            return JsonResponse({
+                'success': True,
+                'is_global': False,
+                'student_count':   student_count,
+                'teacher_count':   teacher_count,
+                'classroom_count': classroom_count,
+                'academic_year':   active_year.name if active_year else None,
+                'school_code':     school.code,
+                'school_name':     school.name,
+            })
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
