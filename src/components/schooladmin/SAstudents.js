@@ -770,7 +770,7 @@ export function StudentsPage({ school, openAddSignal }) {
   const [fieldErrors,         setFieldErrors]         = useState({});
   const [step,                setStep]                = useState(0);
   const [,                    setDupWarning]          = useState(null);
-  const [dupIgnored,          setDupIgnored]          = useState(false);
+  const [,                    setDupIgnored]          = useState(false);
   const [draftRestored,       setDraftRestored]       = useState(false);
   const [stats,               setStats]               = useState(null);
   const prevSignal = useRef(openAddSignal);
