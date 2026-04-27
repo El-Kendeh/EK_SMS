@@ -2717,6 +2717,19 @@ def _get_school_for_admin(request):
     return actor, sa, sa.school
 
 
+def _get_user_school(user):
+    """Returns the School object associated with any user (Admin, Teacher, Student, Parent)."""
+    if hasattr(user, 'school_admin_profile'):
+        return user.school_admin_profile.school
+    if hasattr(user, 'teacher_profile'):
+        return user.teacher_profile.school
+    if hasattr(user, 'student_profile'):
+        return user.student_profile.school
+    if hasattr(user, 'parent_profile'):
+        return user.parent_profile.school
+    return None
+
+
 def _require_exam_officer(request, school):
     """
     Returns (teacher, error_response).
@@ -3858,14 +3871,14 @@ def _term_to_dict(t):
 
 @csrf_exempt
 def api_terms(request):
-    try:
-        actor, sa, school = _get_school_for_admin(request)
-    except SchoolAdmin.DoesNotExist:
-        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    actor = _get_authed_user(request)
     if not actor:
         return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
 
     if request.method == 'GET':
+        school = _get_user_school(actor)
+        if not school:
+            return JsonResponse({'success': False, 'message': 'No school context.'}, status=404)
         year_id = request.GET.get('academic_year_id')
         if year_id:
             qs = Term.objects.filter(academic_year_id=year_id, academic_year__school=school)
@@ -3878,6 +3891,10 @@ def api_terms(request):
         return JsonResponse({'success': True, 'terms': [_term_to_dict(t) for t in terms]})
 
     if request.method == 'POST':
+        try:
+            _, sa, school = _get_school_for_admin(request)
+        except SchoolAdmin.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Admin access required.'}, status=403)
         try:
             body = json.loads(request.body)
         except json.JSONDecodeError:
@@ -5902,8 +5919,11 @@ def api_teacher_me(request):
     classes = [{
         'id': tsc.classroom.id,
         'name': tsc.classroom.name,
-        'subject': tsc.subject.name,
-        'subject_id': tsc.subject.id,
+        'subject': {
+            'id': tsc.subject.id,
+            'name': tsc.subject.name,
+        },
+        'room': tsc.classroom.code, # Using code as room name for now
         'student_count': tsc.classroom.students.filter(is_active=True).count(),
     } for tsc in tscs]
     subjects = list({tsc.subject.name for tsc in tscs})
@@ -5943,32 +5963,59 @@ def api_teacher_me(request):
 
 @csrf_exempt
 def api_teacher_classes(request):
-    """List all classes + subjects assigned to this teacher."""
+    """List all classes + subjects assigned to this teacher with grade stats."""
     if request.method != 'GET':
         return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
     user, teacher = _get_teacher_profile(request)
     if not teacher:
         return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
 
+    from eksms_core.models import Term, Grade
+    from django.db.models import Q
+    
+    # Get current active term for this school
+    term = Term.objects.filter(academic_year__school=teacher.school, is_active=True).first()
+    
     tscs = teacher.subject_classes.select_related('subject', 'classroom').filter(is_active=True)
-    classes = []
+    classes_out = []
     seen = set()
     for tsc in tscs:
         key = (tsc.classroom.id, tsc.subject.id)
         if key in seen:
             continue
         seen.add(key)
-        students = list(tsc.classroom.students.filter(is_active=True).select_related('user').values(
-            'id', 'admission_number', 'user__first_name', 'user__last_name', 'user__email'
-        ))
-        classes.append({
-            'classroom_id': tsc.classroom.id,
-            'classroom_name': tsc.classroom.name,
-            'subject_id': tsc.subject.id,
-            'subject_name': tsc.subject.name,
-            'student_count': len(students),
+        
+        # Calculate grade stats
+        total_students = tsc.classroom.students.filter(is_active=True).count()
+        if term:
+            grades_qs = Grade.objects.filter(student__classroom=tsc.classroom, subject=tsc.subject, term=term)
+            locked = grades_qs.filter(is_locked=True).count()
+            draft  = grades_qs.filter(is_locked=False).filter(
+                Q(continuous_assessment__gt=0) | Q(mid_term_exam__gt=0) | Q(final_exam__gt=0)
+            ).count()
+            pending = total_students - (locked + draft)
+        else:
+            locked = 0
+            draft = 0
+            pending = total_students
+            
+        classes_out.append({
+            'id': tsc.classroom.id,
+            'name': tsc.classroom.name,
+            'subject': {
+                'id': tsc.subject.id,
+                'name': tsc.subject.name,
+            },
+            'room': tsc.classroom.code,
+            'student_count': total_students,
+            'gradeStats': {
+                'total': total_students,
+                'locked': locked,
+                'draft': draft,
+                'pending': pending,
+            }
         })
-    return JsonResponse({'success': True, 'classes': classes})
+    return JsonResponse({'success': True, 'classes': classes_out})
 
 
 @csrf_exempt
@@ -7430,19 +7477,18 @@ def api_room_detail(request, room_id):
 @csrf_exempt
 def api_grading_scheme(request):
     """GET or PUT the school's grading scheme (grade boundaries + pass mark)."""
-    try:
-        actor, sa, school = _get_school_for_admin(request)
-    except SchoolAdmin.DoesNotExist:
-        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    actor = _get_authed_user(request)
     if not actor:
         return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
 
-    scheme, _ = GradingScheme.objects.get_or_create(
-        school=school,
-        defaults={'boundaries': GradingScheme.default_boundaries(), 'pass_mark': 50},
-    )
-
     if request.method == 'GET':
+        school = _get_user_school(actor)
+        if not school:
+            return JsonResponse({'success': False, 'message': 'No school context.'}, status=404)
+        scheme, _ = GradingScheme.objects.get_or_create(
+            school=school,
+            defaults={'boundaries': GradingScheme.default_boundaries(), 'pass_mark': 50},
+        )
         return JsonResponse({'success': True, 'scheme': {
             'id': scheme.id,
             'pass_mark': scheme.pass_mark,
@@ -7452,14 +7498,22 @@ def api_grading_scheme(request):
 
     if request.method in ('PUT', 'POST'):
         try:
+            _, sa, school = _get_school_for_admin(request)
+        except SchoolAdmin.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Admin access required.'}, status=403)
+        
+        scheme, _ = GradingScheme.objects.get_or_create(school=school)
+        try:
             body = json.loads(request.body)
         except json.JSONDecodeError:
             return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        
         if 'pass_mark' in body:
             pm = int(body['pass_mark'])
             if not (0 <= pm <= 100):
                 return JsonResponse({'success': False, 'message': 'pass_mark must be 0–100.'}, status=400)
             scheme.pass_mark = pm
+            
         if 'boundaries' in body:
             boundaries = body['boundaries']
             if not isinstance(boundaries, list) or len(boundaries) < 2:
@@ -7468,6 +7522,7 @@ def api_grading_scheme(request):
                 if not all(k in b for k in ('letter', 'min', 'max')):
                     return JsonResponse({'success': False, 'message': 'Each boundary needs letter, min, max.'}, status=400)
             scheme.boundaries = boundaries
+            
         scheme.save()
         return JsonResponse({'success': True, 'message': 'Grading scheme updated.'})
 

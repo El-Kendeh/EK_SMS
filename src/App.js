@@ -75,6 +75,7 @@ const PATH_TO_PAGE = {
   '/superadmin':  'superadmindashboard',
   '/dashboard/school-admin': 'sa-dashboard',
   '/dashboard/teacher':      'teacher-dashboard',
+  '/teacher/dashboard':      'teacher-dashboard',
   '/dashboard/student':      'student-dashboard',
   '/parent':                 'parentdashboard',
   '/parent/children':        'parentdashboard',
@@ -128,6 +129,14 @@ function App() {
     if (token && userStr) {
       try {
         const user = JSON.parse(userStr);
+
+        // Enforce password change if required
+        if (user.must_change_password) {
+          setCurrentPage('force-change-password');
+          setIsLoading(false);
+          return;
+        }
+
         const isSuper = user.is_superuser || user.role === 'superadmin' || user.role === 'admin' || user.role === 'superuser';
 
         if (isSuper) {
@@ -165,6 +174,13 @@ function App() {
       } else {
         try {
           const user = JSON.parse(userStr);
+
+          // Enforce password change
+          if (user.must_change_password) {
+            setCurrentPage('force-change-password');
+            return;
+          }
+
           const isSuper = user.is_superuser || user.role === 'superadmin' || user.role === 'admin' || user.role === 'superuser';
           if (isSuper) {
             setCurrentPage('superadmindashboard');

@@ -11,9 +11,11 @@ export function useTeacherClasses() {
     let cancelled = false;
     setLoading(true);
     teacherApi.getAssignedClasses()
-      .then(classes => {
+      .then(data => {
         if (cancelled) return;
-        setAssignedClasses(classes || []);
+        // The API returns { success: true, classes: [...] }
+        const classesArray = data.classes || (Array.isArray(data) ? data : []);
+        setAssignedClasses(classesArray);
       })
       .catch(err => {
         if (!cancelled) setError(err.message || 'Failed to load classes');

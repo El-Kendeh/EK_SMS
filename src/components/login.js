@@ -98,6 +98,12 @@ function Login({ onNavigate }) {
     if (token && userStr) {
       try {
         const user = JSON.parse(userStr);
+
+        if (user.must_change_password) {
+          onNavigate('force-change-password');
+          return;
+        }
+
         const isSuper = user.is_superuser || user.role === 'superadmin' || user.role === 'admin' || user.role === 'superuser';
         if (isSuper) {
           onNavigate('superadmindashboard');
@@ -147,9 +153,9 @@ function Login({ onNavigate }) {
         throw new Error(data.message || 'Login failed. Please check your credentials.');
       }
 
+      const user = { ...data.user, must_change_password: !!data.must_change_password };
       localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      const user = data.user;
+      localStorage.setItem('user', JSON.stringify(user));
 
       if (onNavigate) {
         if (data.must_change_password) {
