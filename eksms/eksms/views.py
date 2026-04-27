@@ -5941,24 +5941,36 @@ def api_teacher_me(request):
     except Exception:
         has_2fa = False
 
-    return JsonResponse({'success': True, 'teacher': {
-        'id': teacher.id,
-        'full_name': user.get_full_name(),
-        'first_name': user.first_name,
-        'last_name': user.last_name,
-        'email': user.email,
-        'phone_number': teacher.phone_number,
-        'employee_id': teacher.employee_id,
-        'qualification': teacher.qualification,
-        'hire_date': str(teacher.hire_date),
-        'school_name': school.name if school else '',
-        'school': {'id': school.id, 'name': school.name, 'badge': badge_url} if school else None,
-        'subjects': subjects,
-        'classes': classes,
-        'total_students': sum(c['student_count'] for c in classes),
-        'periods_per_week': len(classes),
-        'has_2fa': has_2fa,
-    }})
+    # Session count
+    from eksms_core.models import UserToken
+    session_count = UserToken.objects.filter(user=user).count()
+
+    return JsonResponse({
+        'success': True,
+        'teacher': {
+            'id': teacher.id,
+            'firstName': user.first_name,
+            'lastName': user.last_name,
+            'fullName': user.get_full_name(),
+            'initials': (user.first_name[0] if user.first_name else '') + (user.last_name[0] if user.last_name else ''),
+            'email': user.email,
+            'phone': teacher.phone_number,
+            'qualification': teacher.qualification or 'Teacher',
+            'employeeNumber': teacher.employee_id,
+            'school': school.name if school else 'N/A',
+            'joinedDate': str(teacher.hire_date) if teacher.hire_date else None,
+            'status': 'active' if user.is_active else 'inactive',
+            'lastLogin': user.last_login.isoformat() if user.last_login else None,
+            'activeSessions': session_count,
+            'twoFactorEnabled': has_2fa,
+            'specializations': subjects,
+            'subjects': subjects,
+            'classes': classes,
+            'periods_per_week': len(classes),
+            'student_count': sum(c['student_count'] for c in classes),
+            'has_2fa': has_2fa,
+        }
+    })
 
 
 @csrf_exempt

@@ -46,7 +46,7 @@ export default function TimetableScreen({ navigateTo }) {
   return (
     <div>
       <h1 className="tch-page-title">My Timetable</h1>
-      <p className="tch-page-sub">First Term 2024–2025 · AI-Generated Schedule</p>
+      <p className="tch-page-sub">Your weekly teaching schedule</p>
 
       {/* Workload summary */}
       <div className="tch-stats-grid" style={{ gridTemplateColumns: 'repeat(3,1fr)', marginBottom: 20 }}>
@@ -145,8 +145,8 @@ export default function TimetableScreen({ navigateTo }) {
       <div className="tt-legend">
         <p className="tt-legend__label">Key</p>
         <div className="tt-legend__items">
-          <div className="tch-period-block period-math tt-legend__item">Mathematics (Core)</div>
-          <div className="tch-period-block period-elective tt-legend__item">Mathematics Elective</div>
+          <div className="tch-period-block period-math tt-legend__item">Teaching Period</div>
+          <div className="tch-period-block period-elective tt-legend__item">Elective Period</div>
           <div className="tch-period-block period-duty tt-legend__item">Duty Period</div>
         </div>
       </div>

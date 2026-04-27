@@ -134,7 +134,7 @@ function TeacherDashboardInner({ onNavigate }) {
           <div className="tch-sidebar__avatar">{initials}</div>
           <div className="tch-sidebar__user-info">
             <p className="tch-sidebar__name">{profile?.fullName || 'Teacher'}</p>
-            <p className="tch-sidebar__role">Mathematics Teacher</p>
+            <p className="tch-sidebar__role">{profile?.qualification || (profile?.subjects?.length ? profile.subjects.slice(0,2).join(', ') + ' Teacher' : 'Teacher')}</p>
           </div>
         </div>
 

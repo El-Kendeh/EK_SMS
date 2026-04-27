@@ -1,9 +1,16 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTeacherProfile } from '../../hooks/useTeacherProfile';
-import { mockSettingsPrefs, mockExportHistory } from '../../mock/teacherMockData';
 import { formatRelativeTime } from '../../utils/teacherUtils';
 import './TeacherSettings.css';
+
+const DEFAULT_PREFS = {
+  gradeDiscrepancyAlerts: true,
+  modificationRequests: true,
+  gradeLockConfirmations: true,
+  systemAlerts: true,
+  weeklyFacultyDigest: false,
+};
 
 function SettingsSection({ icon, title, children }) {
   return (
@@ -38,20 +45,17 @@ function ToggleRow({ label, description, checked, onChange }) {
 
 export default function TeacherSettings({ onLogout }) {
   const { profile } = useTeacherProfile();
-  const [prefs, setPrefs] = useState(mockSettingsPrefs.notifications);
+  const [prefs, setPrefs] = useState(DEFAULT_PREFS);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [passwordFields, setPasswordFields] = useState({ current: '', next: '', confirm: '' });
   const [passwordMsg, setPasswordMsg] = useState(null);
-  const [showExports, setShowExports] = useState(false);
   const [exportMsg, setExportMsg] = useState(null);
 
   const togglePref = (key) => {
     setPrefs(p => ({ ...p, [key]: !p[key] }));
   };
 
-  const storagePercent = Math.round((mockSettingsPrefs.storageUsedGB / mockSettingsPrefs.storageTotalGB) * 100);
-
-  const handleChangePassword = (e) => {
+  const handleChangePassword = async (e) => {
     e.preventDefault();
     if (passwordFields.next !== passwordFields.confirm) {
       setPasswordMsg({ type: 'error', text: 'New passwords do not match.' });
@@ -61,14 +65,34 @@ export default function TeacherSettings({ onLogout }) {
       setPasswordMsg({ type: 'error', text: 'Password must be at least 8 characters.' });
       return;
     }
-    setPasswordMsg({ type: 'success', text: 'Password changed successfully.' });
-    setPasswordFields({ current: '', next: '', confirm: '' });
-    setTimeout(() => { setShowPasswordForm(false); setPasswordMsg(null); }, 2000);
+    try {
+      const res = await fetch('/api/change-password/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Token ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({
+          current_password: passwordFields.current,
+          new_password: passwordFields.next,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPasswordMsg({ type: 'success', text: 'Password changed successfully.' });
+        setPasswordFields({ current: '', next: '', confirm: '' });
+        setTimeout(() => { setShowPasswordForm(false); setPasswordMsg(null); }, 2000);
+      } else {
+        setPasswordMsg({ type: 'error', text: data.message || 'Failed to change password.' });
+      }
+    } catch {
+      setPasswordMsg({ type: 'error', text: 'Network error. Please try again.' });
+    }
   };
 
   const handleExport = (format) => {
     setExportMsg({ text: `Generating ${format} export…` });
-    setTimeout(() => setExportMsg({ text: `${format} export ready. Check export history.`, success: true }), 1800);
+    setTimeout(() => setExportMsg({ text: `${format} export ready.`, success: true }), 1800);
     setTimeout(() => setExportMsg(null), 4000);
   };
 
@@ -86,7 +110,7 @@ export default function TeacherSettings({ onLogout }) {
               <div>
                 <p className="ts-profile-name">{profile.fullName}</p>
                 <p className="ts-profile-id">
-                  <span className="tch-badge tch-badge--grey">FACULTY_ID: {profile.employeeNumber}</span>
+                  <span className="tch-badge tch-badge--grey">FACULTY_ID: {profile.employeeNumber || 'N/A'}</span>
                 </p>
               </div>
             </div>
@@ -104,7 +128,7 @@ export default function TeacherSettings({ onLogout }) {
                 <label className="tch-label">Employee ID</label>
                 <div className="ts-field-value">
                   <span className="material-symbols-outlined" style={{ fontSize: 14, color: 'var(--tch-text-secondary)' }}>tag</span>
-                  {profile.employeeNumber}
+                  {profile.employeeNumber || 'N/A'}
                   <span className="material-symbols-outlined ts-lock-icon">lock</span>
                 </div>
               </div>
@@ -120,9 +144,12 @@ export default function TeacherSettings({ onLogout }) {
             <div className="ts-field" style={{ marginTop: 14 }}>
               <label className="tch-label">Assigned Subjects</label>
               <div className="ts-chips">
-                {profile.specializations.map(s => (
+                {(profile.specializations || profile.subjects || []).map(s => (
                   <span key={s} className="tch-badge tch-badge--primary">{s}</span>
                 ))}
+                {(!profile.specializations || profile.specializations.length === 0) && (!profile.subjects || profile.subjects.length === 0) && (
+                  <span className="tch-badge tch-badge--grey">No subjects assigned</span>
+                )}
               </div>
             </div>
             <p className="ts-admin-note">
@@ -141,7 +168,7 @@ export default function TeacherSettings({ onLogout }) {
             <span className="material-symbols-outlined ts-security-row__icon">password</span>
             <div>
               <p className="ts-security-row__title">Change Password</p>
-              <p className="ts-security-row__sub">Last changed {formatRelativeTime(profile?.lastLogin)}</p>
+              <p className="ts-security-row__sub">Last login {formatRelativeTime(profile?.lastLogin)}</p>
             </div>
           </div>
           <span className="material-symbols-outlined" style={{ color: 'var(--tch-text-secondary)', fontSize: 18, transform: showPasswordForm ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>
@@ -203,10 +230,16 @@ export default function TeacherSettings({ onLogout }) {
           <span className="material-symbols-outlined ts-2fa-icon" style={{ fontVariationSettings: "'FILL' 1" }}>shield</span>
           <div className="ts-2fa-info">
             <p className="ts-2fa-title">
-              Biometric 2FA Active
-              <span className="tch-badge tch-badge--green" style={{ marginLeft: 8, fontSize: 10 }}>SECURE</span>
+              Account Security
+              <span className={`tch-badge ${profile?.twoFactorEnabled ? 'tch-badge--green' : 'tch-badge--amber'}`} style={{ marginLeft: 8, fontSize: 10 }}>
+                {profile?.twoFactorEnabled ? 'SECURE' : 'BASIC'}
+              </span>
             </p>
-            <p className="ts-2fa-sub">Institutional tamper-proof encryption is currently securing your faculty access and student records.</p>
+            <p className="ts-2fa-sub">
+              {profile?.twoFactorEnabled
+                ? 'Two-factor authentication is active. Your account and student records are protected.'
+                : 'Two-factor authentication is not enabled. Consider enabling it for enhanced security.'}
+            </p>
           </div>
         </div>
 
@@ -285,73 +318,6 @@ export default function TeacherSettings({ onLogout }) {
               </button>
             ))}
           </div>
-        </div>
-
-        <div className="ts-divider" />
-
-        <div
-          className="ts-security-row"
-          style={{ cursor: 'pointer' }}
-          onClick={() => setShowExports(p => !p)}
-        >
-          <div className="ts-security-row__left">
-            <span className="material-symbols-outlined ts-security-row__icon">history</span>
-            <div>
-              <p className="ts-security-row__title">Export History</p>
-              <p className="ts-security-row__sub">View your previous exports</p>
-            </div>
-          </div>
-          <span className="material-symbols-outlined" style={{ color: 'var(--tch-text-secondary)', fontSize: 18, transform: showExports ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>
-            chevron_right
-          </span>
-        </div>
-
-        <AnimatePresence>
-          {showExports && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              style={{ overflow: 'hidden' }}
-            >
-              <div className="ts-export-history">
-                {mockExportHistory.map(exp => (
-                  <div key={exp.id} className="ts-export-item">
-                    <div className="ts-export-item__left">
-                      <span className={`tch-badge ${exp.status === 'success' ? 'tch-badge--green' : 'tch-badge--grey'}`} style={{ fontSize: 10 }}>{exp.format}</span>
-                      <div>
-                        <p className="ts-export-item__name">{exp.name}</p>
-                        <p className="ts-export-item__meta">{new Date(exp.date).toLocaleDateString()} · {exp.size} · <span style={{ color: exp.status === 'expired' ? 'var(--tch-error)' : '#059669' }}>{exp.status}</span></p>
-                      </div>
-                    </div>
-                    {exp.status !== 'expired' && (
-                      <button className="tch-btn tch-btn--ghost tch-btn--sm" title="Re-download">
-                        <span className="material-symbols-outlined">download</span>
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <div className="ts-divider" />
-
-        {/* Storage */}
-        <div className="ts-storage">
-          <div className="ts-storage__header">
-            <span className="ts-info-label">Storage Usage</span>
-            <span className="ts-info-value">{mockSettingsPrefs.storageUsedGB}GB / {mockSettingsPrefs.storageTotalGB}GB</span>
-          </div>
-          <div className="ts-storage__bar">
-            <div
-              className={`ts-storage__fill ${storagePercent > 80 ? 'ts-storage__fill--warn' : ''}`}
-              style={{ width: `${storagePercent}%` }}
-            />
-          </div>
-          <p className="ts-storage__pct">{storagePercent}% used</p>
         </div>
       </SettingsSection>
 

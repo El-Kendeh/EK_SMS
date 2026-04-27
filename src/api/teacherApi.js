@@ -1,8 +1,3 @@
-import { mockTeacherProfile, mockAssignedClasses, mockStudents, mockGradeHistory, mockTimetable, mockModificationRequests, mockTeacherNotifications, mockTerms, mockGradingScheme } from '../mock/teacherMockData';
-
-const USE_MOCK = process.env.REACT_APP_USE_MOCK_DATA === 'true';
-const delay = ms => new Promise(res => setTimeout(res, ms));
-
 function authHeaders() {
   const token = localStorage.getItem('token');
   return { 'Content-Type': 'application/json', Authorization: `Token ${token}` };
@@ -15,35 +10,26 @@ function authHeadersNoContent() {
 
 export const teacherApi = {
   async getTeacherProfile() {
-    if (USE_MOCK) { await delay(500); return mockTeacherProfile; }
     const res = await fetch('/api/teacher/me/', { headers: authHeaders() });
     return res.json();
   },
 
   async getAssignedClasses() {
-    if (USE_MOCK) { await delay(600); return mockAssignedClasses; }
     const res = await fetch('/api/teacher/classes/', { headers: authHeaders() });
     return res.json();
   },
 
   async getClassStudents(classId) {
-    if (USE_MOCK) { await delay(700); return mockStudents[classId] || []; }
     const res = await fetch(`/api/teacher/students/?class_id=${classId}`, { headers: authHeaders() });
     return res.json();
   },
 
   async getClassGrades(classId) {
-    if (USE_MOCK) {
-      await delay(600);
-      const students = mockStudents[classId] || [];
-      return students.map(s => ({ studentId: s.id, studentName: s.fullName, studentNumber: s.studentNumber, initials: s.initials, avatarColor: s.avatarColor, ...s.currentGrade }));
-    }
     const res = await fetch(`/api/teacher/gradebook/?class_id=${classId}`, { headers: authHeaders() });
     return res.json();
   },
 
   async saveGradeDraft(payload) {
-    if (USE_MOCK) { await delay(400); return { success: true }; }
     const res = await fetch('/api/teacher/gradebook/', {
       method: 'POST',
       headers: authHeaders(),
@@ -53,7 +39,6 @@ export const teacherApi = {
   },
 
   async submitGradesForLocking(gradesArray, subjectId, termId) {
-    if (USE_MOCK) { await delay(1200); return { success: true, locked: gradesArray.length }; }
     const student_ids = gradesArray.map(g => g.studentId).filter(Boolean);
     const res = await fetch('/api/teacher/grades/lock/', {
       method: 'POST',
@@ -73,27 +58,22 @@ export const teacherApi = {
   },
 
   async getGradeHistory(gradeId) {
-    if (USE_MOCK) { await delay(400); return mockGradeHistory[gradeId] || []; }
     const res = await fetch(`/api/teacher/grades/${gradeId}/history/`, { headers: authHeaders() });
     return res.json();
   },
 
   async getGradingScheme() {
-    if (USE_MOCK) { await delay(300); return mockGradingScheme; }
     const res = await fetch('/api/school/grading-scheme/', { headers: authHeaders() });
     const data = await res.json();
-    if (!data.success) return mockGradingScheme;
-    return data.scheme;
+    return data.success ? data.scheme : null;
   },
 
   async getModificationRequests() {
-    if (USE_MOCK) { await delay(500); return { success: true, requests: mockModificationRequests }; }
     const res = await fetch('/api/teacher/modification-requests/', { headers: authHeaders() });
     return res.json();
   },
 
   async submitModificationRequest(payload) {
-    if (USE_MOCK) { await delay(1000); return { success: true, requestId: 'mod-new' }; }
     if (payload.evidenceFile) {
       const fd = new FormData();
       fd.append('grade_id', payload.gradeId);
@@ -116,7 +96,6 @@ export const teacherApi = {
   },
 
   async withdrawModificationRequest(requestId) {
-    if (USE_MOCK) { await delay(400); return { success: true }; }
     const res = await fetch('/api/teacher/modification-requests/', {
       method: 'POST',
       headers: authHeaders(),
@@ -126,7 +105,6 @@ export const teacherApi = {
   },
 
   async getClassAnalytics(classId, subjectId) {
-    if (USE_MOCK) { await delay(400); return { trend: [] }; }
     const params = new URLSearchParams();
     if (classId)   params.append('class_id', classId);
     if (subjectId) params.append('subject_id', subjectId);
@@ -135,19 +113,16 @@ export const teacherApi = {
   },
 
   async getTeacherTimetable() {
-    if (USE_MOCK) { await delay(600); return mockTimetable; }
     const res = await fetch('/api/teacher/attendance/', { headers: authHeaders() });
     return res.json();
   },
 
   async getNotifications() {
-    if (USE_MOCK) { await delay(400); return mockTeacherNotifications; }
     const res = await fetch('/api/school/notifications/', { headers: authHeaders() });
     return res.json();
   },
 
   async markNotificationRead(id) {
-    if (USE_MOCK) { await delay(200); return { success: true }; }
     const res = await fetch(`/api/school/notifications/${id}/read/`, {
       method: 'POST',
       headers: authHeaders(),
@@ -156,19 +131,16 @@ export const teacherApi = {
   },
 
   async markAllNotificationsRead() {
-    if (USE_MOCK) { await delay(300); return { success: true }; }
     return { success: true };
   },
 
   async getCurrentTerm() {
-    if (USE_MOCK) { await delay(300); return mockTerms.find(t => t.isCurrent); }
     const res = await fetch('/api/school/terms/', { headers: authHeaders() });
     const data = await res.json();
     return (data.terms || []).find(t => t.status === 'active') || null;
   },
 
   async getAllTerms() {
-    if (USE_MOCK) { await delay(300); return mockTerms; }
     const res = await fetch('/api/school/terms/', { headers: authHeaders() });
     const data = await res.json();
     return data.terms || [];

@@ -1,32 +1,130 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useTeacher } from '../../context/TeacherContext';
 import { teacherApi } from '../../api/teacherApi';
-import { mockClassAnalytics } from '../../mock/teacherMockData';
 import './ClassAnalytics.css';
 
-const INSIGHT_META = {
-  positive: { icon: 'trending_up',  cls: 'ca-insight--positive' },
-  warning:  { icon: 'warning',      cls: 'ca-insight--warning' },
-  info:     { icon: 'info',         cls: 'ca-insight--info' },
+// Grade distribution colors
+const GRADE_COLORS = {
+  A: '#059669', B: '#3b82f6', C: '#8b5cf6', D: '#f59e0b', E: '#ef4444', I: '#6b7280',
 };
+
+function avatarColor(str = '') {
+  const colours = ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#14b8a6'];
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  return colours[Math.abs(hash) % colours.length];
+}
+
+function initials(name = '') {
+  return name.split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+}
+
+function getGradeLetter(score, boundaries) {
+  if (!boundaries || !Array.isArray(boundaries)) {
+    if (score >= 80) return 'A';
+    if (score >= 65) return 'B';
+    if (score >= 55) return 'C';
+    if (score >= 45) return 'D';
+    return 'E';
+  }
+  for (const b of boundaries) {
+    if (score >= b.min && score <= b.max) return b.letter;
+  }
+  return 'E';
+}
 
 export default function ClassAnalytics() {
   const { assignedClasses, selectedClassId, setSelectedClassId } = useTeacher();
   const [exportDone, setExportDone] = useState(false);
   const [trend, setTrend] = useState([]);
+  const [gradesData, setGradesData] = useState(null);
+  const [gradingScheme, setGradingScheme] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  const selectedClass = assignedClasses.find(c => c.id === selectedClassId);
-  const analytics = selectedClassId ? mockClassAnalytics[selectedClassId] : null;
+  const selectedClass = assignedClasses.find(c => String(c.id) === String(selectedClassId));
 
+  // Fetch grading scheme on mount
   useEffect(() => {
-    if (!selectedClassId) { setTrend([]); return; }
-    const cls = assignedClasses.find(c => c.id === selectedClassId);
+    teacherApi.getGradingScheme()
+      .then(scheme => setGradingScheme(scheme))
+      .catch(() => setGradingScheme(null));
+  }, []);
+
+  // Fetch grades + trend when class changes
+  useEffect(() => {
+    if (!selectedClassId) { setGradesData(null); setTrend([]); return; }
+    setLoading(true);
+    const cls = assignedClasses.find(c => String(c.id) === String(selectedClassId));
     const subjectId = cls?.subject?.id;
-    teacherApi.getClassAnalytics(selectedClassId, subjectId)
-      .then(data => setTrend(data.trend || []))
-      .catch(() => setTrend([]));
+
+    Promise.all([
+      teacherApi.getClassGrades(selectedClassId),
+      teacherApi.getClassAnalytics(selectedClassId, subjectId),
+    ])
+      .then(([gradeResp, analyticsResp]) => {
+        setGradesData(gradeResp);
+        setTrend(analyticsResp.trend || []);
+      })
+      .catch(() => { setGradesData(null); setTrend([]); })
+      .finally(() => setLoading(false));
   }, [selectedClassId, assignedClasses]);
+
+  // Compute analytics from real grade data
+  const analytics = useMemo(() => {
+    if (!gradesData) return null;
+    const entries = gradesData.entries || [];
+    const students = gradesData.students || [];
+    const boundaries = gradingScheme?.boundaries || null;
+    const passMark = gradingScheme?.pass_mark || 50;
+
+    // Only consider entries with actual scores
+    const scored = entries.filter(e => {
+      const total = (parseFloat(e.ca) || 0) + (parseFloat(e.midterm) || 0) + (parseFloat(e.final_exam) || 0);
+      return total > 0;
+    }).map(e => {
+      const stu = students.find(s => s.id === e.student_id) || {};
+      const fullName = `${stu.first_name || ''} ${stu.last_name || ''}`.trim() || `Student #${e.student_id}`;
+      const total = Math.round((parseFloat(e.ca) || 0) + (parseFloat(e.midterm) || 0) + (parseFloat(e.final_exam) || 0));
+      return { studentName: fullName, score: total, gradeLetter: getGradeLetter(total, boundaries) };
+    });
+
+    if (scored.length === 0) return null;
+
+    scored.sort((a, b) => b.score - a.score);
+    const avg = Math.round(scored.reduce((sum, s) => sum + s.score, 0) / scored.length);
+    const passed = scored.filter(s => s.score >= passMark).length;
+    const passRate = Math.round((passed / scored.length) * 100);
+
+    // Distribution
+    const distMap = {};
+    ['A','B','C','D','E','I'].forEach(l => { distMap[l] = 0; });
+    scored.forEach(s => { distMap[s.gradeLetter] = (distMap[s.gradeLetter] || 0) + 1; });
+    const distribution = Object.entries(distMap).map(([letter, count]) => ({
+      letter, count, color: GRADE_COLORS[letter] || '#6b7280',
+    }));
+
+    // Top performers (top 5)
+    const topPerformers = scored.slice(0, 5).map((s, i) => ({
+      rank: i + 1,
+      studentName: s.studentName,
+      score: s.score,
+      gradeLetter: s.gradeLetter,
+      initials: initials(s.studentName),
+      avatarColor: avatarColor(s.studentName),
+    }));
+
+    return {
+      classAverage: avg,
+      classAverageLetter: getGradeLetter(avg, boundaries),
+      passRate,
+      highestScore: scored[0],
+      lowestScore: scored[scored.length - 1],
+      distribution,
+      topPerformers,
+      totalScored: scored.length,
+    };
+  }, [gradesData, gradingScheme]);
 
   const maxCount = analytics
     ? Math.max(...analytics.distribution.map(d => d.count), 1)
@@ -44,7 +142,7 @@ export default function ClassAnalytics() {
           <h1 className="tch-page-title" style={{ margin: 0 }}>Class Analytics</h1>
           {selectedClass && (
             <p className="tch-page-sub" style={{ margin: '2px 0 0' }}>
-              {selectedClass.name} · {selectedClass.subject.name}
+              {selectedClass.name} · {selectedClass.subject?.name}
             </p>
           )}
         </div>
@@ -67,7 +165,7 @@ export default function ClassAnalytics() {
         >
           <option value="">— Select a class —</option>
           {assignedClasses.map(cls => (
-            <option key={cls.id} value={cls.id}>{cls.name} — {cls.subject.name}</option>
+            <option key={cls.id} value={cls.id}>{cls.name} — {cls.subject?.name}</option>
           ))}
         </select>
       </div>
@@ -79,14 +177,20 @@ export default function ClassAnalytics() {
         </div>
       )}
 
-      {selectedClassId && !analytics && (
+      {selectedClassId && loading && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
+          {[0,1,2].map(i => <div key={i} className="tch-skeleton" style={{ height: 80 }} />)}
+        </div>
+      )}
+
+      {selectedClassId && !loading && !analytics && (
         <div className="tch-empty">
           <span className="material-symbols-outlined">hourglass_empty</span>
           <p>No analytics available — grades haven't been submitted yet for this class</p>
         </div>
       )}
 
-      {/* Term-over-term performance trend — real API data, shown independently of mock analytics */}
+      {/* Term-over-term performance trend */}
       {selectedClassId && trend.length > 1 && (() => {
         const maxAvg = Math.max(...trend.map(t => t.average), 1);
         return (
@@ -147,10 +251,6 @@ export default function ClassAnalytics() {
                 <span className="ca-avg-letter">{analytics.classAverageLetter}</span>
                 <div>
                   <p className="ca-avg-score">{analytics.classAverage}%</p>
-                  <p className={`ca-avg-delta ${analytics.averageDelta >= 0 ? 'ca-avg-delta--up' : 'ca-avg-delta--down'}`}>
-                    <span className="material-symbols-outlined">{analytics.averageDelta >= 0 ? 'trending_up' : 'trending_down'}</span>
-                    {analytics.averageDelta >= 0 ? '+' : ''}{analytics.averageDelta}% vs last term
-                  </p>
                 </div>
               </div>
               <div className="ca-kpi-card__bar">
@@ -238,31 +338,6 @@ export default function ClassAnalytics() {
                   </span>
                 </motion.div>
               ))}
-            </div>
-          </div>
-
-          {/* AI Insights */}
-          <div className="tch-card ca-insights-card">
-            <p className="ca-section-title">
-              <span className="material-symbols-outlined">auto_awesome</span>
-              AI Insights
-            </p>
-            <div className="ca-insights-list">
-              {analytics.aiInsights.map((insight, i) => {
-                const meta = INSIGHT_META[insight.type] || INSIGHT_META.info;
-                return (
-                  <motion.div
-                    key={i}
-                    className={`ca-insight ${meta.cls}`}
-                    initial={{ opacity: 0, x: -8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.08 }}
-                  >
-                    <span className="material-symbols-outlined ca-insight__icon">{meta.icon}</span>
-                    <p className="ca-insight__text">{insight.text}</p>
-                  </motion.div>
-                );
-              })}
             </div>
           </div>
 

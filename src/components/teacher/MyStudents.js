@@ -1,40 +1,69 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { mockStudents } from '../../mock/teacherMockData';
 import { useTeacher } from '../../context/TeacherContext';
+import { useTeacherStudents } from '../../hooks/useTeacherStudents';
 import StudentProfileDrawer from './StudentProfileDrawer';
 import './MyStudents.css';
 
+// Generate a stable colour from a string
+function avatarColor(str = '') {
+  const colours = ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#14b8a6'];
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  return colours[Math.abs(hash) % colours.length];
+}
+
+function initials(name = '') {
+  return name.split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+}
+
 export default function MyStudents({ navigateTo }) {
   const { assignedClasses } = useTeacher();
+  const { students, loading, error } = useTeacherStudents();
   const [search, setSearch] = useState('');
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [filterClass, setFilterClass] = useState('all');
 
-  const allStudents = useMemo(() => {
-    return Object.entries(mockStudents).flatMap(([classId, studs]) => {
-      const cls = assignedClasses.find(c => c.id === classId);
-      return studs.map(s => ({ ...s, classId, className: cls?.name || '', subjectName: cls?.subject?.name || '' }));
-    });
-  }, [assignedClasses]);
-
   const filtered = useMemo(() => {
-    let list = allStudents;
-    if (filterClass !== 'all') list = list.filter(s => s.classId === filterClass);
+    let list = students;
+    if (filterClass !== 'all') list = list.filter(s => String(s.classId) === String(filterClass));
     if (search) {
       const q = search.toLowerCase();
       list = list.filter(s =>
-        s.fullName.toLowerCase().includes(q) ||
-        s.studentNumber.toLowerCase().includes(q)
+        (s.fullName || '').toLowerCase().includes(q) ||
+        (s.studentNumber || '').toLowerCase().includes(q)
       );
     }
     return list;
-  }, [allStudents, filterClass, search]);
+  }, [students, filterClass, search]);
+
+  if (loading) {
+    return (
+      <div>
+        <h1 className="tch-page-title">My Students</h1>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 20 }}>
+          {[0,1,2,3,4].map(i => <div key={i} className="tch-skeleton" style={{ height: 56 }} />)}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div>
+        <h1 className="tch-page-title">My Students</h1>
+        <div className="tch-empty">
+          <span className="material-symbols-outlined">warning</span>
+          <p>{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
       <h1 className="tch-page-title">My Students</h1>
-      <p className="tch-page-sub">{allStudents.length} students across {assignedClasses.length} classes</p>
+      <p className="tch-page-sub">{students.length} student{students.length !== 1 ? 's' : ''} across {assignedClasses.length} class{assignedClasses.length !== 1 ? 'es' : ''}</p>
 
       {/* Controls */}
       <div className="mys-controls">
@@ -55,7 +84,7 @@ export default function MyStudents({ navigateTo }) {
         >
           <option value="all">All Classes</option>
           {assignedClasses.map(c => (
-            <option key={c.id} value={c.id}>{c.name} — {c.subject.name}</option>
+            <option key={c.id} value={String(c.id)}>{c.name} — {c.subject?.name}</option>
           ))}
         </select>
       </div>
@@ -69,16 +98,15 @@ export default function MyStudents({ navigateTo }) {
                 <th>#</th>
                 <th>Student</th>
                 <th>Class</th>
-                <th>Current Grade</th>
-                <th>Status</th>
+                <th>Student No.</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--tch-text-secondary)' }}>
-                    No students found
+                  <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: 'var(--tch-text-secondary)' }}>
+                    {students.length === 0 ? 'No students assigned yet' : 'No students match your search'}
                   </td>
                 </tr>
               ) : filtered.map((s, i) => (
@@ -86,8 +114,7 @@ export default function MyStudents({ navigateTo }) {
                   key={`${s.classId}-${s.id}`}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.04 }}
-                  className={s.currentGrade.status === 'locked' ? 'tch-grade-row--locked' : ''}
+                  transition={{ delay: i * 0.03 }}
                 >
                   <td style={{ fontSize: 12, color: 'var(--tch-text-secondary)' }}>{i + 1}</td>
                   <td>
@@ -95,17 +122,17 @@ export default function MyStudents({ navigateTo }) {
                       <div
                         style={{
                           width: 36, height: 36, borderRadius: '50%',
-                          background: s.avatarColor, color: 'white',
-                          fontSize: 12, fontWeight: 800,
+                          background: avatarColor(s.fullName),
+                          color: 'white', fontSize: 12, fontWeight: 800,
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           flexShrink: 0,
                         }}
                       >
-                        {s.initials}
+                        {initials(s.fullName)}
                       </div>
                       <div>
                         <p style={{ margin: 0, fontWeight: 700, fontSize: 14 }}>{s.fullName}</p>
-                        <p style={{ margin: 0, fontSize: 11, color: 'var(--tch-text-secondary)' }}>{s.studentNumber}</p>
+                        <p style={{ margin: 0, fontSize: 11, color: 'var(--tch-text-secondary)' }}>{s.email}</p>
                       </div>
                     </div>
                   </td>
@@ -113,26 +140,7 @@ export default function MyStudents({ navigateTo }) {
                     <p style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>{s.className}</p>
                     <p style={{ margin: 0, fontSize: 11, color: 'var(--tch-text-secondary)' }}>{s.subjectName}</p>
                   </td>
-                  <td>
-                    {s.currentGrade.score !== null ? (
-                      <span style={{ fontWeight: 800, fontSize: 15, color: 'var(--tch-primary)', fontFamily: 'Manrope, monospace' }}>
-                        {s.currentGrade.score}%
-                      </span>
-                    ) : '—'}
-                    {s.currentGrade.gradeLetter && (
-                      <span className="tch-badge tch-badge--primary" style={{ marginLeft: 6 }}>
-                        {s.currentGrade.gradeLetter}
-                      </span>
-                    )}
-                  </td>
-                  <td>
-                    <span className={`tch-badge ${
-                      s.currentGrade.status === 'locked' ? 'tch-badge--green' :
-                      s.currentGrade.status === 'draft'  ? 'tch-badge--amber' : 'tch-badge--grey'
-                    }`}>
-                      {s.currentGrade.status}
-                    </span>
-                  </td>
+                  <td style={{ fontFamily: 'monospace', fontSize: 13 }}>{s.studentNumber || '—'}</td>
                   <td>
                     <button
                       className="tch-btn tch-btn--ghost tch-btn--sm"

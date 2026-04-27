@@ -42,7 +42,7 @@ export default function TeacherProfile({ navigateTo }) {
         <div className="tp-avatar">{profile.initials}</div>
         <div className="tp-hero-info">
           <h2 className="tp-name">{profile.fullName}</h2>
-          <p className="tp-role">Mathematics Teacher</p>
+          <p className="tp-role">{profile.qualification || (profile.subjects?.length ? profile.subjects.slice(0,2).join(', ') + ' Teacher' : 'Teacher')}</p>
           <div className="tp-hero-chips">
             {profile.specializations.map(s => (
               <span key={s} className="tch-badge tch-badge--primary">{s}</span>
