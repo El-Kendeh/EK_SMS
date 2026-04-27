@@ -126,7 +126,7 @@ function TeacherDashboardInner({ onNavigate }) {
       {/* Sidebar */}
       <aside className={`tch-sidebar ${sidebarOpen ? 'tch-sidebar--open' : ''}`}>
         <div className="tch-sidebar__brand">
-          <span className="tch-sidebar__logo">EK-SMS</span>
+          <span className="tch-sidebar__logo">{profile?.school?.replace(/EK_SMS/gi, 'PRUH-SMS').replace(/EK-SMS/gi, 'PRUH-SMS') || 'PRUH-SMS'}</span>
           <p className="tch-sidebar__tagline">Teacher Portal</p>
         </div>
 
@@ -180,9 +180,9 @@ function TeacherDashboardInner({ onNavigate }) {
             <button className="tch-header__menu-btn" onClick={() => setSidebarOpen(p => !p)}>
               <span className="material-symbols-outlined">{sidebarOpen ? 'menu_open' : 'menu'}</span>
             </button>
-            <h2 className="tch-header__title">EK-SMS</h2>
+            <h2 className="tch-header__title">{profile?.school?.replace(/EK_SMS/gi, 'PRUH-SMS').replace(/EK-SMS/gi, 'PRUH-SMS') || 'PRUH-SMS'}</h2>
             <span className="tch-header__divider" />
-            <p className="tch-header__sub">Teacher Portal</p>
+            <p className="tch-header__sub">Welcome, {profile?.fullName || 'Teacher'}</p>
           </div>
           <div className="tch-header__right">
             <button className="tch-header__theme-btn" onClick={toggleTheme} title="Toggle theme">

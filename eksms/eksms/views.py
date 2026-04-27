@@ -3460,10 +3460,7 @@ def api_teachers(request):
         created_assignments = []
         if class_assignments:
             # Get the current academic year
-            current_year = AcademicYear.objects.filter(school=school, is_current=True).first()
-            if not current_year:
-                # Try to get any active year
-                current_year = AcademicYear.objects.filter(school=school, is_active=True).first()
+            current_year = AcademicYear.objects.filter(school=school, is_active=True).first()
             
             for assignment in class_assignments:
                 subject_id = assignment.get('subject_id')
