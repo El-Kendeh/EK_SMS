@@ -10,4 +10,5 @@ django-otp==1.7.0
 qrcode==8.2
 psutil==6.0.0
 resend==0.7.0
-africastalking==1.5.7
+africastalking==2.0.2
+pymysql==1.1.0
