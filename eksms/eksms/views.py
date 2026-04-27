@@ -3426,6 +3426,15 @@ def api_teachers(request):
         qualification   = request.POST.get('qualification', '')
         password        = request.POST.get('password', '').strip()
         profile_picture = request.FILES.get('profile_picture')
+        
+        # Parse class assignments from POST data
+        import json
+        assignments_json = request.POST.get('class_assignments', '[]')
+        try:
+            class_assignments = json.loads(assignments_json) if assignments_json else []
+        except json.JSONDecodeError:
+            class_assignments = []
+        
         if not first_name or not last_name or not employee_id:
             return JsonResponse({'success': False, 'message': 'first_name, last_name, and employee_id are required.'}, status=400)
         if not password:
@@ -3446,6 +3455,39 @@ def api_teachers(request):
             must_change_password=True,
             **(({'profile_picture': profile_picture}) if profile_picture else {}),
         )
+        
+        # Create class/subject assignments if provided
+        created_assignments = []
+        if class_assignments:
+            # Get the current academic year
+            current_year = AcademicYear.objects.filter(school=school, is_current=True).first()
+            if not current_year:
+                # Try to get any active year
+                current_year = AcademicYear.objects.filter(school=school, is_active=True).first()
+            
+            for assignment in class_assignments:
+                subject_id = assignment.get('subject_id')
+                classroom_id = assignment.get('classroom_id')
+                
+                if subject_id and classroom_id and current_year:
+                    try:
+                        subject = Subject.objects.get(id=subject_id, school=school)
+                        classroom = ClassRoom.objects.get(id=classroom_id, school=school)
+                        tsc = TeacherSubjectClass.objects.create(
+                            teacher=teacher,
+                            subject=subject,
+                            classroom=classroom,
+                            academic_year=current_year,
+                            is_active=True
+                        )
+                        created_assignments.append({
+                            'subject_name': subject.name,
+                            'class_name': classroom.name
+                        })
+                    except (Subject.DoesNotExist, ClassRoom.DoesNotExist) as e:
+                        # Skip invalid assignments
+                        pass
+        
         email_sent = False
         if email:
             html_content = (
@@ -3473,6 +3515,7 @@ def api_teachers(request):
             'login_username': username,
             'email_sent': email_sent,
             'email_warning': None if email_sent else 'Credentials email could not be delivered. Please share login details manually.',
+            'assignments': created_assignments,
         }, status=201)
 
     return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)

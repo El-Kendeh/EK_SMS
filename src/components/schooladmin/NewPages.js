@@ -3049,6 +3049,18 @@ function AddTeacherWizard({ school, onSave, onCancel }) {
   const [profilePreview,  setProfilePreview] = React.useState('');
   const [photoHover,      setPhotoHover]     = React.useState(false);
   const teacherImgRef = React.useRef(null);
+  
+  // Class allocation state
+  const [classes, setClasses] = React.useState([]);
+  const [subjects, setSubjects] = React.useState([]);
+  const [classAssignments, setClassAssignments] = React.useState([]);
+  const [newAssignment, setNewAssignment] = React.useState({ classroom_id: '', subject_id: '' });
+  
+  // Load classes and subjects
+  React.useEffect(() => {
+    ApiClient.get('/api/school/classes/').then(d => setClasses(d.classes || [])).catch(() => {});
+    ApiClient.get('/api/school/subjects/').then(d => setSubjects(d.subjects || [])).catch(() => {});
+  }, []);
 
   const handleTeacherImageChange = (e) => {
     const file = e.target.files?.[0];
@@ -3059,6 +3071,34 @@ function AddTeacherWizard({ school, onSave, onCancel }) {
     const reader = new FileReader();
     reader.onload = (ev) => setProfilePreview(ev.target.result);
     reader.readAsDataURL(file);
+  };
+  
+  // Class assignment functions
+  const addClassAssignment = () => {
+    if (newAssignment.classroom_id && newAssignment.subject_id) {
+      const classroom = classes.find(c => c.id === parseInt(newAssignment.classroom_id));
+      const subject = subjects.find(s => s.id === parseInt(newAssignment.subject_id));
+      if (classroom && subject) {
+        // Check for duplicates
+        const exists = classAssignments.some(
+          ca => ca.classroom_id === parseInt(newAssignment.classroom_id) && 
+                ca.subject_id === parseInt(newAssignment.subject_id)
+        );
+        if (!exists) {
+          setClassAssignments([...classAssignments, { 
+            classroom_id: parseInt(newAssignment.classroom_id),
+            subject_id: parseInt(newAssignment.subject_id),
+            class_name: classroom.name,
+            subject_name: subject.name
+          }]);
+          setNewAssignment({ classroom_id: '', subject_id: '' });
+        }
+      }
+    }
+  };
+  
+  const removeClassAssignment = (index) => {
+    setClassAssignments(classAssignments.filter((_, i) => i !== index));
   };
 
   const pw = _pwStrength(form.password);
@@ -3077,6 +3117,10 @@ function AddTeacherWizard({ school, onSave, onCancel }) {
       const fd = new FormData();
       Object.entries(form).forEach(([k, v]) => { if (v !== '') fd.append(k, v); });
       if (profileImage) fd.append('profile_picture', profileImage);
+      // Add class assignments as JSON
+      if (classAssignments.length > 0) {
+        fd.append('class_assignments', JSON.stringify(classAssignments));
+      }
       await ApiClient.post('/api/school/teachers/', fd);
       onSave();
     } catch (e) { setError(e.message || 'Failed to add teacher.'); setSaving(false); }
@@ -3407,6 +3451,95 @@ function AddTeacherWizard({ school, onSave, onCancel }) {
                     Share these credentials with the teacher so they can log in.
                   </p>
                 </div>
+                
+                {/* Class Allocation Section */}
+                <div style={{
+                  marginTop: 16, padding: '16px', borderRadius: 10,
+                  background: 'var(--ska-surface-high)', border: '1px solid var(--ska-border)',
+                }}>
+                  <p style={{ margin: '0 0 12px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--ska-text-2)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    <span className="ska-icon ska-icon--sm" style={{ marginRight: 6, verticalAlign: 'middle' }}>class</span>
+                    Class Allocation (Optional)
+                  </p>
+                  <p style={{ margin: '0 0 12px', fontSize: '0.8125rem', color: 'var(--ska-text-3)' }}>
+                    Assign this teacher to specific classes and subjects. You can also do this later from the teacher management page.
+                  </p>
+                  
+                  {/* Add new assignment */}
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                    <select
+                      className="ska-input"
+                      value={newAssignment.classroom_id}
+                      onChange={e => setNewAssignment({ ...newAssignment, classroom_id: e.target.value })}
+                      style={{ flex: 1 }}
+                    >
+                      <option value="">Select Class...</option>
+                      {classes.filter(c => !classAssignments.some(ca => ca.classroom_id === c.id)).map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                    <select
+                      className="ska-input"
+                      value={newAssignment.subject_id}
+                      onChange={e => setNewAssignment({ ...newAssignment, subject_id: e.target.value })}
+                      style={{ flex: 1 }}
+                    >
+                      <option value="">Select Subject...</option>
+                      {subjects.map(s => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      className="ska-btn ska-btn--primary"
+                      onClick={addClassAssignment}
+                      disabled={!newAssignment.classroom_id || !newAssignment.subject_id}
+                      style={{ padding: '8px 12px' }}
+                    >
+                      <span className="ska-icon ska-icon--sm">add</span>
+                    </button>
+                  </div>
+                  
+                  {/* Assigned classes list */}
+                  {classAssignments.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {classAssignments.map((ca, index) => (
+                        <div key={index} style={{
+                          display: 'flex', alignItems: 'center', gap: 10,
+                          padding: '10px 12px', borderRadius: 8,
+                          background: 'var(--ska-surface-card)', border: '1px solid var(--ska-border)',
+                        }}>
+                          <span className="ska-icon ska-icon--sm" style={{ color: 'var(--ska-primary)' }}>class</span>
+                          <div style={{ flex: 1 }}>
+                            <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--ska-text)' }}>{ca.class_name}</span>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--ska-text-3)', marginLeft: 8 }}>• {ca.subject_name}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeClassAssignment(index)}
+                            style={{
+                              background: 'none', border: 'none', cursor: 'pointer',
+                              color: 'var(--ska-error)', padding: 4,
+                            }}
+                          >
+                            <span className="ska-icon ska-icon--sm">close</span>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{
+                      padding: '16px', borderRadius: 8,
+                      background: 'var(--ska-surface-low)', border: '1px dashed var(--ska-border)',
+                      textAlign: 'center',
+                    }}>
+                      <span className="ska-icon" style={{ fontSize: 24, color: 'var(--ska-text-3)', marginBottom: 8 }}>school</span>
+                      <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--ska-text-3)' }}>
+                        No classes assigned yet
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -3467,6 +3600,37 @@ function AddTeacherWizard({ school, onSave, onCancel }) {
                     <TeacherReviewRow label="Password"      value="••••••••"                  icon="lock"   />
                   </div>
                 </div>
+
+                {/* Class Assignments Summary */}
+                {classAssignments.length > 0 && (
+                  <div style={{
+                    borderRadius: 12, overflow: 'hidden', marginBottom: 16,
+                    border: '1px solid rgba(173,198,255,0.15)',
+                  }}>
+                    <div style={{
+                      padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10,
+                      background: 'linear-gradient(135deg, #1a2540, #111928)',
+                      borderBottom: '1px solid rgba(173,198,255,0.1)',
+                    }}>
+                      <span className="ska-icon" style={{ color: 'var(--ska-primary)' }}>class</span>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ska-primary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                        Class Assignments ({classAssignments.length})
+                      </span>
+                    </div>
+                    <div style={{ padding: '12px 16px', background: 'var(--ska-surface-card)' }}>
+                      {classAssignments.map((ca, index) => (
+                        <div key={index} style={{
+                          display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0',
+                          borderBottom: index < classAssignments.length - 1 ? '1px solid var(--ska-border)' : 'none',
+                        }}>
+                          <span className="ska-icon ska-icon--sm" style={{ color: 'var(--ska-text-3)' }}>class</span>
+                          <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--ska-text)' }}>{ca.class_name}</span>
+                          <span style={{ fontSize: '0.8125rem', color: 'var(--ska-text-3)' }}>— {ca.subject_name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div style={{
                   display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 14px',
