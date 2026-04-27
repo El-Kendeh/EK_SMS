@@ -3055,6 +3055,26 @@ def api_students(request):
         transport_route     = body.get('transport_route', '').strip()
         sen_notes           = body.get('sen_notes', '').strip()
         sen_iep             = _parse_bool(body.get('sen_iep', 'false'))
+        place_of_birth       = body.get('place_of_birth', '').strip()
+        nationality          = body.get('nationality', '').strip()
+        religion             = body.get('religion', '').strip()
+        home_address         = body.get('home_address', '').strip()
+        city                 = body.get('city', '').strip()
+        previous_school      = body.get('previous_school', '').strip()
+        last_class_completed = body.get('last_class_completed', '').strip()
+        leaving_reason       = body.get('leaving_reason', '').strip()
+        emergency_name         = body.get('emergency_name', '').strip()
+        emergency_relationship = body.get('emergency_relationship', '').strip()
+        emergency_phone        = body.get('emergency_phone', '').strip()
+        emergency_address      = body.get('emergency_address', '').strip()
+        doctor_name          = body.get('doctor_name', '').strip()
+        doctor_phone         = body.get('doctor_phone', '').strip()
+        documents_birth_certificate      = _parse_bool(body.get('documents_birth_certificate', False))
+        documents_passport_photo         = _parse_bool(body.get('documents_passport_photo', False))
+        documents_previous_school_report = _parse_bool(body.get('documents_previous_school_report', False))
+        documents_transfer_letter        = _parse_bool(body.get('documents_transfer_letter', False))
+        documents_medical_report         = _parse_bool(body.get('documents_medical_report', False))
+        documents_other                  = _parse_bool(body.get('documents_other', False))
         father_relationship = body.get('father_relationship', 'Father').strip()
         mother_relationship = body.get('mother_relationship', 'Mother').strip()
         _valid_rels = (
@@ -3136,6 +3156,19 @@ def api_students(request):
             intake_term=intake_term, is_repeater=is_repeater,
             middle_name=middle_name, hostel_house=hostel_house,
             transport_route=transport_route, sen_notes=sen_notes, sen_iep=sen_iep,
+            place_of_birth=place_of_birth, nationality=nationality, religion=religion,
+            home_address=home_address, city=city,
+            previous_school=previous_school, last_class_completed=last_class_completed,
+            leaving_reason=leaving_reason,
+            emergency_name=emergency_name, emergency_relationship=emergency_relationship,
+            emergency_phone=emergency_phone, emergency_address=emergency_address,
+            doctor_name=doctor_name, doctor_phone=doctor_phone,
+            documents_birth_certificate=documents_birth_certificate,
+            documents_passport_photo=documents_passport_photo,
+            documents_previous_school_report=documents_previous_school_report,
+            documents_transfer_letter=documents_transfer_letter,
+            documents_medical_report=documents_medical_report,
+            documents_other=documents_other,
             **(dict(admission_date=enrollment_date_str) if enrollment_date_str else {}),
         )
 
@@ -3372,6 +3405,32 @@ def api_student_detail(request, student_id):
             'is_flagged':       is_flagged,
             'disciplinary_history': student.disciplinary_history,
             'disciplinary_notes': student.disciplinary_notes,
+            'middle_name':       student.middle_name,
+            'place_of_birth':    student.place_of_birth,
+            'nationality':       student.nationality,
+            'religion':          student.religion,
+            'home_address':      student.home_address,
+            'city':              student.city,
+            'student_type':      student.student_type,
+            'hostel_house':      student.hostel_house,
+            'transport_route':   student.transport_route,
+            'previous_school':   student.previous_school,
+            'last_class_completed': student.last_class_completed,
+            'leaving_reason':    student.leaving_reason,
+            'emergency_name':    student.emergency_name,
+            'emergency_relationship': student.emergency_relationship,
+            'emergency_phone':   student.emergency_phone,
+            'emergency_address': student.emergency_address,
+            'doctor_name':       student.doctor_name,
+            'doctor_phone':      student.doctor_phone,
+            'sen_notes':         student.sen_notes,
+            'sen_iep':           student.sen_iep,
+            'documents_birth_certificate':      student.documents_birth_certificate,
+            'documents_passport_photo':         student.documents_passport_photo,
+            'documents_previous_school_report': student.documents_previous_school_report,
+            'documents_transfer_letter':        student.documents_transfer_letter,
+            'documents_medical_report':         student.documents_medical_report,
+            'documents_other':                  student.documents_other,
             'grades':           grades_data,
             'parents':          parents_data,
             'documents': [
@@ -3434,6 +3493,20 @@ def api_student_detail(request, student_id):
                 student.disciplinary_notes = ''
         if 'disciplinary_notes' in data:
             student.disciplinary_notes = data['disciplinary_notes'].strip()
+        for _f in ('place_of_birth', 'nationality', 'religion', 'home_address', 'city',
+                   'previous_school', 'last_class_completed', 'leaving_reason',
+                   'emergency_name', 'emergency_relationship', 'emergency_phone', 'emergency_address',
+                   'doctor_name', 'doctor_phone',
+                   'middle_name', 'hostel_house', 'transport_route', 'sen_notes'):
+            if _f in data:
+                setattr(student, _f, str(data[_f]).strip())
+        if 'sen_iep' in data:
+            student.sen_iep = _parse_bool(data['sen_iep'])
+        for _doc in ('documents_birth_certificate', 'documents_passport_photo',
+                     'documents_previous_school_report', 'documents_transfer_letter',
+                     'documents_medical_report', 'documents_other'):
+            if _doc in data:
+                setattr(student, _doc, _parse_bool(data[_doc]))
         if passport_picture:
             student.passport_picture = passport_picture
 

@@ -761,6 +761,8 @@ export function StudentsPage({ school, openAddSignal }) {
   const [profilePhotoPreview, setProfilePhotoPreview] = useState(null);
   const [generatingAdmNo,     setGeneratingAdmNo]     = useState(false);
   const [showFormPwd,         setShowFormPwd]         = useState(false);
+  const [showFatherPwd,       setShowFatherPwd]       = useState(false);
+  const [showMotherPwd,       setShowMotherPwd]       = useState(false);
   const [credSuccess,         setCredSuccess]         = useState(null);
   const [linkedParents,       setLinkedParents]       = useState([]);
   const [parentsLoading,      setParentsLoading]      = useState(false);
@@ -800,6 +802,7 @@ export function StudentsPage({ school, openAddSignal }) {
   const closeModal = () => {
     setModal(null); setError(''); setFieldErrors({});
     setStep(0); setDupWarning(null); setDupIgnored(false);
+    setShowFatherPwd(false); setShowMotherPwd(false);
   };
 
   const load = useCallback(async (q = '') => {
@@ -836,7 +839,7 @@ export function StudentsPage({ school, openAddSignal }) {
   }, [viewStudent, loadLinkedParents]);
 
   const emptyForm = {
-    first_name: '', middle_name: '', last_name: '', gender: '', date_of_birth: '', age: '', place_of_birth: '',
+    first_name: '', middle_name: '', last_name: '', gender: '', date_of_birth: '', place_of_birth: '',
     nationality: '', religion: '', home_address: '', city: '', phone_number: '', email: '',
     admission_number: '', classroom_id: '', student_status: 'active', student_type: '', hostel_house: '', transport_route: '',
     previous_school: '', last_class_completed: '', leaving_reason: '',
@@ -872,6 +875,7 @@ export function StudentsPage({ school, openAddSignal }) {
     setDraftRestored(hasDraft);
     setProfilePhotoPreview(null);
     setShowFormPwd(true);
+    setShowFatherPwd(false); setShowMotherPwd(false);
     setError('');
     setFieldErrors({});
     setStep(0); setDupWarning(null); setDupIgnored(false);
@@ -899,7 +903,7 @@ export function StudentsPage({ school, openAddSignal }) {
     setForm({
       first_name: s.first_name || '', middle_name: s.middle_name || '', last_name: s.last_name || '',
       gender: s.gender === 'M' ? 'Male' : s.gender === 'F' ? 'Female' : s.gender || '',
-      date_of_birth: s.date_of_birth || '', age: s.age || '', place_of_birth: s.place_of_birth || '',
+      date_of_birth: s.date_of_birth || '', place_of_birth: s.place_of_birth || '',
       nationality: s.nationality || '', religion: s.religion || '',
       home_address: s.home_address || '', city: s.city || '',
       phone_number: s.phone_number || '', email: s.email || '',
@@ -932,6 +936,7 @@ export function StudentsPage({ school, openAddSignal }) {
     });
     setProfilePhotoPreview(s.profile_photo_url || s.profile_photo || null);
     setDraftRestored(false);
+    setShowFatherPwd(false); setShowMotherPwd(false);
     setError(''); setFieldErrors({}); setStep(0); setDupWarning(null); setDupIgnored(false); setModal(s);
   };
 
@@ -985,8 +990,6 @@ export function StudentsPage({ school, openAddSignal }) {
           if (yrs > 30) errs.date_of_birth = 'Please verify — age is over 30 years';
         }
       }
-      if (form.age && (!/^\d+$/.test(String(form.age).trim()) || Number(form.age) < 1 || Number(form.age) > 30))
-        errs.age = 'Enter a valid age (1–30)';
     }
     if (s === 2) {
       const emailRe2 = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -1602,13 +1605,6 @@ export function StudentsPage({ school, openAddSignal }) {
                 {fieldErrors.date_of_birth && <span style={{ fontSize: '0.71875rem', color: 'var(--ska-error)', marginTop: 2 }}>{fieldErrors.date_of_birth}</span>}
               </label>
               <label className="ska-form-group">
-                <span>Age</span>
-                <input className="ska-input" value={form.age} inputMode="numeric"
-                  style={fieldErrors.age ? { borderColor: 'var(--ska-error)' } : {}}
-                  onChange={e => { setForm(f => ({ ...f, age: e.target.value })); setFieldErrors(p => ({ ...p, age: '' })); }} />
-                {fieldErrors.age && <span style={{ fontSize: '0.71875rem', color: 'var(--ska-error)', marginTop: 2 }}>{fieldErrors.age}</span>}
-              </label>
-              <label className="ska-form-group">
                 <span>Place of Birth</span>
                 <input className="ska-input" value={form.place_of_birth} onChange={e => setForm(f => ({ ...f, place_of_birth: e.target.value }))} />
               </label>
@@ -1746,6 +1742,7 @@ export function StudentsPage({ school, openAddSignal }) {
                 <span>Relationship</span>
                 <select className="ska-input" value={form.father_relationship}
                   onChange={e => setForm(f => ({ ...f, father_relationship: e.target.value }))}>
+                  <option value="">— Select —</option>
                   <option value="Father">Father</option>
                   <option value="Mother">Mother</option>
                   <option value="Uncle">Uncle</option>
@@ -1774,7 +1771,17 @@ export function StudentsPage({ school, openAddSignal }) {
               <label className="ska-form-group"><span>Parent Login Username</span>
                 <input className="ska-input" value={form.father_username} onChange={e => setForm(f => ({ ...f, father_username: e.target.value }))} /></label>
               <label className="ska-form-group"><span>Parent Login Password</span>
-                <input className="ska-input" type="password" value={form.father_password} onChange={e => setForm(f => ({ ...f, father_password: e.target.value }))} /></label>
+                <div style={{ position: 'relative' }}>
+                  <input className="ska-input" type={showFatherPwd ? 'text' : 'password'} value={form.father_password}
+                    style={{ paddingRight: 36 }}
+                    onChange={e => setForm(f => ({ ...f, father_password: e.target.value }))} />
+                  <button type="button" title={showFatherPwd ? 'Hide' : 'Show'}
+                    onClick={() => setShowFatherPwd(p => !p)}
+                    style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ska-text-3)', padding: 4 }}>
+                    <Ic name={showFatherPwd ? 'visibility_off' : 'visibility'} size="sm" />
+                  </button>
+                </div>
+              </label>
 
               {/* Guardian 2 */}
               <div style={{ gridColumn: '1 / -1', marginTop: 8, fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--ska-primary)' }}>
@@ -1784,6 +1791,7 @@ export function StudentsPage({ school, openAddSignal }) {
                 <span>Relationship</span>
                 <select className="ska-input" value={form.mother_relationship}
                   onChange={e => setForm(f => ({ ...f, mother_relationship: e.target.value }))}>
+                  <option value="">— Select —</option>
                   <option value="Father">Father</option>
                   <option value="Mother">Mother</option>
                   <option value="Uncle">Uncle</option>
@@ -1812,7 +1820,17 @@ export function StudentsPage({ school, openAddSignal }) {
               <label className="ska-form-group"><span>Parent Login Username</span>
                 <input className="ska-input" value={form.mother_username} onChange={e => setForm(f => ({ ...f, mother_username: e.target.value }))} /></label>
               <label className="ska-form-group"><span>Parent Login Password</span>
-                <input className="ska-input" type="password" value={form.mother_password} onChange={e => setForm(f => ({ ...f, mother_password: e.target.value }))} /></label>
+                <div style={{ position: 'relative' }}>
+                  <input className="ska-input" type={showMotherPwd ? 'text' : 'password'} value={form.mother_password}
+                    style={{ paddingRight: 36 }}
+                    onChange={e => setForm(f => ({ ...f, mother_password: e.target.value }))} />
+                  <button type="button" title={showMotherPwd ? 'Hide' : 'Show'}
+                    onClick={() => setShowMotherPwd(p => !p)}
+                    style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ska-text-3)', padding: 4 }}>
+                    <Ic name={showMotherPwd ? 'visibility_off' : 'visibility'} size="sm" />
+                  </button>
+                </div>
+              </label>
             </div>
           </div>
 
@@ -1879,11 +1897,18 @@ export function StudentsPage({ school, openAddSignal }) {
             <h3 className="ska-card-title" style={{ marginBottom: 12 }}>Student Conduct &amp; Discipline</h3>
             <div style={{ display: 'grid', gap: 12 }}>
               <label className="ska-form-group" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <input type="checkbox" checked={form.disciplinary_history} onChange={e => setForm(f => ({ ...f, disciplinary_history: e.target.checked }))} />
+                <input type="checkbox" checked={form.disciplinary_history}
+                  onChange={e => setForm(f => ({ ...f, disciplinary_history: e.target.checked, disciplinary_notes: e.target.checked ? f.disciplinary_notes : '' }))} />
                 <span>Has the student ever been suspended/expelled?</span>
               </label>
-              <label className="ska-form-group"><span>If yes, explain</span>
-                <input className="ska-input" value={form.disciplinary_notes} onChange={e => setForm(f => ({ ...f, disciplinary_notes: e.target.value }))} /></label>
+              {form.disciplinary_history && (
+                <label className="ska-form-group"><span>Provide details</span>
+                  <textarea className="ska-input" rows={3} value={form.disciplinary_notes}
+                    onChange={e => setForm(f => ({ ...f, disciplinary_notes: e.target.value }))}
+                    style={{ resize: 'vertical', fontFamily: 'inherit' }}
+                  />
+                </label>
+              )}
             </div>
           </div>
 
