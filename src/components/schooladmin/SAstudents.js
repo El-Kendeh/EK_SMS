@@ -746,12 +746,6 @@ function LinkParentDrawer({ student, onClose, onLinked }) {
 
 const DRAFT_KEY = 'ek_sms_student_form_draft';
 
-const STUDENT_STEPS = [
-  { label: 'Identity',       icon: 'person'           },
-  { label: 'Credentials',    icon: 'key'              },
-  { label: 'Family',         icon: 'family_restroom'  },
-  { label: 'Medical & Docs', icon: 'medical_services' },
-];
 
 // ── Main Component ─────────────────────────────────────────────────
 export function StudentsPage({ school, openAddSignal }) {
@@ -775,7 +769,7 @@ export function StudentsPage({ school, openAddSignal }) {
   const [loadFailed,          setLoadFailed]          = useState(false);
   const [fieldErrors,         setFieldErrors]         = useState({});
   const [step,                setStep]                = useState(0);
-  const [dupWarning,          setDupWarning]          = useState(null);
+  const [,                    setDupWarning]          = useState(null);
   const [dupIgnored,          setDupIgnored]          = useState(false);
   const [draftRestored,       setDraftRestored]       = useState(false);
   const [stats,               setStats]               = useState(null);
@@ -1001,28 +995,6 @@ export function StudentsPage({ school, openAddSignal }) {
     }
     setFieldErrors(errs);
     return errs;
-  };
-
-  const handleNext = () => {
-    const errs = validateStep(step);
-    if (Object.keys(errs).length) {
-      setError(Object.keys(errs).length === 1
-        ? 'Please fix the highlighted field below.'
-        : `Please fix ${Object.keys(errs).length} highlighted fields below.`);
-      return;
-    }
-    if (step === 0 && modal === 'add' && !dupIgnored) {
-      const fn = form.first_name.trim().toLowerCase();
-      const ln = form.last_name.trim().toLowerCase();
-      const dup = students.find(s =>
-        s.first_name?.toLowerCase() === fn &&
-        s.last_name?.toLowerCase() === ln &&
-        (!form.date_of_birth || s.date_of_birth === form.date_of_birth)
-      );
-      if (dup) { setDupWarning(dup); setError(''); return; }
-    }
-    setError(''); setDupWarning(null);
-    setStep(s => s + 1);
   };
 
   const handleSave = async () => {

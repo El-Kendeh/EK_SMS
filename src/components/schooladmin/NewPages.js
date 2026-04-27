@@ -1984,6 +1984,7 @@ function AddStudentWizard({ school, classes, classesLoading = false, onSave, onC
     } catch (e) { setError(e?.message || 'Failed to enroll student.'); setSaving(false); }
   };
 
+  // eslint-disable-next-line no-unused-vars
   const printAdmissionSlip = () => {
     const intakeLbls = { TERM1: 'Term 1 (First)', TERM2: 'Term 2 (Second)', TERM3: 'Term 3 (Third)' };
     const enrollDate = form.enrollment_date || new Date().toISOString().split('T')[0];
