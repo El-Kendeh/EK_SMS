@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import ApiClient from '../../api/client';
 
 const Ic = ({ name, size, className = '' }) => (
@@ -47,6 +47,147 @@ const previewUsername = admNo =>
 
 const copyText = text => navigator.clipboard?.writeText(text).catch(() => {});
 
+// ── Phone input with country dial-code selector ────────────────────
+const PHONE_COUNTRIES = [
+  { code: 'SL', name: 'Sierra Leone',   dial: '+232', flag: '🇸🇱', placeholder: '76 000 000'       },
+  { code: 'GN', name: 'Guinea',         dial: '+224', flag: '🇬🇳', placeholder: '62 000 000'       },
+  { code: 'LR', name: 'Liberia',        dial: '+231', flag: '🇱🇷', placeholder: '77 000 000'       },
+  { code: 'GM', name: 'Gambia',         dial: '+220', flag: '🇬🇲', placeholder: '3XX XXXX'         },
+  { code: 'SN', name: 'Senegal',        dial: '+221', flag: '🇸🇳', placeholder: '7X XXX XX XX'    },
+  { code: 'ML', name: 'Mali',           dial: '+223', flag: '🇲🇱', placeholder: '6X XX XX XX'     },
+  { code: 'GH', name: 'Ghana',          dial: '+233', flag: '🇬🇭', placeholder: '24 XXX XXXX'     },
+  { code: 'NG', name: 'Nigeria',        dial: '+234', flag: '🇳🇬', placeholder: '70 XXX XXXX'     },
+  { code: 'CI', name: "Côte d'Ivoire", dial: '+225', flag: '🇨🇮', placeholder: '07 XX XX XX XX'  },
+  { code: 'GW', name: 'Guinea-Bissau',  dial: '+245', flag: '🇬🇼', placeholder: '96 XXX XXXX'     },
+  { code: 'TG', name: 'Togo',           dial: '+228', flag: '🇹🇬', placeholder: '90 XX XX XX'     },
+  { code: 'BJ', name: 'Benin',          dial: '+229', flag: '🇧🇯', placeholder: '97 XX XX XX'     },
+  { code: 'BF', name: 'Burkina Faso',   dial: '+226', flag: '🇧🇫', placeholder: '70 XX XX XX'     },
+  { code: 'CM', name: 'Cameroon',       dial: '+237', flag: '🇨🇲', placeholder: '6X XX XX XX XX'  },
+  { code: 'ZA', name: 'South Africa',   dial: '+27',  flag: '🇿🇦', placeholder: '71 XXX XXXX'     },
+  { code: 'KE', name: 'Kenya',          dial: '+254', flag: '🇰🇪', placeholder: '7XX XXX XXX'     },
+  { code: 'GB', name: 'United Kingdom', dial: '+44',  flag: '🇬🇧', placeholder: '7XXX XXXXXX'     },
+  { code: 'US', name: 'United States',  dial: '+1',   flag: '🇺🇸', placeholder: 'XXX XXX XXXX'    },
+  { code: 'FR', name: 'France',         dial: '+33',  flag: '🇫🇷', placeholder: '6X XX XX XX XX'  },
+  { code: 'DE', name: 'Germany',        dial: '+49',  flag: '🇩🇪', placeholder: '1XX XXXXXXX'     },
+];
+const TZ_COUNTRY_MAP = {
+  'Africa/Freetown':'SL','Africa/Conakry':'GN','Africa/Monrovia':'LR',
+  'Africa/Banjul':'GM','Africa/Dakar':'SN','Africa/Bamako':'ML',
+  'Africa/Accra':'GH','Africa/Lagos':'NG','Africa/Abidjan':'CI',
+  'Africa/Bissau':'GW','Africa/Lome':'TG','Africa/Porto-Novo':'BJ',
+  'Africa/Ouagadougou':'BF','Africa/Douala':'CM','Africa/Johannesburg':'ZA',
+  'Africa/Nairobi':'KE','Europe/London':'GB','America/New_York':'US',
+  'America/Chicago':'US','America/Denver':'US','America/Los_Angeles':'US',
+  'Europe/Paris':'FR','Europe/Berlin':'DE',
+};
+function _detectPhoneCountry() {
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (TZ_COUNTRY_MAP[tz]) return TZ_COUNTRY_MAP[tz];
+    const parts = (navigator.language || '').split('-');
+    if (parts.length > 1) {
+      const code = parts[parts.length - 1].toUpperCase();
+      if (PHONE_COUNTRIES.find(c => c.code === code)) return code;
+    }
+  } catch { /* */ }
+  return 'SL';
+}
+function PhoneInput({ value, onChange, placeholder = 'Phone number', defaultCountry }) {
+  const [country, setCountry] = useState(() => {
+    if (value) {
+      const v = value.replace(/\s/g, '');
+      const sorted = [...PHONE_COUNTRIES].sort((a, b) => b.dial.length - a.dial.length);
+      const match = sorted.find(c => v.startsWith(c.dial.replace(/\s/g, '')));
+      if (match) return match;
+    }
+    const code = defaultCountry || _detectPhoneCountry();
+    return PHONE_COUNTRIES.find(c => c.code === code) || PHONE_COUNTRIES[0];
+  });
+  const [open,     setOpen]     = useState(false);
+  const [search,   setSearch]   = useState('');
+  const [dropRect, setDropRect] = useState(null);
+  const wrapRef = useRef(null);
+
+  const getLocal = (val, dial) => {
+    if (!val) return '';
+    const v = val.replace(/\s/g, ''), d = dial.replace(/\s/g, '');
+    return v.startsWith(d) ? v.slice(d.length) : val;
+  };
+  const localNum = getLocal(value, country.dial);
+
+  useEffect(() => {
+    if (!open) return;
+    if (wrapRef.current) {
+      const r = wrapRef.current.getBoundingClientRect();
+      setDropRect({ top: r.bottom + 4, left: r.left });
+    }
+    const close = () => { setOpen(false); setSearch(''); };
+    const h = e => { if (wrapRef.current && !wrapRef.current.contains(e.target)) close(); };
+    document.addEventListener('mousedown', h);
+    document.addEventListener('scroll', close, true);
+    return () => {
+      document.removeEventListener('mousedown', h);
+      document.removeEventListener('scroll', close, true);
+    };
+  }, [open]);
+
+  const selectCountry = c => { setCountry(c); setOpen(false); setSearch(''); onChange(c.dial + localNum); };
+  const filtered = search
+    ? PHONE_COUNTRIES.filter(c => c.name.toLowerCase().includes(search.toLowerCase()) || c.dial.includes(search) || c.code.toLowerCase().includes(search.toLowerCase()))
+    : PHONE_COUNTRIES;
+
+  return (
+    <div ref={wrapRef} style={{ position: 'relative', display: 'flex' }}>
+      <button type="button" onClick={() => setOpen(o => !o)} style={{
+        display: 'flex', alignItems: 'center', gap: 4, padding: '0 10px',
+        borderRadius: '8px 0 0 8px', border: '1px solid var(--ska-border)', borderRight: 'none',
+        background: 'var(--ska-surface-high)', cursor: 'pointer', flexShrink: 0, minHeight: 40, whiteSpace: 'nowrap',
+      }}>
+        <span style={{ fontSize: '1.125rem', lineHeight: 1 }}>{country.flag}</span>
+        <span style={{ fontSize: '0.8125rem', color: 'var(--ska-text-3)', fontWeight: 600 }}>{country.dial}</span>
+        <span className="ska-icon" style={{ fontSize: 14, color: 'var(--ska-text-3)' }}>expand_more</span>
+      </button>
+      <input type="tel" className="ska-input" value={localNum}
+        onChange={e => onChange(country.dial + e.target.value)}
+        placeholder={country.placeholder || placeholder}
+        style={{ borderRadius: '0 8px 8px 0', flex: 1 }}
+      />
+      {open && dropRect && (
+        <div style={{
+          position: 'fixed', top: dropRect.top, left: dropRect.left, zIndex: 99999,
+          background: 'var(--ska-surface)', border: '1px solid var(--ska-border)',
+          borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+          width: 260, maxHeight: 280, overflow: 'hidden',
+          display: 'flex', flexDirection: 'column',
+        }}>
+          <div style={{ padding: '8px 10px', borderBottom: '1px solid var(--ska-border)' }}>
+            <input type="text" placeholder="Search country…" value={search} autoFocus
+              onChange={e => setSearch(e.target.value)}
+              style={{ width: '100%', border: '1px solid var(--ska-border)', borderRadius: 6, padding: '6px 10px', fontSize: '0.8125rem', background: 'var(--ska-surface-high)', color: 'var(--ska-text)', outline: 'none', boxSizing: 'border-box' }}
+            />
+          </div>
+          <div style={{ overflowY: 'auto', flex: 1 }}>
+            {filtered.map(c => (
+              <button key={c.code} type="button" onClick={() => selectCountry(c)} style={{
+                display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 14px',
+                border: 'none', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem', color: 'var(--ska-text)',
+                background: c.code === country.code ? 'var(--ska-surface-high)' : 'transparent',
+              }}>
+                <span style={{ fontSize: '1.125rem', lineHeight: 1 }}>{c.flag}</span>
+                <span style={{ flex: 1, fontWeight: c.code === country.code ? 700 : 400 }}>{c.name}</span>
+                <span style={{ fontSize: '0.8125rem', color: 'var(--ska-text-3)', flexShrink: 0 }}>{c.dial}</span>
+              </button>
+            ))}
+            {filtered.length === 0 && (
+              <div style={{ padding: 16, textAlign: 'center', fontSize: '0.8125rem', color: 'var(--ska-text-3)' }}>No countries found</div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Credential Success Overlay ─────────────────────────────────────
 function CredentialCard({ info, onDone, onLinkParent }) {
   const [copied,  setCopied]  = useState(false);
@@ -63,6 +204,60 @@ function CredentialCard({ info, onDone, onLinkParent }) {
     );
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
+  };
+
+  const handlePrintSlip = () => {
+    const win = window.open('', '_blank', 'width=794,height=1123');
+    if (!win) return;
+    win.document.write(`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Admission Slip — ${info.full_name}</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:Georgia,serif;padding:60px 70px;color:#1a1a1a;font-size:14px}
+  .header{text-align:center;border-bottom:3px double #1B3FAF;padding-bottom:24px;margin-bottom:32px}
+  .school{font-size:26px;font-weight:800;color:#1B3FAF;letter-spacing:.02em}
+  .slip-title{margin-top:14px;font-size:16px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#333}
+  .slip-sub{font-size:12px;color:#777;margin-top:4px}
+  .section{margin-bottom:28px}
+  .section-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#1B3FAF;margin-bottom:8px}
+  table{width:100%;border-collapse:collapse}
+  td{padding:13px 8px;border-bottom:1px solid #e5e7eb;font-size:14px}
+  td:first-child{font-weight:600;color:#555;width:210px}
+  td:last-child{color:#111;font-weight:500}
+  .footer{margin-top:60px;display:flex;justify-content:space-between}
+  .sig{border-top:1px solid #333;width:190px;text-align:center;padding-top:8px;font-size:12px;color:#555}
+  .notice{margin-top:36px;font-size:11px;color:#999;text-align:center;border-top:1px solid #eee;padding-top:14px}
+  @media print{body{padding:40px 50px}}
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="school">${info.school_name || 'School Name'}</div>
+    <div class="slip-title">Admission Slip</div>
+    <div class="slip-sub">Official Admission Record</div>
+  </div>
+  <div class="section">
+    <div class="section-label">Student Information</div>
+    <table>
+      <tr><td>Full Name</td><td>${info.full_name || '—'}</td></tr>
+      <tr><td>Admission Number</td><td>${info.admission_number || '—'}</td></tr>
+      <tr><td>Class / Grade</td><td>${info.classroom || '—'}</td></tr>
+      <tr><td>Date of Enrollment</td><td>${info.enrollment_date || '—'}</td></tr>
+    </table>
+  </div>
+  <div class="footer">
+    <div class="sig">Date</div>
+    <div class="sig">Authorized Signature</div>
+  </div>
+  <div class="notice">This slip serves as official confirmation of admission. Please retain for your records.</div>
+</body>
+</html>`);
+    win.document.close();
+    win.focus();
+    setTimeout(() => { win.print(); }, 400);
   };
 
   return (
@@ -154,6 +349,14 @@ function CredentialCard({ info, onDone, onLinkParent }) {
               <Ic name="mail" size="sm" /> Credentials emailed to {firstName}.
             </p>
           )}
+          {info.parent_warnings?.length > 0 && (
+            <div style={{ marginTop: 10, padding: '8px 12px', background: 'var(--ska-tertiary-dim)', borderRadius: 8, border: '1px solid rgba(255,183,134,0.3)' }}>
+              <p style={{ margin: '0 0 4px', fontSize: '0.6875rem', fontWeight: 700, color: 'var(--ska-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Guardian note</p>
+              {info.parent_warnings.map((w, i) => (
+                <p key={i} style={{ margin: 0, fontSize: '0.75rem', color: 'var(--ska-tertiary)' }}>{w}</p>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* ── What's next ── */}
@@ -196,10 +399,14 @@ function CredentialCard({ info, onDone, onLinkParent }) {
         </div>
 
         {/* ── Bottom row ── */}
-        <div style={{ padding: '10px 28px 24px', display: 'flex', gap: 8 }}>
-          <button className="ska-btn ska-btn--ghost" onClick={handleCopy} style={{ flex: 1, gap: 6 }}>
+        <div style={{ padding: '10px 28px 24px', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button className="ska-btn ska-btn--ghost" onClick={handleCopy} style={{ flex: 1, gap: 6, minWidth: 140 }}>
             <Ic name={copied ? 'check' : 'content_copy'} size="sm" />
             {copied ? 'Copied!' : 'Copy Credentials'}
+          </button>
+          <button className="ska-btn ska-btn--ghost" onClick={handlePrintSlip} style={{ flex: 1, gap: 6, minWidth: 140 }}>
+            <Ic name="print" size="sm" />
+            Print Admission Slip
           </button>
           <button className="ska-btn ska-btn--ghost" onClick={onDone} style={{ padding: '0 22px' }}>
             Done
@@ -458,8 +665,7 @@ function LinkParentDrawer({ student, onClose, onLinked }) {
                 </label>
                 <label className="ska-form-group">
                   <span>Phone Number</span>
-                  <input className="ska-input" value={newForm.phone}
-                    onChange={e => setNewForm(f => ({ ...f, phone: e.target.value }))} />
+                  <PhoneInput value={newForm.phone} onChange={v => setNewForm(f => ({ ...f, phone: v }))} />
                 </label>
                 <label className="ska-form-group">
                   <span>Parent Type *</span>
@@ -538,8 +744,17 @@ function LinkParentDrawer({ student, onClose, onLinked }) {
   );
 }
 
+const DRAFT_KEY = 'ek_sms_student_form_draft';
+
+const STUDENT_STEPS = [
+  { label: 'Identity',       icon: 'person'           },
+  { label: 'Credentials',    icon: 'key'              },
+  { label: 'Family',         icon: 'family_restroom'  },
+  { label: 'Medical & Docs', icon: 'medical_services' },
+];
+
 // ── Main Component ─────────────────────────────────────────────────
-export default function StudentsPage({ school, openAddSignal }) {
+export function StudentsPage({ school, openAddSignal }) {
   const [students,            setStudents]            = useState([]);
   const [loading,             setLoading]             = useState(true);
   const [search,              setSearch]              = useState('');
@@ -557,16 +772,52 @@ export default function StudentsPage({ school, openAddSignal }) {
   const [parentsLoading,      setParentsLoading]      = useState(false);
   const [showLinkDrawer,      setShowLinkDrawer]      = useState(false);
   const [pendingLinkStudent,  setPendingLinkStudent]  = useState(null);
+  const [loadFailed,          setLoadFailed]          = useState(false);
+  const [fieldErrors,         setFieldErrors]         = useState({});
+  const [step,                setStep]                = useState(0);
+  const [dupWarning,          setDupWarning]          = useState(null);
+  const [dupIgnored,          setDupIgnored]          = useState(false);
+  const [draftRestored,       setDraftRestored]       = useState(false);
+  const [stats,               setStats]               = useState(null);
   const prevSignal = useRef(openAddSignal);
+
+  const loadStats = useCallback(async () => {
+    try { const d = await ApiClient.get('/api/school/student-stats/'); setStats(d); }
+    catch { /* stats are non-critical */ }
+  }, []);
+
+  useEffect(() => {
+    if (modal !== 'add') return;
+    const { profile_photo, student_password, admission_number, ...saveable } = form;
+    const t = setTimeout(() => {
+      try { localStorage.setItem(DRAFT_KEY, JSON.stringify(saveable)); } catch { /* quota exceeded */ }
+    }, 600);
+    return () => clearTimeout(t);
+  }, [form, modal]);
+
+  const schoolCountryCode = useMemo(() => {
+    if (!school?.country) return null;
+    const q = school.country.toLowerCase().trim();
+    return PHONE_COUNTRIES.find(c =>
+      c.name.toLowerCase() === q || c.code.toLowerCase() === q
+    )?.code || null;
+  }, [school]);
+
+  const closeModal = () => {
+    setModal(null); setError(''); setFieldErrors({});
+    setStep(0); setDupWarning(null); setDupIgnored(false);
+  };
 
   const load = useCallback(async (q = '') => {
     setLoading(true);
+    setLoadFailed(false);
     try {
       const params = q ? `?q=${encodeURIComponent(q)}` : '';
       const data   = await ApiClient.get(`/api/school/students/${params}`);
       setStudents(data.students || []);
     } catch {
       setStudents([]);
+      setLoadFailed(true);
     }
     setLoading(false);
   }, []);
@@ -581,7 +832,7 @@ export default function StudentsPage({ school, openAddSignal }) {
     setParentsLoading(false);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); loadStats(); }, [load, loadStats]);
   useEffect(() => {
     ApiClient.get('/api/school/classes/').then(d => setClasses(d.classes || [])).catch(() => {});
   }, []);
@@ -591,17 +842,18 @@ export default function StudentsPage({ school, openAddSignal }) {
   }, [viewStudent, loadLinkedParents]);
 
   const emptyForm = {
-    first_name: '', last_name: '', gender: '', date_of_birth: '', age: '', place_of_birth: '',
+    first_name: '', middle_name: '', last_name: '', gender: '', date_of_birth: '', age: '', place_of_birth: '',
     nationality: '', religion: '', home_address: '', city: '', phone_number: '', email: '',
-    admission_number: '', classroom_id: '',
+    admission_number: '', classroom_id: '', student_status: 'active', student_type: '', hostel_house: '', transport_route: '',
     previous_school: '', last_class_completed: '', leaving_reason: '',
-    student_password: '',
-    father_name: '', father_occupation: '', father_phone: '', father_email: '',
+    student_username: '', student_password: '',
+    father_relationship: 'Father', father_name: '', father_occupation: '', father_phone: '', father_email: '',
     father_address: '', father_username: '', father_password: '',
-    mother_name: '', mother_occupation: '', mother_phone: '', mother_email: '',
+    mother_relationship: 'Mother', mother_name: '', mother_occupation: '', mother_phone: '', mother_email: '',
     mother_address: '', mother_username: '', mother_password: '',
     emergency_name: '', emergency_relationship: '', emergency_phone: '', emergency_address: '',
     blood_group: '', allergies: '', medical_conditions: '', doctor_name: '', doctor_phone: '',
+    sen_notes: '', sen_iep: false,
     disciplinary_history: false, disciplinary_notes: '',
     documents_birth_certificate: false, documents_passport_photo: false,
     documents_previous_school_report: false, documents_transfer_letter: false,
@@ -610,70 +862,71 @@ export default function StudentsPage({ school, openAddSignal }) {
   };
 
   const openAdd = useCallback(() => {
-<<<<<<< HEAD
-    setForm({
-      first_name: '', last_name: '', gender: '', date_of_birth: '', age: '', place_of_birth: '', nationality: '', religion: '', home_address: '', city: '', phone_number: '', email: '',
-      admission_number: '', classroom_id: '', previous_school: '', last_class_completed: '', leaving_reason: '',
-      father_name: '', father_occupation: '', father_phone: '', father_email: '', father_address: '', father_username: '', father_password: '',
-      mother_name: '', mother_occupation: '', mother_phone: '', mother_email: '', mother_address: '', mother_username: '', mother_password: '',
-      emergency_name: '', emergency_relationship: '', emergency_phone: '', emergency_address: '',
-      blood_group: '', allergies: '', medical_conditions: '', doctor_name: '', doctor_phone: '',
-      disciplinary_history: false, disciplinary_notes: '',
-      document_type: '', document_file: null,
-    }
-=======
     const pwd = generatePassword();
-    setForm({ ...emptyForm, student_password: pwd });
+    let base = { ...emptyForm, student_password: pwd };
+    let hasDraft = false;
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (raw) {
+        const draft = JSON.parse(raw);
+        base = { ...base, ...draft, student_password: pwd };
+        hasDraft = true;
+      }
+    } catch { /* corrupt draft — ignore */ }
+
+    setForm(base);
+    setDraftRestored(hasDraft);
     setProfilePhotoPreview(null);
     setShowFormPwd(true);
     setError('');
+    setFieldErrors({});
+    setStep(0); setDupWarning(null); setDupIgnored(false);
     setModal('add');
 
-    // Fetch next admission number async — pre-fills the field
+    // Always refresh admission number from API regardless of draft
     setGeneratingAdmNo(true);
     ApiClient.get('/api/school/students/next-admission-number/')
       .then(d => { if (d.admission_number) setForm(f => ({ ...f, admission_number: d.admission_number })); })
-      .catch(() => {})
+      .catch(() => {
+        const y = new Date().getFullYear();
+        const seq = String(Date.now()).slice(-4);
+        setForm(f => ({ ...f, admission_number: `STU/${y}/${seq}` }));
+      })
       .finally(() => setGeneratingAdmNo(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (openAddSignal !== prevSignal.current && prevSignal.current !== undefined) openAdd();
->>>>>>> 5c35a02602b594f1606dd7154a3e035cf240658d
     prevSignal.current = openAddSignal;
   }, [openAddSignal, openAdd]);
 
   const openEdit = s => {
     setForm({
-      first_name: s.first_name || '', last_name: s.last_name || '', gender: s.gender || '',
+      first_name: s.first_name || '', middle_name: s.middle_name || '', last_name: s.last_name || '',
+      gender: s.gender === 'M' ? 'Male' : s.gender === 'F' ? 'Female' : s.gender || '',
       date_of_birth: s.date_of_birth || '', age: s.age || '', place_of_birth: s.place_of_birth || '',
       nationality: s.nationality || '', religion: s.religion || '',
       home_address: s.home_address || '', city: s.city || '',
       phone_number: s.phone_number || '', email: s.email || '',
       admission_number: s.admission_number || '', classroom_id: s.classroom_id || '',
+      student_status: s.is_active === false ? 'suspended' : 'active',
+      student_type: s.student_type || '', hostel_house: s.hostel_house || '', transport_route: s.transport_route || '',
       previous_school: s.previous_school || '', last_class_completed: s.last_class_completed || '',
       leaving_reason: s.leaving_reason || '',
-      student_password: '',
-      father_name: s.father_name || '', father_occupation: s.father_occupation || '',
+      student_username: '', student_password: '',
+      father_relationship: s.father_relationship || 'Father', father_name: s.father_name || '', father_occupation: s.father_occupation || '',
       father_phone: s.father_phone || '', father_email: s.father_email || '',
       father_address: s.father_address || '', father_username: s.father_username || '', father_password: '',
-      mother_name: s.mother_name || '', mother_occupation: s.mother_occupation || '',
+      mother_relationship: s.mother_relationship || 'Mother', mother_name: s.mother_name || '', mother_occupation: s.mother_occupation || '',
       mother_phone: s.mother_phone || '', mother_email: s.mother_email || '',
       mother_address: s.mother_address || '', mother_username: s.mother_username || '', mother_password: '',
       emergency_name: s.emergency_name || '', emergency_relationship: s.emergency_relationship || '',
       emergency_phone: s.emergency_phone || '', emergency_address: s.emergency_address || '',
       blood_group: s.blood_group || '', allergies: s.allergies || '',
       medical_conditions: s.medical_conditions || '',
-<<<<<<< HEAD
-      doctor_name: s.doctor_name || '',
-      doctor_phone: s.doctor_phone || '',
-      disciplinary_history: !!s.disciplinary_history,
-      disciplinary_notes: s.disciplinary_notes || '',
-      document_type: '',
-      document_file: null,
-=======
       doctor_name: s.doctor_name || '', doctor_phone: s.doctor_phone || '',
+      sen_notes: s.sen_notes || '', sen_iep: !!s.sen_iep,
       disciplinary_history: !!s.disciplinary_history, disciplinary_notes: s.disciplinary_notes || '',
       documents_birth_certificate: !!s.documents_birth_certificate,
       documents_passport_photo: !!s.documents_passport_photo,
@@ -681,11 +934,11 @@ export default function StudentsPage({ school, openAddSignal }) {
       documents_transfer_letter: !!s.documents_transfer_letter,
       documents_medical_report: !!s.documents_medical_report,
       documents_other: !!s.documents_other,
->>>>>>> 5c35a02602b594f1606dd7154a3e035cf240658d
       profile_photo: null,
     });
     setProfilePhotoPreview(s.profile_photo_url || s.profile_photo || null);
-    setError(''); setModal(s);
+    setDraftRestored(false);
+    setError(''); setFieldErrors({}); setStep(0); setDupWarning(null); setDupIgnored(false); setModal(s);
   };
 
   const handlePhotoChange = e => {
@@ -702,58 +955,116 @@ export default function StudentsPage({ school, openAddSignal }) {
   };
 
   const buildPayload = data => {
-<<<<<<< HEAD
-    const hasFile = Object.values(data).some(value => value instanceof File || value instanceof Blob);
-    if (hasFile) {
-      const formData = new FormData();
-      Object.entries(data).forEach(([key, value]) => {
-        if (value === undefined || value === null) return;
-        if (value instanceof File || value instanceof Blob) {
-          formData.append(key, value);
-        } else if (typeof value === 'boolean') {
-          formData.append(key, value ? 'true' : 'false');
-        } else {
-          formData.append(key, value);
-        }
-=======
-    if (data.profile_photo instanceof File || data.profile_photo instanceof Blob) {
+    const clean = { ...data };
+    if (!clean.student_username) delete clean.student_username;
+    if (clean.student_status !== undefined) {
+      clean.is_active = clean.student_status === 'active';
+      delete clean.student_status;
+    }
+
+    if (clean.profile_photo instanceof File || clean.profile_photo instanceof Blob) {
       const fd = new FormData();
-      Object.entries(data).forEach(([k, v]) => {
+      Object.entries(clean).forEach(([k, v]) => {
         if (v === undefined || v === null) return;
         if (v instanceof File || v instanceof Blob) fd.append(k, v);
         else if (typeof v === 'boolean') fd.append(k, v ? 'true' : 'false');
         else fd.append(k, v);
->>>>>>> 5c35a02602b594f1606dd7154a3e035cf240658d
       });
       return fd;
     }
-    return data;
+    return clean;
+  };
+
+  const validateStep = s => {
+    const errs = {};
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (s === 0) {
+      if (!form.first_name?.trim()) errs.first_name = 'First name is required';
+      if (!form.last_name?.trim())  errs.last_name  = 'Last name is required';
+      if (form.email?.trim() && !emailRe.test(form.email.trim())) errs.email = 'Enter a valid email address';
+      if (form.date_of_birth) {
+        const dob = new Date(form.date_of_birth), now = new Date();
+        if (dob > now) errs.date_of_birth = 'Date of birth cannot be in the future';
+        else {
+          const yrs = (now - dob) / (365.25 * 24 * 3600 * 1000);
+          if (yrs < 3)  errs.date_of_birth = 'Student appears too young for enrolment';
+          if (yrs > 30) errs.date_of_birth = 'Please verify — age is over 30 years';
+        }
+      }
+      if (form.age && (!/^\d+$/.test(String(form.age).trim()) || Number(form.age) < 1 || Number(form.age) > 30))
+        errs.age = 'Enter a valid age (1–30)';
+    }
+    if (s === 2) {
+      const emailRe2 = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (form.father_email?.trim() && !emailRe2.test(form.father_email.trim())) errs.father_email = 'Enter a valid email address';
+      if (form.mother_email?.trim() && !emailRe2.test(form.mother_email.trim())) errs.mother_email = 'Enter a valid email address';
+    }
+    setFieldErrors(errs);
+    return errs;
+  };
+
+  const handleNext = () => {
+    const errs = validateStep(step);
+    if (Object.keys(errs).length) {
+      setError(Object.keys(errs).length === 1
+        ? 'Please fix the highlighted field below.'
+        : `Please fix ${Object.keys(errs).length} highlighted fields below.`);
+      return;
+    }
+    if (step === 0 && modal === 'add' && !dupIgnored) {
+      const fn = form.first_name.trim().toLowerCase();
+      const ln = form.last_name.trim().toLowerCase();
+      const dup = students.find(s =>
+        s.first_name?.toLowerCase() === fn &&
+        s.last_name?.toLowerCase() === ln &&
+        (!form.date_of_birth || s.date_of_birth === form.date_of_birth)
+      );
+      if (dup) { setDupWarning(dup); setError(''); return; }
+    }
+    setError(''); setDupWarning(null);
+    setStep(s => s + 1);
   };
 
   const handleSave = async () => {
-    setSaving(true); setError('');
+    const errs = validateStep(step);
+    if (Object.keys(errs).length) {
+      setError(Object.keys(errs).length === 1 ? 'Please fix the highlighted field below.' : `Please fix ${Object.keys(errs).length} highlighted fields below.`);
+      return;
+    }
+    setSaving(true); setError(''); setFieldErrors({});
     try {
       const payload = buildPayload(form);
       if (modal === 'add') {
         const res = await ApiClient.post('/api/school/students/', payload);
-        setModal(null);
+        try { localStorage.removeItem(DRAFT_KEY); } catch { /* */ }
+        closeModal();
         load(search);
+        loadStats();
         setCredSuccess({
-          id:                      res.id,
-          full_name:               res.full_name || `${form.first_name} ${form.last_name}`.trim(),
-          admission_number:        res.admission_number || form.admission_number,
-          student_username:        res.student_username || previewUsername(res.admission_number || form.admission_number),
+          id:                       res.id,
+          full_name:                res.full_name || [form.first_name, form.middle_name, form.last_name].filter(Boolean).join(' '),
+          admission_number:         res.admission_number || form.admission_number,
+          student_username:         res.student_username || previewUsername(res.admission_number || form.admission_number),
           student_initial_password: res.student_initial_password || form.student_password,
-          email_sent:              !!form.email,
-          school_name:             school?.name,
+          email_sent:               !!form.email,
+          school_name:              school?.name,
+          classroom:                classes.find(c => String(c.id) === String(form.classroom_id))?.name || '',
+          enrollment_date:          new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
+          parent_warnings:          res.parent_warnings || [],
         });
       } else {
         await ApiClient.put(`/api/school/students/${modal.id}/`, payload);
-        setModal(null);
+        closeModal();
         load(search);
+        loadStats();
       }
     } catch (e) {
-      setError(e.message || 'Failed to save.');
+      const msg = e.message || '';
+      setError(
+        msg === 'Load failed' || msg.includes('Failed to fetch') || msg.includes('NetworkError')
+          ? 'Unable to reach the server. Please check your internet connection.'
+          : msg || 'Failed to save student.'
+      );
     }
     setSaving(false);
   };
@@ -1033,6 +1344,29 @@ export default function StudentsPage({ school, openAddSignal }) {
         </button>
       </div>
 
+      {/* ── Metrics bar ─────────────────────────────────────── */}
+      {stats && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12, marginBottom: 20 }}>
+          {[
+            { icon: 'group',           color: 'var(--ska-primary)',   bg: 'var(--ska-primary-dim)',      label: 'Total',          value: stats.total ?? '—' },
+            { icon: 'person_check',    color: 'var(--ska-secondary)', bg: 'var(--ska-secondary-dim)',    label: 'Active',         value: stats.active ?? '—' },
+            { icon: 'person_add',      color: '#4b8eff',              bg: 'rgba(75,142,255,0.12)',       label: 'New This Term',  value: stats.new_this_term ?? '—' },
+            { icon: 'warning',         color: 'var(--ska-error)',     bg: 'var(--ska-error-dim)',        label: 'Flagged',        value: stats.flagged ?? '—' },
+            { icon: 'event_available', color: '#4cd7f6',              bg: 'rgba(76,215,246,0.12)',       label: 'Avg Attendance', value: stats.avg_attendance != null ? `${stats.avg_attendance}%` : '—' },
+          ].map(m => (
+            <div key={m.label} className="ska-card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: m.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Ic name={m.icon} style={{ color: m.color, fontSize: 20 }} />
+              </div>
+              <div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--ska-text)', lineHeight: 1 }}>{m.value}</div>
+                <div style={{ fontSize: '0.6875rem', color: 'var(--ska-text-3)', marginTop: 2 }}>{m.label}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="ska-search ska-toolbar-search" style={{ marginBottom: 16 }}>
         <Ic name="search" />
         <input className="ska-search-input" placeholder="Search by name or admission number…"
@@ -1042,6 +1376,15 @@ export default function StudentsPage({ school, openAddSignal }) {
       <div className="ska-card" style={{ overflowX: 'auto' }}>
         {loading ? (
           <div className="ska-empty"><p className="ska-empty-desc">Loading…</p></div>
+        ) : loadFailed ? (
+          <div className="ska-empty">
+            <Ic name="wifi_off" size="xl" style={{ color: 'var(--ska-text-3)', marginBottom: 12 }} />
+            <p className="ska-empty-title">Could not load students</p>
+            <p className="ska-empty-desc">Check your connection and try again.</p>
+            <button className="ska-btn ska-btn--ghost" style={{ marginTop: 14 }} onClick={() => load(search)}>
+              <Ic name="refresh" size="sm" /> Retry
+            </button>
+          </div>
         ) : students.length === 0 ? (
           <div className="ska-empty">
             <Ic name="group" size="xl" style={{ color: 'var(--ska-primary)', marginBottom: 12 }} />
@@ -1090,8 +1433,46 @@ export default function StudentsPage({ school, openAddSignal }) {
 
       {/* ── Add / Edit Modal ───────────────────────────────────── */}
       {modal && (
-        <Modal title={modal === 'add' ? 'Register New Student' : 'Edit Student'} onClose={() => setModal(null)}>
-          {error && <p className="ska-form-error">{error}</p>}
+        <Modal title={modal === 'add' ? 'Register New Student' : 'Edit Student'} onClose={() => { setModal(null); setError(''); setFieldErrors({}); }}>
+          {error && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
+              <p className="ska-form-error" style={{ margin: 0, flex: 1 }}>{error}</p>
+              {(error.includes('reach the server') || error.includes('connection')) && (
+                <button type="button" className="ska-btn ska-btn--ghost ska-btn--sm" onClick={handleSave} style={{ flexShrink: 0 }}>
+                  <Ic name="refresh" size="sm" /> Retry
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Draft-restored banner */}
+          {draftRestored && modal === 'add' && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12,
+              background: 'var(--ska-primary-dim)', border: '1px solid var(--ska-primary)',
+              borderRadius: 10, padding: '10px 14px',
+            }}>
+              <Ic name="restore" size="sm" style={{ color: 'var(--ska-primary)', flexShrink: 0 }} />
+              <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--ska-primary)', flex: 1 }}>
+                Draft restored — your unsaved progress was recovered.
+              </p>
+              <button type="button"
+                onClick={() => {
+                  const pwd = generatePassword();
+                  setForm({ ...emptyForm, student_password: pwd });
+                  try { localStorage.removeItem(DRAFT_KEY); } catch { /* */ }
+                  setDraftRestored(false);
+                  setGeneratingAdmNo(true);
+                  ApiClient.get('/api/school/students/next-admission-number/')
+                    .then(d => { if (d.admission_number) setForm(f => ({ ...f, admission_number: d.admission_number })); })
+                    .catch(() => {})
+                    .finally(() => setGeneratingAdmNo(false));
+                }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ska-primary)', fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap', padding: 0 }}>
+                Start fresh
+              </button>
+            </div>
+          )}
 
           {/* Profile photo */}
           <div className="ska-card ska-card-pad" style={{ marginBottom: 16 }}>
@@ -1122,135 +1503,10 @@ export default function StudentsPage({ school, openAddSignal }) {
             </div>
           </div>
 
-          {/* Personal information */}
-          <div className="ska-form-grid">
-            <label className="ska-form-group">
-              <span>First Name *</span>
-              <input className="ska-input" value={form.first_name} onChange={e => setForm(f => ({ ...f, first_name: e.target.value }))} />
-            </label>
-            <label className="ska-form-group">
-              <span>Last Name *</span>
-              <input className="ska-input" value={form.last_name} onChange={e => setForm(f => ({ ...f, last_name: e.target.value }))} />
-            </label>
-            <label className="ska-form-group">
-              <span>Gender</span>
-              <select className="ska-input" value={form.gender} onChange={e => setForm(f => ({ ...f, gender: e.target.value }))}>
-                <option value="">— Select —</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-              </select>
-            </label>
-            <label className="ska-form-group">
-              <span>Date of Birth</span>
-              <input className="ska-input" type="date" value={form.date_of_birth} onChange={e => setForm(f => ({ ...f, date_of_birth: e.target.value }))} />
-            </label>
-            <label className="ska-form-group">
-              <span>Age</span>
-              <input className="ska-input" value={form.age} onChange={e => setForm(f => ({ ...f, age: e.target.value }))} />
-            </label>
-            <label className="ska-form-group">
-              <span>Place of Birth</span>
-              <input className="ska-input" value={form.place_of_birth} onChange={e => setForm(f => ({ ...f, place_of_birth: e.target.value }))} />
-            </label>
-            <label className="ska-form-group">
-              <span>Nationality</span>
-              <input className="ska-input" value={form.nationality} onChange={e => setForm(f => ({ ...f, nationality: e.target.value }))} />
-            </label>
-            <label className="ska-form-group">
-              <span>Religion</span>
-              <input className="ska-input" value={form.religion} onChange={e => setForm(f => ({ ...f, religion: e.target.value }))} />
-            </label>
-            <label className="ska-form-group">
-              <span>Home Address</span>
-              <input className="ska-input" value={form.home_address} onChange={e => setForm(f => ({ ...f, home_address: e.target.value }))} />
-            </label>
-            <label className="ska-form-group">
-              <span>City / Town</span>
-              <input className="ska-input" value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} />
-            </label>
-            <label className="ska-form-group">
-              <span>Email Address</span>
-              <input className="ska-input" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
-            </label>
-            <label className="ska-form-group">
-              <span>Phone Number</span>
-              <input className="ska-input" value={form.phone_number} onChange={e => setForm(f => ({ ...f, phone_number: e.target.value }))} />
-            </label>
-
-            {/* Admission number — auto-generated on add, locked on edit */}
-            <label className="ska-form-group">
-              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                Admission Number
-                {modal === 'add' && (
-                  <span style={{
-                    fontSize: '0.625rem', fontWeight: 700, padding: '2px 6px', borderRadius: 20,
-                    background: 'var(--ska-primary-dim)', color: 'var(--ska-primary)',
-                    textTransform: 'uppercase', letterSpacing: '0.05em',
-                  }}>Auto</span>
-                )}
-              </span>
-              <div style={{ position: 'relative' }}>
-                <input
-                  className="ska-input"
-                  value={generatingAdmNo ? 'Generating…' : form.admission_number}
-                  disabled={modal !== 'add'}
-                  onChange={e => setForm(f => ({ ...f, admission_number: e.target.value }))}
-                  placeholder="Auto-generated"
-                  style={{ paddingRight: modal === 'add' ? 40 : undefined }}
-                />
-                {modal === 'add' && !generatingAdmNo && (
-                  <button
-                    type="button"
-                    title="Refresh — get a new admission number"
-                    onClick={() => {
-                      setGeneratingAdmNo(true);
-                      ApiClient.get('/api/school/students/next-admission-number/')
-                        .then(d => { if (d.admission_number) setForm(f => ({ ...f, admission_number: d.admission_number })); })
-                        .catch(() => {})
-                        .finally(() => setGeneratingAdmNo(false));
-                    }}
-                    style={{
-                      position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
-                      background: 'none', border: 'none', cursor: 'pointer',
-                      color: 'var(--ska-text-3)', padding: 4,
-                    }}
-                  >
-                    <Ic name="refresh" size="sm" />
-                  </button>
-                )}
-              </div>
-              {modal === 'add' && (
-                <span style={{ fontSize: '0.75rem', color: 'var(--ska-text-3)', marginTop: 2 }}>
-                  Format: SCHOOLCODE/YEAR/SEQ — e.g. GBHS/2026/0001. You may override it.
-                </span>
-              )}
-            </label>
-
-            <label className="ska-form-group">
-              <span>Class / Grade</span>
-              <select className="ska-input" value={form.classroom_id} onChange={e => setForm(f => ({ ...f, classroom_id: e.target.value }))}>
-                <option value="">— No class —</option>
-                {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </label>
-            <label className="ska-form-group">
-              <span>Previous School Attended</span>
-              <input className="ska-input" value={form.previous_school} onChange={e => setForm(f => ({ ...f, previous_school: e.target.value }))} />
-            </label>
-            <label className="ska-form-group">
-              <span>Last Class Completed</span>
-              <input className="ska-input" value={form.last_class_completed} onChange={e => setForm(f => ({ ...f, last_class_completed: e.target.value }))} />
-            </label>
-            <label className="ska-form-group">
-              <span>Reason for Leaving Previous School</span>
-              <input className="ska-input" value={form.leaving_reason} onChange={e => setForm(f => ({ ...f, leaving_reason: e.target.value }))} />
-            </label>
-          </div>
-
           {/* ── Student Portal Credentials ────────────────────── */}
           {modal === 'add' && (
             <div className="ska-card ska-card-pad" style={{
-              marginTop: 16,
+              marginTop: 16, marginBottom: 4,
               border: '1.5px solid var(--ska-primary)',
               background: 'var(--ska-primary-dim)',
             }}>
@@ -1271,110 +1527,276 @@ export default function StudentsPage({ school, openAddSignal }) {
                 </div>
               </div>
 
-              {/* Username preview */}
-              <div style={{ marginBottom: 12 }}>
-                <p style={{
-                  margin: '0 0 4px', fontSize: '0.75rem', fontWeight: 600,
-                  color: 'var(--ska-text-2)', textTransform: 'uppercase', letterSpacing: '0.05em',
-                }}>
-                  Portal Username (auto-generated)
-                </p>
-                <div style={{
-                  background: 'var(--ska-surface)', border: '1px solid var(--ska-border)',
-                  borderRadius: 8, padding: '9px 14px', display: 'flex', alignItems: 'center',
-                  justifyContent: 'space-between', gap: 8,
-                }}>
-                  <span style={{
-                    fontFamily: 'monospace', fontWeight: 700, fontSize: '0.9375rem',
-                    color: 'var(--ska-primary)', letterSpacing: '0.04em',
+              {/* Auto-generated credential preview — read-only */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {[
+                  {
+                    label: 'Username',
+                    value: form.admission_number ? previewUsername(form.admission_number) : 'Generated after admission number',
+                    icon: 'account_circle',
+                  },
+                  {
+                    label: 'Password',
+                    value: form.student_password,
+                    icon: 'lock',
+                    secret: true,
+                  },
+                ].map(row => (
+                  <div key={row.label} style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    background: 'var(--ska-surface)', borderRadius: 10,
+                    padding: '10px 14px', border: '1px solid var(--ska-border)',
                   }}>
-                    {form.admission_number
-                      ? previewUsername(form.admission_number)
-                      : <span style={{ color: 'var(--ska-text-3)', fontFamily: 'inherit', fontWeight: 400 }}>Assigned after admission number</span>
-                    }
-                  </span>
-                  {form.admission_number && (
-                    <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer',
-                      color: 'var(--ska-text-3)', padding: 2 }}
-                      title="Copy username"
-                      onClick={() => copyText(previewUsername(form.admission_number))}
-                    >
-                      <Ic name="content_copy" size="sm" />
-                    </button>
-                  )}
-                </div>
-                <p style={{ margin: '4px 0 0', fontSize: '0.71875rem', color: 'var(--ska-text-3)' }}>
-                  Username is derived from the admission number and cannot be changed here.
-                </p>
-              </div>
-
-              {/* Password field */}
-              <div>
-                <p style={{
-                  margin: '0 0 4px', fontSize: '0.75rem', fontWeight: 600,
-                  color: 'var(--ska-text-2)', textTransform: 'uppercase', letterSpacing: '0.05em',
-                }}>
-                  Initial Password
-                </p>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    className="ska-input"
-                    type={showFormPwd ? 'text' : 'password'}
-                    value={form.student_password}
-                    onChange={e => setForm(f => ({ ...f, student_password: e.target.value }))}
-                    placeholder="Auto-generated password"
-                    style={{ paddingRight: 88, fontFamily: 'monospace', letterSpacing: '0.06em' }}
-                  />
-                  <div style={{
-                    position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
-                    display: 'flex', gap: 2,
-                  }}>
-                    <button type="button"
-                      title={showFormPwd ? 'Hide' : 'Show'}
-                      onClick={() => setShowFormPwd(p => !p)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer',
-                        color: 'var(--ska-text-3)', padding: 4 }}
-                    >
-                      <Ic name={showFormPwd ? 'visibility_off' : 'visibility'} size="sm" />
-                    </button>
-                    <button type="button"
-                      title="Generate new password"
-                      onClick={() => setForm(f => ({ ...f, student_password: generatePassword() }))}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer',
-                        color: 'var(--ska-text-3)', padding: 4 }}
-                    >
-                      <Ic name="refresh" size="sm" />
-                    </button>
-                    <button type="button"
-                      title="Copy password"
-                      onClick={() => copyText(form.student_password)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer',
-                        color: 'var(--ska-text-3)', padding: 4 }}
-                    >
-                      <Ic name="content_copy" size="sm" />
-                    </button>
+                    <div style={{
+                      width: 32, height: 32, borderRadius: 8, background: 'var(--ska-primary-dim)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                    }}>
+                      <Ic name={row.icon} size="sm" style={{ color: 'var(--ska-primary)' }} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ margin: 0, fontSize: '0.6875rem', color: 'var(--ska-text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{row.label}</p>
+                      <p style={{
+                        margin: 0, fontWeight: 700, fontSize: '0.875rem', color: 'var(--ska-text)',
+                        fontFamily: 'monospace', letterSpacing: '0.04em',
+                        filter: (row.secret && !showFormPwd) ? 'blur(5px)' : 'none',
+                        userSelect: (row.secret && !showFormPwd) ? 'none' : 'text',
+                      }}>{row.value}</p>
+                    </div>
+                    <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+                      {row.secret && (
+                        <button type="button" title={showFormPwd ? 'Hide' : 'Show'} onClick={() => setShowFormPwd(p => !p)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ska-text-3)', padding: 4 }}>
+                          <Ic name={showFormPwd ? 'visibility_off' : 'visibility'} size="sm" />
+                        </button>
+                      )}
+                      {row.secret && (
+                        <button type="button" title="Regenerate password" onClick={() => setForm(f => ({ ...f, student_password: generatePassword() }))}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ska-text-3)', padding: 4 }}>
+                          <Ic name="refresh" size="sm" />
+                        </button>
+                      )}
+                      <button type="button" title="Copy" onClick={() => copyText(row.value)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ska-text-3)', padding: 4 }}>
+                        <Ic name="content_copy" size="sm" />
+                      </button>
+                    </div>
                   </div>
-                </div>
-                <p style={{ margin: '4px 0 0', fontSize: '0.71875rem', color: 'var(--ska-text-3)' }}>
-                  Leave as-is to use the auto-generated password, or type a custom one.
-                  {form.email && ' Credentials will be emailed to the student.'}
+                ))}
+                <p style={{ margin: 0, fontSize: '0.71875rem', color: 'var(--ska-text-3)' }}>
+                  These credentials are auto-generated. Share them with the student — they can change their password after first login.
+                  {form.email && ' They will also be emailed to the student.'}
                 </p>
               </div>
             </div>
           )}
 
+          {/* ── Personal Information ─────────────────────────── */}
+          <div className="ska-card ska-card-pad" style={{ marginTop: 16, background: 'var(--ska-surface-high)' }}>
+            <h3 className="ska-card-title" style={{ marginBottom: 12 }}>Personal Information</h3>
+            <div className="ska-form-grid">
+              <label className="ska-form-group">
+                <span>First Name *</span>
+                <input className="ska-input" value={form.first_name}
+                  style={fieldErrors.first_name ? { borderColor: 'var(--ska-error)' } : {}}
+                  onChange={e => { setForm(f => ({ ...f, first_name: e.target.value })); setFieldErrors(p => ({ ...p, first_name: '' })); }} />
+                {fieldErrors.first_name && <span style={{ fontSize: '0.71875rem', color: 'var(--ska-error)', marginTop: 2 }}>{fieldErrors.first_name}</span>}
+              </label>
+              <label className="ska-form-group">
+                <span>Middle Name</span>
+                <input className="ska-input" value={form.middle_name}
+                  placeholder="Optional"
+                  onChange={e => setForm(f => ({ ...f, middle_name: e.target.value }))} />
+              </label>
+              <label className="ska-form-group">
+                <span>Last Name *</span>
+                <input className="ska-input" value={form.last_name}
+                  style={fieldErrors.last_name ? { borderColor: 'var(--ska-error)' } : {}}
+                  onChange={e => { setForm(f => ({ ...f, last_name: e.target.value })); setFieldErrors(p => ({ ...p, last_name: '' })); }} />
+                {fieldErrors.last_name && <span style={{ fontSize: '0.71875rem', color: 'var(--ska-error)', marginTop: 2 }}>{fieldErrors.last_name}</span>}
+              </label>
+              <label className="ska-form-group">
+                <span>Gender</span>
+                <select className="ska-input" value={form.gender} onChange={e => setForm(f => ({ ...f, gender: e.target.value }))}>
+                  <option value="">— Select —</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                </select>
+              </label>
+              <label className="ska-form-group">
+                <span>Date of Birth</span>
+                <input className="ska-input" type="date" value={form.date_of_birth}
+                  style={fieldErrors.date_of_birth ? { borderColor: 'var(--ska-error)' } : {}}
+                  onChange={e => { setForm(f => ({ ...f, date_of_birth: e.target.value })); setFieldErrors(p => ({ ...p, date_of_birth: '' })); }} />
+                {fieldErrors.date_of_birth && <span style={{ fontSize: '0.71875rem', color: 'var(--ska-error)', marginTop: 2 }}>{fieldErrors.date_of_birth}</span>}
+              </label>
+              <label className="ska-form-group">
+                <span>Age</span>
+                <input className="ska-input" value={form.age} inputMode="numeric"
+                  style={fieldErrors.age ? { borderColor: 'var(--ska-error)' } : {}}
+                  onChange={e => { setForm(f => ({ ...f, age: e.target.value })); setFieldErrors(p => ({ ...p, age: '' })); }} />
+                {fieldErrors.age && <span style={{ fontSize: '0.71875rem', color: 'var(--ska-error)', marginTop: 2 }}>{fieldErrors.age}</span>}
+              </label>
+              <label className="ska-form-group">
+                <span>Place of Birth</span>
+                <input className="ska-input" value={form.place_of_birth} onChange={e => setForm(f => ({ ...f, place_of_birth: e.target.value }))} />
+              </label>
+              <label className="ska-form-group">
+                <span>Nationality</span>
+                <input className="ska-input" value={form.nationality} onChange={e => setForm(f => ({ ...f, nationality: e.target.value }))} />
+              </label>
+              <label className="ska-form-group">
+                <span>Religion</span>
+                <input className="ska-input" value={form.religion} onChange={e => setForm(f => ({ ...f, religion: e.target.value }))} />
+              </label>
+              <label className="ska-form-group">
+                <span>Home Address</span>
+                <input className="ska-input" value={form.home_address} onChange={e => setForm(f => ({ ...f, home_address: e.target.value }))} />
+              </label>
+              <label className="ska-form-group">
+                <span>City / Town</span>
+                <input className="ska-input" value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} />
+              </label>
+              <label className="ska-form-group">
+                <span>Email Address</span>
+                <input className="ska-input" type="email" value={form.email}
+                  style={fieldErrors.email ? { borderColor: 'var(--ska-error)' } : {}}
+                  onChange={e => { setForm(f => ({ ...f, email: e.target.value })); setFieldErrors(p => ({ ...p, email: '' })); }} />
+                {fieldErrors.email && <span style={{ fontSize: '0.71875rem', color: 'var(--ska-error)', marginTop: 2 }}>{fieldErrors.email}</span>}
+              </label>
+              <label className="ska-form-group">
+                <span>Phone Number</span>
+                <PhoneInput value={form.phone_number} onChange={v => setForm(f => ({ ...f, phone_number: v }))} defaultCountry={schoolCountryCode} />
+              </label>
+            </div>
+          </div>
+
+          {/* ── Enrollment Details ───────────────────────────── */}
+          <div className="ska-card ska-card-pad" style={{ marginTop: 16, background: 'var(--ska-surface-high)' }}>
+            <h3 className="ska-card-title" style={{ marginBottom: 12 }}>Enrollment Details</h3>
+            <div className="ska-form-grid">
+
+              {/* Admission number — auto-generated, read-only */}
+              <label className="ska-form-group" style={{ gridColumn: '1 / -1' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  Admission Number
+                  <span style={{
+                    fontSize: '0.625rem', fontWeight: 700, padding: '2px 6px', borderRadius: 20,
+                    background: 'var(--ska-primary-dim)', color: 'var(--ska-primary)',
+                    textTransform: 'uppercase', letterSpacing: '0.05em',
+                  }}>Auto-generated</span>
+                </span>
+                <div style={{ position: 'relative', maxWidth: 320 }}>
+                  <input
+                    className="ska-input"
+                    value={generatingAdmNo ? 'Generating…' : form.admission_number}
+                    readOnly
+                    placeholder="Auto-generated on save"
+                    style={{ paddingRight: 40, fontFamily: 'monospace', letterSpacing: '0.04em', cursor: 'default' }}
+                  />
+                  {modal === 'add' && !generatingAdmNo && (
+                    <button
+                      type="button"
+                      title="Generate a new admission number"
+                      onClick={() => {
+                        setGeneratingAdmNo(true);
+                        ApiClient.get('/api/school/students/next-admission-number/')
+                          .then(d => { if (d.admission_number) setForm(f => ({ ...f, admission_number: d.admission_number })); })
+                          .catch(() => {})
+                          .finally(() => setGeneratingAdmNo(false));
+                      }}
+                      style={{
+                        position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        color: 'var(--ska-text-3)', padding: 4,
+                      }}
+                    >
+                      <Ic name="refresh" size="sm" />
+                    </button>
+                  )}
+                </div>
+              </label>
+
+              <label className="ska-form-group">
+                <span>Class / Grade</span>
+                <select className="ska-input" value={form.classroom_id} onChange={e => setForm(f => ({ ...f, classroom_id: e.target.value }))}>
+                  <option value="">— No class —</option>
+                  {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </label>
+              <label className="ska-form-group">
+                <span>Student Type</span>
+                <select className="ska-input" value={form.student_type}
+                  onChange={e => setForm(f => ({ ...f, student_type: e.target.value, hostel_house: e.target.value !== 'Boarding' ? '' : f.hostel_house }))}>
+                  <option value="">— Select —</option>
+                  <option value="Day">Day</option>
+                  <option value="Boarding">Boarding</option>
+                </select>
+              </label>
+              {form.student_type === 'Boarding' && (
+                <label className="ska-form-group">
+                  <span>House / Hostel</span>
+                  <input className="ska-input" value={form.hostel_house}
+                    placeholder="e.g. Harmony House, Lion House"
+                    onChange={e => setForm(f => ({ ...f, hostel_house: e.target.value }))} />
+                </label>
+              )}
+              <label className="ska-form-group">
+                <span>Transport Route</span>
+                <input className="ska-input" value={form.transport_route}
+                  placeholder="e.g. Route 3 — Waterloo, Morning Bus"
+                  onChange={e => setForm(f => ({ ...f, transport_route: e.target.value }))} />
+              </label>
+              <label className="ska-form-group">
+                <span>Previous School Attended</span>
+                <input className="ska-input" value={form.previous_school} onChange={e => setForm(f => ({ ...f, previous_school: e.target.value }))} />
+              </label>
+              <label className="ska-form-group">
+                <span>Last Class Completed</span>
+                <input className="ska-input" value={form.last_class_completed} onChange={e => setForm(f => ({ ...f, last_class_completed: e.target.value }))} />
+              </label>
+              <label className="ska-form-group">
+                <span>Reason for Leaving Previous School</span>
+                <input className="ska-input" value={form.leaving_reason} onChange={e => setForm(f => ({ ...f, leaving_reason: e.target.value }))} />
+              </label>
+            </div>
+          </div>
+
           {/* Parent / Guardian */}
-          <div className="ska-card ska-card-pad" style={{ marginTop: 16 }}>
+          <div className="ska-card ska-card-pad" style={{ marginTop: 16, background: 'var(--ska-surface-high)' }}>
             <h3 className="ska-card-title" style={{ marginBottom: 12 }}>Parent / Guardian Information</h3>
             <div className="ska-form-grid">
-              <label className="ska-form-group"><span>Father / Guardian Name</span>
+
+              {/* Guardian 1 */}
+              <div style={{ gridColumn: '1 / -1', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--ska-primary)' }}>
+                Guardian 1
+              </div>
+              <label className="ska-form-group">
+                <span>Relationship</span>
+                <select className="ska-input" value={form.father_relationship}
+                  onChange={e => setForm(f => ({ ...f, father_relationship: e.target.value }))}>
+                  <option value="Father">Father</option>
+                  <option value="Mother">Mother</option>
+                  <option value="Uncle">Uncle</option>
+                  <option value="Aunt">Aunt</option>
+                  <option value="Grandparent">Grandparent</option>
+                  <option value="Legal Guardian">Legal Guardian</option>
+                  <option value="Stepfather">Stepfather</option>
+                  <option value="Stepmother">Stepmother</option>
+                  <option value="Other">Other</option>
+                </select>
+              </label>
+              <label className="ska-form-group"><span>{form.father_relationship || 'Guardian 1'} Name</span>
                 <input className="ska-input" value={form.father_name} onChange={e => setForm(f => ({ ...f, father_name: e.target.value }))} /></label>
               <label className="ska-form-group"><span>Occupation</span>
                 <input className="ska-input" value={form.father_occupation} onChange={e => setForm(f => ({ ...f, father_occupation: e.target.value }))} /></label>
               <label className="ska-form-group"><span>Phone Number</span>
-                <input className="ska-input" value={form.father_phone} onChange={e => setForm(f => ({ ...f, father_phone: e.target.value }))} /></label>
+                <PhoneInput value={form.father_phone} onChange={v => setForm(f => ({ ...f, father_phone: v }))} defaultCountry={schoolCountryCode} /></label>
               <label className="ska-form-group"><span>Email Address</span>
-                <input className="ska-input" type="email" value={form.father_email} onChange={e => setForm(f => ({ ...f, father_email: e.target.value }))} /></label>
+                <input className="ska-input" type="email" value={form.father_email}
+                  style={fieldErrors.father_email ? { borderColor: 'var(--ska-error)' } : {}}
+                  onChange={e => { setForm(f => ({ ...f, father_email: e.target.value })); setFieldErrors(p => ({ ...p, father_email: '' })); }} />
+                {fieldErrors.father_email && <span style={{ fontSize: '0.71875rem', color: 'var(--ska-error)', marginTop: 2 }}>{fieldErrors.father_email}</span>}
+              </label>
               <label className="ska-form-group"><span>Address (if different)</span>
                 <input className="ska-input" value={form.father_address} onChange={e => setForm(f => ({ ...f, father_address: e.target.value }))} /></label>
               <label className="ska-form-group"><span>Parent Login Username</span>
@@ -1382,14 +1804,37 @@ export default function StudentsPage({ school, openAddSignal }) {
               <label className="ska-form-group"><span>Parent Login Password</span>
                 <input className="ska-input" type="password" value={form.father_password} onChange={e => setForm(f => ({ ...f, father_password: e.target.value }))} /></label>
 
-              <label className="ska-form-group"><span>Mother / Guardian Name</span>
+              {/* Guardian 2 */}
+              <div style={{ gridColumn: '1 / -1', marginTop: 8, fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--ska-primary)' }}>
+                Guardian 2
+              </div>
+              <label className="ska-form-group">
+                <span>Relationship</span>
+                <select className="ska-input" value={form.mother_relationship}
+                  onChange={e => setForm(f => ({ ...f, mother_relationship: e.target.value }))}>
+                  <option value="Father">Father</option>
+                  <option value="Mother">Mother</option>
+                  <option value="Uncle">Uncle</option>
+                  <option value="Aunt">Aunt</option>
+                  <option value="Grandparent">Grandparent</option>
+                  <option value="Legal Guardian">Legal Guardian</option>
+                  <option value="Stepfather">Stepfather</option>
+                  <option value="Stepmother">Stepmother</option>
+                  <option value="Other">Other</option>
+                </select>
+              </label>
+              <label className="ska-form-group"><span>{form.mother_relationship || 'Guardian 2'} Name</span>
                 <input className="ska-input" value={form.mother_name} onChange={e => setForm(f => ({ ...f, mother_name: e.target.value }))} /></label>
               <label className="ska-form-group"><span>Occupation</span>
                 <input className="ska-input" value={form.mother_occupation} onChange={e => setForm(f => ({ ...f, mother_occupation: e.target.value }))} /></label>
               <label className="ska-form-group"><span>Phone Number</span>
-                <input className="ska-input" value={form.mother_phone} onChange={e => setForm(f => ({ ...f, mother_phone: e.target.value }))} /></label>
+                <PhoneInput value={form.mother_phone} onChange={v => setForm(f => ({ ...f, mother_phone: v }))} defaultCountry={schoolCountryCode} /></label>
               <label className="ska-form-group"><span>Email Address</span>
-                <input className="ska-input" type="email" value={form.mother_email} onChange={e => setForm(f => ({ ...f, mother_email: e.target.value }))} /></label>
+                <input className="ska-input" type="email" value={form.mother_email}
+                  style={fieldErrors.mother_email ? { borderColor: 'var(--ska-error)' } : {}}
+                  onChange={e => { setForm(f => ({ ...f, mother_email: e.target.value })); setFieldErrors(p => ({ ...p, mother_email: '' })); }} />
+                {fieldErrors.mother_email && <span style={{ fontSize: '0.71875rem', color: 'var(--ska-error)', marginTop: 2 }}>{fieldErrors.mother_email}</span>}
+              </label>
               <label className="ska-form-group"><span>Address (if different)</span>
                 <input className="ska-input" value={form.mother_address} onChange={e => setForm(f => ({ ...f, mother_address: e.target.value }))} /></label>
               <label className="ska-form-group"><span>Parent Login Username</span>
@@ -1400,7 +1845,7 @@ export default function StudentsPage({ school, openAddSignal }) {
           </div>
 
           {/* Emergency contact */}
-          <div className="ska-card ska-card-pad" style={{ marginTop: 16 }}>
+          <div className="ska-card ska-card-pad" style={{ marginTop: 16, background: 'var(--ska-surface-high)' }}>
             <h3 className="ska-card-title" style={{ marginBottom: 12 }}>Emergency Contact</h3>
             <div className="ska-form-grid">
               <label className="ska-form-group"><span>Name</span>
@@ -1408,14 +1853,14 @@ export default function StudentsPage({ school, openAddSignal }) {
               <label className="ska-form-group"><span>Relationship</span>
                 <input className="ska-input" value={form.emergency_relationship} onChange={e => setForm(f => ({ ...f, emergency_relationship: e.target.value }))} /></label>
               <label className="ska-form-group"><span>Phone Number</span>
-                <input className="ska-input" value={form.emergency_phone} onChange={e => setForm(f => ({ ...f, emergency_phone: e.target.value }))} /></label>
+                <PhoneInput value={form.emergency_phone} onChange={v => setForm(f => ({ ...f, emergency_phone: v }))} defaultCountry={schoolCountryCode} /></label>
               <label className="ska-form-group"><span>Address</span>
                 <input className="ska-input" value={form.emergency_address} onChange={e => setForm(f => ({ ...f, emergency_address: e.target.value }))} /></label>
             </div>
           </div>
 
           {/* Medical */}
-          <div className="ska-card ska-card-pad" style={{ marginTop: 16 }}>
+          <div className="ska-card ska-card-pad" style={{ marginTop: 16, background: 'var(--ska-surface-high)' }}>
             <h3 className="ska-card-title" style={{ marginBottom: 12 }}>Medical Information</h3>
             <div className="ska-form-grid">
               <label className="ska-form-group"><span>Blood Group</span>
@@ -1427,33 +1872,38 @@ export default function StudentsPage({ school, openAddSignal }) {
               <label className="ska-form-group"><span>Doctor's Name</span>
                 <input className="ska-input" value={form.doctor_name} onChange={e => setForm(f => ({ ...f, doctor_name: e.target.value }))} /></label>
               <label className="ska-form-group"><span>Doctor's Phone</span>
-                <input className="ska-input" value={form.doctor_phone} onChange={e => setForm(f => ({ ...f, doctor_phone: e.target.value }))} /></label>
+                <PhoneInput value={form.doctor_phone} onChange={v => setForm(f => ({ ...f, doctor_phone: v }))} defaultCountry={schoolCountryCode} /></label>
+            </div>
+          </div>
+
+          {/* Special Educational Needs */}
+          <div className="ska-card ska-card-pad" style={{ marginTop: 16, background: 'var(--ska-surface-high)' }}>
+            <h3 className="ska-card-title" style={{ marginBottom: 4 }}>Special Educational Needs (SEN)</h3>
+            <p style={{ margin: '0 0 12px', fontSize: '0.8125rem', color: 'var(--ska-text-3)' }}>
+              Learning disabilities, assistive technology needs, accommodation plans. Kept separate from medical records.
+            </p>
+            <div style={{ display: 'grid', gap: 12 }}>
+              <label className="ska-form-group" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <input type="checkbox" checked={form.sen_iep}
+                  onChange={e => setForm(f => ({ ...f, sen_iep: e.target.checked }))} />
+                <span>Student has an active Individualized Education Plan (IEP)</span>
+              </label>
+              <label className="ska-form-group">
+                <span>SEN Notes</span>
+                <textarea
+                  className="ska-input"
+                  rows={4}
+                  value={form.sen_notes}
+                  placeholder="Describe any learning disabilities, assistive needs, accommodations required, or other relevant SEN information…"
+                  onChange={e => setForm(f => ({ ...f, sen_notes: e.target.value }))}
+                  style={{ resize: 'vertical', fontFamily: 'inherit' }}
+                />
+              </label>
             </div>
           </div>
 
           {/* Conduct */}
-          <div className="ska-card ska-card-pad" style={{ marginTop: 16 }}>
-<<<<<<< HEAD
-            <h3 className="ska-card-title" style={{ marginBottom: 12 }}>Student Conduct & Discipline</h3>
-            <div className="ska-form-grid" style={{ gridTemplateColumns: '1fr', gap: 12 }}>
-              <label className="ska-form-group">
-                <span>Has the student ever been suspended/expelled?</span>
-                <select className="ska-input" value={form.disciplinary_history ? 'yes' : 'no'} onChange={e => setForm(f => ({
-                  ...f,
-                  disciplinary_history: e.target.value === 'yes',
-                  disciplinary_notes: e.target.value === 'yes' ? f.disciplinary_notes : '',
-                }))}>
-                  <option value="no">No</option>
-                  <option value="yes">Yes</option>
-                </select>
-              </label>
-              {form.disciplinary_history && (
-                <label className="ska-form-group">
-                  <span>Please explain the incident</span>
-                  <textarea className="ska-input" rows="3" value={form.disciplinary_notes} onChange={e => setForm(f => ({ ...f, disciplinary_notes: e.target.value }))} />
-                </label>
-              )}
-=======
+          <div className="ska-card ska-card-pad" style={{ marginTop: 16, background: 'var(--ska-surface-high)' }}>
             <h3 className="ska-card-title" style={{ marginBottom: 12 }}>Student Conduct &amp; Discipline</h3>
             <div style={{ display: 'grid', gap: 12 }}>
               <label className="ska-form-group" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -1462,42 +1912,12 @@ export default function StudentsPage({ school, openAddSignal }) {
               </label>
               <label className="ska-form-group"><span>If yes, explain</span>
                 <input className="ska-input" value={form.disciplinary_notes} onChange={e => setForm(f => ({ ...f, disciplinary_notes: e.target.value }))} /></label>
->>>>>>> 5c35a02602b594f1606dd7154a3e035cf240658d
             </div>
           </div>
 
           {/* Documents */}
-          <div className="ska-card ska-card-pad" style={{ marginTop: 16 }}>
+          <div className="ska-card ska-card-pad" style={{ marginTop: 16, background: 'var(--ska-surface-high)' }}>
             <h3 className="ska-card-title" style={{ marginBottom: 12 }}>Documents Submitted</h3>
-<<<<<<< HEAD
-            <div className="ska-form-grid">
-              <label className="ska-form-group">
-                <span>Document Type</span>
-                <select className="ska-input" value={form.document_type} onChange={e => setForm(f => ({ ...f, document_type: e.target.value }))}>
-                  <option value="">Select a document type</option>
-                  <option value="birth_certificate">Birth Certificate</option>
-                  <option value="passport_photo">Passport Photograph</option>
-                  <option value="previous_school_report">Previous School Report</option>
-                  <option value="transfer_letter">Transfer Letter</option>
-                  <option value="medical_report">Medical Report</option>
-                  <option value="other">Other Document</option>
-                </select>
-              </label>
-              <label className="ska-form-group">
-                <span>Upload Document (PDF / DOC / DOCX)</span>
-                <input
-                  type="file"
-                  accept=".pdf,.doc,.docx"
-                  className="ska-input"
-                  onChange={e => setForm(f => ({ ...f, document_file: e.target.files?.[0] || null }))}
-                />
-                {form.document_file && (
-                  <div style={{ marginTop: 6, color: '#444', fontSize: '0.95rem' }}>
-                    Selected file: {form.document_file.name}
-                  </div>
-                )}
-              </label>
-=======
             <div style={{ display: 'grid', gap: 10 }}>
               {[
                 ['documents_birth_certificate',       'Birth Certificate'],
@@ -1512,12 +1932,11 @@ export default function StudentsPage({ school, openAddSignal }) {
                   <span>{label}</span>
                 </label>
               ))}
->>>>>>> 5c35a02602b594f1606dd7154a3e035cf240658d
             </div>
           </div>
 
           <div className="ska-modal-actions">
-            <button className="ska-btn ska-btn--ghost" onClick={() => setModal(null)}>Cancel</button>
+            <button className="ska-btn ska-btn--ghost" onClick={() => { setModal(null); setError(''); setFieldErrors({}); }}>Cancel</button>
             <button className="ska-btn ska-btn--primary" onClick={handleSave} disabled={saving}>
               {saving ? 'Saving…' : modal === 'add' ? 'Register Student' : 'Save Changes'}
             </button>

@@ -245,12 +245,46 @@ class Student(models.Model):
     gender = models.CharField(max_length=1, choices=[('M', 'Male'), ('F', 'Female')], blank=True)
     passport_picture     = models.ImageField(upload_to='student_passports/', blank=True, null=True)
     disciplinary_history = models.BooleanField(default=False, help_text="Has the student ever been suspended or expelled?")
-    disciplinary_notes = models.TextField(blank=True, help_text="Details about disciplinary incidents, if any.")
+    disciplinary_notes   = models.TextField(blank=True, help_text="Details about disciplinary incidents, if any.")
+    student_type         = models.CharField(
+        max_length=20,
+        choices=[('day', 'Day Student'), ('boarding', 'Boarding / Hostel')],
+        default='day', blank=True,
+    )
+    fee_category         = models.CharField(
+        max_length=30,
+        choices=[
+            ('full_paying',          'Full-Paying'),
+            ('partial_scholarship',  'Partial Scholarship'),
+            ('full_scholarship',     'Full Scholarship'),
+            ('government_sponsored', 'Government-Sponsored'),
+            ('bursary',              'Bursary'),
+        ],
+        blank=True, default='',
+    )
+    home_language        = models.CharField(max_length=100, blank=True)
+    intake_term          = models.CharField(
+        max_length=10,
+        choices=[('TERM1', 'Term 1'), ('TERM2', 'Term 2'), ('TERM3', 'Term 3')],
+        blank=True, default='',
+    )
+    is_repeater          = models.BooleanField(default=False)
+    middle_name          = models.CharField(max_length=100, blank=True)
+    hostel_house         = models.CharField(max_length=100, blank=True)
+    transport_route      = models.CharField(max_length=200, blank=True)
+    # Special Educational Needs
+    sen_notes            = models.TextField(blank=True)
+    sen_iep              = models.BooleanField(default=False)
     # Medical information
     blood_type           = models.CharField(max_length=5, blank=True, help_text="e.g., A+, O-")
     allergies            = models.TextField(blank=True, help_text="Known allergies")
     medical_notes        = models.TextField(blank=True, help_text="General medical notes / conditions")
     is_active            = models.BooleanField(default=True)
+    status               = models.CharField(
+        max_length=20,
+        choices=[('active','Active'),('suspended','Suspended'),('transferred','Transferred'),('graduated','Graduated')],
+        default='active', blank=True,
+    )
     must_change_password = models.BooleanField(default=False)
     created_at           = models.DateTimeField(auto_now_add=True)
     updated_at           = models.DateTimeField(auto_now=True)
@@ -292,6 +326,7 @@ class Parent(models.Model):
     school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='parents', null=True, blank=True)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='parent_profile')
     phone_number         = models.CharField(max_length=20)
+    whatsapp_number      = models.CharField(max_length=20, blank=True)
     relationship         = models.CharField(max_length=50, help_text="e.g., Father, Mother, Guardian")
     occupation           = models.CharField(max_length=100, blank=True)
     is_active            = models.BooleanField(default=True)

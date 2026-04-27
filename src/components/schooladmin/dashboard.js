@@ -9,8 +9,9 @@ import {
 } from './SchoolAdminPages';
 import {
   AnalyticsPage, ExamsPage, NotificationsPage, TimetablePage, ParentsPage,
-  FinanceUsersPage, PrincipalUsersPage, StudentsPage, TeachersPage,
+  FinanceUsersPage, PrincipalUsersPage, TeachersPage,
 } from './NewPages';
+import { StudentsPage } from './SAstudents';
 import {
   ModRequestsPage, GradingSchemePage, AcademicCalendarPage, SecurityPageEnhanced,
   GradeOversightPage, RoomsPage, ExamOfficersPage, TeacherAssignmentsPage, StudentPromotionPage,
