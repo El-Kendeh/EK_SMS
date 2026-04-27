@@ -3160,6 +3160,9 @@ def api_student_detail(request, student_id):
             'date_of_birth':    str(student.date_of_birth) if student.date_of_birth else None,
             'phone_number':     student.phone_number,
             'gender':           student.gender,
+            'blood_type':       student.blood_type,
+            'allergies':        student.allergies,
+            'medical_notes':    student.medical_notes,
             'passport_picture': stu_pic_url,
             'admission_date':   str(student.admission_date),
             'attendance_rate':  att_rate,
@@ -3210,6 +3213,12 @@ def api_student_detail(request, student_id):
             student.phone_number = data['phone_number']
         if 'gender' in data:
             student.gender = data['gender']
+        if 'blood_type' in data:
+            student.blood_type = data['blood_type']
+        if 'allergies' in data:
+            student.allergies = data['allergies']
+        if 'medical_notes' in data:
+            student.medical_notes = data['medical_notes']
         if 'disciplinary_history' in data:
             student.disciplinary_history = _parse_bool(data['disciplinary_history'])
             if not student.disciplinary_history:
