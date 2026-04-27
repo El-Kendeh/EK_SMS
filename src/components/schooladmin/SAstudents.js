@@ -921,8 +921,8 @@ export function StudentsPage({ school, openAddSignal }) {
       mother_address: s.mother_address || '', mother_username: s.mother_username || '', mother_password: '',
       emergency_name: s.emergency_name || '', emergency_relationship: s.emergency_relationship || '',
       emergency_phone: s.emergency_phone || '', emergency_address: s.emergency_address || '',
-      blood_group: s.blood_group || '', allergies: s.allergies || '',
-      medical_conditions: s.medical_conditions || '',
+      blood_group: s.blood_type || '', allergies: s.allergies || '',
+      medical_conditions: s.medical_notes || '',
       doctor_name: s.doctor_name || '', doctor_phone: s.doctor_phone || '',
       sen_notes: s.sen_notes || '', sen_iep: !!s.sen_iep,
       disciplinary_history: !!s.disciplinary_history, disciplinary_notes: s.disciplinary_notes || '',
@@ -934,7 +934,7 @@ export function StudentsPage({ school, openAddSignal }) {
       documents_other: !!s.documents_other,
       profile_photo: null,
     });
-    setProfilePhotoPreview(s.profile_photo_url || s.profile_photo || null);
+    setProfilePhotoPreview(s.passport_picture || null);
     setDraftRestored(false);
     setShowFatherPwd(false); setShowMotherPwd(false);
     setError(''); setFieldErrors({}); setStep(0); setDupWarning(null); setDupIgnored(false); setModal(s);
@@ -943,14 +943,18 @@ export function StudentsPage({ school, openAddSignal }) {
   const handlePhotoChange = e => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const preview = URL.createObjectURL(file);
-    setForm(f => ({ ...f, profile_photo: file }));
-    setProfilePhotoPreview(prev => { if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev); return preview; });
+    e.target.value = ''; // allow re-selecting the same file
+    const reader = new FileReader();
+    reader.onload = ev => {
+      setForm(f => ({ ...f, profile_photo: file }));
+      setProfilePhotoPreview(ev.target.result);
+    };
+    reader.readAsDataURL(file);
   };
 
   const removePhoto = () => {
     setForm(f => ({ ...f, profile_photo: null }));
-    setProfilePhotoPreview(prev => { if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev); return null; });
+    setProfilePhotoPreview(null);
   };
 
   const buildPayload = data => {

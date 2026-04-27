@@ -3447,7 +3447,7 @@ def api_student_detail(request, student_id):
         # Accept both multipart (with file) and JSON (without file)
         if request.content_type and 'multipart' in request.content_type:
             data = request.POST
-            passport_picture = request.FILES.get('passport_picture')
+            passport_picture = request.FILES.get('passport_picture') or request.FILES.get('profile_photo')
         else:
             try:
                 data = json.loads(request.body)
@@ -3481,12 +3481,12 @@ def api_student_detail(request, student_id):
             elif g not in ('M', 'F', ''):
                 g = ''
             student.gender = g
-        if 'blood_type' in data:
-            student.blood_type = data['blood_type']
+        if 'blood_type' in data or 'blood_group' in data:
+            student.blood_type = (data.get('blood_type') or data.get('blood_group') or '').strip()
         if 'allergies' in data:
             student.allergies = data['allergies']
-        if 'medical_notes' in data:
-            student.medical_notes = data['medical_notes']
+        if 'medical_notes' in data or 'medical_conditions' in data:
+            student.medical_notes = (data.get('medical_notes') or data.get('medical_conditions') or '').strip()
         if 'disciplinary_history' in data:
             student.disciplinary_history = _parse_bool(data['disciplinary_history'])
             if not student.disciplinary_history:
