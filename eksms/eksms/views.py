@@ -2894,6 +2894,49 @@ def api_student_next_admission(request):
 
 
 @csrf_exempt
+def api_student_check_duplicate(request):
+    """GET ?first_name=&last_name=&date_of_birth= — returns {exists, student?} for duplicate detection."""
+    try:
+        actor, sa, school = _get_school_for_admin(request)
+    except SchoolAdmin.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+
+    first_name    = request.GET.get('first_name', '').strip()
+    last_name     = request.GET.get('last_name', '').strip()
+    date_of_birth = request.GET.get('date_of_birth', '').strip()
+
+    if not first_name or not last_name:
+        return JsonResponse({'success': True, 'exists': False})
+
+    qs = Student.objects.filter(
+        school=school,
+        user__first_name__iexact=first_name,
+        user__last_name__iexact=last_name,
+    ).select_related('user')
+
+    if date_of_birth:
+        try:
+            qs = qs.filter(date_of_birth=date_of_birth)
+        except Exception:
+            pass
+
+    student = qs.first()
+    if student:
+        return JsonResponse({
+            'success': True, 'exists': True,
+            'student': {
+                'id':               student.id,
+                'full_name':        student.user.get_full_name(),
+                'date_of_birth':    str(student.date_of_birth) if student.date_of_birth else None,
+                'admission_number': student.admission_number,
+            },
+        })
+    return JsonResponse({'success': True, 'exists': False})
+
+
+@csrf_exempt
 def api_students(request):
     try:
         actor, sa, school = _get_school_for_admin(request)
@@ -2971,12 +3014,78 @@ def api_students(request):
         date_of_birth    = body.get('date_of_birth') or None
         phone_number     = body.get('phone_number', '')
         gender           = body.get('gender', '')
-        passport_picture = request.FILES.get('passport_picture') or request.FILES.get('profile_photo')
-        document_type    = body.get('document_type', '').strip()
-        document_file    = request.FILES.get('document_file')
+        # Normalize: frontend sends 'Male'/'Female', model expects 'M'/'F' (max_length=1)
+        if gender.lower() == 'male':
+            gender = 'M'
+        elif gender.lower() == 'female':
+            gender = 'F'
+        elif gender not in ('M', 'F', ''):
+            gender = ''
+        passport_picture     = request.FILES.get('passport_picture') or request.FILES.get('profile_photo')
+        document_type        = body.get('document_type', '').strip()
+        document_file        = request.FILES.get('document_file')
         disciplinary_history = _parse_bool(body.get('disciplinary_history', False))
         disciplinary_notes   = body.get('disciplinary_notes', '').strip()
 
+        blood_type    = (body.get('blood_group') or body.get('blood_type') or '').strip()
+        allergies     = body.get('allergies', '').strip()
+        medical_notes = (body.get('medical_conditions') or body.get('medical_notes') or '').strip()
+        status        = body.get('status', 'active').strip()
+        if status not in ('active', 'suspended', 'transferred', 'graduated'):
+            status = 'active'
+
+        student_type  = body.get('student_type', 'day').strip().lower()
+        if student_type not in ('day', 'boarding'):
+            student_type = 'day'
+        fee_category  = body.get('fee_category', '').strip()
+        if fee_category not in ('full_paying', 'partial_scholarship', 'full_scholarship', 'government_sponsored', 'bursary', ''):
+            fee_category = ''
+        home_language     = body.get('home_language', '').strip()
+        enrollment_date_str = body.get('enrollment_date', '').strip() or None
+        intake_term = body.get('intake_term', '').strip()
+        if intake_term not in ('TERM1', 'TERM2', 'TERM3', ''):
+            intake_term = ''
+        is_repeater        = _parse_bool(body.get('is_repeater', 'false'))
+        father_whatsapp    = body.get('father_whatsapp', '').strip()
+        mother_whatsapp    = body.get('mother_whatsapp', '').strip()
+        father_existing_id = body.get('father_existing_id', '').strip()
+        mother_existing_id  = body.get('mother_existing_id', '').strip()
+        middle_name         = body.get('middle_name', '').strip()
+        hostel_house        = body.get('hostel_house', '').strip()
+        transport_route     = body.get('transport_route', '').strip()
+        sen_notes           = body.get('sen_notes', '').strip()
+        sen_iep             = _parse_bool(body.get('sen_iep', 'false'))
+        place_of_birth       = body.get('place_of_birth', '').strip()
+        nationality          = body.get('nationality', '').strip()
+        religion             = body.get('religion', '').strip()
+        home_address         = body.get('home_address', '').strip()
+        city                 = body.get('city', '').strip()
+        previous_school      = body.get('previous_school', '').strip()
+        last_class_completed = body.get('last_class_completed', '').strip()
+        leaving_reason       = body.get('leaving_reason', '').strip()
+        emergency_name         = body.get('emergency_name', '').strip()
+        emergency_relationship = body.get('emergency_relationship', '').strip()
+        emergency_phone        = body.get('emergency_phone', '').strip()
+        emergency_address      = body.get('emergency_address', '').strip()
+        doctor_name          = body.get('doctor_name', '').strip()
+        doctor_phone         = body.get('doctor_phone', '').strip()
+        documents_birth_certificate      = _parse_bool(body.get('documents_birth_certificate', False))
+        documents_passport_photo         = _parse_bool(body.get('documents_passport_photo', False))
+        documents_previous_school_report = _parse_bool(body.get('documents_previous_school_report', False))
+        documents_transfer_letter        = _parse_bool(body.get('documents_transfer_letter', False))
+        documents_medical_report         = _parse_bool(body.get('documents_medical_report', False))
+        documents_other                  = _parse_bool(body.get('documents_other', False))
+        father_relationship = body.get('father_relationship', 'Father').strip()
+        mother_relationship = body.get('mother_relationship', 'Mother').strip()
+        _valid_rels = (
+            'Father', 'Mother', 'Guardian', 'Stepfather', 'Stepmother',
+            'Grandfather', 'Grandmother', 'Uncle', 'Aunt', 'Sibling',
+            'Grandparent', 'Legal Guardian', 'Other',
+        )
+        if father_relationship not in _valid_rels:
+            father_relationship = 'Father'
+        if mother_relationship not in _valid_rels:
+            mother_relationship = 'Mother'
 
         father_name      = body.get('father_name', '').strip()
         father_email     = body.get('father_email', '').strip()
@@ -3001,11 +3110,11 @@ def api_students(request):
         if not first_name or not last_name:
             return JsonResponse({'success': False, 'message': 'first_name and last_name are required.'}, status=400)
 
-        # Auto-generate admission number if not supplied
-        if not admission_number:
+        # Always guarantee a unique admission number server-side.
+        # If the client-supplied one is already taken (race condition / orphaned record),
+        # silently generate the next available one rather than returning a 400.
+        if not admission_number or Student.objects.filter(school=school, admission_number=admission_number).exists():
             admission_number = _generate_admission_number(school)
-        elif Student.objects.filter(school=school, admission_number=admission_number).exists():
-            return JsonResponse({'success': False, 'message': 'Admission number already exists.'}, status=400)
 
         # Accept a custom student password; default to admission number
         student_password = body.get('student_password', '').strip() or admission_number
@@ -3041,7 +3150,26 @@ def api_students(request):
             passport_picture=passport_picture if passport_picture else None,
             disciplinary_history=disciplinary_history,
             disciplinary_notes=disciplinary_notes if disciplinary_history else '',
-
+            blood_type=blood_type, allergies=allergies, medical_notes=medical_notes,
+            status=status,
+            student_type=student_type, fee_category=fee_category, home_language=home_language,
+            intake_term=intake_term, is_repeater=is_repeater,
+            middle_name=middle_name, hostel_house=hostel_house,
+            transport_route=transport_route, sen_notes=sen_notes, sen_iep=sen_iep,
+            place_of_birth=place_of_birth, nationality=nationality, religion=religion,
+            home_address=home_address, city=city,
+            previous_school=previous_school, last_class_completed=last_class_completed,
+            leaving_reason=leaving_reason,
+            emergency_name=emergency_name, emergency_relationship=emergency_relationship,
+            emergency_phone=emergency_phone, emergency_address=emergency_address,
+            doctor_name=doctor_name, doctor_phone=doctor_phone,
+            documents_birth_certificate=documents_birth_certificate,
+            documents_passport_photo=documents_passport_photo,
+            documents_previous_school_report=documents_previous_school_report,
+            documents_transfer_letter=documents_transfer_letter,
+            documents_medical_report=documents_medical_report,
+            documents_other=documents_other,
+            **(dict(admission_date=enrollment_date_str) if enrollment_date_str else {}),
         )
 
         if document_file:
@@ -3058,7 +3186,20 @@ def api_students(request):
                 doc.file = document_file
                 doc.save(update_fields=['file'])
 
-        def _create_parent(name, email, phone, occupation, username, password, relationship, is_primary):
+        def _create_parent(name, email, phone, occupation, username, password, relationship, is_primary, existing_id='', whatsapp=''):
+            if existing_id:
+                try:
+                    parent = Parent.objects.get(id=int(existing_id), school=school)
+                    ParentStudent.objects.get_or_create(
+                        parent=parent, student=student,
+                        defaults={'is_primary_contact': is_primary, 'relationship_type': relationship},
+                    )
+                    if whatsapp and not parent.whatsapp_number:
+                        parent.whatsapp_number = whatsapp
+                        parent.save(update_fields=['whatsapp_number'])
+                    return {'username': parent.user.username, 'email': parent.user.email, 'password': None}
+                except (Parent.DoesNotExist, ValueError):
+                    pass
             if not name and not email and not phone and not username:
                 return None
 
@@ -3113,10 +3254,11 @@ def api_students(request):
                     school=school,
                     user=user,
                     phone_number=phone or '',
+                    whatsapp_number=whatsapp or '',
                     relationship=relationship,
                     occupation=occupation or '',
                 )
-            ParentStudent.objects.create(parent=parent, student=student, is_primary_contact=is_primary)
+            ParentStudent.objects.create(parent=parent, student=student, is_primary_contact=is_primary, relationship_type=relationship)
 
             if email:
                 subject = 'Your parent login for EK-SMS'
@@ -3134,23 +3276,35 @@ def api_students(request):
             return {'username': user.username, 'email': user.email, 'password': password if email else None}
 
         created_parents = []
-        father_result = _create_parent(
-            father_name, father_email, father_phone, father_occupation,
-            father_username, father_password, 'Father', bool(primary_contact or not mother_name)
-        )
-        if father_result:
-            if isinstance(father_result, dict) and father_result.get('error'):
-                return JsonResponse({'success': False, 'message': father_result['error']}, status=400)
-            created_parents.append({'relationship': 'Father', **father_result})
+        parent_warnings = []
 
-        mother_result = _create_parent(
-            mother_name, mother_email, mother_phone, mother_occupation,
-            mother_username, mother_password, 'Mother', False if father_result else True
-        )
-        if mother_result:
-            if isinstance(mother_result, dict) and mother_result.get('error'):
-                return JsonResponse({'success': False, 'message': mother_result['error']}, status=400)
-            created_parents.append({'relationship': 'Mother', **mother_result})
+        try:
+            father_result = _create_parent(
+                father_name, father_email, father_phone, father_occupation,
+                father_username, father_password, father_relationship, bool(primary_contact or not mother_name),
+                existing_id=father_existing_id, whatsapp=father_whatsapp,
+            )
+            if father_result:
+                if isinstance(father_result, dict) and father_result.get('error'):
+                    parent_warnings.append(father_result['error'])
+                else:
+                    created_parents.append({'relationship': 'Father', **father_result})
+        except Exception as exc:
+            parent_warnings.append(f'Guardian 1 could not be created: {exc}')
+
+        try:
+            mother_result = _create_parent(
+                mother_name, mother_email, mother_phone, mother_occupation,
+                mother_username, mother_password, mother_relationship, False if created_parents else True,
+                existing_id=mother_existing_id, whatsapp=mother_whatsapp,
+            )
+            if mother_result:
+                if isinstance(mother_result, dict) and mother_result.get('error'):
+                    parent_warnings.append(mother_result['error'])
+                else:
+                    created_parents.append({'relationship': 'Mother', **mother_result})
+        except Exception as exc:
+            parent_warnings.append(f'Guardian 2 could not be created: {exc}')
 
         # Email the student their login credentials if email was provided
         if email:
@@ -3182,6 +3336,7 @@ def api_students(request):
             'student_username':      student_username,
             'student_initial_password': student_password,
             'parents':               created_parents,
+            'parent_warnings':       parent_warnings,
         }
         return JsonResponse(response_data, status=201)
 
@@ -3250,6 +3405,32 @@ def api_student_detail(request, student_id):
             'is_flagged':       is_flagged,
             'disciplinary_history': student.disciplinary_history,
             'disciplinary_notes': student.disciplinary_notes,
+            'middle_name':       student.middle_name,
+            'place_of_birth':    student.place_of_birth,
+            'nationality':       student.nationality,
+            'religion':          student.religion,
+            'home_address':      student.home_address,
+            'city':              student.city,
+            'student_type':      student.student_type,
+            'hostel_house':      student.hostel_house,
+            'transport_route':   student.transport_route,
+            'previous_school':   student.previous_school,
+            'last_class_completed': student.last_class_completed,
+            'leaving_reason':    student.leaving_reason,
+            'emergency_name':    student.emergency_name,
+            'emergency_relationship': student.emergency_relationship,
+            'emergency_phone':   student.emergency_phone,
+            'emergency_address': student.emergency_address,
+            'doctor_name':       student.doctor_name,
+            'doctor_phone':      student.doctor_phone,
+            'sen_notes':         student.sen_notes,
+            'sen_iep':           student.sen_iep,
+            'documents_birth_certificate':      student.documents_birth_certificate,
+            'documents_passport_photo':         student.documents_passport_photo,
+            'documents_previous_school_report': student.documents_previous_school_report,
+            'documents_transfer_letter':        student.documents_transfer_letter,
+            'documents_medical_report':         student.documents_medical_report,
+            'documents_other':                  student.documents_other,
             'grades':           grades_data,
             'parents':          parents_data,
             'documents': [
@@ -3266,7 +3447,7 @@ def api_student_detail(request, student_id):
         # Accept both multipart (with file) and JSON (without file)
         if request.content_type and 'multipart' in request.content_type:
             data = request.POST
-            passport_picture = request.FILES.get('passport_picture')
+            passport_picture = request.FILES.get('passport_picture') or request.FILES.get('profile_photo')
         else:
             try:
                 data = json.loads(request.body)
@@ -3292,19 +3473,40 @@ def api_student_detail(request, student_id):
         if 'phone_number' in data:
             student.phone_number = data['phone_number']
         if 'gender' in data:
-            student.gender = data['gender']
-        if 'blood_type' in data:
-            student.blood_type = data['blood_type']
+            g = data['gender']
+            if g.lower() == 'male':
+                g = 'M'
+            elif g.lower() == 'female':
+                g = 'F'
+            elif g not in ('M', 'F', ''):
+                g = ''
+            student.gender = g
+        if 'blood_type' in data or 'blood_group' in data:
+            student.blood_type = (data.get('blood_type') or data.get('blood_group') or '').strip()
         if 'allergies' in data:
             student.allergies = data['allergies']
-        if 'medical_notes' in data:
-            student.medical_notes = data['medical_notes']
+        if 'medical_notes' in data or 'medical_conditions' in data:
+            student.medical_notes = (data.get('medical_notes') or data.get('medical_conditions') or '').strip()
         if 'disciplinary_history' in data:
             student.disciplinary_history = _parse_bool(data['disciplinary_history'])
             if not student.disciplinary_history:
                 student.disciplinary_notes = ''
         if 'disciplinary_notes' in data:
             student.disciplinary_notes = data['disciplinary_notes'].strip()
+        for _f in ('place_of_birth', 'nationality', 'religion', 'home_address', 'city',
+                   'previous_school', 'last_class_completed', 'leaving_reason',
+                   'emergency_name', 'emergency_relationship', 'emergency_phone', 'emergency_address',
+                   'doctor_name', 'doctor_phone',
+                   'middle_name', 'hostel_house', 'transport_route', 'sen_notes'):
+            if _f in data:
+                setattr(student, _f, str(data[_f]).strip())
+        if 'sen_iep' in data:
+            student.sen_iep = _parse_bool(data['sen_iep'])
+        for _doc in ('documents_birth_certificate', 'documents_passport_photo',
+                     'documents_previous_school_report', 'documents_transfer_letter',
+                     'documents_medical_report', 'documents_other'):
+            if _doc in data:
+                setattr(student, _doc, _parse_bool(data[_doc]))
         if passport_picture:
             student.passport_picture = passport_picture
 

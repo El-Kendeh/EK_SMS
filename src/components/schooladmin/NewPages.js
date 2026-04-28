@@ -1797,10 +1797,13 @@ function StudentProfilePanel({ student, onClose, onEdit }) {
   );
 }
 
+const RELATIONSHIP_OPTS = ['Father', 'Mother', 'Uncle', 'Aunt', 'Grandparent', 'Legal Guardian', 'Other'];
+
 const STUDENT_WIZARD_STEPS = [
-  { label: 'Personal Info',    icon: 'person'       },
-  { label: 'Academic Details', icon: 'school'       },
-  { label: 'Review & Enroll',  icon: 'check_circle' },
+  { label: 'Identity',            icon: 'person'            },
+  { label: 'Credentials & Class', icon: 'badge'             },
+  { label: 'Family',              icon: 'family_restroom'   },
+  { label: 'Medical & Enroll',    icon: 'health_and_safety' },
 ];
 
 function _studentAvatarLetters(first, last) {
@@ -1809,20 +1812,125 @@ function _studentAvatarLetters(first, last) {
   return (a + b).toUpperCase() || '?';
 }
 
+function _calcAge(dob) {
+  if (!dob) return '';
+  const today = new Date();
+  const birth = new Date(dob);
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  return age >= 0 ? String(age) : '';
+}
+
+const STUDENT_STATUS_OPTS = [
+  { value: 'active',      label: 'Active',      color: '#22c55e' },
+  { value: 'suspended',   label: 'Suspended',   color: '#f59e0b' },
+  { value: 'transferred', label: 'Transferred', color: '#6366f1' },
+  { value: 'graduated',   label: 'Graduated',   color: '#4b8eff' },
+];
+
+const STUDENT_TYPE_OPTS = [
+  { value: 'day',      label: 'Day Student',       icon: 'directions_walk' },
+  { value: 'boarding', label: 'Boarding / Hostel',  icon: 'hotel'           },
+];
+
+const FEE_CATEGORY_OPTS = [
+  { value: 'full_paying',          label: 'Full-Paying'          },
+  { value: 'partial_scholarship',  label: 'Partial Scholarship'  },
+  { value: 'full_scholarship',     label: 'Full Scholarship'     },
+  { value: 'government_sponsored', label: 'Government-Sponsored' },
+  { value: 'bursary',              label: 'Bursary'              },
+];
+
 function AddStudentWizard({ school, classes, classesLoading = false, onSave, onCancel }) {
-  const [step,           setStep]          = useState(0);
-  const [saving,         setSaving]        = useState(false);
-  const [error,          setError]         = useState('');
-  const [credentials,    setCredentials]   = useState(null);  // { username, password }
-  const [form,           setForm]          = useState({
-    first_name: '', last_name: '', gender: '', date_of_birth: '',
-    phone_number: '', email: '', admission_number: '', classroom_id: '',
+  const [step,          setStep]        = useState(0);
+  const [saving,        setSaving]      = useState(false);
+  const [error,         setError]       = useState('');
+  const [credentials,   setCredentials] = useState(null);
+  const [dupWarning,    setDupWarning]  = useState(null);
+  const [form,          setForm]        = useState({
+    first_name: '', last_name: '', gender: '', date_of_birth: '', age: '',
+    phone_number: '', status: 'active',
+    student_type: 'day', fee_category: '', home_language: '',
+    admission_number: '', classroom_id: '', email: '', enrollment_date: '',
+    father_name: '', father_email: '', father_phone: '', father_occupation: '',
+    mother_name: '', mother_email: '', mother_phone: '', mother_occupation: '',
+    blood_type: '', allergies: '', medical_notes: '',
+    intake_term: '', is_repeater: false,
+    middle_name: '', hostel_house: '',
+    father_relationship: 'Father', mother_relationship: 'Mother',
+    father_whatsapp: '', mother_whatsapp: '',
+    father_existing_id: '', mother_existing_id: '',
   });
-  const [profileImage,   setProfileImage]  = useState(null);   // File object
-  const [profilePreview, setProfilePreview] = useState('');    // data-URL for display
+  const [profileImage,   setProfileImage]  = useState(null);
+  const [profilePreview, setProfilePreview] = useState('');
   const [photoHover,     setPhotoHover]     = useState(false);
   const studentImgRef = React.useRef(null);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const [fatherSearch,    setFatherSearch]    = useState('');
+  const [fatherResults,   setFatherResults]   = useState([]);
+  const [fatherSearching, setFatherSearching] = useState(false);
+  const [fatherWASame,    setFatherWASame]    = useState(false);
+  const [motherSearch,    setMotherSearch]    = useState('');
+  const [motherResults,   setMotherResults]   = useState([]);
+  const [motherSearching, setMotherSearching] = useState(false);
+  const [motherWASame,    setMotherWASame]    = useState(false);
+
+  useEffect(() => {
+    if (!fatherSearch.trim() || fatherSearch.length < 2) { setFatherResults([]); return; }
+    setFatherSearching(true);
+    const t = setTimeout(async () => {
+      try {
+        const r = await ApiClient.get(`/api/school/parents/?q=${encodeURIComponent(fatherSearch.trim())}`);
+        setFatherResults((r.parents || []).slice(0, 6));
+      } catch (_) { setFatherResults([]); }
+      setFatherSearching(false);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [fatherSearch]);
+
+  useEffect(() => {
+    if (!motherSearch.trim() || motherSearch.length < 2) { setMotherResults([]); return; }
+    setMotherSearching(true);
+    const t = setTimeout(async () => {
+      try {
+        const r = await ApiClient.get(`/api/school/parents/?q=${encodeURIComponent(motherSearch.trim())}`);
+        setMotherResults((r.parents || []).slice(0, 6));
+      } catch (_) { setMotherResults([]); }
+      setMotherSearching(false);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [motherSearch]);
+
+  const applyExistingParent = (prefix, p) => {
+    setForm(f => ({
+      ...f,
+      [`${prefix}_name`]:        p.name || '',
+      [`${prefix}_email`]:       p.email || '',
+      [`${prefix}_phone`]:       p.phone || '',
+      [`${prefix}_occupation`]:  p.occupation || '',
+      [`${prefix}_whatsapp`]:    p.whatsapp || '',
+      [`${prefix}_existing_id`]: String(p.id),
+    }));
+    if (prefix === 'father') { setFatherSearch(''); setFatherResults([]); }
+    else                     { setMotherSearch(''); setMotherResults([]); }
+  };
+
+  const clearExistingParent = (prefix) => {
+    setForm(f => ({
+      ...f,
+      [`${prefix}_name`]: '', [`${prefix}_email`]: '', [`${prefix}_phone`]: '',
+      [`${prefix}_occupation`]: '', [`${prefix}_whatsapp`]: '',
+      [`${prefix}_existing_id`]: '',
+    }));
+    if (prefix === 'father') setFatherWASame(false);
+    else setMotherWASame(false);
+  };
+
+  const handleDobChange = (val) => {
+    setForm(f => ({ ...f, date_of_birth: val, age: _calcAge(val) }));
+  };
 
   const handleImageChange = (e) => {
     const file = e.target.files?.[0];
@@ -1835,29 +1943,119 @@ function AddStudentWizard({ school, classes, classesLoading = false, onSave, onC
     reader.readAsDataURL(file);
   };
 
-  const canNext = step === 0
-    ? !!(form.first_name.trim() && form.last_name.trim())
-    : step === 1 ? !!form.admission_number.trim()
-    : true;
+  const canNext = [
+    !!(form.first_name.trim() && form.last_name.trim()),
+    !!form.admission_number.trim(),
+    true,
+    true,
+  ][step];
 
-  const handleSave = async () => {
-    setSaving(true); setError('');
+  const handleSave = async (bypass = false) => {
+    setError('');
+    setSaving(true);
+    if (!bypass) {
+      try {
+        const params = new URLSearchParams({ first_name: form.first_name.trim(), last_name: form.last_name.trim() });
+        if (form.date_of_birth) params.set('date_of_birth', form.date_of_birth);
+        const chk = await ApiClient.get(`/api/school/students/check-duplicate/?${params}`);
+        if (chk.exists) {
+          setDupWarning(chk.student);
+          setSaving(false);
+          return;
+        }
+      } catch (_) {}
+    }
     try {
       const fd = new FormData();
-      Object.entries(form).forEach(([k, v]) => { if (v !== '') fd.append(k, v); });
+      const { age, ...submitFields } = form;
+      Object.entries(submitFields).forEach(([k, v]) => {
+        if (v === '' || v === null || v === undefined) return;
+        fd.append(k, typeof v === 'boolean' ? (v ? 'true' : 'false') : v);
+      });
+      if (fatherWASame && form.father_phone) fd.set('father_whatsapp', form.father_phone);
+      if (motherWASame && form.mother_phone) fd.set('mother_whatsapp', form.mother_phone);
       if (profileImage) fd.append('passport_picture', profileImage);
       const res = await ApiClient.post('/api/school/students/', fd);
-      if (res.credentials) setCredentials(res.credentials);
-      else onSave();
+      if (res.student_username) {
+        setCredentials({ username: res.student_username, password: res.student_initial_password });
+      } else {
+        onSave();
+      }
     } catch (e) { setError(e?.message || 'Failed to enroll student.'); setSaving(false); }
   };
 
+  // eslint-disable-next-line no-unused-vars
+  const printAdmissionSlip = () => {
+    const intakeLbls = { TERM1: 'Term 1 (First)', TERM2: 'Term 2 (Second)', TERM3: 'Term 3 (Third)' };
+    const enrollDate = form.enrollment_date || new Date().toISOString().split('T')[0];
+    const printDate  = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+    const resolvedFatherWA = fatherWASame ? form.father_phone : form.father_whatsapp;
+    const resolvedMotherWA = motherWASame ? form.mother_phone : form.mother_whatsapp;
+    const fullName = [form.first_name, form.middle_name, form.last_name].filter(Boolean).join(' ') || 'Student';
+    const w = window.open('', '_blank', 'width=794,height=1123');
+    if (!w) return;
+    w.document.write(`<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><title>Admission Slip — ${fullName}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Times New Roman',Times,serif;padding:48px 56px;color:#111;font-size:13px;line-height:1.5}
+.hdr{text-align:center;border-bottom:3px double #111;padding-bottom:18px;margin-bottom:24px}
+.school-name{font-size:22px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px}
+.school-meta{font-size:12px;color:#555;margin-top:2px}
+.slip-title{font-size:14px;font-weight:700;text-align:center;text-transform:uppercase;letter-spacing:3px;border:1.5px solid #111;padding:7px 0;margin-bottom:22px}
+.section{margin-bottom:18px}
+.sec-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:#666;border-bottom:1px solid #bbb;padding-bottom:4px;margin-bottom:8px}
+.row{display:flex;padding:6px 0;border-bottom:1px dashed #ddd}
+.lbl{width:170px;font-weight:700;font-size:12px;color:#444;flex-shrink:0}
+.val{flex:1;font-size:13px}
+.footer{margin-top:52px;display:flex;justify-content:space-between}
+.sig{width:170px;text-align:center}.sig-line{border-top:1px solid #111;padding-top:6px;font-size:11px;color:#555}
+.wm{margin-top:36px;text-align:center;font-size:9px;color:#bbb}
+@media print{body{padding:24px 32px}}
+</style></head><body>
+<div class="hdr">
+  <div class="school-name">${school?.name || 'School Name'}</div>
+  ${school?.address ? `<div class="school-meta">${school.address}</div>` : ''}
+  ${school?.phone ? `<div class="school-meta">Tel: ${school.phone}</div>` : ''}
+  ${school?.email ? `<div class="school-meta">Email: ${school.email}</div>` : ''}
+</div>
+<div class="slip-title">Student Admission Slip</div>
+<div class="section">
+  <div class="sec-title">Student Details</div>
+  <div class="row"><span class="lbl">Full Name</span><span class="val">${fullName}</span></div>
+  <div class="row"><span class="lbl">Admission Number</span><span class="val">${form.admission_number || '—'}</span></div>
+  <div class="row"><span class="lbl">Class</span><span class="val">${currentClass || '—'}</span></div>
+  <div class="row"><span class="lbl">Date of Birth</span><span class="val">${form.date_of_birth || '—'}</span></div>
+  <div class="row"><span class="lbl">Gender</span><span class="val">${form.gender === 'M' ? 'Male' : form.gender === 'F' ? 'Female' : '—'}</span></div>
+  <div class="row"><span class="lbl">Enrollment Date</span><span class="val">${enrollDate}</span></div>
+  ${form.intake_term ? `<div class="row"><span class="lbl">Intake Term</span><span class="val">${intakeLbls[form.intake_term] || form.intake_term}</span></div>` : ''}
+  <div class="row"><span class="lbl">Student Type</span><span class="val">${form.student_type === 'boarding' ? 'Boarding / Hostel' : 'Day Student'}${form.hostel_house ? ' — ' + form.hostel_house : ''}</span></div>
+  ${form.is_repeater ? '<div class="row"><span class="lbl">Repeating Year</span><span class="val">Yes</span></div>' : ''}
+</div>
+${form.father_name || form.mother_name ? `<div class="section">
+  <div class="sec-title">Parent / Guardian</div>
+  ${form.father_name ? `<div class="row"><span class="lbl">${form.father_relationship || 'Father'}</span><span class="val">${form.father_name}${form.father_phone ? ' &nbsp;·&nbsp; Tel: ' + form.father_phone : ''}${resolvedFatherWA && resolvedFatherWA !== form.father_phone ? ' &nbsp;·&nbsp; WhatsApp: ' + resolvedFatherWA : ''}</span></div>` : ''}
+  ${form.mother_name ? `<div class="row"><span class="lbl">${form.mother_relationship || 'Mother'}</span><span class="val">${form.mother_name}${form.mother_phone ? ' &nbsp;·&nbsp; Tel: ' + form.mother_phone : ''}${resolvedMotherWA && resolvedMotherWA !== form.mother_phone ? ' &nbsp;·&nbsp; WhatsApp: ' + resolvedMotherWA : ''}</span></div>` : ''}
+</div>` : ''}
+<div class="footer">
+  <div class="sig"><div class="sig-line">Head Teacher / Principal</div></div>
+  <div class="sig"><div class="sig-line">School Stamp</div></div>
+  <div class="sig"><div class="sig-line">Date: ${printDate}</div></div>
+</div>
+<div class="wm">Generated by EK-SMS &mdash; ${new Date().toLocaleString()}</div>
+</body></html>`);
+    w.document.close();
+    w.focus();
+    setTimeout(() => w.print(), 400);
+  };
+
   const avatarLetters = _studentAvatarLetters(form.first_name, form.last_name);
-  const displayName   = [form.first_name, form.last_name].filter(Boolean).join(' ') || 'New Student';
+  const displayName   = [form.first_name, form.middle_name, form.last_name].filter(Boolean).join(' ') || 'New Student';
   const currentClass  = classes.find(c => String(c.id) === String(form.classroom_id))?.name || '';
-  const filledCount   = [form.first_name, form.last_name, form.gender, form.date_of_birth, form.admission_number, form.classroom_id, profileImage].filter(Boolean).length;
-  const completionPct = Math.round((filledCount / 7) * 100);
+  const filledCount   = [form.first_name, form.last_name, form.gender, form.date_of_birth, form.admission_number, form.classroom_id, profileImage, form.enrollment_date].filter(Boolean).length;
+  const completionPct = Math.round((filledCount / 8) * 100);
   const genderIcon    = form.gender === 'M' ? 'male' : form.gender === 'F' ? 'female' : 'person';
+  const statusColor   = STUDENT_STATUS_OPTS.find(o => o.value === form.status)?.color || '#22c55e';
 
   if (credentials) {
     return (
@@ -1900,6 +2098,7 @@ function AddStudentWizard({ school, classes, classesLoading = false, onSave, onC
     }} onClick={e => e.target === e.currentTarget && onCancel()}>
       <style>{`
         @media(max-width:600px){.student-wizard-panel{display:none!important}}
+        @media(max-width:460px){.student-name-grid{grid-template-columns:1fr 1fr!important}}
         @keyframes ska-overlay-in{from{opacity:0}to{opacity:1}}
         @keyframes ska-panel-in{from{opacity:0;transform:scale(0.97) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
       `}</style>
@@ -1954,6 +2153,9 @@ function AddStudentWizard({ school, classes, classesLoading = false, onSave, onC
               <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.875rem', lineHeight: 1.3 }}>{displayName}</div>
               {currentClass && <div style={{ fontSize: '0.6875rem', color: 'rgba(173,198,255,0.65)', marginTop: 3 }}>Class {currentClass}</div>}
               {form.admission_number && <div style={{ fontSize: '0.6875rem', color: 'rgba(173,198,255,0.45)', marginTop: 2 }}>{form.admission_number}</div>}
+              {form.status !== 'active' && (
+                <div style={{ fontSize: '0.625rem', fontWeight: 700, color: statusColor, marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.07em' }}>{form.status}</div>
+              )}
             </div>
           </div>
 
@@ -2002,8 +2204,10 @@ function AddStudentWizard({ school, classes, classesLoading = false, onSave, onC
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           }}>
             <div>
-              <div style={{ fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--ska-text-3)', fontWeight: 700, marginBottom: 2 }}>
-                Step {step + 1} of {STUDENT_WIZARD_STEPS.length}
+              <div style={{ fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--ska-text-3)', fontWeight: 700, marginBottom: 2, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span>Step {step + 1} of {STUDENT_WIZARD_STEPS.length}</span>
+                <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'var(--ska-text-3)', display: 'inline-block' }} />
+                <span style={{ color: 'var(--ska-primary)' }}>{Math.round(((step + 1) / STUDENT_WIZARD_STEPS.length) * 100)}% complete</span>
               </div>
               <div style={{ fontSize: '1.0625rem', fontWeight: 800, color: 'var(--ska-text)' }}>
                 {STUDENT_WIZARD_STEPS[step].label}
@@ -2016,18 +2220,19 @@ function AddStudentWizard({ school, classes, classesLoading = false, onSave, onC
             }}><Ic name="close" size="sm" /></button>
           </div>
 
-          <div style={{ height: 3, background: 'var(--ska-surface-high)' }}>
+          <div style={{ height: 4, background: 'var(--ska-surface-high)' }}>
             <div style={{
               height: '100%', width: `${((step + 1) / STUDENT_WIZARD_STEPS.length) * 100}%`,
               background: 'linear-gradient(90deg,#4b8eff,#adc6ff)', transition: 'width 0.4s ease',
+              borderRadius: '0 2px 2px 0',
             }} />
           </div>
 
           <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
 
+            {/* ── Step 0: Identity ── */}
             {step === 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-                {/* Photo upload */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                   <input type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} ref={studentImgRef} onChange={handleImageChange} />
                   <div
@@ -2072,10 +2277,14 @@ function AddStudentWizard({ school, classes, classesLoading = false, onSave, onC
                     )}
                   </div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                <div className="student-name-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
                   <label className="ska-form-group" style={{ margin: 0 }}>
                     <span>First Name <span style={{ color: 'var(--ska-error)' }}>*</span></span>
                     <input className="ska-input" value={form.first_name} onChange={e => set('first_name', e.target.value)} placeholder="e.g. Amara" autoFocus />
+                  </label>
+                  <label className="ska-form-group" style={{ margin: 0 }}>
+                    <span>Middle Name</span>
+                    <input className="ska-input" value={form.middle_name} onChange={e => set('middle_name', e.target.value)} placeholder="e.g. Binta" />
                   </label>
                   <label className="ska-form-group" style={{ margin: 0 }}>
                     <span>Last Name <span style={{ color: 'var(--ska-error)' }}>*</span></span>
@@ -2100,17 +2309,69 @@ function AddStudentWizard({ school, classes, classesLoading = false, onSave, onC
                     ))}
                   </div>
                 </div>
-                <label className="ska-form-group" style={{ margin: 0 }}>
-                  <span>Date of Birth</span>
-                  <input className="ska-input" type="date" value={form.date_of_birth} onChange={e => set('date_of_birth', e.target.value)} />
-                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                  <label className="ska-form-group" style={{ margin: 0 }}>
+                    <span>Date of Birth</span>
+                    <input className="ska-input" type="date" value={form.date_of_birth} onChange={e => handleDobChange(e.target.value)} />
+                  </label>
+                  <label className="ska-form-group" style={{ margin: 0 }}>
+                    <span>Age <span style={{ fontSize: '0.7rem', color: 'var(--ska-text-3)', fontWeight: 400 }}>(auto)</span></span>
+                    <input className="ska-input" value={form.age} readOnly placeholder="—" style={{ background: 'var(--ska-surface-high)', color: form.age ? 'var(--ska-text)' : 'var(--ska-text-3)', cursor: 'default' }} />
+                  </label>
+                </div>
                 <label className="ska-form-group" style={{ margin: 0 }}>
                   <span>Phone Number</span>
                   <input className="ska-input" value={form.phone_number} onChange={e => set('phone_number', e.target.value)} placeholder="+232-xx-xxx-xxx" />
                 </label>
+                <label className="ska-form-group" style={{ margin: 0 }}>
+                  <span>Status</span>
+                  <select className="ska-input" value={form.status} onChange={e => set('status', e.target.value)}>
+                    {STUDENT_STATUS_OPTS.map(o => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                </label>
+                <div className="ska-form-group" style={{ margin: 0 }}>
+                  <span>Student Type</span>
+                  <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
+                    {STUDENT_TYPE_OPTS.map(opt => (
+                      <button key={opt.value} type="button" onClick={() => setForm(f => ({ ...f, student_type: opt.value, ...(opt.value === 'day' ? { hostel_house: '' } : {}) }))} style={{
+                        flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                        padding: '10px 14px', borderRadius: 10, cursor: 'pointer', fontWeight: 700, fontSize: '0.875rem',
+                        transition: 'all 0.15s',
+                        background: form.student_type === opt.value ? 'rgba(75,142,255,0.18)' : 'var(--ska-surface-low)',
+                        border: form.student_type === opt.value ? '2px solid #4b8eff' : '2px solid var(--ska-surface-high)',
+                        color: form.student_type === opt.value ? '#4b8eff' : 'var(--ska-text-3)',
+                      }}>
+                        <span className="material-symbols-rounded" style={{ fontSize: 18 }}>{opt.icon}</span>
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {form.student_type === 'boarding' && (
+                  <label className="ska-form-group" style={{ margin: 0 }}>
+                    <span>House / Hostel Block</span>
+                    <input className="ska-input" value={form.hostel_house} onChange={e => set('hostel_house', e.target.value)} placeholder="e.g. Girls Hostel, Block A, Sunrise House" />
+                  </label>
+                )}
+                <label className="ska-form-group" style={{ margin: 0 }}>
+                  <span>Fee / Scholarship Category</span>
+                  <select className="ska-input" value={form.fee_category} onChange={e => set('fee_category', e.target.value)}>
+                    <option value="">— Select category —</option>
+                    {FEE_CATEGORY_OPTS.map(o => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="ska-form-group" style={{ margin: 0 }}>
+                  <span>Home Language</span>
+                  <input className="ska-input" value={form.home_language} onChange={e => set('home_language', e.target.value)} placeholder="e.g. Krio, Mende, Temne" />
+                </label>
               </div>
             )}
 
+            {/* ── Step 1: Credentials & Class ── */}
             {step === 1 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
@@ -2118,6 +2379,12 @@ function AddStudentWizard({ school, classes, classesLoading = false, onSave, onC
                     <span>Admission No. <span style={{ color: 'var(--ska-error)' }}>*</span></span>
                     <input className="ska-input" value={form.admission_number} onChange={e => set('admission_number', e.target.value)} placeholder="ADM-2024-001" autoFocus />
                   </label>
+                  <label className="ska-form-group" style={{ margin: 0 }}>
+                    <span>Enrollment Date</span>
+                    <input className="ska-input" type="date" value={form.enrollment_date} onChange={e => set('enrollment_date', e.target.value)} />
+                  </label>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                   <label className="ska-form-group" style={{ margin: 0 }}>
                     <span>Class</span>
                     {classesLoading ? (
@@ -2137,11 +2404,35 @@ function AddStudentWizard({ school, classes, classesLoading = false, onSave, onC
                       </select>
                     )}
                   </label>
+                  <label className="ska-form-group" style={{ margin: 0 }}>
+                    <span>Email Address</span>
+                    <input className="ska-input" type="email" value={form.email} onChange={e => set('email', e.target.value)} placeholder="student@school.com" />
+                  </label>
                 </div>
-                <label className="ska-form-group" style={{ margin: 0 }}>
-                  <span>Email Address</span>
-                  <input className="ska-input" type="email" value={form.email} onChange={e => set('email', e.target.value)} placeholder="student@school.com" />
-                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, alignItems: 'end' }}>
+                  <label className="ska-form-group" style={{ margin: 0 }}>
+                    <span>Intake Term</span>
+                    <select className="ska-input" value={form.intake_term} onChange={e => set('intake_term', e.target.value)}>
+                      <option value="">— Select term —</option>
+                      <option value="TERM1">Term 1 (First Term)</option>
+                      <option value="TERM2">Term 2 (Second Term)</option>
+                      <option value="TERM3">Term 3 (Third Term)</option>
+                    </select>
+                  </label>
+                  <button type="button" onClick={() => set('is_repeater', !form.is_repeater)} style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '10px 14px', borderRadius: 10, cursor: 'pointer',
+                    fontWeight: 700, fontSize: '0.8125rem', transition: 'all 0.15s',
+                    background: form.is_repeater ? 'rgba(245,158,11,0.12)' : 'var(--ska-surface-low)',
+                    border: `2px solid ${form.is_repeater ? '#f59e0b' : 'var(--ska-surface-high)'}`,
+                    color: form.is_repeater ? '#f59e0b' : 'var(--ska-text-3)',
+                  }}>
+                    <span className="material-symbols-rounded" style={{ fontSize: 18 }}>
+                      {form.is_repeater ? 'check_box' : 'check_box_outline_blank'}
+                    </span>
+                    Repeating year
+                  </button>
+                </div>
                 {(form.admission_number || form.classroom_id) && (
                   <div style={{
                     padding: '14px 16px', borderRadius: 12,
@@ -2173,58 +2464,266 @@ function AddStudentWizard({ school, classes, classesLoading = false, onSave, onC
               </div>
             )}
 
-            {step === 2 && (() => {
-              const rows = [
-                { icon: 'person',  label: 'Full Name',     value: displayName },
+            {/* ── Step 2: Family ── */}
+            {step === 2 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span className="material-symbols-rounded" style={{ fontSize: 18, color: '#4b8eff' }}>person</span>
+                    <select value={form.father_relationship} onChange={e => set('father_relationship', e.target.value)} style={{ padding: '4px 8px', height: 32, fontSize: '0.8125rem', fontWeight: 700, minWidth: 150, borderRadius: 8, border: '1.5px solid var(--ska-surface-high)', background: 'var(--ska-surface-low)', color: 'var(--ska-text)', cursor: 'pointer' }}>
+                      {RELATIONSHIP_OPTS.map(r => <option key={r} value={r}>{r}</option>)}
+                    </select>
+                    <span style={{ fontSize: '0.6875rem', color: 'var(--ska-text-3)' }}>(optional)</span>
+                  </div>
+                  {form.father_existing_id ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 10, background: 'rgba(75,142,255,0.08)', border: '1px solid rgba(75,142,255,0.25)' }}>
+                      <span className="material-symbols-rounded" style={{ fontSize: 16, color: '#4b8eff' }}>link</span>
+                      <span style={{ flex: 1, fontSize: '0.8125rem', fontWeight: 700, color: '#4b8eff' }}>Linked: {form.father_name || 'Existing parent'}</span>
+                      <button type="button" onClick={() => clearExistingParent('father')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: 'var(--ska-text-3)', display: 'flex', alignItems: 'center' }}>
+                        <span className="material-symbols-rounded" style={{ fontSize: 16 }}>close</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ position: 'relative' }}>
+                      <div style={{ position: 'relative' }}>
+                        <span className="material-symbols-rounded" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 16, color: 'var(--ska-text-3)', pointerEvents: 'none', zIndex: 1 }}>search</span>
+                        <input className="ska-input" style={{ paddingLeft: 38 }} placeholder="Search existing parent by name or phone…" value={fatherSearch} onChange={e => setFatherSearch(e.target.value)} onBlur={() => setTimeout(() => setFatherResults([]), 150)} />
+                        {fatherSearching && <span className="material-symbols-rounded" style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 16, color: 'var(--ska-text-3)', animation: 'ska-spin 0.8s linear infinite', display: 'inline-block' }}>autorenew</span>}
+                      </div>
+                      {fatherResults.length > 0 && (
+                        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 200, background: 'var(--ska-surface-high)', border: '1px solid var(--ska-border)', borderRadius: 10, marginTop: 4, overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.25)' }}>
+                          {fatherResults.map(p => (
+                            <button key={p.id} type="button" onMouseDown={() => applyExistingParent('father', p)} style={{ width: '100%', padding: '10px 14px', background: 'none', border: 'none', borderBottom: '1px solid var(--ska-surface-low)', cursor: 'pointer', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                              <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--ska-text)' }}>{p.name}</span>
+                              <span style={{ fontSize: '0.75rem', color: 'var(--ska-text-3)' }}>{p.phone}{p.email ? ` · ${p.email}` : ''}{p.children?.length ? ` · ${p.children.length} child${p.children.length > 1 ? 'ren' : ''}` : ''}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                    <label className="ska-form-group" style={{ margin: 0 }}>
+                      <span>Full Name</span>
+                      <input className="ska-input" value={form.father_name} onChange={e => set('father_name', e.target.value)} placeholder="e.g. Ibrahim Kamara" readOnly={!!form.father_existing_id} style={form.father_existing_id ? { background: 'var(--ska-surface-high)', cursor: 'default' } : {}} />
+                    </label>
+                    <label className="ska-form-group" style={{ margin: 0 }}>
+                      <span>Phone</span>
+                      <input className="ska-input" value={form.father_phone} onChange={e => set('father_phone', e.target.value)} placeholder="+232-xx-xxx-xxx" readOnly={!!form.father_existing_id} style={form.father_existing_id ? { background: 'var(--ska-surface-high)', cursor: 'default' } : {}} />
+                    </label>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                    <label className="ska-form-group" style={{ margin: 0 }}>
+                      <span>Email</span>
+                      <input className="ska-input" type="email" value={form.father_email} onChange={e => set('father_email', e.target.value)} placeholder="father@email.com" readOnly={!!form.father_existing_id} style={form.father_existing_id ? { background: 'var(--ska-surface-high)', cursor: 'default' } : {}} />
+                    </label>
+                    <label className="ska-form-group" style={{ margin: 0 }}>
+                      <span>Occupation</span>
+                      <input className="ska-input" value={form.father_occupation} onChange={e => set('father_occupation', e.target.value)} placeholder="e.g. Teacher" readOnly={!!form.father_existing_id} style={form.father_existing_id ? { background: 'var(--ska-surface-high)', cursor: 'default' } : {}} />
+                    </label>
+                  </div>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
+                    <label className="ska-form-group" style={{ margin: 0, flex: 1 }}>
+                      <span>WhatsApp <span style={{ fontSize: '0.7rem', color: '#25d366', fontWeight: 700 }}>W</span></span>
+                      <input className="ska-input" value={fatherWASame ? form.father_phone : form.father_whatsapp} onChange={e => !fatherWASame && set('father_whatsapp', e.target.value)} placeholder="+232-xx-xxx-xxx" readOnly={fatherWASame} style={fatherWASame ? { background: 'var(--ska-surface-high)', cursor: 'default' } : {}} />
+                    </label>
+                    <button type="button" onClick={() => setFatherWASame(v => !v)} style={{ padding: '0 12px', height: 40, borderRadius: 10, flexShrink: 0, cursor: 'pointer', fontWeight: 600, fontSize: '0.75rem', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6, transition: 'all 0.15s', background: fatherWASame ? 'rgba(37,211,102,0.1)' : 'var(--ska-surface-low)', border: `1.5px solid ${fatherWASame ? '#25d366' : 'var(--ska-surface-high)'}`, color: fatherWASame ? '#25d366' : 'var(--ska-text-3)' }}>
+                      <span className="material-symbols-rounded" style={{ fontSize: 14 }}>{fatherWASame ? 'check_circle' : 'phone'}</span>
+                      Same as phone
+                    </button>
+                  </div>
+                </div>
+                <div style={{ height: 1, background: 'var(--ska-surface-high)' }} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span className="material-symbols-rounded" style={{ fontSize: 18, color: '#e879a0' }}>person</span>
+                    <select value={form.mother_relationship} onChange={e => set('mother_relationship', e.target.value)} style={{ padding: '4px 8px', height: 32, fontSize: '0.8125rem', fontWeight: 700, minWidth: 150, borderRadius: 8, border: '1.5px solid var(--ska-surface-high)', background: 'var(--ska-surface-low)', color: 'var(--ska-text)', cursor: 'pointer' }}>
+                      {RELATIONSHIP_OPTS.map(r => <option key={r} value={r}>{r}</option>)}
+                    </select>
+                    <span style={{ fontSize: '0.6875rem', color: 'var(--ska-text-3)' }}>(optional)</span>
+                  </div>
+                  {form.mother_existing_id ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 10, background: 'rgba(232,121,160,0.08)', border: '1px solid rgba(232,121,160,0.25)' }}>
+                      <span className="material-symbols-rounded" style={{ fontSize: 16, color: '#e879a0' }}>link</span>
+                      <span style={{ flex: 1, fontSize: '0.8125rem', fontWeight: 700, color: '#e879a0' }}>Linked: {form.mother_name || 'Existing parent'}</span>
+                      <button type="button" onClick={() => clearExistingParent('mother')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: 'var(--ska-text-3)', display: 'flex', alignItems: 'center' }}>
+                        <span className="material-symbols-rounded" style={{ fontSize: 16 }}>close</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ position: 'relative' }}>
+                      <div style={{ position: 'relative' }}>
+                        <span className="material-symbols-rounded" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 16, color: 'var(--ska-text-3)', pointerEvents: 'none', zIndex: 1 }}>search</span>
+                        <input className="ska-input" style={{ paddingLeft: 38 }} placeholder="Search existing parent by name or phone…" value={motherSearch} onChange={e => setMotherSearch(e.target.value)} onBlur={() => setTimeout(() => setMotherResults([]), 150)} />
+                        {motherSearching && <span className="material-symbols-rounded" style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 16, color: 'var(--ska-text-3)', animation: 'ska-spin 0.8s linear infinite', display: 'inline-block' }}>autorenew</span>}
+                      </div>
+                      {motherResults.length > 0 && (
+                        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 200, background: 'var(--ska-surface-high)', border: '1px solid var(--ska-border)', borderRadius: 10, marginTop: 4, overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.25)' }}>
+                          {motherResults.map(p => (
+                            <button key={p.id} type="button" onMouseDown={() => applyExistingParent('mother', p)} style={{ width: '100%', padding: '10px 14px', background: 'none', border: 'none', borderBottom: '1px solid var(--ska-surface-low)', cursor: 'pointer', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                              <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--ska-text)' }}>{p.name}</span>
+                              <span style={{ fontSize: '0.75rem', color: 'var(--ska-text-3)' }}>{p.phone}{p.email ? ` · ${p.email}` : ''}{p.children?.length ? ` · ${p.children.length} child${p.children.length > 1 ? 'ren' : ''}` : ''}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                    <label className="ska-form-group" style={{ margin: 0 }}>
+                      <span>Full Name</span>
+                      <input className="ska-input" value={form.mother_name} onChange={e => set('mother_name', e.target.value)} placeholder="e.g. Fatima Kamara" readOnly={!!form.mother_existing_id} style={form.mother_existing_id ? { background: 'var(--ska-surface-high)', cursor: 'default' } : {}} />
+                    </label>
+                    <label className="ska-form-group" style={{ margin: 0 }}>
+                      <span>Phone</span>
+                      <input className="ska-input" value={form.mother_phone} onChange={e => set('mother_phone', e.target.value)} placeholder="+232-xx-xxx-xxx" readOnly={!!form.mother_existing_id} style={form.mother_existing_id ? { background: 'var(--ska-surface-high)', cursor: 'default' } : {}} />
+                    </label>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                    <label className="ska-form-group" style={{ margin: 0 }}>
+                      <span>Email</span>
+                      <input className="ska-input" type="email" value={form.mother_email} onChange={e => set('mother_email', e.target.value)} placeholder="mother@email.com" readOnly={!!form.mother_existing_id} style={form.mother_existing_id ? { background: 'var(--ska-surface-high)', cursor: 'default' } : {}} />
+                    </label>
+                    <label className="ska-form-group" style={{ margin: 0 }}>
+                      <span>Occupation</span>
+                      <input className="ska-input" value={form.mother_occupation} onChange={e => set('mother_occupation', e.target.value)} placeholder="e.g. Nurse" readOnly={!!form.mother_existing_id} style={form.mother_existing_id ? { background: 'var(--ska-surface-high)', cursor: 'default' } : {}} />
+                    </label>
+                  </div>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
+                    <label className="ska-form-group" style={{ margin: 0, flex: 1 }}>
+                      <span>WhatsApp <span style={{ fontSize: '0.7rem', color: '#25d366', fontWeight: 700 }}>W</span></span>
+                      <input className="ska-input" value={motherWASame ? form.mother_phone : form.mother_whatsapp} onChange={e => !motherWASame && set('mother_whatsapp', e.target.value)} placeholder="+232-xx-xxx-xxx" readOnly={motherWASame} style={motherWASame ? { background: 'var(--ska-surface-high)', cursor: 'default' } : {}} />
+                    </label>
+                    <button type="button" onClick={() => setMotherWASame(v => !v)} style={{ padding: '0 12px', height: 40, borderRadius: 10, flexShrink: 0, cursor: 'pointer', fontWeight: 600, fontSize: '0.75rem', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6, transition: 'all 0.15s', background: motherWASame ? 'rgba(37,211,102,0.1)' : 'var(--ska-surface-low)', border: `1.5px solid ${motherWASame ? '#25d366' : 'var(--ska-surface-high)'}`, color: motherWASame ? '#25d366' : 'var(--ska-text-3)' }}>
+                      <span className="material-symbols-rounded" style={{ fontSize: 14 }}>{motherWASame ? 'check_circle' : 'phone'}</span>
+                      Same as phone
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── Step 3: Medical & Enroll ── */}
+            {step === 3 && (() => {
+              const statusOpt = STUDENT_STATUS_OPTS.find(o => o.value === form.status);
+              const studentTypeLabel = STUDENT_TYPE_OPTS.find(o => o.value === form.student_type)?.label || 'Day Student';
+              const feeCatLabel      = FEE_CATEGORY_OPTS.find(o => o.value === form.fee_category)?.label || '—';
+              const intakeTermLabels = { TERM1: 'Term 1 (First)', TERM2: 'Term 2 (Second)', TERM3: 'Term 3 (Third)' };
+              const reviewRows = [
+                { icon: 'person',            label: 'Full Name',       value: displayName },
                 { icon: form.gender === 'M' ? 'male' : form.gender === 'F' ? 'female' : 'wc', label: 'Gender', value: form.gender === 'M' ? 'Male' : form.gender === 'F' ? 'Female' : '—' },
-                { icon: 'badge',   label: 'Admission No.', value: form.admission_number || '—' },
-                { icon: 'school',  label: 'Class',         value: currentClass || '—' },
-                { icon: 'cake',    label: 'Date of Birth', value: form.date_of_birth || '—' },
-                { icon: 'mail',    label: 'Email',         value: form.email || '—' },
-                { icon: 'phone',   label: 'Phone',         value: form.phone_number || '—' },
+                { icon: 'badge',             label: 'Admission No.',   value: form.admission_number || '—' },
+                { icon: 'event',             label: 'Enrollment Date', value: form.enrollment_date || '—' },
+                { icon: 'calendar_month',    label: 'Intake Term',     value: intakeTermLabels[form.intake_term] || '—' },
+                { icon: 'school',            label: 'Class',           value: currentClass || '—' },
+                { icon: 'cake',              label: 'Date of Birth',   value: form.date_of_birth || '—' },
+                { icon: 'directions_walk',   label: 'Student Type',    value: studentTypeLabel },
+                { icon: 'payments',          label: 'Fee Category',    value: feeCatLabel },
+                { icon: 'translate',         label: 'Home Language',   value: form.home_language || '—' },
+                { icon: 'info',              label: 'Status',          value: statusOpt?.label || 'Active', color: statusOpt?.color },
+                { icon: form.is_repeater ? 'replay' : 'school', label: 'Repeater', value: form.is_repeater ? 'Yes — repeating year' : 'No', color: form.is_repeater ? '#f59e0b' : undefined },
               ];
               return (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <div style={{
-                    padding: '20px', borderRadius: 14,
-                    background: 'linear-gradient(135deg,rgba(75,142,255,0.12) 0%,rgba(173,198,255,0.06) 100%)',
-                    border: '1px solid rgba(75,142,255,0.2)',
-                    display: 'flex', alignItems: 'center', gap: 16, marginBottom: 8,
-                  }}>
-                    <div style={{
-                      width: 56, height: 56, borderRadius: '50%',
-                      background: 'linear-gradient(135deg,#4b8eff,#adc6ff)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontWeight: 800, fontSize: '1.25rem', color: '#fff',
-                      boxShadow: '0 4px 12px rgba(75,142,255,0.3)',
-                      overflow: 'hidden', flexShrink: 0,
-                    }}>
-                      {profilePreview
-                        ? <img src={profilePreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        : avatarLetters
-                      }
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span className="material-symbols-rounded" style={{ fontSize: 18, color: '#4cd7f6' }}>health_and_safety</span>
+                      <span style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--ska-text)' }}>Medical Information</span>
+                      <span style={{ fontSize: '0.6875rem', color: 'var(--ska-text-3)' }}>(optional)</span>
                     </div>
-                    <div>
-                      <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--ska-text)', lineHeight: 1.2 }}>{displayName}</div>
-                      {currentClass && <div style={{ fontSize: '0.75rem', color: 'var(--ska-primary)', fontWeight: 600, marginTop: 3 }}>Class {currentClass}</div>}
-                      <div style={{ fontSize: '0.6875rem', color: 'var(--ska-text-3)', marginTop: 2 }}>{school?.name || ''}</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                      <label className="ska-form-group" style={{ margin: 0 }}>
+                        <span>Blood Type</span>
+                        <select className="ska-input" value={form.blood_type} onChange={e => set('blood_type', e.target.value)}>
+                          <option value="">— Unknown —</option>
+                          {['A+','A-','B+','B-','AB+','AB-','O+','O-'].map(bt => (
+                            <option key={bt} value={bt}>{bt}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="ska-form-group" style={{ margin: 0 }}>
+                        <span>Known Allergies</span>
+                        <input className="ska-input" value={form.allergies} onChange={e => set('allergies', e.target.value)} placeholder="e.g. Penicillin, dust" />
+                      </label>
                     </div>
+                    <label className="ska-form-group" style={{ margin: 0 }}>
+                      <span>Medical Notes</span>
+                      <textarea className="ska-input" value={form.medical_notes} onChange={e => set('medical_notes', e.target.value)} placeholder="Any conditions, medications, or special needs…" rows={3} style={{ resize: 'vertical', fontFamily: 'inherit' }} />
+                    </label>
                   </div>
-                  {rows.map(row => (
-                    <div key={row.label} style={{
-                      display: 'flex', alignItems: 'center', gap: 10,
-                      padding: '10px 14px', background: 'var(--ska-surface-low)',
-                      borderRadius: 10, border: '1px solid var(--ska-surface-high)',
+
+                  <div style={{ height: 1, background: 'var(--ska-surface-high)' }} />
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <span style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ska-text-3)' }}>Review Summary</span>
+                    <div style={{
+                      padding: '14px 16px', borderRadius: 12,
+                      background: 'linear-gradient(135deg,rgba(75,142,255,0.1) 0%,rgba(173,198,255,0.05) 100%)',
+                      border: '1px solid rgba(75,142,255,0.18)',
+                      display: 'flex', alignItems: 'center', gap: 14, marginBottom: 4,
                     }}>
-                      <span className="material-symbols-rounded" style={{ fontSize: 16, color: 'var(--ska-text-3)', flexShrink: 0 }}>{row.icon}</span>
-                      <span style={{ fontSize: '0.8125rem', color: 'var(--ska-text-3)', fontWeight: 600, minWidth: 110 }}>{row.label}</span>
-                      <span style={{ fontSize: '0.875rem', color: 'var(--ska-text)', fontWeight: 700, marginLeft: 'auto', textAlign: 'right' }}>{row.value}</span>
+                      <div style={{
+                        width: 44, height: 44, borderRadius: '50%',
+                        background: 'linear-gradient(135deg,#4b8eff,#adc6ff)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontWeight: 800, fontSize: '1rem', color: '#fff',
+                        overflow: 'hidden', flexShrink: 0,
+                      }}>
+                        {profilePreview ? <img src={profilePreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : avatarLetters}
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 800, fontSize: '0.9375rem', color: 'var(--ska-text)' }}>{displayName}</div>
+                        {currentClass && <div style={{ fontSize: '0.75rem', color: 'var(--ska-primary)', fontWeight: 600, marginTop: 2 }}>Class {currentClass}</div>}
+                        <div style={{ fontSize: '0.6875rem', color: 'var(--ska-text-3)', marginTop: 1 }}>{school?.name || ''}</div>
+                      </div>
                     </div>
-                  ))}
+                    {reviewRows.map(row => (
+                      <div key={row.label} style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '8px 12px', background: 'var(--ska-surface-low)',
+                        borderRadius: 8, border: '1px solid var(--ska-surface-high)',
+                      }}>
+                        <span className="material-symbols-rounded" style={{ fontSize: 15, color: row.color || 'var(--ska-text-3)', flexShrink: 0 }}>{row.icon}</span>
+                        <span style={{ fontSize: '0.8125rem', color: 'var(--ska-text-3)', fontWeight: 600, minWidth: 100 }}>{row.label}</span>
+                        <span style={{ fontSize: '0.875rem', color: row.color || 'var(--ska-text)', fontWeight: 700, marginLeft: 'auto', textAlign: 'right' }}>{row.value}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {dupWarning && (
+                    <div style={{
+                      padding: '16px', borderRadius: 12,
+                      background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.35)',
+                      display: 'flex', flexDirection: 'column', gap: 10,
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                        <span className="material-symbols-rounded" style={{ fontSize: 20, color: '#f59e0b', flexShrink: 0, marginTop: 1 }}>warning</span>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '0.875rem', color: '#f59e0b', marginBottom: 4 }}>Possible Duplicate</div>
+                          <div style={{ fontSize: '0.8125rem', color: 'var(--ska-text-3)', lineHeight: 1.5 }}>
+                            A student named <strong style={{ color: 'var(--ska-text)' }}>{dupWarning.full_name}</strong>
+                            {dupWarning.date_of_birth ? <> born <strong style={{ color: 'var(--ska-text)' }}>{dupWarning.date_of_birth}</strong></> : null}
+                            {' '}is already enrolled (Adm.{' '}
+                            <strong style={{ color: 'var(--ska-text)' }}>{dupWarning.admission_number}</strong>).
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button className="ska-btn ska-btn--ghost" style={{ flex: 1 }} onClick={() => setDupWarning(null)}>
+                          Cancel
+                        </button>
+                        <button className="ska-btn ska-btn--primary" style={{ flex: 1 }} onClick={() => { setDupWarning(null); handleSave(true); }}>
+                          Continue anyway
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {error && <p style={{ margin: '4px 0 0', color: 'var(--ska-error)', fontSize: '0.8125rem' }}>{error}</p>}
                 </div>
               );
             })()}
+
           </div>
 
           <div style={{
@@ -2236,7 +2735,7 @@ function AddStudentWizard({ school, classes, classesLoading = false, onSave, onC
             </button>
             {step < STUDENT_WIZARD_STEPS.length - 1
               ? <button className="ska-btn ska-btn--primary" disabled={!canNext} onClick={() => setStep(s => s + 1)}>Next <Ic name="arrow_forward" size="sm" /></button>
-              : <button className="ska-btn ska-btn--primary" disabled={saving || !canNext} onClick={handleSave}>
+              : <button className="ska-btn ska-btn--primary" disabled={saving || !canNext || !!dupWarning} onClick={() => handleSave(false)}>
                   {saving
                     ? <><span className="material-symbols-rounded" style={{ fontSize: 16, animation: 'ska-spin 0.8s linear infinite', display: 'inline-block' }}>autorenew</span> Enrolling…</>
                     : <><Ic name="person_add" size="sm" /> Enroll Student</>
@@ -3009,6 +3508,146 @@ function TeacherReviewRow({ label, value, icon }) {
   );
 }
 
+/* ── Phone input with country dial-code selector ── */
+const PHONE_COUNTRIES = [
+  { code: 'SL', name: 'Sierra Leone',   dial: '+232', flag: '🇸🇱' },
+  { code: 'GN', name: 'Guinea',         dial: '+224', flag: '🇬🇳' },
+  { code: 'LR', name: 'Liberia',        dial: '+231', flag: '🇱🇷' },
+  { code: 'GM', name: 'Gambia',         dial: '+220', flag: '🇬🇲' },
+  { code: 'SN', name: 'Senegal',        dial: '+221', flag: '🇸🇳' },
+  { code: 'ML', name: 'Mali',           dial: '+223', flag: '🇲🇱' },
+  { code: 'GH', name: 'Ghana',          dial: '+233', flag: '🇬🇭' },
+  { code: 'NG', name: 'Nigeria',        dial: '+234', flag: '🇳🇬' },
+  { code: 'CI', name: "Côte d'Ivoire", dial: '+225', flag: '🇨🇮' },
+  { code: 'GW', name: 'Guinea-Bissau',  dial: '+245', flag: '🇬🇼' },
+  { code: 'TG', name: 'Togo',           dial: '+228', flag: '🇹🇬' },
+  { code: 'BJ', name: 'Benin',          dial: '+229', flag: '🇧🇯' },
+  { code: 'BF', name: 'Burkina Faso',   dial: '+226', flag: '🇧🇫' },
+  { code: 'CM', name: 'Cameroon',       dial: '+237', flag: '🇨🇲' },
+  { code: 'ZA', name: 'South Africa',   dial: '+27',  flag: '🇿🇦' },
+  { code: 'KE', name: 'Kenya',          dial: '+254', flag: '🇰🇪' },
+  { code: 'GB', name: 'United Kingdom', dial: '+44',  flag: '🇬🇧' },
+  { code: 'US', name: 'United States',  dial: '+1',   flag: '🇺🇸' },
+  { code: 'FR', name: 'France',         dial: '+33',  flag: '🇫🇷' },
+  { code: 'DE', name: 'Germany',        dial: '+49',  flag: '🇩🇪' },
+];
+const TZ_COUNTRY_MAP = {
+  'Africa/Freetown':'SL','Africa/Conakry':'GN','Africa/Monrovia':'LR',
+  'Africa/Banjul':'GM','Africa/Dakar':'SN','Africa/Bamako':'ML',
+  'Africa/Accra':'GH','Africa/Lagos':'NG','Africa/Abidjan':'CI',
+  'Africa/Bissau':'GW','Africa/Lome':'TG','Africa/Porto-Novo':'BJ',
+  'Africa/Ouagadougou':'BF','Africa/Douala':'CM','Africa/Johannesburg':'ZA',
+  'Africa/Nairobi':'KE','Europe/London':'GB','America/New_York':'US',
+  'America/Chicago':'US','America/Denver':'US','America/Los_Angeles':'US',
+  'Europe/Paris':'FR','Europe/Berlin':'DE',
+};
+function _detectPhoneCountry() {
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (TZ_COUNTRY_MAP[tz]) return TZ_COUNTRY_MAP[tz];
+    const parts = (navigator.language || '').split('-');
+    if (parts.length > 1) {
+      const code = parts[parts.length - 1].toUpperCase();
+      if (PHONE_COUNTRIES.find(c => c.code === code)) return code;
+    }
+  } catch { /* */ }
+  return 'SL';
+}
+function PhoneInput({ value, onChange, placeholder = 'Phone number' }) {
+  const [country, setCountry] = React.useState(() => {
+    if (value) {
+      const v = value.replace(/\s/g, '');
+      const sorted = [...PHONE_COUNTRIES].sort((a, b) => b.dial.length - a.dial.length);
+      const match = sorted.find(c => v.startsWith(c.dial.replace(/\s/g, '')));
+      if (match) return match;
+    }
+    return PHONE_COUNTRIES.find(c => c.code === _detectPhoneCountry()) || PHONE_COUNTRIES[0];
+  });
+  const [open,     setOpen]     = React.useState(false);
+  const [search,   setSearch]   = React.useState('');
+  const [dropRect, setDropRect] = React.useState(null);
+  const wrapRef = React.useRef(null);
+
+  const getLocal = (val, dial) => {
+    if (!val) return '';
+    const v = val.replace(/\s/g, ''), d = dial.replace(/\s/g, '');
+    return v.startsWith(d) ? v.slice(d.length) : val;
+  };
+  const localNum = getLocal(value, country.dial);
+
+  React.useEffect(() => {
+    if (!open) return;
+    if (wrapRef.current) {
+      const r = wrapRef.current.getBoundingClientRect();
+      setDropRect({ top: r.bottom + 4, left: r.left });
+    }
+    const close = () => { setOpen(false); setSearch(''); };
+    const h = e => { if (wrapRef.current && !wrapRef.current.contains(e.target)) close(); };
+    document.addEventListener('mousedown', h);
+    document.addEventListener('scroll', close, true);
+    return () => {
+      document.removeEventListener('mousedown', h);
+      document.removeEventListener('scroll', close, true);
+    };
+  }, [open]);
+
+  const selectCountry = c => { setCountry(c); setOpen(false); setSearch(''); onChange(c.dial + localNum); };
+  const filtered = search
+    ? PHONE_COUNTRIES.filter(c => c.name.toLowerCase().includes(search.toLowerCase()) || c.dial.includes(search) || c.code.toLowerCase().includes(search.toLowerCase()))
+    : PHONE_COUNTRIES;
+
+  return (
+    <div ref={wrapRef} style={{ position: 'relative', display: 'flex' }}>
+      <button type="button" onClick={() => setOpen(o => !o)} style={{
+        display: 'flex', alignItems: 'center', gap: 4, padding: '0 10px',
+        borderRadius: '8px 0 0 8px', border: '1px solid var(--ska-border)', borderRight: 'none',
+        background: 'var(--ska-surface-high)', cursor: 'pointer', flexShrink: 0, minHeight: 40, whiteSpace: 'nowrap',
+      }}>
+        <span style={{ fontSize: '1.125rem', lineHeight: 1 }}>{country.flag}</span>
+        <span style={{ fontSize: '0.8125rem', color: 'var(--ska-text-3)', fontWeight: 600 }}>{country.dial}</span>
+        <span className="ska-icon" style={{ fontSize: 14, color: 'var(--ska-text-3)' }}>expand_more</span>
+      </button>
+      <input type="tel" className="ska-input" value={localNum}
+        onChange={e => onChange(country.dial + e.target.value)}
+        placeholder={placeholder}
+        style={{ borderRadius: '0 8px 8px 0', flex: 1 }}
+      />
+      {open && dropRect && (
+        <div style={{
+          position: 'fixed', top: dropRect.top, left: dropRect.left, zIndex: 99999,
+          background: 'var(--ska-surface)', border: '1px solid var(--ska-border)',
+          borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+          width: 260, maxHeight: 280, overflow: 'hidden',
+          display: 'flex', flexDirection: 'column',
+        }}>
+          <div style={{ padding: '8px 10px', borderBottom: '1px solid var(--ska-border)' }}>
+            <input type="text" placeholder="Search country…" value={search} autoFocus
+              onChange={e => setSearch(e.target.value)}
+              style={{ width: '100%', border: '1px solid var(--ska-border)', borderRadius: 6, padding: '6px 10px', fontSize: '0.8125rem', background: 'var(--ska-surface-high)', color: 'var(--ska-text)', outline: 'none', boxSizing: 'border-box' }}
+            />
+          </div>
+          <div style={{ overflowY: 'auto', flex: 1 }}>
+            {filtered.map(c => (
+              <button key={c.code} type="button" onClick={() => selectCountry(c)} style={{
+                display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 14px',
+                border: 'none', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem', color: 'var(--ska-text)',
+                background: c.code === country.code ? 'var(--ska-surface-high)' : 'transparent',
+              }}>
+                <span style={{ fontSize: '1.125rem', lineHeight: 1 }}>{c.flag}</span>
+                <span style={{ flex: 1, fontWeight: c.code === country.code ? 700 : 400 }}>{c.name}</span>
+                <span style={{ fontSize: '0.8125rem', color: 'var(--ska-text-3)', flexShrink: 0 }}>{c.dial}</span>
+              </button>
+            ))}
+            {filtered.length === 0 && (
+              <div style={{ padding: 16, textAlign: 'center', fontSize: '0.8125rem', color: 'var(--ska-text-3)' }}>No countries found</div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── AddTeacherWizard: redesigned split-panel registration ── */
 const TEACHER_WIZARD_STEPS = [
   { label: 'Personal Info',   icon: 'person'      },
@@ -3045,6 +3684,7 @@ function AddTeacherWizard({ school, onSave, onCancel }) {
   const [showPass,        setShowPass]       = React.useState(false);
   const [saving,          setSaving]         = React.useState(false);
   const [error,           setError]          = React.useState('');
+  const [fieldErrors,     setFieldErrors]    = React.useState({});
   const [profileImage,    setProfileImage]   = React.useState(null);
   const [profilePreview,  setProfilePreview] = React.useState('');
   const [photoHover,      setPhotoHover]     = React.useState(false);
@@ -3112,7 +3752,16 @@ function AddTeacherWizard({ school, onSave, onCancel }) {
   ][step];
 
   const handleSubmit = async () => {
-    setSaving(true); setError('');
+    if (!form.first_name.trim() || !form.last_name.trim()) {
+      setError('First and last name are required.'); return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      setError('Please enter a valid email address.'); return;
+    }
+    if (form.password.length < 8) {
+      setError('Password must be at least 8 characters.'); return;
+    }
+    setSaving(true); setError(''); setFieldErrors({});
     try {
       const fd = new FormData();
       Object.entries(form).forEach(([k, v]) => { if (v !== '') fd.append(k, v); });
@@ -3123,7 +3772,15 @@ function AddTeacherWizard({ school, onSave, onCancel }) {
       }
       await ApiClient.post('/api/school/teachers/', fd);
       onSave();
-    } catch (e) { setError(e.message || 'Failed to add teacher.'); setSaving(false); }
+    } catch (e) {
+      const msg = e.message || '';
+      setError(
+        msg === 'Load failed' || msg.includes('Failed to fetch') || msg.includes('NetworkError')
+          ? 'Unable to reach the server. Please check your internet connection.'
+          : msg || 'Failed to add teacher.'
+      );
+      setSaving(false);
+    }
   };
 
   /* ── completion percentage for left panel ── */
@@ -3287,7 +3944,14 @@ function AddTeacherWizard({ school, onSave, onCancel }) {
                 borderRadius: 8, background: 'var(--ska-error-dim)', border: '1px solid rgba(255,180,171,0.25)',
                 marginBottom: 16, fontSize: '0.875rem', color: 'var(--ska-error)',
               }}>
-                <span className="ska-icon ska-icon--sm">error</span>{error}
+                <span className="ska-icon ska-icon--sm">error</span>
+                <span style={{ flex: 1 }}>{error}</span>
+                {(error.includes('reach the server') || error.includes('connection')) && (
+                  <button type="button" onClick={handleSubmit}
+                    style={{ flexShrink: 0, background: 'none', border: '1px solid var(--ska-error)', borderRadius: 6, padding: '3px 10px', fontSize: '0.8125rem', color: 'var(--ska-error)', cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span className="ska-icon" style={{ fontSize: 14 }}>refresh</span>Retry
+                  </button>
+                )}
               </div>
             )}
 
@@ -3342,12 +4006,11 @@ function AddTeacherWizard({ school, onSave, onCancel }) {
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   {[
-                    { key: 'first_name',   label: 'First Name',    required: true,  type: 'text',  placeholder: 'e.g. Abubakarr',     full: false },
-                    { key: 'last_name',    label: 'Last Name',     required: true,  type: 'text',  placeholder: 'e.g. Kamara',        full: false },
-                    { key: 'email',        label: 'Email Address', required: true,  type: 'email', placeholder: 'teacher@school.com', full: false },
-                    { key: 'phone_number', label: 'Phone Number',  required: false, type: 'tel',   placeholder: '+232 76 000 000',    full: false },
-                  ].map(({ key, label, required, type, placeholder, full }) => (
-                    <label key={key} style={{ display: 'flex', flexDirection: 'column', gap: 5, gridColumn: full ? '1/-1' : undefined }}>
+                    { key: 'first_name', label: 'First Name',    required: true,  type: 'text',  placeholder: 'e.g. Abubakarr'     },
+                    { key: 'last_name',  label: 'Last Name',     required: true,  type: 'text',  placeholder: 'e.g. Kamara'        },
+                    { key: 'email',      label: 'Email Address', required: true,  type: 'email', placeholder: 'teacher@school.com' },
+                  ].map(({ key, label, required, type, placeholder }) => (
+                    <label key={key} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                       <span style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ska-text-3)' }}>
                         {label}{required && <span style={{ color: 'var(--ska-error)', marginLeft: 2 }}>*</span>}
                       </span>
@@ -3356,10 +4019,28 @@ function AddTeacherWizard({ school, onSave, onCancel }) {
                         type={type}
                         value={form[key]}
                         placeholder={placeholder}
-                        onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
+                        style={fieldErrors[key] ? { borderColor: 'var(--ska-error)' } : {}}
+                        onChange={e => { setForm(f => ({ ...f, [key]: e.target.value })); setFieldErrors(p => ({ ...p, [key]: '' })); }}
+                        onBlur={() => {
+                          const v = form[key].trim();
+                          if (key === 'first_name' || key === 'last_name') {
+                            setFieldErrors(p => ({ ...p, [key]: v ? '' : 'Required' }));
+                          } else if (key === 'email') {
+                            if (!v) setFieldErrors(p => ({ ...p, email: 'Required' }));
+                            else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) setFieldErrors(p => ({ ...p, email: 'Invalid email format' }));
+                            else setFieldErrors(p => ({ ...p, email: '' }));
+                          }
+                        }}
                       />
+                      {fieldErrors[key] && <span style={{ fontSize: '0.6875rem', color: 'var(--ska-error)', marginTop: 2 }}>{fieldErrors[key]}</span>}
                     </label>
                   ))}
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                    <span style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ska-text-3)' }}>
+                      Phone Number
+                    </span>
+                    <PhoneInput value={form.phone_number} onChange={v => setForm(f => ({ ...f, phone_number: v }))} placeholder="76 000 000" />
+                  </label>
                   <div style={{ gridColumn: '1/-1', height: 1, background: 'var(--ska-border)', margin: '4px 0' }} />
                   {/* Password full-width with strength meter */}
                   <label style={{ display: 'flex', flexDirection: 'column', gap: 5, gridColumn: '1/-1' }}>
@@ -3931,6 +4612,7 @@ export function TeachersPage({ school }) {
   const [teachers,       setTeachers]       = React.useState([]);
   const [stats,          setStats]          = React.useState(null);
   const [loading,        setLoading]        = React.useState(true);
+  const [loadFailed,     setLoadFailed]     = React.useState(false);
   const [search,         setSearch]         = React.useState('');
   const [filter,         setFilter]         = React.useState('all');
   const [subView,        setSubView]        = React.useState('list');
@@ -3940,6 +4622,7 @@ export function TeachersPage({ school }) {
 
   const loadTeachers = React.useCallback(async (q, ov) => {
     setLoading(true);
+    setLoadFailed(false);
     try {
       const params = [];
       if (q)  params.push(`q=${encodeURIComponent(q)}`);
@@ -3947,7 +4630,7 @@ export function TeachersPage({ school }) {
       const url = '/api/school/teachers/' + (params.length ? '?' + params.join('&') : '');
       const d   = await ApiClient.get(url);
       setTeachers(d.teachers || []);
-    } catch { setTeachers([]); }
+    } catch { setTeachers([]); setLoadFailed(true); }
     setLoading(false);
   }, []);
 
@@ -4050,7 +4733,16 @@ export function TeachersPage({ school }) {
         </p>
 
       {/* Card grid */}
-      {!loading && teachers.length === 0 ? (
+      {!loading && loadFailed ? (
+        <div className="ska-empty" style={{ padding: '40px 0' }}>
+          <span className="ska-icon ska-icon--xl" style={{ color: 'var(--ska-text-3)', marginBottom: 12 }}>wifi_off</span>
+          <p className="ska-empty-title">Could not load teachers</p>
+          <p className="ska-empty-desc">Check your connection and try again.</p>
+          <button className="ska-btn ska-btn--ghost" style={{ marginTop: 14 }} onClick={() => loadTeachers(search, filter === 'overloaded' ? '1' : '')}>
+            <span className="ska-icon ska-icon--sm">refresh</span> Retry
+          </button>
+        </div>
+      ) : !loading && teachers.length === 0 ? (
         <div className="ska-empty" style={{ padding: '40px 0' }}>
           <span className="ska-icon ska-icon--xl" style={{ color: 'var(--ska-text-3)', marginBottom: 12 }}>school</span>
           <p className="ska-empty-title">No teachers found</p>
