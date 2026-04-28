@@ -242,7 +242,7 @@ class Student(models.Model):
     admission_date = models.DateField(default=timezone.now)
     date_of_birth = models.DateField(blank=True, null=True)
     phone_number = models.CharField(max_length=20, blank=True)
-    gender = models.CharField(max_length=1, choices=[('M', 'Male'), ('F', 'Female')], blank=True)
+    gender = models.CharField(max_length=1, choices=[('M', 'Male'), ('F', 'Female'), ('O', 'Other / Prefer not to say')], blank=True)
     passport_picture     = models.ImageField(upload_to='student_passports/', blank=True, null=True)
     disciplinary_history = models.BooleanField(default=False, help_text="Has the student ever been suspended or expelled?")
     disciplinary_notes   = models.TextField(blank=True, help_text="Details about disciplinary incidents, if any.")

@@ -905,7 +905,7 @@ export function StudentsPage({ school, openAddSignal }) {
   const openEdit = s => {
     setForm({
       first_name: s.first_name || '', middle_name: s.middle_name || '', last_name: s.last_name || '',
-      gender: s.gender === 'M' ? 'Male' : s.gender === 'F' ? 'Female' : s.gender || '',
+      gender: s.gender === 'M' ? 'Male' : s.gender === 'F' ? 'Female' : s.gender === 'O' ? 'Other' : '',
       date_of_birth: s.date_of_birth || '', place_of_birth: s.place_of_birth || '',
       nationality: s.nationality || '', religion: s.religion || '',
       home_address: s.home_address || '', city: s.city || '',
@@ -986,34 +986,29 @@ export function StudentsPage({ school, openAddSignal }) {
     return clean;
   };
 
-  const validateStep = s => {
+  const validate = () => {
     const errs = {};
     const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (s === 0) {
-      if (!form.first_name?.trim()) errs.first_name = 'First name is required';
-      if (!form.last_name?.trim())  errs.last_name  = 'Last name is required';
-      if (form.email?.trim() && !emailRe.test(form.email.trim())) errs.email = 'Enter a valid email address';
-      if (form.date_of_birth) {
-        const dob = new Date(form.date_of_birth), now = new Date();
-        if (dob > now) errs.date_of_birth = 'Date of birth cannot be in the future';
-        else {
-          const yrs = (now - dob) / (365.25 * 24 * 3600 * 1000);
-          if (yrs < 3)  errs.date_of_birth = 'Student appears too young for enrolment';
-          if (yrs > 30) errs.date_of_birth = 'Please verify — age is over 30 years';
-        }
+    if (!form.first_name?.trim()) errs.first_name = 'First name is required';
+    if (!form.last_name?.trim())  errs.last_name  = 'Last name is required';
+    if (form.email?.trim() && !emailRe.test(form.email.trim())) errs.email = 'Enter a valid email address';
+    if (form.date_of_birth) {
+      const dob = new Date(form.date_of_birth), now = new Date();
+      if (dob > now) errs.date_of_birth = 'Date of birth cannot be in the future';
+      else {
+        const yrs = (now - dob) / (365.25 * 24 * 3600 * 1000);
+        if (yrs < 3)  errs.date_of_birth = 'Student appears too young for enrolment';
+        if (yrs > 30) errs.date_of_birth = 'Please verify — age is over 30 years';
       }
     }
-    if (s === 2) {
-      const emailRe2 = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (form.father_email?.trim() && !emailRe2.test(form.father_email.trim())) errs.father_email = 'Enter a valid email address';
-      if (form.mother_email?.trim() && !emailRe2.test(form.mother_email.trim())) errs.mother_email = 'Enter a valid email address';
-    }
+    if (form.father_email?.trim() && !emailRe.test(form.father_email.trim())) errs.father_email = 'Enter a valid email address';
+    if (form.mother_email?.trim() && !emailRe.test(form.mother_email.trim())) errs.mother_email = 'Enter a valid email address';
     setFieldErrors(errs);
     return errs;
   };
 
   const handleSave = async () => {
-    const errs = validateStep(step);
+    const errs = validate();
     if (Object.keys(errs).length) {
       setError(Object.keys(errs).length === 1 ? 'Please fix the highlighted field below.' : `Please fix ${Object.keys(errs).length} highlighted fields below.`);
       return;
@@ -1965,7 +1960,9 @@ export function StudentsPage({ school, openAddSignal }) {
               <label className="ska-form-group"><span>Phone Number</span>
                 <PhoneInput value={form.emergency_phone} onChange={v => setForm(f => ({ ...f, emergency_phone: v }))} defaultCountry={schoolCountryCode} /></label>
               <label className="ska-form-group"><span>Address</span>
-                <input className="ska-input" value={form.emergency_address} onChange={e => setForm(f => ({ ...f, emergency_address: e.target.value }))} /></label>
+                <textarea className="ska-input" rows={2} value={form.emergency_address}
+                  onChange={e => setForm(f => ({ ...f, emergency_address: e.target.value }))}
+                  style={{ resize: 'vertical', fontFamily: 'inherit' }} /></label>
             </div>
           </div>
 
@@ -2019,8 +2016,9 @@ export function StudentsPage({ school, openAddSignal }) {
             <div style={{ display: 'grid', gap: 12 }}>
               <label className="ska-form-group" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <input type="checkbox" checked={form.disciplinary_history}
-                  onChange={e => setForm(f => ({ ...f, disciplinary_history: e.target.checked, disciplinary_notes: e.target.checked ? f.disciplinary_notes : '' }))} />
-                <span>Has the student ever been suspended/expelled?</span>
+                  onChange={e => setForm(f => ({ ...f, disciplinary_history: e.target.checked, disciplinary_notes: e.target.checked ? f.disciplinary_notes : '' }))}
+                  style={{ width: 16, height: 16, accentColor: 'var(--ska-primary)', cursor: 'pointer', flexShrink: 0 }} />
+                <span style={{ fontSize: '0.875rem' }}>Has the student ever been suspended/expelled?</span>
               </label>
               {form.disciplinary_history && (
                 <label className="ska-form-group"><span>Provide details</span>
@@ -2046,8 +2044,9 @@ export function StudentsPage({ school, openAddSignal }) {
                 ['documents_other',                    'Others'],
               ].map(([key, label]) => (
                 <label key={key} className="ska-form-group" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <input type="checkbox" checked={form[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.checked }))} />
-                  <span>{label}</span>
+                  <input type="checkbox" checked={form[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.checked }))}
+                    style={{ width: 16, height: 16, accentColor: 'var(--ska-primary)', cursor: 'pointer', flexShrink: 0 }} />
+                  <span style={{ fontSize: '0.875rem' }}>{label}</span>
                 </label>
               ))}
             </div>

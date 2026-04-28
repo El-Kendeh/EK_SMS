@@ -3014,12 +3014,14 @@ def api_students(request):
         date_of_birth    = body.get('date_of_birth') or None
         phone_number     = body.get('phone_number', '')
         gender           = body.get('gender', '')
-        # Normalize: frontend sends 'Male'/'Female', model expects 'M'/'F' (max_length=1)
+        # Normalize: frontend sends 'Male'/'Female'/'Other', model expects 'M'/'F'/'O'
         if gender.lower() == 'male':
             gender = 'M'
         elif gender.lower() == 'female':
             gender = 'F'
-        elif gender not in ('M', 'F', ''):
+        elif gender.lower() == 'other':
+            gender = 'O'
+        elif gender not in ('M', 'F', 'O', ''):
             gender = ''
         passport_picture     = request.FILES.get('passport_picture') or request.FILES.get('profile_photo')
         document_type        = body.get('document_type', '').strip()
@@ -3483,7 +3485,9 @@ def api_student_detail(request, student_id):
                 g = 'M'
             elif g.lower() == 'female':
                 g = 'F'
-            elif g not in ('M', 'F', ''):
+            elif g.lower() == 'other':
+                g = 'O'
+            elif g not in ('M', 'F', 'O', ''):
                 g = ''
             student.gender = g
         if 'blood_type' in data or 'blood_group' in data:
