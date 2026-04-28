@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>EK-SMS Student Portal - Resources</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "secondary-fixed": "#d7e3fc",
+                    "surface-container": "#e8f0e9",
+                    "on-secondary": "#ffffff",
+                    "secondary": "#535f74",
+                    "surface-container-highest": "#dde4dd",
+                    "surface-dim": "#d4dcd5",
+                    "on-tertiary": "#ffffff",
+                    "background": "#f4fbf4",
+                    "primary": "#006c49",
+                    "outline-variant": "#bbcabf",
+                    "on-surface-variant": "#3c4a42",
+                    "inverse-surface": "#2b322d",
+                    "secondary-container": "#d4e0f9",
+                    "on-primary-container": "#00422b",
+                    "on-primary-fixed-variant": "#005236",
+                    "secondary-fixed-dim": "#bbc7df",
+                    "tertiary-container": "#fc7c78",
+                    "on-error": "#ffffff",
+                    "inverse-primary": "#4edea3",
+                    "primary-container": "#10b981",
+                    "outline": "#6c7a71",
+                    "error": "#ba1a1a",
+                    "on-surface": "#161d19",
+                    "on-tertiary-fixed": "#410005",
+                    "surface-container-low": "#eef6ee",
+                    "on-primary-fixed": "#002113",
+                    "error-container": "#ffdad6",
+                    "tertiary-fixed": "#ffdad7",
+                    "surface-container-high": "#e3eae3",
+                    "primary-fixed-dim": "#4edea3",
+                    "surface-variant": "#dde4dd",
+                    "surface-container-lowest": "#ffffff",
+                    "primary-fixed": "#6ffbbe",
+                    "inverse-on-surface": "#ebf3eb",
+                    "on-tertiary-fixed-variant": "#842225",
+                    "on-tertiary-container": "#711419",
+                    "on-secondary-fixed-variant": "#3c475b",
+                    "surface-tint": "#006c49",
+                    "on-primary": "#ffffff",
+                    "tertiary-fixed-dim": "#ffb3af",
+                    "surface-bright": "#f4fbf4",
+                    "on-secondary-container": "#576378",
+                    "on-error-container": "#93000a",
+                    "tertiary": "#a43a3a",
+                    "surface": "#f4fbf4",
+                    "on-background": "#161d19",
+                    "on-secondary-fixed": "#101c2e"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "unit-1": "0.25rem",
+                    "base": "4px",
+                    "unit-6": "1.5rem",
+                    "gutter": "1rem",
+                    "unit-2": "0.5rem",
+                    "margin-desktop": "2rem",
+                    "unit-4": "1rem",
+                    "margin-mobile": "1rem"
+            },
+            "fontFamily": {
+                    "body-md": ["Inter"],
+                    "body-sm": ["Inter"],
+                    "status-label": ["Inter"],
+                    "h1": ["Inter"],
+                    "label-caps": ["Inter"],
+                    "display-sm": ["Inter"]
+            },
+            "fontSize": {
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "status-label": ["13px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "h1": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "display-sm": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+            vertical-align: middle;
+        }
+        body {
+            background-color: #F8F9FB; /* Level 0 Canvas from style guide */
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="font-body-md text-on-background">
+<!-- Sidebar Navigation (NavigationDrawer) -->
+<aside class="hidden lg:flex flex-col fixed left-0 top-0 h-screen z-40 w-[280px] bg-slate-900 border-r border-slate-800">
+<div class="p-unit-6">
+<h1 class="text-xl font-bold text-emerald-500 tracking-tight">EK-SMS Portal</h1>
+</div>
+<!-- Profile Header in Nav -->
+<div class="px-unit-6 py-unit-4 flex items-center gap-unit-4 mb-unit-6">
+<div class="w-10 h-10 rounded-full overflow-hidden bg-slate-800 border border-slate-700">
+<img alt="Student Profile" class="w-full h-full object-cover" data-alt="professional portrait of a young male university student in a library setting with soft natural lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCS7v5NdJTxzVYEVo3kmjYHm13w8a2xLFJS-XLhEqm3W2dm_AI6VzT3WsavB-4kbSmSvTHlTusCU0UdJRrkTH0iCG7k6I7Pcs-AUGBOuPB7rGFTERClWgigG43NX8Lx1y6Bu4QNI9SBj6MB1esC0CDrnCZq_-nWVkzU5ClJKZzRY6LTIGtJyeuKFIQb1R196SWv3waJI1he66pL-Hafb2btoupYiMzw3tvNq8Ntye9v-LX2H2yh_BVXDYApIhHHhHJ8F5IoprxlWwB7"/>
+</div>
+<div>
+<p class="font-inter text-sm font-medium tracking-tight text-slate-100">Alex Rivers</p>
+<p class="text-xs text-slate-400">ID: 2024-0892</p>
+</div>
+</div>
+<nav class="flex-1 space-y-1 px-unit-2">
+<a class="flex items-center gap-unit-4 px-unit-4 py-3 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-inter text-sm font-medium tracking-tight">Dashboard</span>
+</a>
+<a class="flex items-center gap-unit-4 px-unit-4 py-3 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined" data-icon="calendar_month">calendar_month</span>
+<span class="font-inter text-sm font-medium tracking-tight">Schedule</span>
+</a>
+<a class="flex items-center gap-unit-4 px-unit-4 py-3 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined" data-icon="grade">grade</span>
+<span class="font-inter text-sm font-medium tracking-tight">Grades</span>
+</a>
+<a class="flex items-center gap-unit-4 px-unit-4 py-3 rounded-lg bg-emerald-500/10 text-emerald-400 border-r-4 border-emerald-500" href="#">
+<span class="material-symbols-outlined" data-icon="folder_open">folder_open</span>
+<span class="font-inter text-sm font-medium tracking-tight">Resources</span>
+</a>
+<a class="flex items-center gap-unit-4 px-unit-4 py-3 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-inter text-sm font-medium tracking-tight">Settings</span>
+</a>
+</nav>
+</aside>
+<!-- Top App Bar (Mobile) -->
+<header class="lg:hidden flex justify-between items-center px-4 h-16 w-full sticky top-0 z-30 bg-white border-b border-slate-200">
+<div class="flex items-center gap-unit-4">
+<span class="material-symbols-outlined text-emerald-600" data-icon="menu">menu</span>
+<span class="text-lg font-black text-emerald-600">Resources</span>
+</div>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-slate-200">
+<img alt="Student Avatar" class="w-full h-full object-cover" data-alt="professional portrait of a young male university student" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBhbBrSUqwWEaR1Mp7tgVz6oPidoELwBSgJ4R2XAo4t1YsmqyweKfr7u6ZNWVxTgcx5QYBxl0KLzD9kbVGDWZAehF05EClyFcPl6ZmS9JYEN7n5wYhQS6f-s6wrzeFGFKVVnVI0mEgqyxWfW-Ky4k61P4hgNDUFbqiPAs02caKemigDn5hGNhDf7b2GcFwsriKzqA0DBi5Kl_esspywgKBUk8TTK8BXMlBk7RHCR9f59YSX-phR1OUQvODe35pd33WDVcW8ZOdD5Yak"/>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="lg:ml-[280px] pb-24 lg:pb-8 pt-6 px-4 md:px-8 max-w-7xl">
+<!-- Search & Filter Section -->
+<section class="mb-8">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+<div>
+<h2 class="font-h1 text-h1 text-on-surface">Learning Materials</h2>
+<p class="text-body-sm text-outline font-body-sm">Access your course syllabi, lecture notes, and past exams.</p>
+</div>
+<div class="relative w-full md:w-80">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline" data-icon="search">search</span>
+<input class="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all text-body-sm font-body-sm" placeholder="Search subjects or materials..." type="text"/>
+</div>
+</div>
+<!-- Filters -->
+<div class="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+<button class="px-5 py-2 bg-primary text-white rounded-full text-status-label font-status-label">All</button>
+<button class="px-5 py-2 bg-white border border-slate-200 text-outline hover:bg-slate-50 rounded-full text-status-label font-status-label transition-colors">Syllabus</button>
+<button class="px-5 py-2 bg-white border border-slate-200 text-outline hover:bg-slate-50 rounded-full text-status-label font-status-label transition-colors">Lecture Notes</button>
+<button class="px-5 py-2 bg-white border border-slate-200 text-outline hover:bg-slate-50 rounded-full text-status-label font-status-label transition-colors whitespace-nowrap">Videos</button>
+<button class="px-5 py-2 bg-white border border-slate-200 text-outline hover:bg-slate-50 rounded-full text-status-label font-status-label transition-colors">Exams</button>
+<button class="px-5 py-2 bg-white border border-slate-200 text-outline hover:bg-slate-50 rounded-full text-status-label font-status-label transition-colors">Handouts</button>
+</div>
+</section>
+<!-- Bento Grid Course Sections -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-gutter">
+<!-- Video Lectures Card (New Section) -->
+<div class="bg-white rounded-xl border border-slate-200 overflow-hidden flex flex-col">
+<div class="p-unit-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+<div>
+<span class="text-label-caps font-label-caps text-secondary bg-secondary-container/20 px-2 py-0.5 rounded">VIDEOS</span>
+<h3 class="font-h1 text-on-surface mt-1">Recent Video Lectures</h3>
+</div>
+<span class="material-symbols-outlined text-outline" data-icon="more_vert">more_vert</span>
+</div>
+<div class="p-unit-4 flex-1 space-y-3">
+<!-- Video Item -->
+<div class="group flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:border-primary/30 hover:bg-primary-container/5 transition-all">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 flex items-center justify-center bg-emerald-50 text-emerald-600 rounded-lg">
+<span class="material-symbols-outlined" data-icon="play_circle">play_circle</span>
+</div>
+<div>
+<p class="text-body-sm font-semibold text-on-surface">Calculus: Derivatives Explained</p>
+<p class="text-[11px] text-outline uppercase tracking-wider font-bold">42:15 • 1080p</p>
+</div>
+</div>
+<button class="flex items-center gap-1 text-primary hover:bg-primary/10 px-3 py-1.5 rounded-lg transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="visibility">visibility</span>
+<span class="text-status-label font-status-label">Watch Now</span>
+</button>
+</div>
+<!-- Video Item -->
+<div class="group flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:border-primary/30 hover:bg-primary-container/5 transition-all">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 flex items-center justify-center bg-emerald-50 text-emerald-600 rounded-lg">
+<span class="material-symbols-outlined" data-icon="play_circle">play_circle</span>
+</div>
+<div>
+<p class="text-body-sm font-semibold text-on-surface">Quantum State Intro</p>
+<p class="text-[11px] text-outline uppercase tracking-wider font-bold">28:40 • 1080p</p>
+</div>
+</div>
+<button class="flex items-center gap-1 text-primary hover:bg-primary/10 px-3 py-1.5 rounded-lg transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="visibility">visibility</span>
+<span class="text-status-label font-status-label">Watch Now</span>
+</button>
+</div>
+</div>
+</div>
+<!-- MAT201 Course Card -->
+<div class="bg-white rounded-xl border border-slate-200 overflow-hidden flex flex-col">
+<div class="p-unit-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+<div>
+<span class="text-label-caps font-label-caps text-primary bg-primary-container/10 px-2 py-0.5 rounded">MATHEMATICS</span>
+<h3 class="font-h1 text-on-surface mt-1">MAT201 - Advanced Calculus</h3>
+</div>
+<span class="material-symbols-outlined text-outline" data-icon="more_vert">more_vert</span>
+</div>
+<div class="p-unit-4 flex-1 space-y-3">
+<!-- Resource Item -->
+<div class="group flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:border-primary/30 hover:bg-primary-container/5 transition-all">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-lg">
+<span class="material-symbols-outlined" data-icon="picture_as_pdf">picture_as_pdf</span>
+</div>
+<div>
+<p class="text-body-sm font-semibold text-on-surface">2023 Syllabus PDF</p>
+<p class="text-[11px] text-outline uppercase tracking-wider font-bold">2.4 MB • PDF</p>
+</div>
+</div>
+<button class="flex items-center gap-1 text-primary hover:bg-primary/10 px-3 py-1.5 rounded-lg transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="download">download</span>
+<span class="text-status-label font-status-label">Download</span>
+</button>
+</div>
+<!-- Resource Item -->
+<div class="group flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:border-primary/30 hover:bg-primary-container/5 transition-all">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 flex items-center justify-center bg-blue-50 text-blue-500 rounded-lg">
+<span class="material-symbols-outlined" data-icon="description">description</span>
+</div>
+<div>
+<p class="text-body-sm font-semibold text-on-surface">Chapter 1: Multi-variable Limits</p>
+<p class="text-[11px] text-outline uppercase tracking-wider font-bold">1.2 MB • DOCX</p>
+</div>
+</div>
+<button class="flex items-center gap-1 text-primary hover:bg-primary/10 px-3 py-1.5 rounded-lg transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="download">download</span>
+<span class="text-status-label font-status-label">Download</span>
+</button>
+</div>
+<!-- Resource Item (Locked) -->
+<div class="relative group flex items-center justify-between p-3 rounded-lg border border-slate-100 bg-slate-50/50 cursor-not-allowed">
+<div class="flex items-center gap-3 opacity-50">
+<div class="w-10 h-10 flex items-center justify-center bg-slate-200 text-slate-500 rounded-lg">
+<span class="material-symbols-outlined" data-icon="picture_as_pdf">picture_as_pdf</span>
+</div>
+<div>
+<p class="text-body-sm font-semibold text-on-surface">Midterm Prep Quiz</p>
+<p class="text-[11px] text-outline uppercase tracking-wider font-bold">Available Oct 12</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-slate-400" data-icon="lock" data-weight="fill" style="font-variation-settings: 'FILL' 1;">lock</span>
+</div>
+</div>
+</div>
+<!-- PHY302 Course Card -->
+<div class="bg-white rounded-xl border border-slate-200 overflow-hidden flex flex-col">
+<div class="p-unit-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+<div>
+<span class="text-label-caps font-label-caps text-tertiary bg-tertiary-container/10 px-2 py-0.5 rounded">PHYSICS</span>
+<h3 class="font-h1 text-on-surface mt-1">PHY302 - Quantum Mechanics</h3>
+</div>
+<span class="material-symbols-outlined text-outline" data-icon="more_vert">more_vert</span>
+</div>
+<div class="p-unit-4 flex-1 space-y-3">
+<!-- Resource Item -->
+<div class="group flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:border-primary/30 hover:bg-primary-container/5 transition-all">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-lg">
+<span class="material-symbols-outlined" data-icon="picture_as_pdf">picture_as_pdf</span>
+</div>
+<div>
+<p class="text-body-sm font-semibold text-on-surface">Course Overview &amp; Intro</p>
+<p class="text-[11px] text-outline uppercase tracking-wider font-bold">3.8 MB • PDF</p>
+</div>
+</div>
+<button class="flex items-center gap-1 text-primary hover:bg-primary/10 px-3 py-1.5 rounded-lg transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="download">download</span>
+<span class="text-status-label font-status-label">Download</span>
+</button>
+</div>
+<!-- Resource Item -->
+<div class="group flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:border-primary/30 hover:bg-primary-container/5 transition-all">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 flex items-center justify-center bg-orange-50 text-orange-500 rounded-lg">
+<span class="material-symbols-outlined" data-icon="slideshow">slideshow</span>
+</div>
+<div>
+<p class="text-body-sm font-semibold text-on-surface">Lec 2: Wave-Particle Duality</p>
+<p class="text-[11px] text-outline uppercase tracking-wider font-bold">15.4 MB • PPTX</p>
+</div>
+</div>
+<button class="flex items-center gap-1 text-primary hover:bg-primary/10 px-3 py-1.5 rounded-lg transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="download">download</span>
+<span class="text-status-label font-status-label">Download</span>
+</button>
+</div>
+</div>
+</div>
+<!-- CS102 Banner Card (Asymmetric) -->
+<div class="md:col-span-2 bg-slate-900 rounded-xl overflow-hidden relative min-h-[160px] flex items-center">
+<img alt="Course Background" class="absolute inset-0 w-full h-full object-cover opacity-30" data-alt="abstract coding screen with glowing lines of syntax on a dark background representing computer science" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDP1xSJAenn09us_zfLToy1oHYubkBs6jiRGPT3iqY-pSJMno7Y7mIRWTuTRLqd2KricDH49NM9f_bEjNwbf9XzEM6WWAe6IkmSiim5GlqZ-4sIs2vWf9yyaRNfxSxMZazP6x3cxct-J1pvP_iwI_0KjxGH0L_DZRrFu7PcMM7gLKKZNy-SfNMXpta3SaQJftHI_KA91FjBkIx5kfVobUILAmoz3wUyPXBYibK_a7ALmi9rq9qhqz4EVaGckI0wYTsZXn3CWG9K5Ytn"/>
+<div class="absolute inset-0 bg-gradient-to-r from-slate-900 via-slate-900/80 to-transparent"></div>
+<div class="relative z-10 p-unit-6 max-w-lg">
+<span class="text-label-caps font-label-caps text-emerald-400 mb-2 block">NEW MATERIAL ADDED</span>
+<h3 class="text-display-sm text-white font-display-sm">CS102 - Data Structures</h3>
+<p class="text-slate-400 text-body-sm font-body-sm mt-1">Final project guidelines and template files are now available for download.</p>
+<button class="mt-4 flex items-center gap-2 bg-emerald-500 text-slate-950 px-6 py-2 rounded-lg font-semibold hover:bg-emerald-400 transition-colors">
+<span class="material-symbols-outlined text-[20px]" data-icon="folder_zip">folder_zip</span>
+                        View Files
+                    </button>
+</div>
+</div>
+</div>
+<!-- Trust Indicator Banner -->
+<section class="mt-8">
+<div class="bg-white border border-slate-200 border-l-4 border-l-primary p-4 rounded-lg flex items-start gap-3">
+<span class="material-symbols-outlined text-primary mt-0.5" data-icon="verified">verified</span>
+<div>
+<h4 class="text-status-label font-bold text-on-surface">Verified Academic Content</h4>
+<p class="text-body-sm text-outline font-body-sm">All materials in this portal are uploaded and verified by authorized faculty members of EK-SMS.</p>
+</div>
+</div>
+</section>
+</main>
+<!-- Bottom Navigation Bar (Mobile) -->
+<nav class="lg:hidden fixed bottom-0 w-full z-50 flex justify-around items-center px-2 py-3 bg-white border-t border-slate-200 shadow-[0_-1px_3px_0_rgba(0,0,0,0.05)]">
+<a class="flex flex-col items-center justify-center text-slate-500" href="#">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="font-inter text-[10px] uppercase tracking-wider font-bold">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-500" href="#">
+<span class="material-symbols-outlined" data-icon="fact_check">fact_check</span>
+<span class="font-inter text-[10px] uppercase tracking-wider font-bold">Grades</span>
+</a>
+<a class="flex flex-col items-center justify-center text-emerald-600 bg-emerald-50 rounded-xl px-3 py-1" href="#">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+<span class="font-inter text-[10px] uppercase tracking-wider font-bold">Resources</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-500" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-inter text-[10px] uppercase tracking-wider font-bold">Profile</span>
+</a>
+</nav>
+</body></html>

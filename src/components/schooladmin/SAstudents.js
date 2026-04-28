@@ -48,27 +48,34 @@ const previewUsername = admNo =>
 const copyText = text => navigator.clipboard?.writeText(text).catch(() => {});
 
 // ── Phone input with country dial-code selector ────────────────────
+const PHONE_COUNTRY_GROUPS = ['West Africa', 'East & Southern Africa', 'Europe & Americas'];
 const PHONE_COUNTRIES = [
-  { code: 'SL', name: 'Sierra Leone',   dial: '+232', flag: '🇸🇱', placeholder: '76 000 000'       },
-  { code: 'GN', name: 'Guinea',         dial: '+224', flag: '🇬🇳', placeholder: '62 000 000'       },
-  { code: 'LR', name: 'Liberia',        dial: '+231', flag: '🇱🇷', placeholder: '77 000 000'       },
-  { code: 'GM', name: 'Gambia',         dial: '+220', flag: '🇬🇲', placeholder: '3XX XXXX'         },
-  { code: 'SN', name: 'Senegal',        dial: '+221', flag: '🇸🇳', placeholder: '7X XXX XX XX'    },
-  { code: 'ML', name: 'Mali',           dial: '+223', flag: '🇲🇱', placeholder: '6X XX XX XX'     },
-  { code: 'GH', name: 'Ghana',          dial: '+233', flag: '🇬🇭', placeholder: '24 XXX XXXX'     },
-  { code: 'NG', name: 'Nigeria',        dial: '+234', flag: '🇳🇬', placeholder: '70 XXX XXXX'     },
-  { code: 'CI', name: "Côte d'Ivoire", dial: '+225', flag: '🇨🇮', placeholder: '07 XX XX XX XX'  },
-  { code: 'GW', name: 'Guinea-Bissau',  dial: '+245', flag: '🇬🇼', placeholder: '96 XXX XXXX'     },
-  { code: 'TG', name: 'Togo',           dial: '+228', flag: '🇹🇬', placeholder: '90 XX XX XX'     },
-  { code: 'BJ', name: 'Benin',          dial: '+229', flag: '🇧🇯', placeholder: '97 XX XX XX'     },
-  { code: 'BF', name: 'Burkina Faso',   dial: '+226', flag: '🇧🇫', placeholder: '70 XX XX XX'     },
-  { code: 'CM', name: 'Cameroon',       dial: '+237', flag: '🇨🇲', placeholder: '6X XX XX XX XX'  },
-  { code: 'ZA', name: 'South Africa',   dial: '+27',  flag: '🇿🇦', placeholder: '71 XXX XXXX'     },
-  { code: 'KE', name: 'Kenya',          dial: '+254', flag: '🇰🇪', placeholder: '7XX XXX XXX'     },
-  { code: 'GB', name: 'United Kingdom', dial: '+44',  flag: '🇬🇧', placeholder: '7XXX XXXXXX'     },
-  { code: 'US', name: 'United States',  dial: '+1',   flag: '🇺🇸', placeholder: 'XXX XXX XXXX'    },
-  { code: 'FR', name: 'France',         dial: '+33',  flag: '🇫🇷', placeholder: '6X XX XX XX XX'  },
-  { code: 'DE', name: 'Germany',        dial: '+49',  flag: '🇩🇪', placeholder: '1XX XXXXXXX'     },
+  // ── West Africa ──────────────────────────────────────────────────
+  { code: 'SL', name: 'Sierra Leone',   dial: '+232', flag: '🇸🇱', placeholder: '76 000 000',      group: 'West Africa' },
+  { code: 'GN', name: 'Guinea',         dial: '+224', flag: '🇬🇳', placeholder: '62 000 000',      group: 'West Africa' },
+  { code: 'LR', name: 'Liberia',        dial: '+231', flag: '🇱🇷', placeholder: '77 000 000',      group: 'West Africa' },
+  { code: 'GM', name: 'Gambia',         dial: '+220', flag: '🇬🇲', placeholder: '3XX XXXX',        group: 'West Africa' },
+  { code: 'SN', name: 'Senegal',        dial: '+221', flag: '🇸🇳', placeholder: '7X XXX XX XX',   group: 'West Africa' },
+  { code: 'ML', name: 'Mali',           dial: '+223', flag: '🇲🇱', placeholder: '6X XX XX XX',    group: 'West Africa' },
+  { code: 'GH', name: 'Ghana',          dial: '+233', flag: '🇬🇭', placeholder: '24 XXX XXXX',    group: 'West Africa' },
+  { code: 'NG', name: 'Nigeria',        dial: '+234', flag: '🇳🇬', placeholder: '70 XXX XXXX',    group: 'West Africa' },
+  { code: 'CI', name: "Côte d'Ivoire", dial: '+225', flag: '🇨🇮', placeholder: '07 XX XX XX XX', group: 'West Africa' },
+  { code: 'GW', name: 'Guinea-Bissau',  dial: '+245', flag: '🇬🇼', placeholder: '96 XXX XXXX',    group: 'West Africa' },
+  { code: 'TG', name: 'Togo',           dial: '+228', flag: '🇹🇬', placeholder: '90 XX XX XX',    group: 'West Africa' },
+  { code: 'BJ', name: 'Benin',          dial: '+229', flag: '🇧🇯', placeholder: '97 XX XX XX',    group: 'West Africa' },
+  { code: 'BF', name: 'Burkina Faso',   dial: '+226', flag: '🇧🇫', placeholder: '70 XX XX XX',    group: 'West Africa' },
+  { code: 'CM', name: 'Cameroon',       dial: '+237', flag: '🇨🇲', placeholder: '6X XX XX XX XX', group: 'West Africa' },
+  // ── East & Southern Africa ────────────────────────────────────────
+  { code: 'ZA', name: 'South Africa',   dial: '+27',  flag: '🇿🇦', placeholder: '71 XXX XXXX',    group: 'East & Southern Africa' },
+  { code: 'KE', name: 'Kenya',          dial: '+254', flag: '🇰🇪', placeholder: '7XX XXX XXX',    group: 'East & Southern Africa' },
+  { code: 'TZ', name: 'Tanzania',       dial: '+255', flag: '🇹🇿', placeholder: '7XX XXX XXX',    group: 'East & Southern Africa' },
+  { code: 'UG', name: 'Uganda',         dial: '+256', flag: '🇺🇬', placeholder: '7XX XXX XXX',    group: 'East & Southern Africa' },
+  { code: 'ET', name: 'Ethiopia',       dial: '+251', flag: '🇪🇹', placeholder: '9XX XXX XXX',    group: 'East & Southern Africa' },
+  // ── Europe & Americas ─────────────────────────────────────────────
+  { code: 'GB', name: 'United Kingdom', dial: '+44',  flag: '🇬🇧', placeholder: '7XXX XXXXXX',    group: 'Europe & Americas' },
+  { code: 'US', name: 'United States',  dial: '+1',   flag: '🇺🇸', placeholder: 'XXX XXX XXXX',   group: 'Europe & Americas' },
+  { code: 'FR', name: 'France',         dial: '+33',  flag: '🇫🇷', placeholder: '6X XX XX XX XX', group: 'Europe & Americas' },
+  { code: 'DE', name: 'Germany',        dial: '+49',  flag: '🇩🇪', placeholder: '1XX XXXXXXX',    group: 'Europe & Americas' },
 ];
 const TZ_COUNTRY_MAP = {
   'Africa/Freetown':'SL','Africa/Conakry':'GN','Africa/Monrovia':'LR',
@@ -76,7 +83,8 @@ const TZ_COUNTRY_MAP = {
   'Africa/Accra':'GH','Africa/Lagos':'NG','Africa/Abidjan':'CI',
   'Africa/Bissau':'GW','Africa/Lome':'TG','Africa/Porto-Novo':'BJ',
   'Africa/Ouagadougou':'BF','Africa/Douala':'CM','Africa/Johannesburg':'ZA',
-  'Africa/Nairobi':'KE','Europe/London':'GB','America/New_York':'US',
+  'Africa/Nairobi':'KE','Africa/Dar_es_Salaam':'TZ','Africa/Kampala':'UG',
+  'Africa/Addis_Ababa':'ET','Europe/London':'GB','America/New_York':'US',
   'America/Chicago':'US','America/Denver':'US','America/Los_Angeles':'US',
   'Europe/Paris':'FR','Europe/Berlin':'DE',
 };
@@ -106,7 +114,8 @@ function PhoneInput({ value, onChange, placeholder = 'Phone number', defaultCoun
   const [open,     setOpen]     = useState(false);
   const [search,   setSearch]   = useState('');
   const [dropRect, setDropRect] = useState(null);
-  const wrapRef = useRef(null);
+  const wrapRef        = useRef(null);
+  const searchInputRef = useRef(null);
 
   const getLocal = (val, dial) => {
     if (!val) return '';
@@ -119,35 +128,65 @@ function PhoneInput({ value, onChange, placeholder = 'Phone number', defaultCoun
     if (!open) return;
     if (wrapRef.current) {
       const r = wrapRef.current.getBoundingClientRect();
-      setDropRect({ top: r.bottom + 4, left: r.left });
+      // Clamp left so the dropdown never goes off the right edge of the screen
+      const dropW = 300;
+      const left = Math.min(r.left, window.innerWidth - dropW - 12);
+      setDropRect({ top: r.bottom + 6, left: Math.max(4, left) });
     }
+    // preventScroll stops the modal from scrolling when this input gains focus,
+    // which would otherwise fire the scroll listener and close the dropdown.
+    const focusTimer = setTimeout(() => searchInputRef.current?.focus({ preventScroll: true }), 50);
     const close = () => { setOpen(false); setSearch(''); };
-    const h = e => { if (wrapRef.current && !wrapRef.current.contains(e.target)) close(); };
-    document.addEventListener('mousedown', h);
-    document.addEventListener('scroll', close, true);
+    const onMouseDown = e => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) close();
+    };
+    document.addEventListener('mousedown', onMouseDown);
     return () => {
-      document.removeEventListener('mousedown', h);
-      document.removeEventListener('scroll', close, true);
+      clearTimeout(focusTimer);
+      document.removeEventListener('mousedown', onMouseDown);
     };
   }, [open]);
 
   const selectCountry = c => { setCountry(c); setOpen(false); setSearch(''); onChange(c.dial + localNum); };
-  const filtered = search
-    ? PHONE_COUNTRIES.filter(c => c.name.toLowerCase().includes(search.toLowerCase()) || c.dial.includes(search) || c.code.toLowerCase().includes(search.toLowerCase()))
-    : PHONE_COUNTRIES;
+
+  const searchLower = search.toLowerCase();
+  const displayList = search
+    ? PHONE_COUNTRIES.filter(c =>
+        c.name.toLowerCase().includes(searchLower) ||
+        c.dial.includes(search) ||
+        c.code.toLowerCase().includes(searchLower)
+      )
+    : null; // null = show grouped view
+
+  const rowStyle = isSelected => ({
+    display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 14px',
+    border: 'none', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem',
+    color: 'var(--ska-text)', background: isSelected ? 'var(--ska-primary-dim)' : 'transparent',
+  });
 
   return (
     <div ref={wrapRef} style={{ position: 'relative', display: 'flex' }}>
-      <button type="button" onClick={() => setOpen(o => !o)} style={{
-        display: 'flex', alignItems: 'center', gap: 4, padding: '0 10px',
-        borderRadius: '8px 0 0 8px', border: '1px solid var(--ska-border)', borderRight: 'none',
-        background: 'var(--ska-surface-high)', cursor: 'pointer', flexShrink: 0, minHeight: 40, whiteSpace: 'nowrap',
-      }}>
-        <span style={{ fontSize: '1.125rem', lineHeight: 1 }}>{country.flag}</span>
-        <span style={{ fontSize: '0.8125rem', color: 'var(--ska-text-3)', fontWeight: 600 }}>{country.dial}</span>
-        <span className="ska-icon" style={{ fontSize: 14, color: 'var(--ska-text-3)' }}>expand_more</span>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 5, padding: '0 10px',
+          borderRadius: '8px 0 0 8px', border: '1px solid var(--ska-border)', borderRight: 'none',
+          background: open ? 'var(--ska-primary-dim)' : 'var(--ska-surface-high)',
+          cursor: 'pointer', flexShrink: 0, minHeight: 40, whiteSpace: 'nowrap',
+          transition: 'background 0.15s',
+        }}
+      >
+        <span style={{ fontSize: '1.25rem', lineHeight: 1 }}>{country.flag}</span>
+        <span style={{ fontSize: '0.8125rem', color: 'var(--ska-text-3)', fontWeight: 700 }}>{country.dial}</span>
+        <span className="ska-icon" style={{ fontSize: 14, color: 'var(--ska-text-3)', transition: 'transform 0.15s', transform: open ? 'rotate(180deg)' : 'none' }}>
+          expand_more
+        </span>
       </button>
-      <input type="tel" className="ska-input" value={localNum}
+      <input
+        type="tel"
+        className="ska-input"
+        value={localNum}
         onChange={e => onChange(country.dial + e.target.value)}
         placeholder={country.placeholder || placeholder}
         style={{ borderRadius: '0 8px 8px 0', flex: 1 }}
@@ -156,30 +195,75 @@ function PhoneInput({ value, onChange, placeholder = 'Phone number', defaultCoun
         <div style={{
           position: 'fixed', top: dropRect.top, left: dropRect.left, zIndex: 99999,
           background: 'var(--ska-surface)', border: '1px solid var(--ska-border)',
-          borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-          width: 260, maxHeight: 280, overflow: 'hidden',
+          borderRadius: 12, boxShadow: '0 12px 40px rgba(0,0,0,0.32)',
+          width: 300, maxHeight: 320, overflow: 'hidden',
           display: 'flex', flexDirection: 'column',
         }}>
-          <div style={{ padding: '8px 10px', borderBottom: '1px solid var(--ska-border)' }}>
-            <input type="text" placeholder="Search country…" value={search} autoFocus
-              onChange={e => setSearch(e.target.value)}
-              style={{ width: '100%', border: '1px solid var(--ska-border)', borderRadius: 6, padding: '6px 10px', fontSize: '0.8125rem', background: 'var(--ska-surface-high)', color: 'var(--ska-text)', outline: 'none', boxSizing: 'border-box' }}
-            />
+          {/* Search box */}
+          <div style={{ padding: '8px 10px', borderBottom: '1px solid var(--ska-border)', flexShrink: 0 }}>
+            <div style={{ position: 'relative' }}>
+              <span className="ska-icon" style={{
+                position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)',
+                fontSize: 16, color: 'var(--ska-text-3)', pointerEvents: 'none',
+              }}>search</span>
+              <input
+                ref={searchInputRef}
+                type="text"
+                placeholder="Search country or code…"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                style={{
+                  width: '100%', border: '1px solid var(--ska-border)', borderRadius: 8,
+                  padding: '7px 10px 7px 30px', fontSize: '0.8125rem',
+                  background: 'var(--ska-surface-high)', color: 'var(--ska-text)',
+                  outline: 'none', boxSizing: 'border-box',
+                }}
+              />
+            </div>
           </div>
-          <div style={{ overflowY: 'auto', flex: 1 }}>
-            {filtered.map(c => (
-              <button key={c.code} type="button" onClick={() => selectCountry(c)} style={{
-                display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 14px',
-                border: 'none', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem', color: 'var(--ska-text)',
-                background: c.code === country.code ? 'var(--ska-surface-high)' : 'transparent',
-              }}>
-                <span style={{ fontSize: '1.125rem', lineHeight: 1 }}>{c.flag}</span>
-                <span style={{ flex: 1, fontWeight: c.code === country.code ? 700 : 400 }}>{c.name}</span>
-                <span style={{ fontSize: '0.8125rem', color: 'var(--ska-text-3)', flexShrink: 0 }}>{c.dial}</span>
-              </button>
-            ))}
-            {filtered.length === 0 && (
-              <div style={{ padding: 16, textAlign: 'center', fontSize: '0.8125rem', color: 'var(--ska-text-3)' }}>No countries found</div>
+
+          {/* Country list — inline rows (no sub-component) to prevent remount flicker */}
+          <div style={{ overflowY: 'auto', flex: 1, scrollbarWidth: 'thin' }}>
+            {displayList ? (
+              <>
+                {displayList.map(c => (
+                  <button key={c.code} type="button" onClick={() => selectCountry(c)} style={rowStyle(c.code === country.code)}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'var(--ska-surface-high)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = c.code === country.code ? 'var(--ska-primary-dim)' : 'transparent'; }}>
+                    <span style={{ fontSize: '1.25rem', lineHeight: 1, flexShrink: 0 }}>{c.flag}</span>
+                    <span style={{ flex: 1, fontWeight: c.code === country.code ? 700 : 400 }}>{c.name}</span>
+                    <span style={{ fontSize: '0.8125rem', color: 'var(--ska-text-3)', flexShrink: 0, fontFamily: 'monospace' }}>{c.dial}</span>
+                  </button>
+                ))}
+                {displayList.length === 0 && (
+                  <div style={{ padding: '20px 16px', textAlign: 'center', fontSize: '0.8125rem', color: 'var(--ska-text-3)' }}>
+                    No countries found
+                  </div>
+                )}
+              </>
+            ) : (
+              PHONE_COUNTRY_GROUPS.map((grp, gi) => (
+                <React.Fragment key={grp}>
+                  <div style={{
+                    padding: gi === 0 ? '8px 14px 4px' : '10px 14px 4px',
+                    fontSize: '0.625rem', fontWeight: 800, textTransform: 'uppercase',
+                    letterSpacing: '0.1em', color: 'var(--ska-primary)',
+                    borderTop: gi > 0 ? '1px solid var(--ska-border)' : 'none',
+                    background: 'var(--ska-surface)',
+                  }}>
+                    {grp}
+                  </div>
+                  {PHONE_COUNTRIES.filter(c => c.group === grp).map(c => (
+                    <button key={c.code} type="button" onClick={() => selectCountry(c)} style={rowStyle(c.code === country.code)}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'var(--ska-surface-high)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = c.code === country.code ? 'var(--ska-primary-dim)' : 'transparent'; }}>
+                      <span style={{ fontSize: '1.25rem', lineHeight: 1, flexShrink: 0 }}>{c.flag}</span>
+                      <span style={{ flex: 1, fontWeight: c.code === country.code ? 700 : 400 }}>{c.name}</span>
+                      <span style={{ fontSize: '0.8125rem', color: 'var(--ska-text-3)', flexShrink: 0, fontFamily: 'monospace' }}>{c.dial}</span>
+                    </button>
+                  ))}
+                </React.Fragment>
+              ))
             )}
           </div>
         </div>
@@ -413,6 +497,120 @@ function CredentialCard({ info, onDone, onLinkParent }) {
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ── ParentSearchInline ─────────────────────────────────────────────
+function ParentSearchInline({ value, onChange }) {
+  const [query,    setQuery]    = useState('');
+  const [results,  setResults]  = useState([]);
+  const [searching,setSearching]= useState(false);
+  const [selected, setSelected] = useState(null);
+  const wrapRef = useRef(null);
+
+  useEffect(() => {
+    if (!query.trim()) { setResults([]); return; }
+    const t = setTimeout(() => {
+      setSearching(true);
+      ApiClient.get(`/api/school/parents/?q=${encodeURIComponent(query)}`)
+        .then(d => setResults(d.parents || []))
+        .catch(() => setResults([]))
+        .finally(() => setSearching(false));
+    }, 320);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  useEffect(() => {
+    if (results.length === 0) return;
+    const close = e => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setResults([]); };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [results]);
+
+  const select = p => {
+    setSelected(p); setResults([]); setQuery('');
+    onChange(String(p.id));
+  };
+
+  const clear = () => {
+    setSelected(null); setQuery(''); setResults([]);
+    onChange('');
+  };
+
+  if (selected || (value && !selected)) {
+    return (
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
+        borderRadius: 8, border: '1.5px solid var(--ska-primary)',
+        background: 'var(--ska-primary-dim)',
+      }}>
+        <InitialsAvatar name={selected?.name || `#${value}`} size={32} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ margin: 0, fontWeight: 700, fontSize: '0.875rem', color: 'var(--ska-text)' }}>
+            {selected?.name || `Parent ID ${value}`}
+          </p>
+          {selected && (
+            <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--ska-text-3)' }}>
+              {selected.relationship}{selected.phone ? ` · ${selected.phone}` : ''}
+              {selected.children?.length > 0 ? ` · ${selected.children.length} child${selected.children.length !== 1 ? 'ren' : ''} linked` : ''}
+            </p>
+          )}
+        </div>
+        <button type="button" onClick={clear} title="Remove"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ska-text-3)', padding: 4, flexShrink: 0 }}>
+          <Ic name="close" size="sm" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div ref={wrapRef} style={{ position: 'relative' }}>
+      <div className="ska-search" style={{ margin: 0 }}>
+        <Ic name="search" />
+        <input className="ska-search-input" value={query}
+          onChange={e => setQuery(e.target.value)}
+          placeholder="Search parents by name, phone or email…" />
+        {searching && (
+          <span style={{ fontSize: '0.75rem', color: 'var(--ska-text-3)', paddingRight: 10, flexShrink: 0 }}>
+            Searching…
+          </span>
+        )}
+      </div>
+      {results.length > 0 && (
+        <div style={{
+          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 200,
+          background: 'var(--ska-surface)', border: '1px solid var(--ska-border)',
+          borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.22)',
+          maxHeight: 220, overflowY: 'auto', marginTop: 4,
+        }}>
+          {results.map(p => (
+            <button key={p.id} type="button" onClick={() => select(p)} style={{
+              display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+              padding: '10px 14px', border: 'none', background: 'transparent',
+              cursor: 'pointer', textAlign: 'left',
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = 'var(--ska-surface-high)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+              <InitialsAvatar name={p.name} size={32} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.875rem', color: 'var(--ska-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</p>
+                <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--ska-text-3)' }}>
+                  {p.relationship}{p.phone ? ` · ${p.phone}` : ''}
+                  {p.children?.length > 0 ? ` · ${p.children.length} child${p.children.length !== 1 ? 'ren' : ''} linked` : ''}
+                </p>
+              </div>
+              <Ic name="chevron_right" size="sm" style={{ color: 'var(--ska-text-3)', flexShrink: 0 }} />
+            </button>
+          ))}
+        </div>
+      )}
+      {query.trim() && !searching && results.length === 0 && (
+        <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: 'var(--ska-text-3)' }}>
+          No parents found — leave empty to create a new account below.
+        </p>
+      )}
     </div>
   );
 }
@@ -744,6 +942,60 @@ function LinkParentDrawer({ student, onClose, onLinked }) {
   );
 }
 
+const FORM_STEPS = [
+  { label: 'Personal',   icon: 'person'           },
+  { label: 'Enrollment', icon: 'school'            },
+  { label: 'Guardian',   icon: 'family_restroom'   },
+  { label: 'Health',     icon: 'medical_services'  },
+  { label: 'Documents',  icon: 'folder_open'       },
+  { label: 'Review',     icon: 'task_alt'          },
+];
+
+function StepBar({ steps, current }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'flex-start',
+      paddingBottom: 20, marginBottom: 4,
+      overflowX: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none',
+    }}>
+      {steps.map((step, i) => {
+        const done   = i < current;
+        const active = i === current;
+        return (
+          <React.Fragment key={step.label}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, minWidth: 52 }}>
+              <div style={{
+                width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: done ? 'var(--ska-green)' : active ? 'var(--ska-primary)' : 'var(--ska-surface-high)',
+                border: `2px solid ${done ? 'var(--ska-green)' : active ? 'var(--ska-primary)' : 'var(--ska-border)'}`,
+                transition: 'background 0.2s, border-color 0.2s',
+              }}>
+                {done
+                  ? <Ic name="check" style={{ color: '#fff', fontSize: 16 }} />
+                  : <Ic name={step.icon} style={{ color: active ? '#fff' : 'var(--ska-text-3)', fontSize: 16 }} />
+                }
+              </div>
+              <span style={{
+                fontSize: '0.625rem', fontWeight: active ? 700 : 500, textAlign: 'center',
+                color: active ? 'var(--ska-primary)' : done ? 'var(--ska-green)' : 'var(--ska-text-3)',
+                whiteSpace: 'nowrap',
+              }}>{step.label}</span>
+            </div>
+            {i < steps.length - 1 && (
+              <div style={{
+                flex: 1, height: 2, margin: '16px 4px 0', minWidth: 8,
+                background: done ? 'var(--ska-green)' : 'var(--ska-border)',
+                transition: 'background 0.2s',
+              }} />
+            )}
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+}
+
 const DRAFT_KEY = 'ek_sms_student_form_draft';
 
 
@@ -762,7 +1014,7 @@ export function StudentsPage({ school, openAddSignal }) {
   const [generatingAdmNo,     setGeneratingAdmNo]     = useState(false);
   const [showFormPwd,         setShowFormPwd]         = useState(false);
   const [showFatherPwd,       setShowFatherPwd]       = useState(false);
-  const [showMotherPwd,       setShowMotherPwd]       = useState(false);
+  const [showGuardian2Pwd,    setShowGuardian2Pwd]    = useState(false);
   const [showGuardian2,       setShowGuardian2]       = useState(false);
   const [credSuccess,         setCredSuccess]         = useState(null);
   const [linkedParents,       setLinkedParents]       = useState([]);
@@ -771,10 +1023,8 @@ export function StudentsPage({ school, openAddSignal }) {
   const [pendingLinkStudent,  setPendingLinkStudent]  = useState(null);
   const [loadFailed,          setLoadFailed]          = useState(false);
   const [fieldErrors,         setFieldErrors]         = useState({});
-  const [step,                setStep]                = useState(0);
-  const [,                    setDupWarning]          = useState(null);
-  const [,                    setDupIgnored]          = useState(false);
   const [draftRestored,       setDraftRestored]       = useState(false);
+  const [formStep,            setFormStep]            = useState(0);
   const [stats,               setStats]               = useState(null);
   const prevSignal = useRef(openAddSignal);
 
@@ -785,7 +1035,7 @@ export function StudentsPage({ school, openAddSignal }) {
 
   useEffect(() => {
     if (modal !== 'add') return;
-    const { profile_photo, student_password, admission_number, ...saveable } = form;
+    const { profile_photo, student_password, admission_number, father_password, guardian2_password, ...saveable } = form;
     const t = setTimeout(() => {
       try { localStorage.setItem(DRAFT_KEY, JSON.stringify(saveable)); } catch { /* quota exceeded */ }
     }, 600);
@@ -802,8 +1052,8 @@ export function StudentsPage({ school, openAddSignal }) {
 
   const closeModal = () => {
     setModal(null); setError(''); setFieldErrors({});
-    setStep(0); setDupWarning(null); setDupIgnored(false);
-    setShowFatherPwd(false); setShowMotherPwd(false); setShowGuardian2(false);
+    setShowFatherPwd(false); setShowGuardian2Pwd(false); setShowGuardian2(false);
+    setFormStep(0);
   };
 
   const load = useCallback(async (q = '') => {
@@ -845,12 +1095,12 @@ export function StudentsPage({ school, openAddSignal }) {
     admission_number: '', classroom_id: '', student_status: 'active', enrollment_date: '',
     student_type: '', fee_category: '', home_language: '', intake_term: '', is_repeater: false,
     hostel_house: '', transport_route: '',
-    previous_school: '', last_class_completed: '', leaving_reason: '',
+    is_transfer: false, previous_school: '', last_class_completed: '', leaving_reason: '',
     student_username: '', student_password: '',
     father_relationship: 'Father', father_name: '', father_occupation: '', father_phone: '', father_email: '',
     father_address: '', father_whatsapp: '', father_username: '', father_password: '', father_existing_id: '',
-    mother_relationship: 'Mother', mother_name: '', mother_occupation: '', mother_phone: '', mother_email: '',
-    mother_address: '', mother_whatsapp: '', mother_username: '', mother_password: '', mother_existing_id: '',
+    guardian2_relationship: 'Mother', guardian2_name: '', guardian2_occupation: '', guardian2_phone: '', guardian2_email: '',
+    guardian2_address: '', guardian2_whatsapp: '', guardian2_username: '', guardian2_password: '', guardian2_existing_id: '',
     emergency_name: '', emergency_relationship: '', emergency_phone: '', emergency_address: '',
     blood_group: '', allergies: '', medical_conditions: '', doctor_name: '', doctor_phone: '',
     sen_notes: '', sen_iep: false,
@@ -863,13 +1113,15 @@ export function StudentsPage({ school, openAddSignal }) {
 
   const openAdd = useCallback(() => {
     const pwd = generatePassword();
-    let base = { ...emptyForm, student_password: pwd };
+    let base = { ...emptyForm, student_password: pwd, father_password: generatePassword(), guardian2_password: generatePassword() };
     let hasDraft = false;
     try {
       const raw = localStorage.getItem(DRAFT_KEY);
       if (raw) {
         const draft = JSON.parse(raw);
-        base = { ...base, ...draft, student_password: pwd };
+        const validKeys = new Set(Object.keys(emptyForm));
+        const safeDraft = Object.fromEntries(Object.entries(draft).filter(([k]) => validKeys.has(k)));
+        base = { ...base, ...safeDraft, student_password: pwd, father_password: base.father_password, guardian2_password: base.guardian2_password };
         hasDraft = true;
       }
     } catch { /* corrupt draft — ignore */ }
@@ -878,15 +1130,18 @@ export function StudentsPage({ school, openAddSignal }) {
     setDraftRestored(hasDraft);
     setProfilePhotoPreview(null);
     setShowFormPwd(true);
-    setShowFatherPwd(false); setShowMotherPwd(false); setShowGuardian2(false);
+    setShowFatherPwd(false); setShowGuardian2Pwd(false); setShowGuardian2(false);
     setError('');
     setFieldErrors({});
-    setStep(0); setDupWarning(null); setDupIgnored(false);
+    setFormStep(0);
     setModal('add');
 
     // Always refresh admission number from API regardless of draft
     setGeneratingAdmNo(true);
-    ApiClient.get('/api/school/students/next-admission-number/')
+    Promise.race([
+      ApiClient.get('/api/school/students/next-admission-number/'),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('adm-timeout')), 5000)),
+    ])
       .then(d => { if (d.admission_number) setForm(f => ({ ...f, admission_number: d.admission_number })); })
       .catch(() => {
         const y = new Date().getFullYear();
@@ -917,15 +1172,16 @@ export function StudentsPage({ school, openAddSignal }) {
       fee_category: s.fee_category || '', home_language: s.home_language || '',
       intake_term: s.intake_term || '', is_repeater: !!s.is_repeater,
       hostel_house: s.hostel_house || '', transport_route: s.transport_route || '',
+      is_transfer: !!(s.previous_school || s.last_class_completed || s.leaving_reason),
       previous_school: s.previous_school || '', last_class_completed: s.last_class_completed || '',
       leaving_reason: s.leaving_reason || '',
       student_username: '', student_password: '',
       father_relationship: 'Father', father_name: '', father_occupation: '',
       father_phone: '', father_email: '', father_address: '', father_whatsapp: '',
       father_username: '', father_password: '', father_existing_id: '',
-      mother_relationship: 'Mother', mother_name: '', mother_occupation: '',
-      mother_phone: '', mother_email: '', mother_address: '', mother_whatsapp: '',
-      mother_username: '', mother_password: '', mother_existing_id: '',
+      guardian2_relationship: 'Mother', guardian2_name: '', guardian2_occupation: '',
+      guardian2_phone: '', guardian2_email: '', guardian2_address: '', guardian2_whatsapp: '',
+      guardian2_username: '', guardian2_password: '', guardian2_existing_id: '',
       emergency_name: s.emergency_name || '', emergency_relationship: s.emergency_relationship || '',
       emergency_phone: s.emergency_phone || '', emergency_address: s.emergency_address || '',
       blood_group: s.blood_type || '', allergies: s.allergies || '',
@@ -943,8 +1199,8 @@ export function StudentsPage({ school, openAddSignal }) {
     });
     setProfilePhotoPreview(s.passport_picture || null);
     setDraftRestored(false);
-    setShowFatherPwd(false); setShowMotherPwd(false); setShowGuardian2(false);
-    setError(''); setFieldErrors({}); setStep(0); setDupWarning(null); setDupIgnored(false); setModal(s);
+    setShowFatherPwd(false); setShowGuardian2Pwd(false); setShowGuardian2(false);
+    setError(''); setFieldErrors({}); setModal(s); setFormStep(0);
   };
 
   const handlePhotoChange = e => {
@@ -972,6 +1228,12 @@ export function StudentsPage({ school, openAddSignal }) {
       clean.is_active = ['active', 'suspended'].includes(clean.student_status);
       delete clean.student_status;
     }
+    // Frontend-only fields — strip before sending
+    delete clean.is_transfer;
+    // Remap guardian2_* → mother_* for API compatibility
+    ['relationship','name','occupation','phone','email','address','whatsapp','username','password','existing_id'].forEach(k => {
+      if (`guardian2_${k}` in clean) { clean[`mother_${k}`] = clean[`guardian2_${k}`]; delete clean[`guardian2_${k}`]; }
+    });
 
     if (clean.profile_photo instanceof File || clean.profile_photo instanceof Blob) {
       const fd = new FormData();
@@ -989,8 +1251,11 @@ export function StudentsPage({ school, openAddSignal }) {
   const validate = () => {
     const errs = {};
     const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!form.first_name?.trim()) errs.first_name = 'First name is required';
-    if (!form.last_name?.trim())  errs.last_name  = 'Last name is required';
+    // Step 0 required
+    if (!form.first_name?.trim())   errs.first_name   = 'First name is required';
+    if (!form.last_name?.trim())    errs.last_name    = 'Last name is required';
+    if (!form.gender)               errs.gender       = 'Gender is required';
+    if (!form.date_of_birth)        errs.date_of_birth = 'Date of birth is required';
     if (form.email?.trim() && !emailRe.test(form.email.trim())) errs.email = 'Enter a valid email address';
     if (form.date_of_birth) {
       const dob = new Date(form.date_of_birth), now = new Date();
@@ -1001,10 +1266,83 @@ export function StudentsPage({ school, openAddSignal }) {
         if (yrs > 30) errs.date_of_birth = 'Please verify — age is over 30 years';
       }
     }
+    // Step 1 required
+    if (!form.classroom_id)         errs.classroom_id    = 'Class / Grade must be assigned before enrolling';
+    if (!form.enrollment_date)      errs.enrollment_date = 'Enrollment date is required';
+    // Guardian emails
     if (form.father_email?.trim() && !emailRe.test(form.father_email.trim())) errs.father_email = 'Enter a valid email address';
-    if (form.mother_email?.trim() && !emailRe.test(form.mother_email.trim())) errs.mother_email = 'Enter a valid email address';
+    if (form.guardian2_email?.trim() && !emailRe.test(form.guardian2_email.trim())) errs.guardian2_email = 'Enter a valid email address';
     setFieldErrors(errs);
     return errs;
+  };
+
+  const scrollStepTop = () => requestAnimationFrame(() =>
+    document.querySelector('.ska-modal')?.scrollTo({ top: 0, behavior: 'smooth' })
+  );
+
+  const handleStepNext = () => {
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (formStep === 0) {
+      const errs = {};
+      if (!form.first_name?.trim())  errs.first_name   = 'First name is required';
+      if (!form.last_name?.trim())   errs.last_name    = 'Last name is required';
+      if (!form.gender)              errs.gender       = 'Gender is required';
+      if (!form.date_of_birth)       errs.date_of_birth = 'Date of birth is required';
+      if (form.email?.trim() && !emailRe.test(form.email.trim())) errs.email = 'Enter a valid email address';
+      if (form.date_of_birth) {
+        const dob = new Date(form.date_of_birth), now = new Date();
+        if (dob > now) errs.date_of_birth = 'Date of birth cannot be in the future';
+        else {
+          const yrs = (now - dob) / (365.25 * 24 * 3600 * 1000);
+          if (yrs < 3)  errs.date_of_birth = 'Student appears too young for enrolment';
+          if (yrs > 30) errs.date_of_birth = 'Please verify — age is over 30 years';
+        }
+      }
+      if (Object.keys(errs).length) {
+        setFieldErrors(errs);
+        setError(Object.keys(errs).length === 1
+          ? 'Please fix the highlighted field below.'
+          : `Please fix ${Object.keys(errs).length} highlighted fields below.`);
+        return;
+      }
+    }
+
+    if (formStep === 1) {
+      const errs = {};
+      if (!form.classroom_id)    errs.classroom_id    = 'Class / Grade must be assigned';
+      if (!form.enrollment_date) errs.enrollment_date = 'Enrollment date is required';
+      if (Object.keys(errs).length) {
+        setFieldErrors(errs);
+        setError(Object.keys(errs).length === 1
+          ? 'Please fix the highlighted field below.'
+          : `Please fix ${Object.keys(errs).length} highlighted fields below.`);
+        return;
+      }
+    }
+
+    if (formStep === 2) {
+      const errs = {};
+      if (form.father_email?.trim() && !emailRe.test(form.father_email.trim())) errs.father_email = 'Enter a valid email address';
+      if (form.guardian2_email?.trim() && !emailRe.test(form.guardian2_email.trim())) errs.guardian2_email = 'Enter a valid email address';
+      if (Object.keys(errs).length) {
+        setFieldErrors(errs);
+        setError(Object.keys(errs).length === 1
+          ? 'Please fix the highlighted field below.'
+          : `Please fix ${Object.keys(errs).length} highlighted fields below.`);
+        return;
+      }
+    }
+
+    setError(''); setFieldErrors({});
+    setFormStep(s => s + 1);
+    scrollStepTop();
+  };
+
+  const handleStepBack = () => {
+    setError(''); setFieldErrors({});
+    setFormStep(s => s - 1);
+    scrollStepTop();
   };
 
   const handleSave = async () => {
@@ -1415,7 +1753,7 @@ export function StudentsPage({ school, openAddSignal }) {
 
       {/* ── Add / Edit Modal ───────────────────────────────────── */}
       {modal && (
-        <Modal title={modal === 'add' ? 'Register New Student' : 'Edit Student'} onClose={() => { setModal(null); setError(''); setFieldErrors({}); }}>
+        <Modal title={modal === 'add' ? 'Register New Student' : 'Edit Student'} onClose={closeModal}>
           {error && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
               <p className="ska-form-error" style={{ margin: 0, flex: 1 }}>{error}</p>
@@ -1445,9 +1783,16 @@ export function StudentsPage({ school, openAddSignal }) {
                   try { localStorage.removeItem(DRAFT_KEY); } catch { /* */ }
                   setDraftRestored(false);
                   setGeneratingAdmNo(true);
-                  ApiClient.get('/api/school/students/next-admission-number/')
+                  Promise.race([
+                    ApiClient.get('/api/school/students/next-admission-number/'),
+                    new Promise((_, rej) => setTimeout(() => rej(new Error('adm-timeout')), 5000)),
+                  ])
                     .then(d => { if (d.admission_number) setForm(f => ({ ...f, admission_number: d.admission_number })); })
-                    .catch(() => {})
+                    .catch(() => {
+                      const y = new Date().getFullYear();
+                      const seq = String(Date.now()).slice(-4);
+                      setForm(f => ({ ...f, admission_number: `STU/${y}/${seq}` }));
+                    })
                     .finally(() => setGeneratingAdmNo(false));
                 }}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ska-primary)', fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap', padding: 0 }}>
@@ -1456,8 +1801,13 @@ export function StudentsPage({ school, openAddSignal }) {
             </div>
           )}
 
+          <StepBar steps={FORM_STEPS} current={formStep} />
+
+          {/* ── Step 0: Personal Information ── */}
+          {formStep === 0 && <>
+
           {/* Profile photo */}
-          <div className="ska-card ska-card-pad" style={{ marginBottom: 16 }}>
+          <div id="s-photo" className="ska-card ska-card-pad" style={{ marginBottom: 16 }}>
             <h3 className="ska-card-title" style={{ marginBottom: 12 }}>Profile Photo</h3>
             <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
               <div style={{
@@ -1487,7 +1837,7 @@ export function StudentsPage({ school, openAddSignal }) {
 
           {/* ── Student Portal Credentials ────────────────────── */}
           {modal === 'add' && (
-            <div className="ska-card ska-card-pad" style={{
+            <div id="s-creds" className="ska-card ska-card-pad" style={{
               marginTop: 16, marginBottom: 4,
               border: '1.5px solid var(--ska-primary)',
               background: 'var(--ska-primary-dim)',
@@ -1573,7 +1923,7 @@ export function StudentsPage({ school, openAddSignal }) {
           )}
 
           {/* ── Personal Information ─────────────────────────── */}
-          <div className="ska-card ska-card-pad" style={{ marginTop: 16, background: 'var(--ska-surface-high)' }}>
+          <div id="s-personal" className="ska-card ska-card-pad" style={{ marginTop: 16, background: 'var(--ska-surface-high)' }}>
             <h3 className="ska-card-title" style={{ marginBottom: 12 }}>Personal Information</h3>
             <div className="ska-form-grid">
               <label className="ska-form-group">
@@ -1597,16 +1947,19 @@ export function StudentsPage({ school, openAddSignal }) {
                 {fieldErrors.last_name && <span style={{ fontSize: '0.71875rem', color: 'var(--ska-error)', marginTop: 2 }}>{fieldErrors.last_name}</span>}
               </label>
               <label className="ska-form-group">
-                <span>Gender</span>
-                <select className="ska-input" value={form.gender} onChange={e => setForm(f => ({ ...f, gender: e.target.value }))}>
-                  <option value="">— Select —</option>
+                <span>Gender *</span>
+                <select className="ska-input" value={form.gender}
+                  style={fieldErrors.gender ? { borderColor: 'var(--ska-error)' } : {}}
+                  onChange={e => { setForm(f => ({ ...f, gender: e.target.value })); setFieldErrors(p => ({ ...p, gender: '' })); }}>
+                  <option value="">— Select gender —</option>
                   <option value="Male">Male</option>
                   <option value="Female">Female</option>
                   <option value="Other">Other / Prefer not to say</option>
                 </select>
+                {fieldErrors.gender && <span style={{ fontSize: '0.71875rem', color: 'var(--ska-error)', marginTop: 2 }}>{fieldErrors.gender}</span>}
               </label>
               <label className="ska-form-group">
-                <span>Date of Birth</span>
+                <span>Date of Birth *</span>
                 <input className="ska-input" type="date" value={form.date_of_birth}
                   max={new Date().toISOString().split('T')[0]}
                   style={fieldErrors.date_of_birth ? { borderColor: 'var(--ska-error)' } : {}}
@@ -1649,8 +2002,13 @@ export function StudentsPage({ school, openAddSignal }) {
             </div>
           </div>
 
+          </>}
+
+          {/* ── Step 1: Enrollment ── */}
+          {formStep === 1 && <>
+
           {/* ── Enrollment Details ───────────────────────────── */}
-          <div className="ska-card ska-card-pad" style={{ marginTop: 16, background: 'var(--ska-surface-high)' }}>
+          <div id="s-enroll" className="ska-card ska-card-pad" style={{ marginTop: 16, background: 'var(--ska-surface-high)' }}>
             <h3 className="ska-card-title" style={{ marginBottom: 12 }}>Enrollment Details</h3>
             <div className="ska-form-grid">
 
@@ -1668,19 +2026,27 @@ export function StudentsPage({ school, openAddSignal }) {
                   <input
                     className="ska-input"
                     value={generatingAdmNo ? 'Generating…' : form.admission_number}
-                    readOnly
-                    placeholder="Auto-generated on save"
-                    style={{ paddingRight: 40, fontFamily: 'monospace', letterSpacing: '0.04em', cursor: 'default' }}
+                    readOnly={generatingAdmNo}
+                    placeholder="Auto-generated — or type your own"
+                    style={{ paddingRight: 40, fontFamily: 'monospace', letterSpacing: '0.04em' }}
+                    onChange={e => !generatingAdmNo && setForm(f => ({ ...f, admission_number: e.target.value }))}
                   />
                   {modal === 'add' && !generatingAdmNo && (
                     <button
                       type="button"
-                      title="Generate a new admission number"
+                      title="Re-generate admission number"
                       onClick={() => {
                         setGeneratingAdmNo(true);
-                        ApiClient.get('/api/school/students/next-admission-number/')
+                        Promise.race([
+                          ApiClient.get('/api/school/students/next-admission-number/'),
+                          new Promise((_, rej) => setTimeout(() => rej(new Error('adm-timeout')), 5000)),
+                        ])
                           .then(d => { if (d.admission_number) setForm(f => ({ ...f, admission_number: d.admission_number })); })
-                          .catch(() => {})
+                          .catch(() => {
+                            const y = new Date().getFullYear();
+                            const seq = String(Date.now()).slice(-4);
+                            setForm(f => ({ ...f, admission_number: `STU/${y}/${seq}` }));
+                          })
                           .finally(() => setGeneratingAdmNo(false));
                       }}
                       style={{
@@ -1696,11 +2062,14 @@ export function StudentsPage({ school, openAddSignal }) {
               </label>
 
               <label className="ska-form-group">
-                <span>Class / Grade</span>
-                <select className="ska-input" value={form.classroom_id} onChange={e => setForm(f => ({ ...f, classroom_id: e.target.value }))}>
-                  <option value="">— No class —</option>
+                <span>Class / Grade *</span>
+                <select className="ska-input" value={form.classroom_id}
+                  style={fieldErrors.classroom_id ? { borderColor: 'var(--ska-error)' } : {}}
+                  onChange={e => { setForm(f => ({ ...f, classroom_id: e.target.value })); setFieldErrors(p => ({ ...p, classroom_id: '' })); }}>
+                  <option value="">— Assign a class —</option>
                   {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
+                {fieldErrors.classroom_id && <span style={{ fontSize: '0.71875rem', color: 'var(--ska-error)', marginTop: 2 }}>{fieldErrors.classroom_id}</span>}
               </label>
               {modal !== 'add' && (
                 <label className="ska-form-group">
@@ -1714,10 +2083,12 @@ export function StudentsPage({ school, openAddSignal }) {
                 </label>
               )}
               <label className="ska-form-group">
-                <span>Enrollment Date</span>
+                <span>Enrollment Date *</span>
                 <input className="ska-input" type="date" value={form.enrollment_date}
                   max={new Date().toISOString().split('T')[0]}
-                  onChange={e => setForm(f => ({ ...f, enrollment_date: e.target.value }))} />
+                  style={fieldErrors.enrollment_date ? { borderColor: 'var(--ska-error)' } : {}}
+                  onChange={e => { setForm(f => ({ ...f, enrollment_date: e.target.value })); setFieldErrors(p => ({ ...p, enrollment_date: '' })); }} />
+                {fieldErrors.enrollment_date && <span style={{ fontSize: '0.71875rem', color: 'var(--ska-error)', marginTop: 2 }}>{fieldErrors.enrollment_date}</span>}
               </label>
               <label className="ska-form-group">
                 <span>Student Type</span>
@@ -1777,8 +2148,18 @@ export function StudentsPage({ school, openAddSignal }) {
           </div>
 
           {/* ── Previous Schooling ───────────────────────────── */}
-          <div className="ska-card ska-card-pad" style={{ marginTop: 16, background: 'var(--ska-surface-high)' }}>
+          <div id="s-prev" className="ska-card ska-card-pad" style={{ marginTop: 16, background: 'var(--ska-surface-high)' }}>
             <h3 className="ska-card-title" style={{ marginBottom: 12 }}>Previous Schooling</h3>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: form.is_transfer ? 16 : 0 }}>
+              <input type="checkbox" checked={!!form.is_transfer}
+                onChange={e => setForm(f => ({
+                  ...f, is_transfer: e.target.checked,
+                  ...(e.target.checked ? {} : { previous_school: '', last_class_completed: '', leaving_reason: '' }),
+                }))}
+                style={{ width: 16, height: 16, accentColor: 'var(--ska-primary)', cursor: 'pointer', flexShrink: 0 }} />
+              <span style={{ fontSize: '0.875rem' }}>Transfer / returning student (attended another school before)</span>
+            </label>
+            {form.is_transfer && (
             <div className="ska-form-grid">
               <label className="ska-form-group">
                 <span>Previous School Attended</span>
@@ -1795,10 +2176,16 @@ export function StudentsPage({ school, openAddSignal }) {
                   style={{ resize: 'vertical', fontFamily: 'inherit' }} />
               </label>
             </div>
+            )}
           </div>
 
+          </>}
+
+          {/* ── Step 2: Guardian & Emergency ── */}
+          {formStep === 2 && <>
+
           {/* Parent / Guardian */}
-          <div className="ska-card ska-card-pad" style={{ marginTop: 16, background: 'var(--ska-surface-high)' }}>
+          <div id="s-guardian" className="ska-card ska-card-pad" style={{ marginTop: 16, background: 'var(--ska-surface-high)' }}>
             <h3 className="ska-card-title" style={{ marginBottom: 12 }}>Parent / Guardian Information</h3>
             <div className="ska-form-grid">
 
@@ -1807,16 +2194,19 @@ export function StudentsPage({ school, openAddSignal }) {
                 <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--ska-primary)' }}>Guardian 1</span>
                 <span style={{ fontSize: '0.625rem', fontWeight: 600, padding: '2px 7px', borderRadius: 20, background: 'var(--ska-primary)', color: '#fff', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Primary Contact</span>
               </div>
-              <label className="ska-form-group" style={{ gridColumn: '1 / -1' }}>
+
+              {/* Link existing parent — search by name */}
+              <div className="ska-form-group" style={{ gridColumn: '1 / -1' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   Link Existing Parent Account
-                  <span style={{ fontSize: '0.625rem', fontWeight: 600, color: 'var(--ska-text-3)' }}>optional — enter parent ID to link instead of creating new</span>
+                  <span style={{ fontSize: '0.625rem', fontWeight: 600, color: 'var(--ska-text-3)' }}>optional — search by name to link instead of creating new</span>
                 </span>
-                <input className="ska-input" inputMode="numeric" value={form.father_existing_id}
-                  placeholder="e.g. 42 (leave blank to create a new account)"
-                  style={{ maxWidth: 240 }}
-                  onChange={e => setForm(f => ({ ...f, father_existing_id: e.target.value.replace(/\D/g, '') }))} />
-              </label>
+                <ParentSearchInline
+                  value={form.father_existing_id}
+                  onChange={id => setForm(f => ({ ...f, father_existing_id: id }))}
+                />
+              </div>
+
               {!form.father_existing_id && (<>
                 <label className="ska-form-group">
                   <span>Relationship</span>
@@ -1853,18 +2243,29 @@ export function StudentsPage({ school, openAddSignal }) {
                   <textarea className="ska-input" rows={2} value={form.father_address}
                     onChange={e => setForm(f => ({ ...f, father_address: e.target.value }))}
                     style={{ resize: 'vertical', fontFamily: 'inherit' }} /></label>
-                <label className="ska-form-group"><span>Parent Login Username</span>
-                  <input className="ska-input" autoComplete="off" value={form.father_username} onChange={e => setForm(f => ({ ...f, father_username: e.target.value }))} /></label>
-                <label className="ska-form-group"><span>Parent Login Password</span>
+                <label className="ska-form-group">
+                  <span>Parent Login Username</span>
+                  <input className="ska-input" autoComplete="off" value={form.father_username}
+                    placeholder={form.father_name ? `e.g. par_${form.father_name.split(' ').pop().toLowerCase().replace(/[^a-z0-9]/g, '')}` : 'e.g. par_smith'}
+                    onChange={e => setForm(f => ({ ...f, father_username: e.target.value }))} />
+                  <span style={{ fontSize: '0.71875rem', color: 'var(--ska-text-3)', marginTop: 2 }}>Used to log in to the parent portal. Must be unique.</span>
+                </label>
+                <label className="ska-form-group">
+                  <span>Parent Login Password</span>
                   <div style={{ position: 'relative' }}>
                     <input className="ska-input" type={showFatherPwd ? 'text' : 'password'} autoComplete="new-password" value={form.father_password}
-                      style={{ paddingRight: 36 }}
+                      style={{ paddingRight: 72 }}
                       onChange={e => setForm(f => ({ ...f, father_password: e.target.value }))} />
-                    <button type="button" title={showFatherPwd ? 'Hide' : 'Show'}
-                      onClick={() => setShowFatherPwd(p => !p)}
-                      style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ska-text-3)', padding: 4 }}>
-                      <Ic name={showFatherPwd ? 'visibility_off' : 'visibility'} size="sm" />
-                    </button>
+                    <div style={{ position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)', display: 'flex', gap: 0 }}>
+                      <button type="button" title="Regenerate password" onClick={() => setForm(f => ({ ...f, father_password: generatePassword() }))}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ska-text-3)', padding: 4 }}>
+                        <Ic name="refresh" size="sm" />
+                      </button>
+                      <button type="button" title={showFatherPwd ? 'Hide' : 'Show'} onClick={() => setShowFatherPwd(p => !p)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ska-text-3)', padding: 4 }}>
+                        <Ic name={showFatherPwd ? 'visibility_off' : 'visibility'} size="sm" />
+                      </button>
+                    </div>
                   </div>
                 </label>
               </>)}
@@ -1884,21 +2285,24 @@ export function StudentsPage({ school, openAddSignal }) {
                 <div style={{ gridColumn: '1 / -1', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--ska-primary)', marginTop: 4 }}>
                   Guardian 2
                 </div>
-                <label className="ska-form-group" style={{ gridColumn: '1 / -1' }}>
+
+                {/* Link existing parent — search by name */}
+                <div className="ska-form-group" style={{ gridColumn: '1 / -1' }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     Link Existing Parent Account
-                    <span style={{ fontSize: '0.625rem', fontWeight: 600, color: 'var(--ska-text-3)' }}>optional — enter parent ID to link instead of creating new</span>
+                    <span style={{ fontSize: '0.625rem', fontWeight: 600, color: 'var(--ska-text-3)' }}>optional — search by name to link instead of creating new</span>
                   </span>
-                  <input className="ska-input" inputMode="numeric" value={form.mother_existing_id}
-                    placeholder="e.g. 42 (leave blank to create a new account)"
-                    style={{ maxWidth: 240 }}
-                    onChange={e => setForm(f => ({ ...f, mother_existing_id: e.target.value.replace(/\D/g, '') }))} />
-                </label>
-                {!form.mother_existing_id && (<>
+                  <ParentSearchInline
+                    value={form.guardian2_existing_id}
+                    onChange={id => setForm(f => ({ ...f, guardian2_existing_id: id }))}
+                  />
+                </div>
+
+                {!form.guardian2_existing_id && (<>
                   <label className="ska-form-group">
                     <span>Relationship</span>
-                    <select className="ska-input" value={form.mother_relationship}
-                      onChange={e => setForm(f => ({ ...f, mother_relationship: e.target.value }))}>
+                    <select className="ska-input" value={form.guardian2_relationship}
+                      onChange={e => setForm(f => ({ ...f, guardian2_relationship: e.target.value }))}>
                       <option value="">— Select —</option>
                       <option value="Father">Father</option>
                       <option value="Mother">Mother</option>
@@ -1912,36 +2316,47 @@ export function StudentsPage({ school, openAddSignal }) {
                       <option value="Other">Other</option>
                     </select>
                   </label>
-                  <label className="ska-form-group"><span>{form.mother_relationship || 'Guardian 2'} Name</span>
-                    <input className="ska-input" value={form.mother_name} onChange={e => setForm(f => ({ ...f, mother_name: e.target.value }))} /></label>
+                  <label className="ska-form-group"><span>{form.guardian2_relationship || 'Guardian 2'} Name</span>
+                    <input className="ska-input" value={form.guardian2_name} onChange={e => setForm(f => ({ ...f, guardian2_name: e.target.value }))} /></label>
                   <label className="ska-form-group"><span>Occupation</span>
-                    <input className="ska-input" value={form.mother_occupation} onChange={e => setForm(f => ({ ...f, mother_occupation: e.target.value }))} /></label>
+                    <input className="ska-input" value={form.guardian2_occupation} onChange={e => setForm(f => ({ ...f, guardian2_occupation: e.target.value }))} /></label>
                   <label className="ska-form-group"><span>Phone Number</span>
-                    <PhoneInput value={form.mother_phone} onChange={v => setForm(f => ({ ...f, mother_phone: v }))} defaultCountry={schoolCountryCode} /></label>
+                    <PhoneInput value={form.guardian2_phone} onChange={v => setForm(f => ({ ...f, guardian2_phone: v }))} defaultCountry={schoolCountryCode} /></label>
                   <label className="ska-form-group"><span>WhatsApp Number</span>
-                    <PhoneInput value={form.mother_whatsapp} onChange={v => setForm(f => ({ ...f, mother_whatsapp: v }))} defaultCountry={schoolCountryCode} /></label>
+                    <PhoneInput value={form.guardian2_whatsapp} onChange={v => setForm(f => ({ ...f, guardian2_whatsapp: v }))} defaultCountry={schoolCountryCode} /></label>
                   <label className="ska-form-group"><span>Email Address</span>
-                    <input className="ska-input" type="email" value={form.mother_email}
-                      style={fieldErrors.mother_email ? { borderColor: 'var(--ska-error)' } : {}}
-                      onChange={e => { setForm(f => ({ ...f, mother_email: e.target.value })); setFieldErrors(p => ({ ...p, mother_email: '' })); }} />
-                    {fieldErrors.mother_email && <span style={{ fontSize: '0.71875rem', color: 'var(--ska-error)', marginTop: 2 }}>{fieldErrors.mother_email}</span>}
+                    <input className="ska-input" type="email" value={form.guardian2_email}
+                      style={fieldErrors.guardian2_email ? { borderColor: 'var(--ska-error)' } : {}}
+                      onChange={e => { setForm(f => ({ ...f, guardian2_email: e.target.value })); setFieldErrors(p => ({ ...p, guardian2_email: '' })); }} />
+                    {fieldErrors.guardian2_email && <span style={{ fontSize: '0.71875rem', color: 'var(--ska-error)', marginTop: 2 }}>{fieldErrors.guardian2_email}</span>}
                   </label>
                   <label className="ska-form-group"><span>Address (if different)</span>
-                    <textarea className="ska-input" rows={2} value={form.mother_address}
-                      onChange={e => setForm(f => ({ ...f, mother_address: e.target.value }))}
+                    <textarea className="ska-input" rows={2} value={form.guardian2_address}
+                      onChange={e => setForm(f => ({ ...f, guardian2_address: e.target.value }))}
                       style={{ resize: 'vertical', fontFamily: 'inherit' }} /></label>
-                  <label className="ska-form-group"><span>Parent Login Username</span>
-                    <input className="ska-input" autoComplete="off" value={form.mother_username} onChange={e => setForm(f => ({ ...f, mother_username: e.target.value }))} /></label>
-                  <label className="ska-form-group"><span>Parent Login Password</span>
+                  <label className="ska-form-group">
+                    <span>Parent Login Username</span>
+                    <input className="ska-input" autoComplete="off" value={form.guardian2_username}
+                      placeholder={form.guardian2_name ? `e.g. par_${form.guardian2_name.split(' ').pop().toLowerCase().replace(/[^a-z0-9]/g, '')}` : 'e.g. par_johnson'}
+                      onChange={e => setForm(f => ({ ...f, guardian2_username: e.target.value }))} />
+                    <span style={{ fontSize: '0.71875rem', color: 'var(--ska-text-3)', marginTop: 2 }}>Used to log in to the parent portal. Must be unique.</span>
+                  </label>
+                  <label className="ska-form-group">
+                    <span>Parent Login Password</span>
                     <div style={{ position: 'relative' }}>
-                      <input className="ska-input" type={showMotherPwd ? 'text' : 'password'} autoComplete="new-password" value={form.mother_password}
-                        style={{ paddingRight: 36 }}
-                        onChange={e => setForm(f => ({ ...f, mother_password: e.target.value }))} />
-                      <button type="button" title={showMotherPwd ? 'Hide' : 'Show'}
-                        onClick={() => setShowMotherPwd(p => !p)}
-                        style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ska-text-3)', padding: 4 }}>
-                        <Ic name={showMotherPwd ? 'visibility_off' : 'visibility'} size="sm" />
-                      </button>
+                      <input className="ska-input" type={showGuardian2Pwd ? 'text' : 'password'} autoComplete="new-password" value={form.guardian2_password}
+                        style={{ paddingRight: 72 }}
+                        onChange={e => setForm(f => ({ ...f, guardian2_password: e.target.value }))} />
+                      <div style={{ position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)', display: 'flex', gap: 0 }}>
+                        <button type="button" title="Regenerate password" onClick={() => setForm(f => ({ ...f, guardian2_password: generatePassword() }))}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ska-text-3)', padding: 4 }}>
+                          <Ic name="refresh" size="sm" />
+                        </button>
+                        <button type="button" title={showGuardian2Pwd ? 'Hide' : 'Show'} onClick={() => setShowGuardian2Pwd(p => !p)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ska-text-3)', padding: 4 }}>
+                          <Ic name={showGuardian2Pwd ? 'visibility_off' : 'visibility'} size="sm" />
+                        </button>
+                      </div>
                     </div>
                   </label>
                 </>)}
@@ -1950,7 +2365,7 @@ export function StudentsPage({ school, openAddSignal }) {
           </div>
 
           {/* Emergency contact */}
-          <div className="ska-card ska-card-pad" style={{ marginTop: 16, background: 'var(--ska-surface-high)' }}>
+          <div id="s-emergency" className="ska-card ska-card-pad" style={{ marginTop: 16, background: 'var(--ska-surface-high)' }}>
             <h3 className="ska-card-title" style={{ marginBottom: 12 }}>Emergency Contact</h3>
             <div className="ska-form-grid">
               <label className="ska-form-group"><span>Name</span>
@@ -1966,12 +2381,22 @@ export function StudentsPage({ school, openAddSignal }) {
             </div>
           </div>
 
+          </>}
+
+          {/* ── Step 3: Health & SEN ── */}
+          {formStep === 3 && <>
+
           {/* Medical */}
-          <div className="ska-card ska-card-pad" style={{ marginTop: 16, background: 'var(--ska-surface-high)' }}>
+          <div id="s-medical" className="ska-card ska-card-pad" style={{ marginTop: 16, background: 'var(--ska-surface-high)' }}>
             <h3 className="ska-card-title" style={{ marginBottom: 12 }}>Medical Information</h3>
             <div className="ska-form-grid">
               <label className="ska-form-group"><span>Blood Group</span>
-                <input className="ska-input" value={form.blood_group} onChange={e => setForm(f => ({ ...f, blood_group: e.target.value }))} /></label>
+                <select className="ska-input" value={form.blood_group} onChange={e => setForm(f => ({ ...f, blood_group: e.target.value }))}>
+                  <option value="">— Unknown —</option>
+                  {['A+','A-','B+','B-','AB+','AB-','O+','O-'].map(g => (
+                    <option key={g} value={g}>{g}</option>
+                  ))}
+                </select></label>
               <label className="ska-form-group"><span>Known Allergies</span>
                 <input className="ska-input" value={form.allergies} onChange={e => setForm(f => ({ ...f, allergies: e.target.value }))} /></label>
               <label className="ska-form-group"><span>Medical Conditions</span>
@@ -1984,7 +2409,7 @@ export function StudentsPage({ school, openAddSignal }) {
           </div>
 
           {/* Special Educational Needs */}
-          <div className="ska-card ska-card-pad" style={{ marginTop: 16, background: 'var(--ska-surface-high)' }}>
+          <div id="s-sen" className="ska-card ska-card-pad" style={{ marginTop: 16, background: 'var(--ska-surface-high)' }}>
             <h3 className="ska-card-title" style={{ marginBottom: 4 }}>Special Educational Needs (SEN)</h3>
             <p style={{ margin: '0 0 12px', fontSize: '0.8125rem', color: 'var(--ska-text-3)' }}>
               Learning disabilities, assistive technology needs, accommodation plans. Kept separate from medical records.
@@ -2011,7 +2436,7 @@ export function StudentsPage({ school, openAddSignal }) {
           </div>
 
           {/* Conduct */}
-          <div className="ska-card ska-card-pad" style={{ marginTop: 16, background: 'var(--ska-surface-high)' }}>
+          <div id="s-conduct" className="ska-card ska-card-pad" style={{ marginTop: 16, background: 'var(--ska-surface-high)' }}>
             <h3 className="ska-card-title" style={{ marginBottom: 12 }}>Student Conduct &amp; Discipline</h3>
             <div style={{ display: 'grid', gap: 12 }}>
               <label className="ska-form-group" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -2031,8 +2456,13 @@ export function StudentsPage({ school, openAddSignal }) {
             </div>
           </div>
 
+          </>}
+
+          {/* ── Step 4: Documents ── */}
+          {formStep === 4 && <>
+
           {/* Documents */}
-          <div className="ska-card ska-card-pad" style={{ marginTop: 16, background: 'var(--ska-surface-high)' }}>
+          <div id="s-docs" className="ska-card ska-card-pad" style={{ marginTop: 16, background: 'var(--ska-surface-high)' }}>
             <h3 className="ska-card-title" style={{ marginBottom: 12 }}>Documents Submitted</h3>
             <div style={{ display: 'grid', gap: 10 }}>
               {[
@@ -2052,11 +2482,176 @@ export function StudentsPage({ school, openAddSignal }) {
             </div>
           </div>
 
-          <div className="ska-modal-actions">
-            <button className="ska-btn ska-btn--ghost" onClick={() => { setModal(null); setError(''); setFieldErrors({}); }}>Cancel</button>
-            <button className="ska-btn ska-btn--primary" onClick={handleSave} disabled={saving}>
-              {saving ? 'Saving…' : modal === 'add' ? 'Register Student' : 'Save Changes'}
-            </button>
+          </>}
+
+          {/* ── Step 5: Review & Submit ── */}
+          {formStep === 5 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+              {/* Summary header card */}
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 14, padding: '16px 20px',
+                background: 'var(--ska-primary-dim)', borderRadius: 12,
+                border: '1px solid var(--ska-primary)',
+              }}>
+                <div style={{
+                  width: 52, height: 52, borderRadius: '50%', background: 'var(--ska-primary)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden',
+                }}>
+                  {profilePhotoPreview
+                    ? <img src={profilePhotoPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : <Ic name="person" style={{ color: '#fff', fontSize: 28 }} />}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ margin: 0, fontWeight: 800, fontSize: '1.0625rem', color: 'var(--ska-text)' }}>
+                    {[form.first_name, form.middle_name, form.last_name].filter(Boolean).join(' ') || '—'}
+                  </p>
+                  <p style={{ margin: '3px 0 0', fontSize: '0.8125rem', color: 'var(--ska-text-3)' }}>
+                    {form.admission_number && (
+                      <><span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--ska-primary)' }}>{form.admission_number}</span>{' · '}</>
+                    )}
+                    {classes.find(c => String(c.id) === String(form.classroom_id))?.name || 'No class assigned'}
+                  </p>
+                </div>
+                <span style={{
+                  padding: '4px 10px', borderRadius: 20, fontSize: '0.6875rem', fontWeight: 700,
+                  background: 'var(--ska-primary)', color: '#fff', textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0,
+                }}>
+                  {modal === 'add' ? 'New Student' : 'Editing'}
+                </span>
+              </div>
+
+              {/* Per-step review cards */}
+              {[
+                {
+                  step: 0, title: 'Personal Information', icon: 'person',
+                  rows: [
+                    ['Gender', form.gender],
+                    ['Date of Birth', form.date_of_birth ? new Date(form.date_of_birth).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : null],
+                    ['Place of Birth', form.place_of_birth],
+                    ['Nationality', form.nationality],
+                    ['Religion', form.religion],
+                    ['Home Language', form.home_language],
+                    ['City / Town', form.city],
+                    ['Email', form.email],
+                    ['Phone', form.phone_number],
+                  ].filter(([, v]) => v),
+                },
+                {
+                  step: 1, title: 'Enrollment', icon: 'school',
+                  rows: [
+                    ['Student Type', form.student_type],
+                    ['Fee Category', form.fee_category?.replace(/_/g, ' ')],
+                    ['Intake Term', form.intake_term],
+                    ['House / Hostel', form.hostel_house],
+                    ['Transport Route', form.transport_route],
+                    ['Repeating Year', form.is_repeater ? 'Yes' : null],
+                    ['Transfer Student', form.is_transfer ? 'Yes' : null],
+                    ['Previous School', form.previous_school],
+                  ].filter(([, v]) => v),
+                },
+                {
+                  step: 2, title: 'Guardian & Emergency', icon: 'family_restroom',
+                  rows: [
+                    ['Guardian 1', form.father_name ? `${form.father_name} (${form.father_relationship})` : form.father_existing_id ? 'Existing account linked' : null],
+                    ['G1 Phone', form.father_phone],
+                    ['Guardian 2', form.guardian2_name ? `${form.guardian2_name} (${form.guardian2_relationship})` : form.guardian2_existing_id ? 'Existing account linked' : null],
+                    ['Emergency Contact', form.emergency_name ? `${form.emergency_name} · ${form.emergency_phone || '—'}` : null],
+                  ].filter(([, v]) => v),
+                },
+                {
+                  step: 3, title: 'Health & SEN', icon: 'medical_services',
+                  rows: [
+                    ['Blood Group', form.blood_group],
+                    ['Allergies', form.allergies],
+                    ['Medical Conditions', form.medical_conditions],
+                    ['IEP Active', form.sen_iep ? 'Yes' : null],
+                    ['SEN Notes', form.sen_notes ? 'On file' : null],
+                    ['Disciplinary History', form.disciplinary_history ? 'Yes — notes on file' : null],
+                  ].filter(([, v]) => v),
+                },
+                {
+                  step: 4, title: 'Documents', icon: 'folder_open',
+                  rows: [
+                    ['Birth Certificate', form.documents_birth_certificate ? 'Submitted' : null],
+                    ['Passport Photo', form.documents_passport_photo ? 'Submitted' : null],
+                    ['School Report', form.documents_previous_school_report ? 'Submitted' : null],
+                    ['Transfer Letter', form.documents_transfer_letter ? 'Submitted' : null],
+                    ['Medical Report', form.documents_medical_report ? 'Submitted' : null],
+                    ['Other Docs', form.documents_other ? 'Submitted' : null],
+                  ].filter(([, v]) => v),
+                },
+              ].map(section => (
+                <div key={section.title} className="ska-card" style={{ padding: '14px 16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: section.rows.length ? 12 : 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{
+                        width: 28, height: 28, borderRadius: 8, background: 'var(--ska-primary-dim)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                      }}>
+                        <Ic name={section.icon} style={{ color: 'var(--ska-primary)', fontSize: 15 }} />
+                      </div>
+                      <h4 style={{ margin: 0, fontWeight: 700, fontSize: '0.875rem', color: 'var(--ska-text)' }}>{section.title}</h4>
+                    </div>
+                    <button type="button" onClick={() => { setFormStep(section.step); scrollStepTop(); }}
+                      style={{
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', gap: 4,
+                        fontSize: '0.75rem', fontWeight: 600, color: 'var(--ska-primary)',
+                        padding: '4px 8px', borderRadius: 6, transition: 'background 0.12s',
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'var(--ska-primary-dim)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                      <Ic name="edit" style={{ fontSize: 14 }} /> Edit
+                    </button>
+                  </div>
+                  {section.rows.length > 0 ? (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '8px 20px' }}>
+                      {section.rows.map(([label, value]) => (
+                        <div key={label}>
+                          <p style={{ margin: 0, fontSize: '0.625rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--ska-text-3)' }}>{label}</p>
+                          <p style={{ margin: '2px 0 0', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--ska-text)', wordBreak: 'break-word' }}>{value}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--ska-text-3)' }}>
+                      Nothing entered —{' '}
+                      <button type="button" onClick={() => { setFormStep(section.step); scrollStepTop(); }}
+                        style={{ background: 'none', border: 'none', color: 'var(--ska-primary)', fontWeight: 600, cursor: 'pointer', fontSize: 'inherit', padding: 0 }}>
+                        go back to fill in
+                      </button>
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ── Step navigation footer ── */}
+          <div className="ska-modal-actions" style={{ marginTop: 20 }}>
+            {formStep > 0 ? (
+              <button className="ska-btn ska-btn--ghost" onClick={handleStepBack}>
+                <Ic name="arrow_back" size="sm" /> Back
+              </button>
+            ) : (
+              <button className="ska-btn ska-btn--ghost" onClick={closeModal}>Cancel</button>
+            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: '0.6875rem', color: 'var(--ska-text-3)', fontWeight: 600 }}>
+                {formStep + 1} / {FORM_STEPS.length}
+              </span>
+              {formStep < FORM_STEPS.length - 1 ? (
+                <button className="ska-btn ska-btn--primary" onClick={handleStepNext}>
+                  Next <Ic name="arrow_forward" size="sm" />
+                </button>
+              ) : (
+                <button className="ska-btn ska-btn--primary" onClick={handleSave} disabled={saving}>
+                  <Ic name="how_to_reg" size="sm" />
+                  {saving ? 'Saving…' : modal === 'add' ? 'Confirm & Register Student' : 'Save Changes'}
+                </button>
+              )}
+            </div>
           </div>
         </Modal>
       )}

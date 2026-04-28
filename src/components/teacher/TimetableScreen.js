@@ -1,9 +1,25 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTeacherTimetable } from '../../hooks/useTeacherTimetable';
 import { teacherApi } from '../../api/teacherApi';
 import { getPeriodsForDay, getPeriodClass, isPeriodNow, getCurrentDay, getWorkloadSummary } from '../../utils/teacherUtils';
 import './TimetableScreen.css';
+
+const MOCK_EXAM_DUTIES = [
+  { id: 1, exam_name: 'Mid-Term Mathematics Exam',  date: new Date(Date.now() + 3  * 86400000).toISOString().split('T')[0], start_time: '09:00', end_time: '12:00', venue: 'Hall A', class_name: 'Form 3A', subject: 'Mathematics', role: 'Invigilator',  status: 'upcoming' },
+  { id: 2, exam_name: 'End-of-Term Science Exam',   date: new Date(Date.now() + 10 * 86400000).toISOString().split('T')[0], start_time: '14:00', end_time: '16:00', venue: 'Room 12', class_name: 'Form 4B', subject: 'Science',     role: 'Examiner',    status: 'upcoming' },
+  { id: 3, exam_name: 'English Literature Mock',    date: new Date(Date.now() - 5  * 86400000).toISOString().split('T')[0], start_time: '09:00', end_time: '11:00', venue: 'Hall B', class_name: 'Form 3A', subject: 'English',     role: 'Invigilator',  status: 'completed' },
+];
+
+function formatExamDate(dateStr) {
+  const d    = new Date(dateStr);
+  const today = new Date(); today.setHours(0,0,0,0);
+  const diff = Math.ceil((d - today) / 86400000);
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Tomorrow';
+  if (diff > 0)   return `In ${diff} day${diff !== 1 ? 's' : ''} · ${d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}`;
+  return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+}
 
 const BLANK_CONSTRAINTS = {
   max_periods_per_day: 6,
@@ -24,37 +40,30 @@ const DAYS = [
 export default function TimetableScreen({ navigateTo }) {
   const { timetable, loading } = useTeacherTimetable();
   const today = getCurrentDay();
+  const [activeTab, setActiveTab] = useState('schedule'); // 'schedule' | 'exam-duties'
   const [activeDay, setActiveDay] = useState(today === 'saturday' || today === 'sunday' ? 'monday' : today);
   const [showGenerate, setShowGenerate] = useState(false);
   const [constraints, setConstraints] = useState(BLANK_CONSTRAINTS);
   const [generating, setGenerating] = useState(false);
   const [genResult, setGenResult] = useState(null);
+  const [examDuties, setExamDuties] = useState([]);
+  const [loadingDuties, setLoadingDuties] = useState(false);
+  const [dutyFilter, setDutyFilter] = useState('upcoming'); // 'upcoming' | 'all'
 
-  if (loading) {
-    return (
-      <div>
-        <h1 className="tch-page-title">My Timetable</h1>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 20 }}>
-          {[0,1,2,3].map(i => <div key={i} className="tch-skeleton" style={{ height: 80 }} />)}
-        </div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (activeTab !== 'exam-duties') return;
+    setLoadingDuties(true);
+    teacherApi.getExamDuties()
+      .then(data => {
+        const duties = data.duties || [];
+        setExamDuties(duties.length > 0 ? duties : MOCK_EXAM_DUTIES);
+      })
+      .catch(() => setExamDuties(MOCK_EXAM_DUTIES))
+      .finally(() => setLoadingDuties(false));
+  }, [activeTab]);
 
-  if (!timetable) {
-    return (
-      <div>
-        <h1 className="tch-page-title">My Timetable</h1>
-        <div className="tch-empty">
-          <span className="material-symbols-outlined">calendar_today</span>
-          <p>No timetable available</p>
-        </div>
-      </div>
-    );
-  }
-
-  const workload = getWorkloadSummary(timetable.periods);
-  const activePeriods = getPeriodsForDay(timetable.periods, activeDay);
+  const workload      = timetable ? getWorkloadSummary(timetable.periods) : { teachingHours: 0, teachingPeriods: 0, dutyPeriods: 0 };
+  const activePeriods = timetable ? getPeriodsForDay(timetable.periods, activeDay) : [];
 
   const handleGenerate = async () => {
     setGenerating(true);
@@ -69,10 +78,163 @@ export default function TimetableScreen({ navigateTo }) {
     }
   };
 
+  const upcomingDuties  = examDuties.filter(d => d.status !== 'completed');
+  const filteredDuties  = dutyFilter === 'upcoming' ? upcomingDuties : examDuties;
+
   return (
     <div>
       <h1 className="tch-page-title">My Timetable</h1>
-      <p className="tch-page-sub">Your weekly teaching schedule</p>
+      <p className="tch-page-sub">Your weekly teaching schedule and exam duties</p>
+
+      {/* Tab switcher */}
+      <div className="tt-tab-bar">
+        <button
+          className={`tt-tab ${activeTab === 'schedule' ? 'tt-tab--active' : ''}`}
+          onClick={() => setActiveTab('schedule')}>
+          <span className="material-symbols-outlined">calendar_today</span>
+          Weekly Schedule
+        </button>
+        <button
+          className={`tt-tab ${activeTab === 'exam-duties' ? 'tt-tab--active' : ''}`}
+          onClick={() => setActiveTab('exam-duties')}>
+          <span className="material-symbols-outlined">fact_check</span>
+          Exam Duties
+          {upcomingDuties.length > 0 && (
+            <span className="tt-tab-badge">{upcomingDuties.length}</span>
+          )}
+        </button>
+      </div>
+
+      {/* ── EXAM DUTIES tab ──────────────────────────────────────── */}
+      {activeTab === 'exam-duties' && (
+        <AnimatePresence mode="wait">
+          <motion.div key="exam-duties"
+            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }}>
+
+            <div className="tt-duties-header">
+              <div className="tch-stats-grid" style={{ gridTemplateColumns: 'repeat(3,1fr)', marginBottom: 20 }}>
+                <div className="tch-stat-card">
+                  <p className="tch-stat-card__label">Upcoming Duties</p>
+                  <p className="tch-stat-card__value">{upcomingDuties.length.toString().padStart(2,'0')}</p>
+                  <p className="tch-stat-card__sub tch-stat-card__sub--amber">
+                    <span className="material-symbols-outlined">schedule</span>Scheduled
+                  </p>
+                </div>
+                <div className="tch-stat-card">
+                  <p className="tch-stat-card__label">Invigilating</p>
+                  <p className="tch-stat-card__value">
+                    {upcomingDuties.filter(d => d.role === 'Invigilator' || d.role === 'invigilator').length.toString().padStart(2,'0')}
+                  </p>
+                  <p className="tch-stat-card__sub">
+                    <span className="material-symbols-outlined">visibility</span>Exams
+                  </p>
+                </div>
+                <div className="tch-stat-card">
+                  <p className="tch-stat-card__label">Examining</p>
+                  <p className="tch-stat-card__value">
+                    {upcomingDuties.filter(d => d.role === 'Examiner' || d.role === 'examiner').length.toString().padStart(2,'0')}
+                  </p>
+                  <p className="tch-stat-card__sub">
+                    <span className="material-symbols-outlined">assignment</span>Exams
+                  </p>
+                </div>
+              </div>
+
+              <div className="tt-duties-filters">
+                <button
+                  className={`tch-btn tch-btn--sm ${dutyFilter === 'upcoming' ? 'tch-btn--primary' : 'tch-btn--ghost'}`}
+                  onClick={() => setDutyFilter('upcoming')}>
+                  Upcoming
+                </button>
+                <button
+                  className={`tch-btn tch-btn--sm ${dutyFilter === 'all' ? 'tch-btn--primary' : 'tch-btn--ghost'}`}
+                  onClick={() => setDutyFilter('all')}>
+                  All Duties
+                </button>
+              </div>
+            </div>
+
+            {loadingDuties ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {[0,1,2].map(i => <div key={i} className="tch-skeleton" style={{ height: 100 }} />)}
+              </div>
+            ) : filteredDuties.length === 0 ? (
+              <div className="tch-empty" style={{ padding: '40px 0' }}>
+                <span className="material-symbols-outlined">event_available</span>
+                <p>No {dutyFilter === 'upcoming' ? 'upcoming ' : ''}exam duties assigned</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {filteredDuties.map((duty, i) => {
+                  const isUpcoming  = duty.status !== 'completed';
+                  const isToday     = duty.date === new Date().toISOString().split('T')[0];
+                  const isTomorrow  = duty.date === new Date(Date.now() + 86400000).toISOString().split('T')[0];
+                  return (
+                    <motion.div key={duty.id}
+                      className={`tch-card tt-duty-card ${isToday ? 'tt-duty-card--today' : ''} ${!isUpcoming ? 'tt-duty-card--done' : ''}`}
+                      initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.06 }}>
+                      <div className="tt-duty-card__left">
+                        <div className="tt-duty-date-col">
+                          <p className="tt-duty-date">{isToday ? 'TODAY' : isTomorrow ? 'TMRW' : new Date(duty.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }).toUpperCase()}</p>
+                          <p className="tt-duty-time">{duty.start_time}</p>
+                        </div>
+                        <div className="tt-duty-info">
+                          <p className="tt-duty-name">{duty.exam_name}</p>
+                          <div className="tt-duty-meta">
+                            <span className="tch-chip">
+                              <span className="material-symbols-outlined">meeting_room</span>{duty.venue}
+                            </span>
+                            {duty.class_name && (
+                              <span className="tch-chip">
+                                <span className="material-symbols-outlined">groups</span>{duty.class_name}
+                              </span>
+                            )}
+                            <span className="tch-chip">
+                              <span className="material-symbols-outlined">schedule</span>
+                              {duty.start_time} – {duty.end_time}
+                            </span>
+                          </div>
+                          <p className="tt-duty-countdown">{formatExamDate(duty.date)}</p>
+                        </div>
+                      </div>
+                      <div className="tt-duty-card__right">
+                        <span className={`tch-badge ${duty.role?.toLowerCase() === 'invigilator' ? 'tch-badge--blue' : 'tch-badge--primary'}`}>
+                          {duty.role}
+                        </span>
+                        {!isUpcoming && (
+                          <span className="tch-badge tch-badge--green" style={{ marginTop: 6, display: 'flex' }}>
+                            <span className="material-symbols-outlined" style={{ fontSize: 12 }}>check</span>Done
+                          </span>
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )}
+          </motion.div>
+        </AnimatePresence>
+      )}
+
+      {/* ── SCHEDULE tab ─────────────────────────────────────────── */}
+      {activeTab === 'schedule' && (
+      <AnimatePresence mode="wait">
+        <motion.div key="schedule"
+          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }}>
+
+      {loading ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {[0,1,2,3].map(i => <div key={i} className="tch-skeleton" style={{ height: 80 }} />)}
+        </div>
+      ) : !timetable ? (
+        <div className="tch-empty" style={{ padding: '40px 0' }}>
+          <span className="material-symbols-outlined">calendar_today</span>
+          <p>No timetable available yet</p>
+        </div>
+      ) : (<>
 
       {/* Workload summary */}
       <div className="tch-stats-grid" style={{ gridTemplateColumns: 'repeat(3,1fr)', marginBottom: 20 }}>
@@ -302,6 +464,13 @@ export default function TimetableScreen({ navigateTo }) {
           <div className="tch-period-block period-duty tt-legend__item">Duty Period</div>
         </div>
       </div>
+
+      </>)} {/* end loading/timetable guard */}
+
+        </motion.div>
+      </AnimatePresence>
+      )} {/* end schedule tab */}
+
     </div>
   );
 }

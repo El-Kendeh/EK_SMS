@@ -1642,3 +1642,101 @@ class GradingScheme(models.Model):
             {'letter': 'D',  'min': 40, 'max': 49,  'color': '#f97316', 'gpa': 1.0},
             {'letter': 'F',  'min': 0,  'max': 39,  'color': '#ef4444', 'gpa': 0.0},
         ]
+
+
+# ---------------------------------------------------------------------------
+# Grade Feedback — threaded per-grade messages between student & teacher
+# ---------------------------------------------------------------------------
+class GradeFeedbackMessage(models.Model):
+    SENDER_CHOICES = [('student', 'Student'), ('teacher', 'Teacher')]
+    grade      = models.ForeignKey(Grade, on_delete=models.CASCADE, related_name='feedback_messages')
+    sender     = models.ForeignKey(User,  on_delete=models.CASCADE, related_name='sent_feedback')
+    sender_role = models.CharField(max_length=10, choices=SENDER_CHOICES)
+    message    = models.TextField()
+    is_read    = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+        indexes  = [models.Index(fields=['grade', 'created_at'])]
+
+    def __str__(self):
+        return f"[{self.sender_role}] feedback on grade {self.grade_id}"
+
+
+# ---------------------------------------------------------------------------
+# Assignment Submission — tracks each student's submission for a teacher exam
+# ---------------------------------------------------------------------------
+class AssignmentSubmission(models.Model):
+    STATUS_CHOICES = [
+        ('pending',   'Pending'),
+        ('submitted', 'Submitted'),
+        ('graded',    'Graded'),
+    ]
+    assignment  = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name='submissions')
+    student     = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='assignment_submissions')
+    status      = models.CharField(max_length=12, choices=STATUS_CHOICES, default='pending')
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    marks       = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    feedback    = models.TextField(blank=True)
+    graded_at   = models.DateTimeField(null=True, blank=True)
+    graded_by   = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='graded_submissions')
+
+    class Meta:
+        unique_together = ('assignment', 'student')
+        ordering        = ['student__user__last_name', 'student__user__first_name']
+
+    def __str__(self):
+        return f"{self.student} — {self.assignment.name} ({self.status})"
+
+
+# ---------------------------------------------------------------------------
+# Student-Teacher Direct Message — 1:1 threaded messaging
+# ---------------------------------------------------------------------------
+class StudentTeacherMessage(models.Model):
+    SENDER_CHOICES = [('student', 'Student'), ('teacher', 'Teacher')]
+    school      = models.ForeignKey(School, on_delete=models.CASCADE, related_name='direct_messages')
+    student     = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='direct_messages')
+    teacher     = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='direct_messages')
+    sender_role = models.CharField(max_length=10, choices=SENDER_CHOICES)
+    message     = models.TextField()
+    is_read     = models.BooleanField(default=False)
+    created_at  = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+        indexes  = [
+            models.Index(fields=['student', 'teacher', 'created_at']),
+            models.Index(fields=['teacher', '-created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.sender_role}: {self.student} ↔ {self.teacher}"
+
+
+# ---------------------------------------------------------------------------
+# Remedial Request — student flags a subject for extra support
+# ---------------------------------------------------------------------------
+class RemedialRequest(models.Model):
+    STATUS_CHOICES = [
+        ('open',        'Open'),
+        ('in_progress', 'In Progress'),
+        ('addressed',   'Addressed'),
+        ('dismissed',   'Dismissed'),
+    ]
+    student     = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='remedial_requests')
+    subject     = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='remedial_requests')
+    grade       = models.ForeignKey(Grade, on_delete=models.SET_NULL, null=True, blank=True, related_name='remedial_requests')
+    reason      = models.TextField()
+    status      = models.CharField(max_length=12, choices=STATUS_CHOICES, default='open')
+    created_at  = models.DateTimeField(auto_now_add=True)
+    addressed_by  = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='addressed_remedials')
+    addressed_at  = models.DateTimeField(null=True, blank=True)
+    teacher_notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes  = [models.Index(fields=['student', 'subject', 'status'])]
+
+    def __str__(self):
+        return f"Remedial: {self.student} — {self.subject} ({self.status})"

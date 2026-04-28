@@ -4,13 +4,13 @@ import { useTeacher } from '../../context/TeacherContext';
 import { teacherApi } from '../../api/teacherApi';
 import './AssignmentsScreen.css';
 
-const MOCK_ASSIGNMENTS = [
-  { id: 1, title: 'Chapter 3 Exercises', type: 'homework', dueDate: '2026-05-05', classId: null, className: 'Form 3A', subjectName: 'Mathematics', status: 'active', description: 'Complete exercises 1–20 from Chapter 3', createdAt: '2026-04-25T10:00:00' },
-  { id: 2, title: 'Mid-Term Written Test', type: 'test', dueDate: '2026-05-10', classId: null, className: 'Form 3A', subjectName: 'Mathematics', status: 'active', description: 'Covers Chapters 1–5. 60 minutes, closed book.', createdAt: '2026-04-20T09:00:00' },
-  { id: 3, title: 'Science Fair Project', type: 'project', dueDate: '2026-05-20', classId: null, className: 'Form 4B', subjectName: 'Science', status: 'active', description: 'Design an experiment and present findings.', createdAt: '2026-04-18T11:00:00' },
-  { id: 4, title: 'Quadratic Equations Quiz', type: 'quiz', dueDate: '2026-04-15', classId: null, className: 'Form 3A', subjectName: 'Mathematics', status: 'completed', description: '20-minute quiz on quadratic equations.', createdAt: '2026-04-10T09:00:00' },
-  { id: 5, title: 'Reading Comprehension', type: 'homework', dueDate: '2026-04-30', classId: null, className: 'Form 2C', subjectName: 'English', status: 'active', description: 'Read pages 45–60 and answer end-of-chapter questions.', createdAt: '2026-04-22T08:00:00' },
-];
+// Backend exam_type values map to display config
+const TYPE_CONFIG_EXTRA = {
+  ca:      { label: 'C.A.',     cls: 'tch-badge--blue',    icon: 'home_work' },
+  midterm: { label: 'Midterm',  cls: 'tch-badge--red',     icon: 'quiz' },
+  final:   { label: 'Final',    cls: 'tch-badge--amber',   icon: 'school' },
+  mock:    { label: 'Mock',     cls: 'tch-badge--primary', icon: 'fact_check' },
+};
 
 const TYPE_CONFIG = {
   homework: { label: 'Homework', cls: 'tch-badge--blue',    icon: 'home_work' },
@@ -36,8 +36,8 @@ const BLANK_FORM = { title: '', type: 'homework', dueDate: '', classId: '', desc
 
 export default function AssignmentsScreen({ navigateTo }) {
   const { assignedClasses } = useTeacher();
-  const [assignments, setAssignments] = useState(MOCK_ASSIGNMENTS);
-  const [loading, setLoading] = useState(false);
+  const [assignments, setAssignments] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [filterClass, setFilterClass] = useState('');
   const [filterType, setFilterType] = useState('');
   const [showPast, setShowPast] = useState(false);
@@ -50,8 +50,8 @@ export default function AssignmentsScreen({ navigateTo }) {
   useEffect(() => {
     setLoading(true);
     teacherApi.getAssignments(filterClass || undefined)
-      .then(data => { if (data.assignments?.length > 0) setAssignments(data.assignments); })
-      .catch(() => {})
+      .then(data => setAssignments(data.assignments || []))
+      .catch(() => setAssignments([]))
       .finally(() => setLoading(false));
   }, [filterClass]);
 
@@ -70,30 +70,38 @@ export default function AssignmentsScreen({ navigateTo }) {
     e.preventDefault();
     if (!form.title.trim()) { setFormError('Title is required.'); return; }
     if (!form.dueDate) { setFormError('Due date is required.'); return; }
+    if (!form.classId) { setFormError('Please select a class.'); return; }
     setFormError('');
     setSaving(true);
     try {
       const cls = assignedClasses.find(c => String(c.id) === String(form.classId));
-      const newA = {
-        id: Date.now(),
-        ...form,
-        className: cls?.name || 'All Classes',
-        subjectName: cls?.subject?.name || '',
-        status: 'active',
-        createdAt: new Date().toISOString(),
-      };
-      try { await teacherApi.createAssignment({ ...form, class_id: form.classId }); } catch {}
-      setAssignments(prev => [newA, ...prev]);
+      const res = await teacherApi.createAssignment({
+        title:    form.title,
+        type:     form.type,
+        dueDate:  form.dueDate,
+        classId:  form.classId,
+        subjectId: cls?.subject?.id,
+      });
+      if (res.success) {
+        // Reload list from server
+        const data = await teacherApi.getAssignments(filterClass || undefined);
+        setAssignments(data.assignments || []);
+      } else {
+        setFormError(res.message || 'Failed to create assignment.');
+        return;
+      }
       setForm(BLANK_FORM);
       setShowCreate(false);
+    } catch {
+      setFormError('Network error — please try again.');
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDelete = (id) => {
-    try { teacherApi.deleteAssignment(id); } catch {}
-    setAssignments(prev => prev.filter(a => a.id !== id));
+  const handleDelete = async (id) => {
+    const res = await teacherApi.deleteAssignment(id);
+    if (res.success) setAssignments(prev => prev.filter(a => a.id !== id));
     setConfirmDeleteId(null);
   };
 
@@ -247,7 +255,7 @@ export default function AssignmentsScreen({ navigateTo }) {
           {filtered.map((a, i) => {
             const days = daysUntil(a.dueDate);
             const badge = dueDateBadge(days, a.status);
-            const typeConf = TYPE_CONFIG[a.type] || TYPE_CONFIG.homework;
+            const typeConf = TYPE_CONFIG[a.type] || TYPE_CONFIG_EXTRA[a.type] || TYPE_CONFIG.homework;
             return (
               <motion.div
                 key={a.id}

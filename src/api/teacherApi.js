@@ -180,6 +180,75 @@ export const teacherApi = {
     return res.ok ? { success: true } : { success: false };
   },
 
+  // Exam results entry
+  async getTeacherExams(classId) {
+    try {
+      const params = classId ? `?class_id=${classId}` : '';
+      const res = await fetch(`/api/teacher/exam-list/${params}`, { headers: authHeaders() });
+      if (!res.ok) return { exams: [] };
+      return res.json();
+    } catch { return { exams: [] }; }
+  },
+
+  async getExamResults(examId) {
+    const res = await fetch(`/api/teacher/exams/${examId}/results/`, { headers: authHeaders() });
+    return res.json();
+  },
+
+  async saveExamResults(examId, results) {
+    const res = await fetch(`/api/teacher/exams/${examId}/results/`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ results }),
+    });
+    return res.json();
+  },
+
+  // Announcements (replaces stub messages)
+  async getAnnouncements() {
+    try {
+      const res = await fetch('/api/teacher/announcements/', { headers: authHeaders() });
+      if (!res.ok) return { announcements: [] };
+      return res.json();
+    } catch { return { announcements: [] }; }
+  },
+
+  async sendAnnouncement(payload) {
+    const res = await fetch('/api/teacher/announcements/', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+
+  // Attendance status (per-class today summary)
+  async getAttendanceStatus() {
+    try {
+      const res = await fetch('/api/teacher/attendance/status/', { headers: authHeaders() });
+      if (!res.ok) return { classes: [], at_risk: [] };
+      return res.json();
+    } catch { return { classes: [], at_risk: [] }; }
+  },
+
+  // Student academic history
+  async getStudentGradeHistory(studentId) {
+    try {
+      const res = await fetch(`/api/teacher/students/${studentId}/grades/`, { headers: authHeaders() });
+      if (!res.ok) return { history: [] };
+      return res.json();
+    } catch { return { history: [] }; }
+  },
+
+  // Student report cards
+  async getStudentReportCards(studentId) {
+    try {
+      const res = await fetch(`/api/teacher/students/${studentId}/report-cards/`, { headers: authHeaders() });
+      if (!res.ok) return { report_cards: [] };
+      return res.json();
+    } catch { return { report_cards: [] }; }
+  },
+
   async getMessages(classId) {
     try {
       const params = classId ? `?class_id=${classId}` : '';
@@ -207,5 +276,93 @@ export const teacherApi = {
       });
       return res.json();
     } catch { return { success: false, error: 'Server unavailable' }; }
+  },
+
+  async getAcademicCalendar() {
+    try {
+      const res = await fetch('/api/school/academic-calendar/', { headers: authHeaders() });
+      if (!res.ok) return { events: [] };
+      return res.json();
+    } catch { return { events: [] }; }
+  },
+
+  async getAtRiskStudents() {
+    try {
+      const res = await fetch('/api/teacher/at-risk-students/', { headers: authHeaders() });
+      if (!res.ok) return { students: [] };
+      return res.json();
+    } catch { return { students: [] }; }
+  },
+
+  async getModificationSummary() {
+    try {
+      const res = await fetch('/api/teacher/modification-requests/summary/', { headers: authHeaders() });
+      if (!res.ok) return { pending: 0, approved: 0, rejected: 0 };
+      return res.json();
+    } catch { return { pending: 0, approved: 0, rejected: 0 }; }
+  },
+
+  async getExamDuties() {
+    try {
+      const res = await fetch('/api/teacher/exam-duties/', { headers: authHeaders() });
+      if (!res.ok) return { duties: [] };
+      return res.json();
+    } catch { return { duties: [] }; }
+  },
+
+  async getResources(classId, type) {
+    try {
+      const params = new URLSearchParams();
+      if (classId) params.append('class_id', classId);
+      if (type) params.append('type', type);
+      const qs = params.toString();
+      const res = await fetch(`/api/teacher/resources/${qs ? '?' + qs : ''}`, { headers: authHeaders() });
+      if (!res.ok) return { resources: [] };
+      return res.json();
+    } catch { return { resources: [] }; }
+  },
+
+  async uploadResource(formData) {
+    const token = localStorage.getItem('token');
+    const res = await fetch('/api/teacher/resources/', {
+      method: 'POST',
+      headers: { Authorization: `Token ${token}` },
+      body: formData,
+    });
+    return res.json();
+  },
+
+  async deleteResource(id) {
+    const res = await fetch(`/api/teacher/resources/${id}/`, {
+      method: 'DELETE',
+      headers: authHeaders(),
+    });
+    return res.ok ? { success: true } : { success: false };
+  },
+
+  async getFeedbackStudents(classId) {
+    try {
+      const params = classId ? `?class_id=${classId}` : '';
+      const res = await fetch(`/api/teacher/feedback/students/${params}`, { headers: authHeaders() });
+      if (!res.ok) return { students: [] };
+      return res.json();
+    } catch { return { students: [] }; }
+  },
+
+  async getFeedbackMessages(studentId) {
+    try {
+      const res = await fetch(`/api/teacher/feedback/${studentId}/`, { headers: authHeaders() });
+      if (!res.ok) return { messages: [] };
+      return res.json();
+    } catch { return { messages: [] }; }
+  },
+
+  async sendFeedback(studentId, message) {
+    const res = await fetch(`/api/teacher/feedback/${studentId}/`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ message }),
+    });
+    return res.json();
   },
 };

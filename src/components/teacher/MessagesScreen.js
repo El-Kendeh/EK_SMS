@@ -1,327 +1,247 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTeacher } from '../../context/TeacherContext';
 import { teacherApi } from '../../api/teacherApi';
 import { formatRelativeTime } from '../../utils/teacherUtils';
 import './MessagesScreen.css';
 
-const MOCK_THREADS = [
-  {
-    id: 1,
-    recipientName: "Amara Koroma's Parent",
-    studentName: 'Amara Koroma',
-    className: 'Form 3A',
-    lastMessage: "Thank you for the update on Amara's recent progress.",
-    timestamp: new Date(Date.now() - 20 * 60000).toISOString(),
-    unread: 0,
-    messages: [
-      { id: 1, sender: 'teacher', text: 'Good morning. I wanted to inform you that Amara has shown great improvement in Mathematics this term.', timestamp: new Date(Date.now() - 2 * 3600000).toISOString() },
-      { id: 2, sender: 'parent', text: "Thank you for the update on Amara's recent progress.", timestamp: new Date(Date.now() - 20 * 60000).toISOString() },
-    ],
-  },
-  {
-    id: 2,
-    recipientName: "Ibrahim Sesay's Parent",
-    studentName: 'Ibrahim Sesay',
-    className: 'Form 3A',
-    lastMessage: 'Ibrahim has been absent for 3 days. Could you please provide a medical certificate?',
-    timestamp: new Date(Date.now() - 2 * 3600000).toISOString(),
-    unread: 1,
-    messages: [
-      { id: 1, sender: 'teacher', text: 'Ibrahim has been absent for 3 days. Could you please provide a medical certificate?', timestamp: new Date(Date.now() - 2 * 3600000).toISOString() },
-    ],
-  },
-  {
-    id: 3,
-    recipientName: "Fatima Bangura's Parent",
-    studentName: 'Fatima Bangura',
-    className: 'Form 4B',
-    lastMessage: 'Fatima has been selected for the inter-school Science competition.',
-    timestamp: new Date(Date.now() - 24 * 3600000).toISOString(),
-    unread: 0,
-    messages: [
-      { id: 1, sender: 'teacher', text: 'Fatima has been selected for the inter-school Science competition. Kindly confirm her participation by Friday.', timestamp: new Date(Date.now() - 24 * 3600000).toISOString() },
-      { id: 2, sender: 'parent', text: 'That is wonderful news! She will participate.', timestamp: new Date(Date.now() - 20 * 3600000).toISOString() },
-    ],
-  },
+const AUDIENCE_OPTIONS = [
+  { value: 'parents',  label: 'Parents',       icon: 'family_restroom' },
+  { value: 'students', label: 'Students',       icon: 'groups' },
+  { value: 'all',      label: 'Everyone',       icon: 'public' },
+  { value: 'staff',    label: 'Staff',          icon: 'badge' },
 ];
 
-function threadInitials(name = '') {
-  return name.split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase();
-}
+const AUDIENCE_META = {
+  parents:  { cls: 'tch-badge--blue',    icon: 'family_restroom' },
+  students: { cls: 'tch-badge--primary', icon: 'groups' },
+  all:      { cls: 'tch-badge--green',   icon: 'public' },
+  staff:    { cls: 'tch-badge--amber',   icon: 'badge' },
+};
 
-function threadColor(name = '') {
-  const colors = ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#14b8a6'];
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
-  return colors[Math.abs(h) % colors.length];
-}
+const BLANK_FORM = { subject: '', body: '', recipient_role: 'parents' };
 
 export default function MessagesScreen({ navigateTo }) {
   const { assignedClasses } = useTeacher();
-  const [threads, setThreads] = useState(MOCK_THREADS);
-  const [activeThread, setActiveThread] = useState(null);
-  const [compose, setCompose] = useState('');
+  const [announcements, setAnnouncements] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showCompose, setShowCompose] = useState(false);
+  const [form, setForm] = useState(BLANK_FORM);
   const [sending, setSending] = useState(false);
-  const [showNew, setShowNew] = useState(false);
-  const [newRecipient, setNewRecipient] = useState('');
-  const [newMessage, setNewMessage] = useState('');
-  const [newClass, setNewClass] = useState('');
-  const [creatingThread, setCreatingThread] = useState(false);
-  const [mobileShowThread, setMobileShowThread] = useState(false);
-  const messagesEndRef = useRef(null);
+  const [sendError, setSendError] = useState('');
+  const [sentFlash, setSentFlash] = useState(false);
 
   useEffect(() => {
-    teacherApi.getMessages()
-      .then(data => { if (data.threads?.length > 0) setThreads(data.threads); })
-      .catch(() => {});
+    setLoading(true);
+    teacherApi.getAnnouncements()
+      .then(data => setAnnouncements(data.announcements || []))
+      .catch(() => setAnnouncements([]))
+      .finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [activeThread?.messages?.length]);
-
-  const openThread = (thread) => {
-    setActiveThread(thread);
-    setMobileShowThread(true);
-    // Mark as read locally
-    setThreads(prev => prev.map(t => t.id === thread.id ? { ...t, unread: 0 } : t));
-  };
-
-  const handleSend = async () => {
-    if (!compose.trim() || !activeThread) return;
-    const text = compose.trim();
-    setCompose('');
+  const handleSend = async (e) => {
+    e.preventDefault();
+    if (!form.subject.trim()) { setSendError('Subject is required.'); return; }
+    if (!form.body.trim()) { setSendError('Message body is required.'); return; }
+    setSendError('');
     setSending(true);
-    const newMsg = { id: Date.now(), sender: 'teacher', text, timestamp: new Date().toISOString() };
-    setThreads(prev => prev.map(t => t.id === activeThread.id
-      ? { ...t, messages: [...t.messages, newMsg], lastMessage: text, timestamp: newMsg.timestamp }
-      : t
-    ));
-    setActiveThread(prev => ({ ...prev, messages: [...prev.messages, newMsg], lastMessage: text }));
     try {
-      await teacherApi.sendMessage({ thread_id: activeThread.id, text });
-    } catch {}
-    setSending(false);
+      const res = await teacherApi.sendAnnouncement({
+        subject: form.subject.trim(),
+        body: form.body.trim(),
+        recipient_role: form.recipient_role,
+      });
+      if (res.success) {
+        setAnnouncements(prev => [{
+          id: res.id,
+          subject: form.subject.trim(),
+          body: form.body.trim(),
+          recipient_role: form.recipient_role,
+          is_broadcast: true,
+          created_at: new Date().toISOString(),
+        }, ...prev]);
+        setForm(BLANK_FORM);
+        setShowCompose(false);
+        setSentFlash(true);
+        setTimeout(() => setSentFlash(false), 3000);
+      } else {
+        setSendError(res.message || 'Failed to send announcement.');
+      }
+    } catch {
+      setSendError('Network error — please try again.');
+    } finally {
+      setSending(false);
+    }
   };
-
-  const handleNewThread = async () => {
-    if (!newRecipient.trim() || !newMessage.trim()) return;
-    setCreatingThread(true);
-    const newThread = {
-      id: Date.now(),
-      recipientName: newRecipient,
-      studentName: '',
-      className: newClass,
-      lastMessage: newMessage,
-      timestamp: new Date().toISOString(),
-      unread: 0,
-      messages: [{ id: 1, sender: 'teacher', text: newMessage, timestamp: new Date().toISOString() }],
-    };
-    try {
-      await teacherApi.sendMessage({ recipient: newRecipient, text: newMessage, class_id: newClass });
-    } catch {}
-    setThreads(prev => [newThread, ...prev]);
-    setActiveThread(newThread);
-    setShowNew(false);
-    setNewRecipient('');
-    setNewMessage('');
-    setNewClass('');
-    setMobileShowThread(true);
-    setCreatingThread(false);
-  };
-
-  const totalUnread = threads.reduce((a, t) => a + (t.unread || 0), 0);
 
   return (
-    <div className="msg-root">
-      {/* Left: Threads sidebar */}
-      <div className={`msg-sidebar ${mobileShowThread ? 'msg-sidebar--hidden-mobile' : ''}`}>
-        <div className="msg-sidebar__header">
-          <div>
-            <p className="msg-sidebar__title">Messages</p>
-            {totalUnread > 0 && (
-              <span className="tch-badge tch-badge--amber" style={{ marginLeft: 8 }}>{totalUnread} unread</span>
-            )}
-          </div>
-          <button
-            className="tch-btn tch-btn--primary tch-btn--sm"
-            onClick={() => { setShowNew(true); setMobileShowThread(true); setActiveThread(null); }}
-          >
-            <span className="material-symbols-outlined">edit</span>
-            New
-          </button>
+    <div className="ann-root">
+      {/* Header */}
+      <div className="ann-top-bar">
+        <div>
+          <h1 className="tch-page-title" style={{ margin: 0 }}>Announcements</h1>
+          <p className="tch-page-sub" style={{ margin: '2px 0 0' }}>
+            Broadcast messages to parents, students, or staff
+          </p>
         </div>
-
-        <div className="msg-thread-list">
-          {threads.length === 0 ? (
-            <div className="tch-empty" style={{ padding: '40px 20px' }}>
-              <span className="material-symbols-outlined">chat</span>
-              <p>No messages yet</p>
-            </div>
-          ) : threads.map(thread => (
-            <button
-              key={thread.id}
-              className={`msg-thread-item ${activeThread?.id === thread.id ? 'msg-thread-item--active' : ''} ${thread.unread > 0 ? 'msg-thread-item--unread' : ''}`}
-              onClick={() => openThread(thread)}
-            >
-              <div className="msg-thread-avatar" style={{ background: threadColor(thread.recipientName) }}>
-                {threadInitials(thread.recipientName)}
-              </div>
-              <div className="msg-thread-info">
-                <div className="msg-thread-name-row">
-                  <span className="msg-thread-name">{thread.recipientName}</span>
-                  <span className="msg-thread-time">{formatRelativeTime(thread.timestamp)}</span>
-                </div>
-                {thread.className && (
-                  <span className="msg-thread-class">{thread.className}</span>
-                )}
-                <p className="msg-thread-preview">{thread.lastMessage}</p>
-              </div>
-              {thread.unread > 0 && (
-                <span className="msg-unread-dot" />
-              )}
-            </button>
-          ))}
-        </div>
+        <button className="tch-btn tch-btn--primary" onClick={() => setShowCompose(true)}>
+          <span className="material-symbols-outlined">campaign</span>
+          New Announcement
+        </button>
       </div>
 
-      {/* Right: Thread view */}
-      <div className={`msg-thread-pane ${!mobileShowThread ? 'msg-thread-pane--hidden-mobile' : ''}`}>
-        {/* Mobile back */}
-        <button
-          className="msg-back-btn"
-          onClick={() => { setMobileShowThread(false); setShowNew(false); }}
-        >
-          <span className="material-symbols-outlined">arrow_back</span>
-          Back
-        </button>
+      {/* Sent flash */}
+      <AnimatePresence>
+        {sentFlash && (
+          <motion.div
+            className="ann-sent-flash"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <span className="material-symbols-outlined">check_circle</span>
+            Announcement sent successfully.
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-        {/* New message compose */}
-        <AnimatePresence>
-          {showNew && (
-            <motion.div
-              className="msg-new-panel"
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-            >
-              <div className="msg-new-header">
-                <p className="msg-new-title">New Message</p>
-                <button className="tch-btn tch-btn--ghost tch-btn--sm" onClick={() => setShowNew(false)}>
-                  <span className="material-symbols-outlined">close</span>
-                </button>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div>
-                  <label className="tch-label">Recipient (parent or student name)</label>
-                  <input
-                    className="tch-input"
-                    value={newRecipient}
-                    onChange={e => setNewRecipient(e.target.value)}
-                    placeholder="e.g. Amara Koroma's Parent"
-                  />
-                </div>
-                <div>
-                  <label className="tch-label">Class (optional)</label>
-                  <select className="tch-select" value={newClass} onChange={e => setNewClass(e.target.value)}>
-                    <option value="">— Select class —</option>
-                    {assignedClasses.map(cls => (
-                      <option key={cls.id} value={cls.name}>{cls.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="tch-label">Message</label>
-                  <textarea
-                    className="tch-textarea"
-                    rows={3}
-                    value={newMessage}
-                    onChange={e => setNewMessage(e.target.value)}
-                    placeholder="Write your message..."
-                    maxLength={500}
-                  />
-                </div>
-                <button
-                  className="tch-btn tch-btn--primary"
-                  disabled={!newRecipient.trim() || !newMessage.trim() || creatingThread}
-                  onClick={handleNewThread}
-                >
-                  <span className="material-symbols-outlined">{creatingThread ? 'sync' : 'send'}</span>
-                  {creatingThread ? 'Sending…' : 'Send Message'}
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Thread messages */}
-        {!showNew && activeThread ? (
-          <div className="msg-thread-view">
-            <div className="msg-thread-view__header">
-              <div className="msg-thread-avatar" style={{ background: threadColor(activeThread.recipientName) }}>
-                {threadInitials(activeThread.recipientName)}
-              </div>
-              <div>
-                <p className="msg-thread-view__name">{activeThread.recipientName}</p>
-                {activeThread.className && (
-                  <p className="msg-thread-view__class">{activeThread.className}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="msg-messages-list">
-              {activeThread.messages.map((msg, i) => (
-                <motion.div
-                  key={msg.id}
-                  className={`msg-bubble-wrap ${msg.sender === 'teacher' ? 'msg-bubble-wrap--teacher' : ''}`}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.04 }}
-                >
-                  <div className={`msg-bubble ${msg.sender === 'teacher' ? 'msg-bubble--teacher' : 'msg-bubble--parent'}`}>
-                    {msg.text}
-                  </div>
-                  <p className="msg-bubble-time">{formatRelativeTime(msg.timestamp)}</p>
-                </motion.div>
-              ))}
-              <div ref={messagesEndRef} />
-            </div>
-
-            <div className="msg-compose">
-              <textarea
-                className="tch-textarea msg-compose-input"
-                rows={2}
-                value={compose}
-                onChange={e => setCompose(e.target.value)}
-                placeholder="Write a message..."
-                maxLength={500}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
-                }}
-              />
+      {/* Compose panel */}
+      <AnimatePresence>
+        {showCompose && (
+          <motion.div
+            className="tch-card tch-card--pad ann-compose"
+            initial={{ opacity: 0, y: -12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.2 }}
+          >
+            <div className="ann-compose-header">
+              <p className="ann-section-label">New Announcement</p>
               <button
-                className="tch-btn tch-btn--primary msg-send-btn"
-                onClick={handleSend}
-                disabled={!compose.trim() || sending}
+                className="tch-btn tch-btn--ghost tch-btn--sm"
+                onClick={() => { setShowCompose(false); setForm(BLANK_FORM); setSendError(''); }}
               >
-                <span className="material-symbols-outlined">{sending ? 'sync' : 'send'}</span>
+                <span className="material-symbols-outlined">close</span>
               </button>
             </div>
-          </div>
-        ) : !showNew && (
-          <div className="msg-empty-pane">
-            <span className="material-symbols-outlined">chat_bubble_outline</span>
-            <p>Select a conversation or start a new message</p>
-            <button className="tch-btn tch-btn--primary" onClick={() => setShowNew(true)}>
-              <span className="material-symbols-outlined">edit</span>
-              New Message
-            </button>
-          </div>
+
+            <form onSubmit={handleSend} className="ann-compose-fields">
+              <div>
+                <label className="tch-label">Audience</label>
+                <div className="ann-audience-grid">
+                  {AUDIENCE_OPTIONS.map(opt => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      className={`ann-audience-btn ${form.recipient_role === opt.value ? 'ann-audience-btn--active' : ''}`}
+                      onClick={() => setForm(p => ({ ...p, recipient_role: opt.value }))}
+                    >
+                      <span className="material-symbols-outlined">{opt.icon}</span>
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="tch-label">Subject *</label>
+                <input
+                  className="tch-input"
+                  value={form.subject}
+                  onChange={e => setForm(p => ({ ...p, subject: e.target.value }))}
+                  placeholder="e.g. Mid-term exam reminder"
+                  maxLength={200}
+                />
+              </div>
+
+              <div>
+                <label className="tch-label">Message *</label>
+                <textarea
+                  className="tch-textarea"
+                  rows={4}
+                  value={form.body}
+                  onChange={e => setForm(p => ({ ...p, body: e.target.value }))}
+                  placeholder="Write your announcement here..."
+                  maxLength={1000}
+                />
+                <p style={{ fontSize: 11, color: 'var(--tch-text-secondary)', marginTop: 4 }}>
+                  {form.body.length}/1000
+                </p>
+              </div>
+
+              {sendError && (
+                <p style={{ color: 'var(--tch-error)', fontSize: 13, margin: 0 }}>{sendError}</p>
+              )}
+
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  type="button"
+                  className="tch-btn tch-btn--ghost"
+                  onClick={() => { setShowCompose(false); setForm(BLANK_FORM); setSendError(''); }}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="tch-btn tch-btn--primary" disabled={sending}>
+                  <span className="material-symbols-outlined">{sending ? 'sync' : 'send'}</span>
+                  {sending ? 'Sending…' : 'Send Announcement'}
+                </button>
+              </div>
+            </form>
+          </motion.div>
         )}
+      </AnimatePresence>
+
+      {/* Announcement list */}
+      <div className="ann-info-note">
+        <span className="material-symbols-outlined">info</span>
+        Announcements are broadcast to all recipients in the selected role across your school.
       </div>
+
+      {loading ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
+          {[0,1,2].map(i => <div key={i} className="tch-skeleton" style={{ height: 80 }} />)}
+        </div>
+      ) : announcements.length === 0 ? (
+        <div className="tch-empty">
+          <span className="material-symbols-outlined">campaign</span>
+          <p>No announcements sent yet</p>
+          <button className="tch-btn tch-btn--primary" onClick={() => setShowCompose(true)}>
+            Send Your First Announcement
+          </button>
+        </div>
+      ) : (
+        <div className="ann-list">
+          {announcements.map((a, i) => {
+            const meta = AUDIENCE_META[a.recipient_role] || AUDIENCE_META.all;
+            return (
+              <motion.div
+                key={a.id}
+                className="tch-card ann-item"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05 }}
+              >
+                <div className="ann-item__header">
+                  <div className="ann-item__icon">
+                    <span className="material-symbols-outlined">campaign</span>
+                  </div>
+                  <div className="ann-item__main">
+                    <p className="ann-item__subject">{a.subject || '(No subject)'}</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
+                      <span className={`tch-badge ${meta.cls}`}>
+                        <span className="material-symbols-outlined">{meta.icon}</span>
+                        {AUDIENCE_OPTIONS.find(o => o.value === a.recipient_role)?.label || a.recipient_role}
+                      </span>
+                      <span className="ann-item__time">{formatRelativeTime(a.created_at)}</span>
+                    </div>
+                  </div>
+                </div>
+                <p className="ann-item__body">{a.body}</p>
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

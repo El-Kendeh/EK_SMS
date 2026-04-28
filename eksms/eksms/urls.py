@@ -50,6 +50,12 @@ from .views import (
     api_teacher_me, api_teacher_classes, api_teacher_students,
     api_teacher_attendance, api_teacher_gradebook, api_teacher_change_password,
     api_teacher_analytics,
+    # Teacher add-ons
+    api_teacher_assignments_teacher, api_teacher_assignment_item,
+    api_teacher_exam_list_teacher, api_teacher_exam_results_entry,
+    api_teacher_announcements,
+    api_teacher_attendance_status,
+    api_teacher_student_grade_history, api_teacher_student_report_cards,
     # Student portal
     api_student_me, api_student_grades, api_student_attendance,
     api_student_timetable, api_student_notifications, api_student_change_password,
@@ -194,9 +200,18 @@ urlpatterns = [
     path('api/teacher/classes/',         api_teacher_classes,         name='api_teacher_classes'),
     path('api/teacher/students/',        api_teacher_students,        name='api_teacher_students'),
     path('api/teacher/attendance/',      api_teacher_attendance,      name='api_teacher_attendance'),
+    path('api/teacher/attendance/status/', api_teacher_attendance_status, name='api_teacher_attendance_status'),
     path('api/teacher/gradebook/',       api_teacher_gradebook,       name='api_teacher_gradebook'),
     path('api/teacher/change-password/', api_teacher_change_password, name='api_teacher_change_password'),
     path('api/teacher/analytics/',       api_teacher_analytics,       name='api_teacher_analytics'),
+    # Teacher add-on routes
+    path('api/teacher/assignments/',                              api_teacher_assignments_teacher,  name='api_teacher_assignments_teacher'),
+    path('api/teacher/assignments/<int:exam_id>/',                api_teacher_assignment_item,      name='api_teacher_assignment_item'),
+    path('api/teacher/exam-list/',                                api_teacher_exam_list_teacher,    name='api_teacher_exam_list_teacher'),
+    path('api/teacher/exams/<int:exam_id>/results/',              api_teacher_exam_results_entry,   name='api_teacher_exam_results_entry'),
+    path('api/teacher/announcements/',                            api_teacher_announcements,         name='api_teacher_announcements'),
+    path('api/teacher/students/<int:student_id>/grades/',         api_teacher_student_grade_history, name='api_teacher_student_grade_history'),
+    path('api/teacher/students/<int:student_id>/report-cards/',   api_teacher_student_report_cards,  name='api_teacher_student_report_cards'),
     # Student portal
     path('api/student/me/',              api_student_me,              name='api_student_me'),
     path('api/student/grades/',          api_student_grades,          name='api_student_grades'),

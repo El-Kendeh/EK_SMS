@@ -18,6 +18,7 @@ from eksms_core.models import (
     Exam, ExamResult, Notification, NotificationRead, TimetableSlot,
     SchoolStaffAccount, GradeModificationRequest, ClassSubject, UserToken,
     Room, GradingScheme, ParentNotificationPreference,
+    GradeFeedbackMessage, AssignmentSubmission, StudentTeacherMessage, RemedialRequest,
 )
 import datetime
 import re
@@ -7171,6 +7172,1049 @@ def api_teacher_mod_requests(request):
         return JsonResponse({'success': True, 'message': 'Modification request submitted.', 'id': mod.id})
 
     return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+@csrf_exempt
+def api_teacher_assignments_teacher(request):
+    """GET: list exams/assignments for teacher's classes. POST: create assignment."""
+    user, teacher = _get_teacher_profile(request)
+    if not teacher:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    school = teacher.school
+    teacher_classroom_ids = list(
+        teacher.subject_classes.filter(is_active=True).values_list('classroom_id', flat=True)
+    )
+
+    if request.method == 'GET':
+        class_id = request.GET.get('class_id')
+        qs = Exam.objects.filter(school=school, is_active=True, classroom_id__in=teacher_classroom_ids)
+        if class_id:
+            qs = qs.filter(classroom_id=class_id)
+        today = datetime.date.today()
+        data = [{
+            'id':          e.id,
+            'title':       e.name,
+            'type':        e.exam_type,
+            'dueDate':     str(e.date),
+            'classId':     e.classroom.id,
+            'className':   e.classroom.name,
+            'subjectName': e.subject.name,
+            'subjectId':   e.subject.id,
+            'status':      'completed' if e.date < today else 'active',
+            'description': '',
+            'totalMarks':  float(e.total_marks),
+            'resultCount': e.results.count(),
+            'createdAt':   e.created_at.isoformat(),
+        } for e in qs.select_related('classroom', 'subject').order_by('-date')[:200]]
+        return JsonResponse({'success': True, 'assignments': data})
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        class_id   = body.get('classId') or body.get('classroom_id')
+        subject_id = body.get('subjectId') or body.get('subject_id')
+        if not class_id:
+            return JsonResponse({'success': False, 'message': 'classId required.'}, status=400)
+        if not teacher.subject_classes.filter(classroom_id=class_id, is_active=True).exists():
+            return JsonResponse({'success': False, 'message': 'Not assigned to this classroom.'}, status=403)
+        try:
+            classroom = ClassRoom.objects.get(id=class_id, school=school)
+        except ClassRoom.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Classroom not found.'}, status=404)
+        if not subject_id:
+            tsc = teacher.subject_classes.filter(classroom_id=class_id, is_active=True).first()
+            subject_id = tsc.subject_id if tsc else None
+        if not subject_id:
+            return JsonResponse({'success': False, 'message': 'subjectId required.'}, status=400)
+        try:
+            subject = Subject.objects.get(id=subject_id, school=school)
+        except Subject.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Subject not found.'}, status=404)
+        term = Term.objects.filter(academic_year__school=school, is_active=True).first()
+        exam_type = body.get('type', 'quiz')
+        try:
+            due_date = datetime.date.fromisoformat(body.get('dueDate') or str(datetime.date.today()))
+        except (ValueError, TypeError):
+            due_date = datetime.date.today()
+        exam = Exam.objects.create(
+            school=school, classroom=classroom, subject=subject, term=term,
+            name=body.get('title', 'Assignment'),
+            exam_type=exam_type,
+            total_marks=float(body.get('totalMarks', 100)),
+            date=due_date,
+            created_by=user,
+        )
+        return JsonResponse({'success': True, 'id': exam.id, 'message': 'Assignment created.'}, status=201)
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+@csrf_exempt
+def api_teacher_assignment_item(request, exam_id):
+    """DELETE a teacher's assignment."""
+    user, teacher = _get_teacher_profile(request)
+    if not teacher:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    teacher_classroom_ids = list(
+        teacher.subject_classes.filter(is_active=True).values_list('classroom_id', flat=True)
+    )
+    try:
+        exam = Exam.objects.get(id=exam_id, school=teacher.school, classroom_id__in=teacher_classroom_ids)
+    except Exam.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Assignment not found.'}, status=404)
+    if request.method == 'DELETE':
+        exam.is_active = False
+        exam.save(update_fields=['is_active'])
+        return JsonResponse({'success': True, 'message': 'Assignment deleted.'})
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+@csrf_exempt
+def api_teacher_exam_list_teacher(request):
+    """GET: exams for teacher's classes for results-entry screen."""
+    user, teacher = _get_teacher_profile(request)
+    if not teacher:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    teacher_classroom_ids = list(
+        teacher.subject_classes.filter(is_active=True).values_list('classroom_id', flat=True)
+    )
+    if request.method != 'GET':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+    class_id = request.GET.get('class_id')
+    qs = Exam.objects.filter(school=teacher.school, is_active=True, classroom_id__in=teacher_classroom_ids)
+    if class_id:
+        qs = qs.filter(classroom_id=class_id)
+    data = [{
+        'id':          e.id,
+        'name':        e.name,
+        'exam_type':   e.exam_type,
+        'classroom':   e.classroom.name,
+        'classroom_id':e.classroom.id,
+        'subject':     e.subject.name,
+        'subject_id':  e.subject.id,
+        'total_marks': float(e.total_marks),
+        'date':        str(e.date),
+        'result_count':e.results.count(),
+    } for e in qs.select_related('classroom', 'subject').order_by('-date')[:200]]
+    return JsonResponse({'success': True, 'exams': data})
+
+
+@csrf_exempt
+def api_teacher_exam_results_entry(request, exam_id):
+    """GET: exam + student results for a teacher's exam. POST: save results."""
+    user, teacher = _get_teacher_profile(request)
+    if not teacher:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    teacher_classroom_ids = list(
+        teacher.subject_classes.filter(is_active=True).values_list('classroom_id', flat=True)
+    )
+    try:
+        exam = Exam.objects.get(id=exam_id, school=teacher.school, classroom_id__in=teacher_classroom_ids)
+    except Exam.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Exam not found.'}, status=404)
+
+    if request.method == 'GET':
+        students = Student.objects.filter(
+            school=teacher.school, classroom=exam.classroom, is_active=True
+        ).select_related('user').order_by('user__last_name', 'user__first_name')
+        results_map = {r.student_id: r for r in ExamResult.objects.filter(exam=exam)}
+        data = [{
+            'student_id':   s.id,
+            'student_name': s.user.get_full_name(),
+            'marks':        float(results_map[s.id].marks_obtained) if s.id in results_map else None,
+            'grade_letter': results_map[s.id].grade_letter if s.id in results_map else None,
+            'remarks':      results_map[s.id].remarks if s.id in results_map else '',
+        } for s in students]
+        return JsonResponse({'success': True, 'exam': {
+            'id': exam.id, 'name': exam.name,
+            'total_marks': float(exam.total_marks),
+            'subject': exam.subject.name,
+            'classroom': exam.classroom.name,
+            'date': str(exam.date),
+        }, 'results': data})
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        entries = body.get('results', [])
+        saved = 0
+        for entry in entries:
+            student_id = entry.get('student_id')
+            marks = entry.get('marks')
+            if student_id is None or marks is None:
+                continue
+            try:
+                student = Student.objects.get(id=student_id, school=teacher.school)
+                ExamResult.objects.update_or_create(
+                    exam=exam, student=student,
+                    defaults={
+                        'marks_obtained': float(marks),
+                        'remarks': entry.get('remarks', ''),
+                        'graded_by': user,
+                    }
+                )
+                saved += 1
+            except Exception:
+                continue
+        return JsonResponse({'success': True, 'saved': saved})
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+@csrf_exempt
+def api_teacher_announcements(request):
+    """GET: announcements sent by this teacher. POST: send broadcast announcement."""
+    user, teacher = _get_teacher_profile(request)
+    if not teacher:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    school = teacher.school
+
+    if request.method == 'GET':
+        msgs = Message.objects.filter(school=school, sender=user).order_by('-id')[:100]
+        data = [{
+            'id':             m.id,
+            'recipient_role': m.recipient_role,
+            'subject':        m.subject,
+            'body':           m.body,
+            'created_at':     m.created_at.isoformat(),
+            'is_broadcast':   m.is_broadcast,
+        } for m in msgs]
+        return JsonResponse({'success': True, 'announcements': data})
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        recipient_role = body.get('recipient_role', 'parents')
+        if recipient_role not in ('all', 'staff', 'students', 'parents'):
+            recipient_role = 'parents'
+        msg = Message.objects.create(
+            school=school,
+            sender=user,
+            recipient_role=recipient_role,
+            subject=body.get('subject', ''),
+            body=body.get('body', ''),
+            is_broadcast=True,
+        )
+        return JsonResponse({'success': True, 'id': msg.id, 'message': 'Announcement sent.'})
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+@csrf_exempt
+def api_teacher_attendance_status(request):
+    """GET: today's per-class attendance status + at-risk students (<75% rate)."""
+    user, teacher = _get_teacher_profile(request)
+    if not teacher:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    if request.method != 'GET':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+    today = datetime.date.today()
+    tscs = teacher.subject_classes.filter(is_active=True).select_related('classroom', 'subject')
+    seen_classrooms = set()
+    classes_status = []
+    for tsc in tscs:
+        if tsc.classroom_id in seen_classrooms:
+            continue
+        seen_classrooms.add(tsc.classroom_id)
+        total_students = tsc.classroom.students.filter(is_active=True).count()
+        today_records  = Attendance.objects.filter(classroom=tsc.classroom, date=today).count()
+        present_count  = Attendance.objects.filter(classroom=tsc.classroom, date=today, status='present').count()
+        classes_status.append({
+            'classroom_id':   tsc.classroom.id,
+            'classroom_name': tsc.classroom.name,
+            'subject_name':   tsc.subject.name,
+            'taken':          today_records >= total_students > 0,
+            'total_students': total_students,
+            'present_count':  present_count,
+            'absent_count':   today_records - present_count,
+        })
+    at_risk = []
+    classroom_ids = list(seen_classrooms)
+    for s in Student.objects.filter(
+        school=teacher.school, is_active=True, classroom_id__in=classroom_ids
+    ).select_related('user', 'classroom')[:300]:
+        total_att = Attendance.objects.filter(student=s).count()
+        present   = Attendance.objects.filter(student=s, status__in=('present', 'late', 'excused')).count()
+        rate = round((present / total_att) * 100, 1) if total_att > 0 else 100
+        if total_att > 0 and rate < 75:
+            at_risk.append({
+                'id':           s.id,
+                'name':         s.user.get_full_name(),
+                'classroom':    s.classroom.name if s.classroom else '',
+                'att_rate':     rate,
+                'total_days':   total_att,
+                'present_days': present,
+            })
+    return JsonResponse({'success': True, 'classes': classes_status, 'at_risk': at_risk})
+
+
+@csrf_exempt
+def api_teacher_student_grade_history(request, student_id):
+    """GET: full multi-term grade history for a student in teacher's classes."""
+    user, teacher = _get_teacher_profile(request)
+    if not teacher:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    if request.method != 'GET':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+    teacher_classroom_ids = list(
+        teacher.subject_classes.filter(is_active=True).values_list('classroom_id', flat=True)
+    )
+    try:
+        student = Student.objects.get(
+            id=student_id, school=teacher.school, classroom_id__in=teacher_classroom_ids
+        )
+    except Student.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Student not found or not in your classes.'}, status=404)
+    grades_qs = Grade.objects.filter(student=student).select_related(
+        'subject', 'term__academic_year'
+    ).order_by('-term__start_date', 'subject__name')
+    term_map = {}
+    for g in grades_qs:
+        year_name = g.term.academic_year.name if (g.term and g.term.academic_year) else ''
+        key = (g.term.id, g.term.name, year_name)
+        term_map.setdefault(key, []).append({
+            'subject':      g.subject.name,
+            'ca':           float(g.continuous_assessment),
+            'midterm':      float(g.mid_term_exam),
+            'final':        float(g.final_exam),
+            'total':        float(g.total_score),
+            'grade_letter': g.grade_letter,
+            'is_locked':    g.is_locked,
+        })
+    history = [{
+        'term_id':       k[0],
+        'term_name':     k[1],
+        'academic_year': k[2],
+        'grades':        term_map[k],
+        'average':       round(sum(g['total'] for g in term_map[k]) / len(term_map[k]), 1),
+    } for k in term_map]
+    return JsonResponse({'success': True, 'student': {
+        'id': student.id,
+        'name': student.user.get_full_name(),
+        'admission_number': student.admission_number,
+    }, 'history': history})
+
+
+@csrf_exempt
+def api_teacher_student_report_cards(request, student_id):
+    """GET: published report cards for a student in teacher's classes."""
+    user, teacher = _get_teacher_profile(request)
+    if not teacher:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    if request.method != 'GET':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+    teacher_classroom_ids = list(
+        teacher.subject_classes.filter(is_active=True).values_list('classroom_id', flat=True)
+    )
+    try:
+        student = Student.objects.get(
+            id=student_id, school=teacher.school, classroom_id__in=teacher_classroom_ids
+        )
+    except Student.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Student not found or not in your classes.'}, status=404)
+    cards = ReportCard.objects.filter(student=student).select_related(
+        'term__academic_year'
+    ).order_by('-term__start_date')
+    def _pdf_url(card):
+        if card.pdf_file:
+            try:
+                return request.build_absolute_uri(card.pdf_file.url)
+            except Exception:
+                return None
+        return None
+    data = [{
+        'id':            c.id,
+        'term':          c.term.name if c.term else '',
+        'academic_year': c.term.academic_year.name if (c.term and c.term.academic_year) else '',
+        'average_score': float(c.average_score) if c.average_score else None,
+        'class_rank':    c.class_rank,
+        'class_size':    c.class_size,
+        'is_published':  c.is_published,
+        'published_at':  c.published_at.isoformat() if c.published_at else None,
+        'pdf_url':       _pdf_url(c),
+        'qr_code':       c.qr_code,
+        'download_url':  f'/api/report-cards/{c.id}/download/',
+    } for c in cards]
+    return JsonResponse({'success': True, 'report_cards': data})
+
+
+# ── #1 Grade Feedback Inbox ─────────────────────────────────────────────────
+
+@csrf_exempt
+def api_teacher_feedback_inbox(request):
+    """GET: all feedback threads for teacher's grades. Returns threads grouped by grade."""
+    user, teacher = _get_teacher_profile(request)
+    if not teacher:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    if request.method != 'GET':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+    teacher_classroom_ids = list(
+        teacher.subject_classes.filter(is_active=True).values_list('classroom_id', flat=True)
+    )
+    # Grades owned by teacher where feedback messages exist
+    grades_with_feedback = Grade.objects.filter(
+        teacher=teacher,
+        feedback_messages__isnull=False,
+    ).select_related('student__user', 'subject').distinct()
+    threads = []
+    for grade in grades_with_feedback:
+        msgs = GradeFeedbackMessage.objects.filter(grade=grade).order_by('created_at')
+        unread = msgs.filter(is_read=False, sender_role='student').count()
+        last = msgs.last()
+        threads.append({
+            'grade_id':      grade.id,
+            'student_id':    grade.student.id,
+            'student_name':  grade.student.user.get_full_name(),
+            'subject_name':  grade.subject.name,
+            'score':         float(grade.total_score),
+            'grade_letter':  grade.grade_letter,
+            'is_locked':     grade.is_locked,
+            'unread':        unread,
+            'last_message':  last.message[:80] if last else '',
+            'last_at':       last.created_at.isoformat() if last else None,
+            'message_count': msgs.count(),
+        })
+    threads.sort(key=lambda t: t['last_at'] or '', reverse=True)
+    return JsonResponse({'success': True, 'threads': threads})
+
+
+@csrf_exempt
+def api_teacher_feedback_thread(request, grade_id):
+    """GET: messages for a grade's thread. POST: send teacher reply."""
+    user, teacher = _get_teacher_profile(request)
+    if not teacher:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    try:
+        grade = Grade.objects.get(id=grade_id, teacher=teacher)
+    except Grade.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Grade not found.'}, status=404)
+
+    if request.method == 'GET':
+        msgs = GradeFeedbackMessage.objects.filter(grade=grade).order_by('created_at')
+        # Mark student messages as read
+        msgs.filter(sender_role='student', is_read=False).update(is_read=True)
+        data = [{
+            'id':          m.id,
+            'sender_role': m.sender_role,
+            'message':     m.message,
+            'is_read':     m.is_read,
+            'created_at':  m.created_at.isoformat(),
+        } for m in msgs]
+        return JsonResponse({'success': True, 'messages': data, 'grade': {
+            'id': grade.id,
+            'subject': grade.subject.name,
+            'student': grade.student.user.get_full_name(),
+            'score': float(grade.total_score),
+            'grade_letter': grade.grade_letter,
+        }})
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        text = body.get('message', '').strip()
+        if not text:
+            return JsonResponse({'success': False, 'message': 'Message required.'}, status=400)
+        msg = GradeFeedbackMessage.objects.create(
+            grade=grade, sender=user, sender_role='teacher', message=text,
+        )
+        # Notify student
+        _create_notification(
+            grade.student.school,
+            f'Teacher replied on {grade.subject.name}',
+            f'{user.get_full_name()} replied to your feedback: "{text[:100]}"',
+            notif_type='info', recipient_user=grade.student.user,
+        )
+        return JsonResponse({'success': True, 'id': msg.id, 'created_at': msg.created_at.isoformat()})
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+# Student-side feedback (connects to teacher inbox)
+@csrf_exempt
+def api_student_grade_feedback(request, grade_id):
+    """GET/POST grade feedback thread for a student."""
+    user, student = _get_student_profile(request)
+    if not student:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    try:
+        grade = Grade.objects.get(id=grade_id, student=student)
+    except Grade.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Grade not found.'}, status=404)
+
+    if request.method == 'GET':
+        msgs = GradeFeedbackMessage.objects.filter(grade=grade).order_by('created_at')
+        msgs.filter(sender_role='teacher', is_read=False).update(is_read=True)
+        data = [{
+            'id': m.id, 'sender': m.sender_role,
+            'text': m.message, 'sentAt': m.created_at.isoformat(),
+            'isRead': m.is_read,
+        } for m in msgs]
+        return JsonResponse({'success': True, 'messages': data})
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        text = (body.get('message') or '').strip()
+        if not text:
+            return JsonResponse({'success': False, 'message': 'Message required.'}, status=400)
+        msg = GradeFeedbackMessage.objects.create(
+            grade=grade, sender=user, sender_role='student', message=text,
+        )
+        # Notify teacher
+        if grade.teacher:
+            _create_notification(
+                student.school,
+                f'Student feedback on {grade.subject.name}',
+                f'{user.get_full_name()} left feedback on their {grade.subject.name} grade.',
+                notif_type='info', recipient_user=grade.teacher.user,
+            )
+        return JsonResponse({'success': True, 'id': msg.id})
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+# ── #2 Assignment Submissions ───────────────────────────────────────────────
+
+@csrf_exempt
+def api_teacher_assignment_submissions(request, exam_id):
+    """GET: submission roster for an assignment. POST: grade a student's submission."""
+    user, teacher = _get_teacher_profile(request)
+    if not teacher:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    teacher_classroom_ids = list(
+        teacher.subject_classes.filter(is_active=True).values_list('classroom_id', flat=True)
+    )
+    try:
+        exam = Exam.objects.get(id=exam_id, school=teacher.school, classroom_id__in=teacher_classroom_ids)
+    except Exam.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Assignment not found.'}, status=404)
+
+    if request.method == 'GET':
+        students = Student.objects.filter(
+            school=teacher.school, classroom=exam.classroom, is_active=True
+        ).select_related('user').order_by('user__last_name', 'user__first_name')
+        sub_map = {s.student_id: s for s in AssignmentSubmission.objects.filter(exam=exam)}
+        data = []
+        for s in students:
+            sub = sub_map.get(s.id)
+            data.append({
+                'student_id':    s.id,
+                'student_name':  s.user.get_full_name(),
+                'status':        sub.status if sub else 'pending',
+                'submitted_at':  sub.submitted_at.isoformat() if (sub and sub.submitted_at) else None,
+                'marks':         float(sub.marks) if (sub and sub.marks is not None) else None,
+                'feedback':      sub.feedback if sub else '',
+                'graded_at':     sub.graded_at.isoformat() if (sub and sub.graded_at) else None,
+            })
+        counts = {
+            'total':     len(data),
+            'pending':   sum(1 for d in data if d['status'] == 'pending'),
+            'submitted': sum(1 for d in data if d['status'] == 'submitted'),
+            'graded':    sum(1 for d in data if d['status'] == 'graded'),
+        }
+        return JsonResponse({'success': True, 'assignment': {
+            'id': exam.id, 'name': exam.name,
+            'total_marks': float(exam.total_marks), 'date': str(exam.date),
+        }, 'submissions': data, 'counts': counts})
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        entries = body.get('grades', [])
+        saved = 0
+        for entry in entries:
+            sid = entry.get('student_id')
+            try:
+                student = Student.objects.get(id=sid, school=teacher.school)
+                defaults = {'graded_by': user, 'status': 'graded'}
+                if entry.get('marks') is not None:
+                    defaults['marks'] = float(entry['marks'])
+                if entry.get('feedback') is not None:
+                    defaults['feedback'] = entry['feedback']
+                import django.utils.timezone as tz
+                defaults['graded_at'] = tz.now()
+                AssignmentSubmission.objects.update_or_create(
+                    exam=exam, student=student, defaults=defaults,
+                )
+                saved += 1
+            except Exception:
+                continue
+        return JsonResponse({'success': True, 'saved': saved})
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+# Student-side assignment submission
+@csrf_exempt
+def api_student_assignment_submit(request, exam_id):
+    """POST: student marks an assignment as submitted."""
+    user, student = _get_student_profile(request)
+    if not student:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+    try:
+        exam = Exam.objects.get(id=exam_id, school=student.school, classroom=student.classroom)
+    except Exam.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Assignment not found.'}, status=404)
+    import django.utils.timezone as tz
+    sub, _ = AssignmentSubmission.objects.update_or_create(
+        exam=exam, student=student,
+        defaults={'status': 'submitted', 'submitted_at': tz.now()},
+    )
+    return JsonResponse({'success': True, 'status': sub.status})
+
+
+# Student: list assignments with submission status
+@csrf_exempt
+def api_student_assignments(request):
+    """GET: all active assignments for student's class with submission status."""
+    user, student = _get_student_profile(request)
+    if not student:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    if request.method != 'GET':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+    today = datetime.date.today()
+    exams = Exam.objects.filter(
+        school=student.school, classroom=student.classroom, is_active=True
+    ).select_related('subject', 'term').order_by('date')
+    sub_map = {s.exam_id: s for s in AssignmentSubmission.objects.filter(
+        exam__in=exams, student=student
+    )}
+    def _subject_color(name):
+        colors = ['#10B981','#3B82F6','#8B5CF6','#F59E0B','#EF4444','#14B8A6','#EC4899']
+        h = sum(ord(c) for c in (name or ''))
+        return colors[h % len(colors)]
+    data = []
+    for e in exams:
+        sub = sub_map.get(e.id)
+        status = sub.status if sub else 'pending'
+        data.append({
+            'id':           e.id,
+            'title':        e.name,
+            'subject':      e.subject.name,
+            'subjectColor': _subject_color(e.subject.name),
+            'subjectIcon':  'school',
+            'teacher':      '',
+            'dueDate':      str(e.date),
+            'maxScore':     float(e.total_marks),
+            'status':       status,
+            'submittedAt':  sub.submitted_at.isoformat() if (sub and sub.submitted_at) else None,
+            'score':        float(sub.marks) if (sub and sub.marks is not None) else None,
+            'feedback':     sub.feedback if sub else '',
+        })
+    return JsonResponse(data, safe=False)
+
+
+# ── #3 Direct Student-Teacher Messages ─────────────────────────────────────
+
+@csrf_exempt
+def api_teacher_direct_messages(request):
+    """GET: conversation list for teacher (one per student). POST: send message."""
+    user, teacher = _get_teacher_profile(request)
+    if not teacher:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    school = teacher.school
+    teacher_classroom_ids = list(
+        teacher.subject_classes.filter(is_active=True).values_list('classroom_id', flat=True)
+    )
+
+    if request.method == 'GET':
+        msgs = StudentTeacherMessage.objects.filter(
+            teacher=teacher
+        ).select_related('student__user').order_by('student_id', 'created_at')
+        # Group by student
+        conv_map = {}
+        for m in msgs:
+            sid = m.student_id
+            if sid not in conv_map:
+                sn = m.student.user.get_full_name()
+                tsc = teacher.subject_classes.filter(
+                    classroom=m.student.classroom, is_active=True
+                ).select_related('subject').first()
+                conv_map[sid] = {
+                    'id':         sid,
+                    'student_id': sid,
+                    'student':    {'name': sn, 'initials': ''.join(w[0] for w in sn.split()[:2]).upper(), 'subject': tsc.subject.name if tsc else ''},
+                    'messages':   [],
+                    'unread':     0,
+                }
+            conv_map[sid]['messages'].append({
+                'id': m.id, 'sender': m.sender_role,
+                'text': m.message, 'sentAt': m.created_at.isoformat(),
+            })
+            if m.sender_role == 'student' and not m.is_read:
+                conv_map[sid]['unread'] += 1
+        convs = sorted(conv_map.values(), key=lambda c: c['messages'][-1]['sentAt'] if c['messages'] else '', reverse=True)
+        return JsonResponse({'success': True, 'conversations': convs})
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        student_id = body.get('student_id')
+        text = (body.get('text') or '').strip()
+        if not student_id or not text:
+            return JsonResponse({'success': False, 'message': 'student_id and text required.'}, status=400)
+        try:
+            student = Student.objects.get(id=student_id, school=school, classroom_id__in=teacher_classroom_ids)
+        except Student.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Student not found.'}, status=404)
+        msg = StudentTeacherMessage.objects.create(
+            school=school, student=student, teacher=teacher,
+            sender_role='teacher', message=text,
+        )
+        _create_notification(
+            school, f'Message from {user.get_full_name()}',
+            text[:100], notif_type='info', recipient_user=student.user,
+        )
+        return JsonResponse({'success': True, 'id': msg.id})
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+@csrf_exempt
+def api_teacher_direct_message_thread(request, student_id):
+    """GET: full thread. POST: send message. PATCH: mark all read."""
+    user, teacher = _get_teacher_profile(request)
+    if not teacher:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    try:
+        student = Student.objects.get(id=student_id, school=teacher.school)
+    except Student.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Student not found.'}, status=404)
+
+    if request.method == 'GET':
+        msgs = StudentTeacherMessage.objects.filter(
+            student=student, teacher=teacher
+        ).order_by('created_at')
+        msgs.filter(sender_role='student', is_read=False).update(is_read=True)
+        data = [{'id': m.id, 'sender': m.sender_role, 'text': m.message, 'sentAt': m.created_at.isoformat()} for m in msgs]
+        return JsonResponse({'success': True, 'messages': data})
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        text = (body.get('text') or '').strip()
+        if not text:
+            return JsonResponse({'success': False, 'message': 'text required.'}, status=400)
+        msg = StudentTeacherMessage.objects.create(
+            school=teacher.school, student=student, teacher=teacher,
+            sender_role='teacher', message=text,
+        )
+        _create_notification(
+            teacher.school, f'Message from {user.get_full_name()}',
+            text[:100], notif_type='info', recipient_user=student.user,
+        )
+        return JsonResponse({'success': True, 'id': msg.id, 'sentAt': msg.created_at.isoformat()})
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+# Student-side direct messages
+@csrf_exempt
+def api_student_direct_messages(request):
+    """GET: student's conversation list with teachers."""
+    user, student = _get_student_profile(request)
+    if not student:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    if request.method == 'GET':
+        msgs = StudentTeacherMessage.objects.filter(
+            student=student
+        ).select_related('teacher__user').order_by('teacher_id', 'created_at')
+        conv_map = {}
+        for m in msgs:
+            tid = m.teacher_id
+            if tid not in conv_map:
+                tname = m.teacher.user.get_full_name()
+                tsc = m.teacher.subject_classes.filter(
+                    classroom=student.classroom, is_active=True
+                ).select_related('subject').first()
+                colors = ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6']
+                col = colors[tid % len(colors)]
+                conv_map[tid] = {
+                    'id': tid,
+                    'teacher': {
+                        'name': tname,
+                        'initials': ''.join(w[0] for w in tname.split()[:2]).upper(),
+                        'subject': tsc.subject.name if tsc else '',
+                        'color': col,
+                    },
+                    'messages': [],
+                    'unread': 0,
+                }
+            conv_map[tid]['messages'].append({
+                'id': m.id, 'sender': m.sender_role, 'text': m.message, 'sentAt': m.created_at.isoformat(),
+            })
+            if m.sender_role == 'teacher' and not m.is_read:
+                conv_map[tid]['unread'] += 1
+        convs = sorted(conv_map.values(), key=lambda c: c['messages'][-1]['sentAt'] if c['messages'] else '', reverse=True)
+        return JsonResponse(convs, safe=False)
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+@csrf_exempt
+def api_student_direct_message_send(request, teacher_id):
+    """POST: student sends a message to a teacher."""
+    user, student = _get_student_profile(request)
+    if not student:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+    try:
+        teacher = Teacher.objects.get(id=teacher_id, school=student.school)
+    except Teacher.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Teacher not found.'}, status=404)
+    try:
+        body = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+    text = (body.get('text') or '').strip()
+    if not text:
+        return JsonResponse({'success': False, 'message': 'text required.'}, status=400)
+    msg = StudentTeacherMessage.objects.create(
+        school=student.school, student=student, teacher=teacher,
+        sender_role='student', message=text,
+    )
+    _create_notification(
+        student.school, f'Message from {user.get_full_name()}',
+        text[:100], notif_type='info', recipient_user=teacher.user,
+    )
+    return JsonResponse({'success': True, 'id': msg.id, 'sentAt': msg.created_at.isoformat()})
+
+
+# ── #5 Remedial Requests ────────────────────────────────────────────────────
+
+@csrf_exempt
+def api_teacher_remedial_requests(request):
+    """GET: remedial requests from students in teacher's classes. POST: update status."""
+    user, teacher = _get_teacher_profile(request)
+    if not teacher:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    teacher_classroom_ids = list(
+        teacher.subject_classes.filter(is_active=True).values_list('classroom_id', flat=True)
+    )
+
+    if request.method == 'GET':
+        reqs = RemedialRequest.objects.filter(
+            student__classroom_id__in=teacher_classroom_ids,
+        ).select_related('student__user', 'subject').order_by('-created_at')
+        data = [{
+            'id':           r.id,
+            'student_id':   r.student.id,
+            'student_name': r.student.user.get_full_name(),
+            'subject':      r.subject.name,
+            'reason':       r.reason,
+            'status':       r.status,
+            'created_at':   r.created_at.isoformat(),
+            'teacher_notes': r.teacher_notes,
+            'addressed_at': r.addressed_at.isoformat() if r.addressed_at else None,
+        } for r in reqs]
+        return JsonResponse({'success': True, 'requests': data})
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        req_id = body.get('id')
+        new_status = body.get('status')
+        notes = body.get('notes', '')
+        if not req_id or not new_status:
+            return JsonResponse({'success': False, 'message': 'id and status required.'}, status=400)
+        try:
+            req = RemedialRequest.objects.get(
+                id=req_id, student__classroom_id__in=teacher_classroom_ids
+            )
+        except RemedialRequest.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Request not found.'}, status=404)
+        req.status = new_status
+        req.teacher_notes = notes
+        if new_status in ('addressed', 'dismissed'):
+            import django.utils.timezone as tz
+            req.addressed_by = user
+            req.addressed_at = tz.now()
+        req.save()
+        return JsonResponse({'success': True, 'message': 'Status updated.'})
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+# Student: submit remedial request
+@csrf_exempt
+def api_student_remedial_request(request, grade_id):
+    """POST: student submits a remedial support request for a grade's subject."""
+    user, student = _get_student_profile(request)
+    if not student:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+    try:
+        grade = Grade.objects.get(id=grade_id, student=student)
+    except Grade.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Grade not found.'}, status=404)
+    try:
+        body = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+    reason = (body.get('reason') or '').strip()
+    if not reason:
+        return JsonResponse({'success': False, 'message': 'Reason required.'}, status=400)
+    req, created = RemedialRequest.objects.get_or_create(
+        student=student, subject=grade.subject, status='open',
+        defaults={'grade': grade, 'reason': reason},
+    )
+    if not created:
+        req.reason = reason
+        req.save(update_fields=['reason'])
+    return JsonResponse({'success': True, 'id': req.id, 'created': created})
+
+
+# ── #8 Parent Coverage ──────────────────────────────────────────────────────
+
+@csrf_exempt
+def api_teacher_parent_coverage(request):
+    """GET: per-classroom count of students with/without linked parent accounts."""
+    user, teacher = _get_teacher_profile(request)
+    if not teacher:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    if request.method != 'GET':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+    tscs = teacher.subject_classes.filter(is_active=True).select_related('classroom', 'subject')
+    seen = set()
+    result = []
+    for tsc in tscs:
+        if tsc.classroom_id in seen:
+            continue
+        seen.add(tsc.classroom_id)
+        students = list(Student.objects.filter(classroom=tsc.classroom, is_active=True).values_list('id', flat=True))
+        total = len(students)
+        with_parents = ParentStudent.objects.filter(student_id__in=students).values('student_id').distinct().count()
+        without = [
+            {'id': s.id, 'name': s.user.get_full_name()}
+            for s in Student.objects.filter(
+                id__in=students, is_active=True
+            ).exclude(
+                id__in=ParentStudent.objects.filter(student_id__in=students).values('student_id')
+            ).select_related('user')[:20]
+        ]
+        result.append({
+            'classroom_id':   tsc.classroom.id,
+            'classroom_name': tsc.classroom.name,
+            'total_students': total,
+            'with_parents':   with_parents,
+            'without_parents': total - with_parents,
+            'coverage_pct':   round((with_parents / total) * 100) if total > 0 else 0,
+            'missing_sample': without,
+        })
+    return JsonResponse({'success': True, 'coverage': result})
+
+
+# ── #9 School Broadcasts (teacher view) ────────────────────────────────────
+
+@csrf_exempt
+def api_teacher_school_broadcasts(request):
+    """GET: recent school-wide messages/broadcasts sent by admin to any audience."""
+    user, teacher = _get_teacher_profile(request)
+    if not teacher:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    if request.method != 'GET':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+    msgs = Message.objects.filter(
+        school=teacher.school, is_broadcast=True
+    ).select_related('sender').exclude(sender=user).order_by('-id')[:100]
+    data = [{
+        'id':             m.id,
+        'sender_name':    m.sender.get_full_name() if m.sender else 'System',
+        'recipient_role': m.recipient_role,
+        'subject':        m.subject,
+        'body':           m.body,
+        'created_at':     m.created_at.isoformat(),
+    } for m in msgs]
+    return JsonResponse({'success': True, 'broadcasts': data})
+
+
+# ── #7 Teacher Events / Exam Calendar ──────────────────────────────────────
+
+@csrf_exempt
+def api_teacher_calendar_events(request):
+    """GET: upcoming exams + timetable events for the teacher's classes."""
+    user, teacher = _get_teacher_profile(request)
+    if not teacher:
+        return JsonResponse({'success': False, 'message': 'Unauthorized.'}, status=401)
+    if request.method != 'GET':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+    teacher_classroom_ids = list(
+        teacher.subject_classes.filter(is_active=True).values_list('classroom_id', flat=True)
+    )
+    today = datetime.date.today()
+    # Upcoming exams (next 60 days)
+    exams = Exam.objects.filter(
+        school=teacher.school, is_active=True,
+        classroom_id__in=teacher_classroom_ids,
+        date__gte=today,
+    ).select_related('classroom', 'subject').order_by('date')[:50]
+    events = []
+    for e in exams:
+        events.append({
+            'id':       f'exam-{e.id}',
+            'type':     'exam',
+            'title':    e.name,
+            'date':     str(e.date),
+            'class':    e.classroom.name,
+            'subject':  e.subject.name,
+            'detail':   f'{e.total_marks} marks',
+            'exam_id':  e.id,
+        })
+    # Teacher's own assignments (due in next 60 days)
+    assignments = Exam.objects.filter(
+        school=teacher.school, is_active=True,
+        classroom_id__in=teacher_classroom_ids,
+        date__gte=today,
+    ).select_related('classroom', 'subject').exclude(
+        exam_type__in=['ca', 'midterm', 'final']
+    ).order_by('date')[:30]
+    seen_ids = {e.id for e in exams}
+    for a in assignments:
+        if a.id not in seen_ids:
+            events.append({
+                'id':      f'assign-{a.id}',
+                'type':    'assignment',
+                'title':   a.name,
+                'date':    str(a.date),
+                'class':   a.classroom.name,
+                'subject': a.subject.name,
+                'detail':  a.exam_type,
+            })
+    events.sort(key=lambda e: e['date'])
+    # Current term info
+    term = Term.objects.filter(
+        academic_year__school=teacher.school, is_active=True
+    ).select_related('academic_year').first()
+    term_info = None
+    if term:
+        term_info = {
+            'name': term.name,
+            'start': str(term.start_date),
+            'end':   str(term.end_date),
+            'academic_year': term.academic_year.name if term.academic_year else '',
+        }
+    return JsonResponse({'success': True, 'events': events, 'term': term_info})
 
 
 @csrf_exempt

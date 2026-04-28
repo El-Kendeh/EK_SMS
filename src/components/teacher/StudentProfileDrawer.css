@@ -81,3 +81,118 @@
 }
 .spd-info-row:last-child { border-bottom: none; }
 .spd-info-row strong { color: var(--tch-text-primary); font-weight: 700; }
+
+/* ── Tabs ── */
+.spd-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--tch-border);
+  margin-bottom: 16px;
+  overflow-x: auto;
+}
+.spd-tab-btn {
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--tch-text-secondary);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+  transition: color 0.15s;
+}
+.spd-tab-btn:hover { color: var(--tch-text-primary); }
+.spd-tab-btn--active {
+  color: var(--tch-primary);
+  border-bottom-color: var(--tch-primary);
+}
+
+/* ── Academic History ── */
+.spd-history { padding: 4px 0; }
+.spd-term-block {
+  margin-bottom: 16px;
+  border: 1px solid var(--tch-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.spd-term-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--tch-surface-low);
+  flex-wrap: wrap;
+}
+.spd-term-name {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--tch-text-primary);
+}
+.spd-term-grades { padding: 4px 0; }
+.spd-grade-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-top: 1px solid var(--tch-border);
+  flex-wrap: wrap;
+}
+.spd-grade-subject {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tch-text-primary);
+  min-width: 100px;
+}
+.spd-grade-scores {
+  display: flex;
+  gap: 4px;
+}
+.spd-score-chip {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--tch-surface-low);
+  color: var(--tch-text-secondary);
+  border: 1px solid var(--tch-border);
+}
+.spd-total-badge {
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+/* ── Report Cards ── */
+.spd-report-cards { padding: 4px 0; }
+.spd-rc-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--tch-border);
+}
+.spd-rc-item:last-child { border-bottom: none; }
+.spd-rc-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+.spd-rc-icon { font-size: 22px; color: var(--tch-primary); flex-shrink: 0; }
+.spd-rc-term {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--tch-text-primary);
+  margin: 0 0 2px;
+}
+.spd-rc-meta {
+  font-size: 11px;
+  color: var(--tch-text-secondary);
+  margin: 0;
+}

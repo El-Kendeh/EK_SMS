@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>EK-SMS Student Portal</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-tertiary-fixed": "#410005",
+            "on-surface-variant": "#3c4a42",
+            "on-surface": "#161d19",
+            "primary-fixed": "#6ffbbe",
+            "tertiary-container": "#fc7c78",
+            "outline-variant": "#bbcabf",
+            "surface-tint": "#006c49",
+            "on-secondary": "#ffffff",
+            "surface": "#f4fbf4",
+            "secondary-container": "#d4e0f9",
+            "on-error-container": "#93000a",
+            "tertiary-fixed-dim": "#ffb3af",
+            "on-primary-fixed-variant": "#005236",
+            "surface-variant": "#dde4dd",
+            "primary-fixed-dim": "#4edea3",
+            "surface-container-high": "#e3eae3",
+            "secondary-fixed-dim": "#bbc7df",
+            "secondary-fixed": "#d7e3fc",
+            "on-secondary-container": "#576378",
+            "surface-bright": "#f4fbf4",
+            "on-primary-container": "#00422b",
+            "on-tertiary": "#ffffff",
+            "surface-container-highest": "#dde4dd",
+            "primary": "#006c49",
+            "on-error": "#ffffff",
+            "on-secondary-fixed-variant": "#3c475b",
+            "on-background": "#161d19",
+            "inverse-surface": "#2b322d",
+            "on-tertiary-container": "#711419",
+            "surface-dim": "#d4dcd5",
+            "inverse-on-surface": "#ebf3eb",
+            "tertiary": "#a43a3a",
+            "on-tertiary-fixed-variant": "#842225",
+            "background": "#f4fbf4",
+            "on-primary-fixed": "#002113",
+            "secondary": "#535f74",
+            "primary-container": "#10b981",
+            "outline": "#6c7a71",
+            "error": "#ba1a1a",
+            "tertiary-fixed": "#ffdad7",
+            "surface-container-lowest": "#ffffff",
+            "on-secondary-fixed": "#101c2e",
+            "inverse-primary": "#4edea3",
+            "surface-container-low": "#eef6ee",
+            "surface-container": "#e8f0e9",
+            "on-primary": "#ffffff",
+            "error-container": "#ffdad6"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "unit-4": "1rem",
+            "unit-6": "1.5rem",
+            "gutter": "1rem",
+            "unit-2": "0.5rem",
+            "base": "4px",
+            "unit-1": "0.25rem",
+            "margin-desktop": "2rem",
+            "margin-mobile": "1rem"
+          },
+          "fontFamily": {
+            "body-md": ["Inter"],
+            "display-sm": ["Inter"],
+            "body-sm": ["Inter"],
+            "label-caps": ["Inter"],
+            "h1": ["Inter"],
+            "status-label": ["Inter"]
+          },
+          "fontSize": {
+            "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+            "display-sm": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+            "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+            "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+            "h1": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+            "status-label": ["13px", {"lineHeight": "16px", "fontWeight": "500"}]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+    }
+    body { background-color: #F8F9FB; }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body-md text-on-surface">
+<!-- Desktop SideNav (Shared Component: NavigationDrawer) -->
+<aside class="fixed left-0 top-0 h-full w-72 bg-slate-900 hidden md:flex flex-col py-6 border-r border-slate-800 z-50">
+<div class="px-6 mb-8">
+<h1 class="text-emerald-500 font-black tracking-tight text-xl">EK-SMS</h1>
+</div>
+<div class="px-6 mb-10 flex flex-col items-start">
+<div class="w-12 h-12 rounded-full overflow-hidden mb-3 border-2 border-emerald-500">
+<img alt="Alex Rivera" data-alt="professional headshot of a young male student with a friendly expression in a modern indoor setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC9godmhGxyD7scujsEMKzTHor4UupO5CFiflu7nC9mppChIrdewS6j2Rx4hQ-zL1KT0A1C06k5_0B5DHmN2a_FzZ0PPRCBBs1ZUeYOi-3qBOPixBkh3XVvwH-lBrxzJrahXkqeEU80Gmrqucv2bQPn4ayJqLqLC3DsPNvb5F5PuUfggCecfTL7LVmGqY0NTG965xQ-zFm6YS3Qug7wuSt-fk00Xc3DO0Jx5AzsXbTDpoYW7mXyF_yvjTp4YWk5fmysmYWQAyN8zxQM"/>
+</div>
+<span class="font-inter text-sm font-medium text-white">Alex Rivera</span>
+<span class="font-inter text-[12px] text-slate-400">Student ID: 2024-001</span>
+<span class="font-inter text-[12px] text-emerald-500 font-semibold mt-1">Computer Science</span>
+</div>
+<nav class="flex-1 px-4 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 bg-emerald-500/10 text-emerald-500 border-l-4 border-emerald-500 font-inter text-sm font-medium transition-all duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+        Dashboard
+      </a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-800 font-inter text-sm font-medium transition-all duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined" data-icon="grade">grade</span>
+        Grades
+      </a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-800 font-inter text-sm font-medium transition-all duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined" data-icon="calendar_today">calendar_today</span>
+        Attendance
+      </a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-800 font-inter text-sm font-medium transition-all duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined" data-icon="schedule">schedule</span>
+        Schedule
+      </a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-800 font-inter text-sm font-medium transition-all duration-150 ease-in-out mt-auto" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+        Settings
+      </a>
+</nav>
+</aside>
+<!-- TopAppBar (Shared Component) -->
+<header class="fixed top-0 w-full z-40 flex justify-between items-center px-4 h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 md:pl-80">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-slate-500 md:hidden" data-icon="menu">menu</span>
+<span class="font-inter text-sm font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-500">Student Portal</span>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors duration-200">
+<span class="material-symbols-outlined text-slate-500" data-icon="notifications">notifications</span>
+</button>
+<div class="h-8 w-8 rounded-full bg-emerald-100 flex items-center justify-center md:hidden">
+<span class="text-[10px] font-bold text-emerald-700">AR</span>
+</div>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="pt-20 pb-24 md:pb-8 md:pl-72 min-h-screen">
+<div class="max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop py-unit-4">
+<!-- Welcome Header -->
+<section class="mb-unit-6">
+<h2 class="font-display-sm text-display-sm text-on-surface mb-unit-1">Welcome back, Alex.</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Your academic progress is looking solid this semester.</p>
+</section>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-gutter">
+<!-- Alerts Banner (Full Width Desktop) -->
+<div class="md:col-span-12">
+<div class="bg-white border border-slate-200 border-l-4 border-l-error p-unit-4 flex items-start gap-4">
+<span class="material-symbols-outlined text-error" data-icon="priority_high">priority_high</span>
+<div class="flex-1">
+<h3 class="font-label-caps text-label-caps text-error mb-1">URGENT REMINDER</h3>
+<p class="font-body-sm text-body-sm text-on-surface font-medium">Mid-term Examination fees are due by Friday, October 27th.</p>
+</div>
+<button class="text-error font-status-label text-status-label underline">Pay Now</button>
+</div>
+</div>
+<!-- GPA Card (Left Large) -->
+<div class="md:col-span-8 bg-white border border-slate-200 p-unit-6 flex flex-col justify-between">
+<div>
+<h3 class="font-label-caps text-label-caps text-on-surface-variant mb-unit-4">PERFORMANCE OVERVIEW</h3>
+<div class="flex items-end gap-gutter mb-6">
+<div class="flex flex-col">
+<span class="font-h1 text-h1 text-primary">3.82</span>
+<span class="font-body-sm text-[10px] text-on-surface-variant">CURRENT GPA</span>
+</div>
+<div class="flex-1 h-24 flex items-end justify-between gap-2 px-2">
+<!-- Simple GPA Chart Representation -->
+<div class="w-full bg-emerald-50 h-1/2 rounded-t-sm"></div>
+<div class="w-full bg-emerald-100 h-2/3 rounded-t-sm"></div>
+<div class="w-full bg-emerald-200 h-3/4 rounded-t-sm"></div>
+<div class="w-full bg-emerald-500 h-[85%] rounded-t-sm"></div>
+<div class="w-full bg-emerald-600 h-[92%] rounded-t-sm"></div>
+</div>
+</div>
+</div>
+<div class="flex justify-between items-center pt-4 border-t border-slate-100">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-lg" data-icon="trending_up">trending_up</span>
+<span class="font-body-sm text-body-sm font-medium">Top 5% of Department</span>
+</div>
+<span class="font-status-label text-status-label text-on-surface-variant">Rank #12 / 240</span>
+</div>
+</div>
+<!-- Quick Stats (Right Side) -->
+<div class="md:col-span-4 grid grid-cols-1 gap-gutter">
+<div class="bg-slate-900 p-unit-4 text-white">
+<h3 class="font-label-caps text-label-caps text-slate-400 mb-2">NEXT CLASS</h3>
+<div class="flex flex-col gap-1">
+<span class="font-h1 text-h1">Data Structures</span>
+<span class="font-body-sm text-slate-400">Room 402 • 10:30 AM</span>
+</div>
+</div>
+<div class="bg-emerald-50 p-unit-4 border border-emerald-100">
+<h3 class="font-label-caps text-label-caps text-emerald-700 mb-2">ATTENDANCE</h3>
+<div class="flex justify-between items-end">
+<span class="font-h1 text-h1 text-emerald-900">94%</span>
+<span class="material-symbols-outlined text-emerald-600" data-icon="fact_check">fact_check</span>
+</div>
+</div>
+</div>
+<!-- Recent Grades (Bottom Large) -->
+<div class="md:col-span-12 bg-white border border-slate-200">
+<div class="px-unit-6 py-unit-4 border-b border-slate-100 flex justify-between items-center">
+<h3 class="font-label-caps text-label-caps text-on-surface-variant">RECENT GRADES</h3>
+<span class="material-symbols-outlined text-slate-400" data-icon="chevron_right">chevron_right</span>
+</div>
+<div class="divide-y divide-slate-50">
+<!-- Grade Row 1 -->
+<div class="px-unit-6 py-4 flex items-center justify-between">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 bg-slate-50 flex items-center justify-center">
+<span class="material-symbols-outlined text-slate-400" data-icon="functions">functions</span>
+</div>
+<div>
+<p class="font-body-md text-body-md font-semibold">Discrete Mathematics</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Assignment 03 • Oct 20</p>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<span class="font-h1 text-h1 text-primary">A</span>
+<span class="material-symbols-outlined text-slate-300" data-icon="verified">verified</span>
+</div>
+</div>
+<!-- Grade Row 2 (Locked) -->
+<div class="px-unit-6 py-4 flex items-center justify-between bg-slate-50/50">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 bg-white border border-slate-100 flex items-center justify-center">
+<span class="material-symbols-outlined text-slate-400" data-icon="terminal">terminal</span>
+</div>
+<div>
+<p class="font-body-md text-body-md font-semibold text-slate-500">Advanced Java</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Mid-term Quiz • Oct 22</p>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center">
+<span class="material-symbols-outlined text-slate-500 text-sm" data-icon="lock">lock</span>
+</div>
+</div>
+</div>
+<!-- Grade Row 3 (Locked) -->
+<div class="px-unit-6 py-4 flex items-center justify-between bg-slate-50/50">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 bg-white border border-slate-100 flex items-center justify-center">
+<span class="material-symbols-outlined text-slate-400" data-icon="database">database</span>
+</div>
+<div>
+<p class="font-body-md text-body-md font-semibold text-slate-500">Database Systems</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Lab Final • Oct 24</p>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center">
+<span class="material-symbols-outlined text-slate-500 text-sm" data-icon="lock">lock</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Upcoming Schedule Mini (Bento Piece) -->
+<div class="md:col-span-12">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-gutter">
+<div class="bg-white border border-slate-200 p-unit-4">
+<span class="font-status-label text-status-label text-primary font-bold">MON, OCT 30</span>
+<p class="mt-2 font-body-sm text-body-sm font-semibold">Web Development Workshop</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">02:00 PM - 04:00 PM</p>
+</div>
+<div class="bg-white border border-slate-200 p-unit-4">
+<span class="font-status-label text-status-label text-slate-500 font-bold">TUE, OCT 31</span>
+<p class="mt-2 font-body-sm text-body-sm font-semibold">OS Architecture Quiz</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">09:00 AM - 10:00 AM</p>
+</div>
+<div class="bg-white border border-slate-200 p-unit-4 opacity-60">
+<span class="font-status-label text-status-label text-slate-500 font-bold">WED, NOV 01</span>
+<p class="mt-2 font-body-sm text-body-sm font-semibold">Project Phase 1 Submission</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">11:59 PM (Deadline)</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Mobile Navigation (Shared Component: BottomNavBar) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-2 py-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 md:hidden shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
+<a class="flex flex-col items-center justify-center text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl px-3 py-1 scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-inter text-[10px] font-bold uppercase">Dashboard</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 px-3 py-1 scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="lock">lock</span>
+<span class="font-inter text-[10px] font-bold uppercase">Grades</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 px-3 py-1 scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="event_note">event_note</span>
+<span class="font-inter text-[10px] font-bold uppercase">Schedule</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 px-3 py-1 scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-inter text-[10px] font-bold uppercase">Profile</span>
+</a>
+</nav>
+</body></html>

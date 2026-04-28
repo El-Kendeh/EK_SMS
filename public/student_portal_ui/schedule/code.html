@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Class Timetable | EK-SMS Student Portal</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+        }
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-tertiary-fixed": "#410005",
+                      "on-surface-variant": "#3c4a42",
+                      "on-surface": "#161d19",
+                      "primary-fixed": "#6ffbbe",
+                      "tertiary-container": "#fc7c78",
+                      "outline-variant": "#bbcabf",
+                      "surface-tint": "#006c49",
+                      "on-secondary": "#ffffff",
+                      "surface": "#f4fbf4",
+                      "secondary-container": "#d4e0f9",
+                      "on-error-container": "#93000a",
+                      "tertiary-fixed-dim": "#ffb3af",
+                      "on-primary-fixed-variant": "#005236",
+                      "surface-variant": "#dde4dd",
+                      "primary-fixed-dim": "#4edea3",
+                      "surface-container-high": "#e3eae3",
+                      "secondary-fixed-dim": "#bbc7df",
+                      "secondary-fixed": "#d7e3fc",
+                      "on-secondary-container": "#576378",
+                      "surface-bright": "#f4fbf4",
+                      "on-primary-container": "#00422b",
+                      "on-tertiary": "#ffffff",
+                      "surface-container-highest": "#dde4dd",
+                      "primary": "#006c49",
+                      "on-error": "#ffffff",
+                      "on-secondary-fixed-variant": "#3c475b",
+                      "on-background": "#161d19",
+                      "inverse-surface": "#2b322d",
+                      "on-tertiary-container": "#711419",
+                      "surface-dim": "#d4dcd5",
+                      "inverse-on-surface": "#ebf3eb",
+                      "tertiary": "#a43a3a",
+                      "on-tertiary-fixed-variant": "#842225",
+                      "background": "#f4fbf4",
+                      "on-primary-fixed": "#002113",
+                      "secondary": "#535f74",
+                      "primary-container": "#10b981",
+                      "outline": "#6c7a71",
+                      "error": "#ba1a1a",
+                      "tertiary-fixed": "#ffdad7",
+                      "surface-container-lowest": "#ffffff",
+                      "on-secondary-fixed": "#101c2e",
+                      "inverse-primary": "#4edea3",
+                      "surface-container-low": "#eef6ee",
+                      "surface-container": "#e8f0e9",
+                      "on-primary": "#ffffff",
+                      "error-container": "#ffdad6"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "unit-4": "1rem",
+                      "unit-6": "1.5rem",
+                      "gutter": "1rem",
+                      "unit-2": "0.5rem",
+                      "base": "4px",
+                      "unit-1": "0.25rem",
+                      "margin-desktop": "2rem",
+                      "margin-mobile": "1rem"
+              },
+              "fontFamily": {
+                      "body-md": ["Inter"],
+                      "display-sm": ["Inter"],
+                      "body-sm": ["Inter"],
+                      "label-caps": ["Inter"],
+                      "h1": ["Inter"],
+                      "status-label": ["Inter"]
+              },
+              "fontSize": {
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "display-sm": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                      "h1": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                      "status-label": ["13px", {"lineHeight": "16px", "fontWeight": "500"}]
+              }
+            },
+          },
+        }
+      </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-4 h-16 bg-white border-b border-slate-200">
+<div class="flex items-center gap-4">
+<button class="p-2 hover:bg-slate-50 transition-colors duration-200 rounded-xl">
+<span class="material-symbols-outlined text-slate-500">menu</span>
+</button>
+<h1 class="text-lg font-bold text-slate-900 font-inter">Student Portal</h1>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 hover:bg-slate-50 transition-colors duration-200 rounded-xl">
+<span class="material-symbols-outlined text-slate-500">notifications</span>
+</button>
+</div>
+</header>
+<!-- NavigationDrawer (Desktop) -->
+<aside class="hidden md:flex flex-col h-full py-6 fixed left-0 top-0 w-72 bg-slate-900 border-r border-slate-800 z-40">
+<div class="px-6 mb-8 mt-12">
+<div class="flex items-center gap-4 mb-6">
+<div class="w-12 h-12 rounded-full overflow-hidden border-2 border-emerald-500">
+<img alt="Alex Rivera" data-alt="portrait of a young student with a friendly expression, soft daylight, professional photography style" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDPSEhY3-X326pXb9oLNr_s9DnHXhFGeyVrKCKs8ODY_8deGnqvAX9__7AFXXXdrVuFKRYHj0KX_VfFsAXFbbRc2HhEqPd-xQVcV0qgBlqZfZIKlxwTXiOHJB3TUm1JSZ8HuG6XA_GHnYZhIYXwfuERDypaBm14eClyyDw9yoq3UY_3beQYqiPePSrNcyyBUFa108FGmmbVwO3TXTfzAFvdcYf2IeWfazsZi5pyUvMP1MphwnNnvfE0WoyVFqW-Tb7e4pW2C5QfVN3b"/>
+</div>
+<div>
+<p class="font-inter text-sm font-medium text-white">Alex Rivera</p>
+<p class="text-xs text-slate-400">Student ID: 2024-001</p>
+</div>
+</div>
+<p class="text-emerald-500 font-black tracking-tight text-xs uppercase mb-4">Computer Science</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition-all duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-inter text-sm font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition-all duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="grade">grade</span>
+<span class="font-inter text-sm font-medium">Grades</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition-all duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="calendar_today">calendar_today</span>
+<span class="font-inter text-sm font-medium">Attendance</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 bg-emerald-500/10 text-emerald-500 border-l-4 border-emerald-500 transition-all duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="schedule">schedule</span>
+<span class="font-inter text-sm font-medium">Schedule</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white transition-all duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-inter text-sm font-medium">Settings</span>
+</a>
+</nav>
+</aside>
+<!-- Main Content Canvas -->
+<main class="pt-20 pb-24 md:pb-8 md:pl-72 min-h-screen">
+<div class="px-4 md:px-margin-desktop max-w-5xl mx-auto">
+<!-- Page Header -->
+<div class="mb-6 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+<div>
+<h2 class="font-h1 text-h1 text-on-surface">Class Timetable</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Academic Year 2023-2024 • Semester 2</p>
+</div>
+<div class="flex items-center bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
+<button class="px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-on-primary-container bg-primary-container rounded-lg">Week</button>
+<button class="px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-slate-500 hover:bg-slate-50 rounded-lg">Month</button>
+</div>
+</div>
+<!-- Day Selector Tabs -->
+<div class="flex overflow-x-auto gap-2 mb-8 no-scrollbar">
+<button class="flex-1 min-w-[80px] bg-white border border-slate-200 rounded-xl p-3 flex flex-col items-center gap-1 transition-all hover:border-emerald-200 group">
+<span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Mon</span>
+<span class="text-lg font-bold text-slate-700">12</span>
+</button>
+<button class="flex-1 min-w-[80px] bg-primary border border-primary rounded-xl p-3 flex flex-col items-center gap-1 shadow-md shadow-emerald-200">
+<span class="text-[10px] font-bold text-emerald-100 uppercase tracking-widest">Tue</span>
+<span class="text-lg font-bold text-white">13</span>
+<div class="w-1 h-1 bg-white rounded-full"></div>
+</button>
+<button class="flex-1 min-w-[80px] bg-white border border-slate-200 rounded-xl p-3 flex flex-col items-center gap-1 transition-all hover:border-emerald-200">
+<span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Wed</span>
+<span class="text-lg font-bold text-slate-700">14</span>
+</button>
+<button class="flex-1 min-w-[80px] bg-white border border-slate-200 rounded-xl p-3 flex flex-col items-center gap-1 transition-all hover:border-emerald-200">
+<span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Thu</span>
+<span class="text-lg font-bold text-slate-700">15</span>
+</button>
+<button class="flex-1 min-w-[80px] bg-white border border-slate-200 rounded-xl p-3 flex flex-col items-center gap-1 transition-all hover:border-emerald-200">
+<span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Fri</span>
+<span class="text-lg font-bold text-slate-700">16</span>
+</button>
+</div>
+<!-- Timeline/Class List -->
+<div class="space-y-4 relative">
+<!-- Vertical Line Indicator -->
+<div class="absolute left-[39px] top-0 bottom-0 w-0.5 bg-slate-100 hidden md:block"></div>
+<!-- Ongoing Class (Highlighted) -->
+<div class="relative flex gap-4 items-start">
+<div class="w-20 pt-2 hidden md:block text-right">
+<span class="font-label-caps text-label-caps text-primary font-bold">NOW</span>
+</div>
+<div class="flex-1 bg-emerald-50 border-2 border-primary-container rounded-2xl p-4 md:p-6 shadow-lg shadow-emerald-100 relative overflow-hidden">
+<div class="absolute top-0 right-0 p-3">
+<span class="flex items-center gap-1 px-2 py-1 bg-primary text-white text-[10px] font-bold rounded-full uppercase tracking-tighter">
+<span class="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span>
+                                In Progress
+                            </span>
+</div>
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+<div class="space-y-1">
+<span class="font-label-caps text-label-caps text-primary uppercase">09:30 AM — 11:00 AM</span>
+<h3 class="text-xl font-bold text-on-primary-container">Advanced Algorithms &amp; Data Structures</h3>
+<div class="flex flex-wrap gap-4 pt-2">
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-sm" data-icon="person">person</span>
+<span class="text-body-sm font-medium">Dr. Helena Vance</span>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-sm" data-icon="location_on">location_on</span>
+<span class="text-body-sm font-medium">Lab 402 • Engineering Block</span>
+</div>
+</div>
+</div>
+<button class="bg-primary text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:opacity-90 transition-opacity">View Resources</button>
+</div>
+</div>
+</div>
+<!-- Next Classes -->
+<div class="relative flex gap-4 items-start">
+<div class="w-20 pt-4 hidden md:block text-right">
+<span class="font-label-caps text-label-caps text-slate-400">11:15 AM</span>
+</div>
+<div class="flex-1 bg-white border border-slate-200 rounded-2xl p-4 md:p-6 hover:shadow-md transition-shadow">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+<div class="space-y-1">
+<span class="font-label-caps text-label-caps text-slate-500 uppercase">11:15 AM — 12:45 PM</span>
+<h3 class="text-lg font-bold text-on-surface">Database Management Systems</h3>
+<div class="flex flex-wrap gap-4 pt-1">
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-sm" data-icon="person">person</span>
+<span class="text-body-sm">Prof. Marcus Thorne</span>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-sm" data-icon="meeting_room">meeting_room</span>
+<span class="text-body-sm">Room 205</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Lunch Break -->
+<div class="relative flex gap-4 items-center py-2">
+<div class="w-20 hidden md:block"></div>
+<div class="flex-1 border-t border-dashed border-slate-200 flex justify-center">
+<span class="bg-surface px-4 -mt-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Lunch Interval</span>
+</div>
+</div>
+<div class="relative flex gap-4 items-start opacity-75">
+<div class="w-20 pt-4 hidden md:block text-right">
+<span class="font-label-caps text-label-caps text-slate-400">01:45 PM</span>
+</div>
+<div class="flex-1 bg-white border border-slate-200 rounded-2xl p-4 md:p-6 grayscale-[0.5]">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+<div class="space-y-1">
+<span class="font-label-caps text-label-caps text-slate-500 uppercase">01:45 PM — 03:15 PM</span>
+<h3 class="text-lg font-bold text-on-surface">Ethics in Artificial Intelligence</h3>
+<div class="flex flex-wrap gap-4 pt-1">
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-sm" data-icon="person">person</span>
+<span class="text-body-sm">Dr. Sarah Jenkins</span>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-sm" data-icon="meeting_room">meeting_room</span>
+<span class="text-body-sm">Seminar Hall B</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Tomorrow Preview Card -->
+<div class="mt-12 p-6 bg-slate-900 rounded-3xl text-white relative overflow-hidden">
+<div class="absolute top-0 right-0 w-64 h-64 bg-emerald-500/20 rounded-full -mr-32 -mt-32 blur-3xl"></div>
+<div class="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+<div class="text-center md:text-left">
+<h4 class="text-emerald-400 font-bold text-sm uppercase tracking-widest mb-1">Tomorrow's Focus</h4>
+<p class="text-xl font-bold mb-4">Mobile App Development Workshop</p>
+<div class="flex items-center justify-center md:justify-start gap-4 text-slate-400 text-sm">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-base">schedule</span> 09:00 AM</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-base">location_on</span> Main Auditorium</span>
+</div>
+</div>
+<div class="flex -space-x-3">
+<img alt="Fac 1" class="w-12 h-12 rounded-full border-4 border-slate-900" data-alt="professional portrait of a faculty member with neutral background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD1RC_69LR9EGCvzVtPp1ruPbEc9LaCppNTiNbJUj3yYb1nor149vQ8V5WB3wV0Pp-sLR-u6olx0WtSh33o7ikL7agnhRGx2HKVnY7BIINMIwfrtY98g7u8Xe-BiYh2fq9Woa2z54A5xMrqhJyW-LxgdjCUeZQ3cr2U5AFSl-aU2hwrXPoPdlvlQm99cC4yzk8hWThw7qKkR-_ZZVBUW5KSh7obVTm0mMkpoehqp9DMLGSop69EV1xavCrQbWFYkgOHtYM2wUYsyL0_"/>
+<img alt="Fac 2" class="w-12 h-12 rounded-full border-4 border-slate-900" data-alt="close up of a professor in an academic setting with soft bokeh" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDSFS5j-8uHbQ1tveuUuYHOrwPK6d3OqJHDjS1BLMimjkCMMlRhm0MsjTvlouLbvfrS2xzisUM58lgXqB8NzhPaIX4WTYhGieBzHW3-0S7mfdYxtJ3yjYd8cQHRB2txDMIFBZEc4ULRQoa4PUJ989IsUF8vrR9TRDBFq-bFUrCt2vP7sufY5IUciX9-9SyWUzo7aoyLyBwk7T2U13F940HeK37VFTFh7Z_tSVG_DXZNaEXPRgscFg8l2hRHbHlgvqp64UOA0amsBhg8"/>
+<div class="w-12 h-12 rounded-full border-4 border-slate-900 bg-slate-800 flex items-center justify-center text-xs font-bold">+12</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Mobile) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-2 py-3 md:hidden bg-white border-t border-slate-200 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
+<a class="flex flex-col items-center justify-center text-slate-500 px-3 py-1" href="#">
+<span class="material-symbols-outlined" data-icon="lock">lock</span>
+<span class="font-inter text-[10px] font-bold uppercase mt-1">Grades</span>
+</a>
+<a class="flex flex-col items-center justify-center text-emerald-600 bg-emerald-50 rounded-xl px-3 py-1" href="#">
+<span class="material-symbols-outlined" data-icon="event_note">event_note</span>
+<span class="font-inter text-[10px] font-bold uppercase mt-1">Schedule</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-500 px-3 py-1" href="#">
+<span class="material-symbols-outlined" data-icon="fact_check">fact_check</span>
+<span class="font-inter text-[10px] font-bold uppercase mt-1">Attendance</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-500 px-3 py-1" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-inter text-[10px] font-bold uppercase mt-1">Profile</span>
+</a>
+</nav>
+</body></html>
