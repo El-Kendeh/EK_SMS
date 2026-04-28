@@ -16,6 +16,9 @@ import TeacherProfile from './TeacherProfile';
 import TeacherAttendance from './TeacherAttendance';
 import ClassAnalytics from './ClassAnalytics';
 import TeacherSettings from './TeacherSettings';
+import AssignmentsScreen from './AssignmentsScreen';
+import ModificationsPage from './ModificationsPage';
+import MessagesScreen from './MessagesScreen';
 import './TeacherDashboard.css';
 
 const SECTION_PATHS = {
@@ -29,6 +32,9 @@ const SECTION_PATHS = {
   profile:         '/teacher/profile',
   attendance:      '/teacher/attendance',
   analytics:       '/teacher/analytics',
+  assignments:     '/teacher/assignments',
+  modifications:   '/teacher/modifications',
+  messages:        '/teacher/messages',
   settings:        '/teacher/settings',
 };
 
@@ -43,6 +49,9 @@ function getInitialSection() {
   if (p.includes('/teacher/profile'))       return 'profile';
   if (p.includes('/teacher/attendance'))    return 'attendance';
   if (p.includes('/teacher/analytics'))     return 'analytics';
+  if (p.includes('/teacher/assignments'))   return 'assignments';
+  if (p.includes('/teacher/modifications')) return 'modifications';
+  if (p.includes('/teacher/messages'))      return 'messages';
   if (p.includes('/teacher/settings'))      return 'settings';
   return 'home';
 }
@@ -56,6 +65,9 @@ const NAV_ITEMS = [
   { key: 'analytics',      icon: 'analytics',       label: 'Class Analytics' },
   { key: 'students',       icon: 'groups',          label: 'My Students' },
   { key: 'timetable',      icon: 'calendar_today',  label: 'Timetable' },
+  { key: 'assignments',    icon: 'assignment',      label: 'Assignments' },
+  { key: 'modifications',  icon: 'rate_review',     label: 'Grade Requests' },
+  { key: 'messages',       icon: 'chat',            label: 'Messages' },
   { key: 'notifications',  icon: 'notifications',   label: 'Notifications' },
   { key: 'profile',        icon: 'person',          label: 'Profile' },
   { key: 'settings',       icon: 'settings',        label: 'Settings' },
@@ -125,6 +137,9 @@ function TeacherDashboardInner({ onNavigate }) {
       case 'timetable':      return <TimetableScreen      {...props} />;
       case 'notifications':  return <TeacherNotifications {...props} />;
       case 'profile':        return <TeacherProfile       {...props} />;
+      case 'assignments':    return <AssignmentsScreen    {...props} />;
+      case 'modifications':  return <ModificationsPage   {...props} />;
+      case 'messages':       return <MessagesScreen       {...props} />;
       case 'settings':       return <TeacherSettings      {...props} onLogout={handleLogout} />;
       default:               return <TeacherHome          {...props} />;
     }

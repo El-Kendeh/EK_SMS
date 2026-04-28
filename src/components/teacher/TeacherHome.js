@@ -1,17 +1,40 @@
-import { motion } from 'framer-motion';
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useTeacher } from '../../context/TeacherContext';
 import { useTeacherProfile } from '../../hooks/useTeacherProfile';
 import { useTeacherNotifications } from '../../hooks/useTeacherNotifications';
 import { useTeacherTimetable } from '../../hooks/useTeacherTimetable';
+import { teacherApi } from '../../api/teacherApi';
 import { getGreeting, getPeriodClass, getPeriodsForDay, getCurrentDay, isPeriodNow, formatRelativeTime } from '../../utils/teacherUtils';
 import { getDeadlineWarning } from '../../utils/gradeUtils';
 import './TeacherHome.css';
 
+const MOCK_ACTIVITY = [
+  { id: 1, type: 'grade_viewed', studentName: 'Amara Koroma', detail: 'Viewed their Mathematics grade', time: new Date(Date.now() - 12 * 60000).toISOString() },
+  { id: 2, type: 'parent_notified', studentName: 'Ibrahim Sesay', detail: 'Parent notified of English grade lock', time: new Date(Date.now() - 45 * 60000).toISOString() },
+  { id: 3, type: 'report_downloaded', studentName: 'Fatima Bangura', detail: 'Downloaded term report card', time: new Date(Date.now() - 2 * 3600000).toISOString() },
+  { id: 4, type: 'grade_viewed', studentName: 'Mohamed Conteh', detail: 'Viewed their Science grade', time: new Date(Date.now() - 3 * 3600000).toISOString() },
+];
+
+const ACTIVITY_ICONS = {
+  grade_viewed: 'visibility',
+  parent_notified: 'family_restroom',
+  report_downloaded: 'download',
+  message_sent: 'chat',
+};
+
 export default function TeacherHome({ navigateTo }) {
-  const { assignedClasses, pendingCounts, currentTerm } = useTeacher();
+  const { assignedClasses, pendingCounts, currentTerm, actionFeedback, clearActionFeedback } = useTeacher();
   const { profile } = useTeacherProfile();
   const { notifications } = useTeacherNotifications();
   const { timetable } = useTeacherTimetable();
+  const [activity, setActivity] = useState(MOCK_ACTIVITY);
+
+  useEffect(() => {
+    teacherApi.getStudentActivity()
+      .then(data => { if (data.activities?.length > 0) setActivity(data.activities); })
+      .catch(() => {});
+  }, []);
 
   const greeting = getGreeting(profile?.firstName || 'Teacher');
   const today = getCurrentDay();
@@ -94,6 +117,38 @@ export default function TeacherHome({ navigateTo }) {
           </button>
         </motion.div>
       )}
+
+      {/* Live action feedback */}
+      <AnimatePresence>
+        {actionFeedback && (
+          <motion.div
+            className="tch-home__action-feedback"
+            initial={{ opacity: 0, y: -12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.25 }}
+          >
+            <span className="material-symbols-outlined tch-home__action-feedback__icon">verified</span>
+            <div className="tch-home__action-feedback__body">
+              <p className="tch-home__action-feedback__title">
+                {actionFeedback.count} grade{actionFeedback.count !== 1 ? 's' : ''} locked in {actionFeedback.className}
+              </p>
+              <p className="tch-home__action-feedback__detail">
+                <span className="material-symbols-outlined" style={{ fontSize: 13 }}>groups</span>
+                {actionFeedback.studentsNotified} student{actionFeedback.studentsNotified !== 1 ? 's' : ''} notified
+                <span style={{ margin: '0 4px' }}>·</span>
+                <span className="material-symbols-outlined" style={{ fontSize: 13 }}>family_restroom</span>
+                {actionFeedback.parentsNotified} parent{actionFeedback.parentsNotified !== 1 ? 's' : ''} notified
+                <span style={{ margin: '0 4px' }}>·</span>
+                {actionFeedback.subjectName}
+              </p>
+            </div>
+            <button className="tch-btn tch-btn--ghost tch-btn--sm" onClick={clearActionFeedback} title="Dismiss">
+              <span className="material-symbols-outlined">close</span>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Stat cards */}
       <div className="tch-stats-grid">
@@ -237,6 +292,35 @@ export default function TeacherHome({ navigateTo }) {
               ))}
             </div>
           </div>
+
+          {/* Recent Student Activity */}
+          {activity.length > 0 && (
+            <div className="tch-card tch-card--pad tch-home__section">
+              <div className="tch-home__section-header">
+                <p className="tch-home__section-label">Recent Student Activity</p>
+              </div>
+              <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {activity.slice(0, 4).map((item, i) => (
+                  <motion.div
+                    key={item.id}
+                    className="tch-home__activity-row"
+                    initial={{ opacity: 0, x: 8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.3 + i * 0.05 }}
+                  >
+                    <div className="tch-home__activity-icon">
+                      <span className="material-symbols-outlined">{ACTIVITY_ICONS[item.type] || 'info'}</span>
+                    </div>
+                    <div className="tch-home__activity-info">
+                      <p className="tch-home__activity-student">{item.studentName}</p>
+                      <p className="tch-home__activity-detail">{item.detail}</p>
+                    </div>
+                    <span className="tch-home__activity-time">{formatRelativeTime(item.time)}</span>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Integrity card */}
           <div className="tch-home__integrity-card">

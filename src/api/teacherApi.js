@@ -145,4 +145,67 @@ export const teacherApi = {
     const data = await res.json();
     return data.terms || [];
   },
+
+  async getStudentActivity() {
+    try {
+      const res = await fetch('/api/teacher/student-activity/', { headers: authHeaders() });
+      if (!res.ok) return { activities: [] };
+      return res.json();
+    } catch { return { activities: [] }; }
+  },
+
+  async getAssignments(classId) {
+    try {
+      const params = classId ? `?class_id=${classId}` : '';
+      const res = await fetch(`/api/teacher/assignments/${params}`, { headers: authHeaders() });
+      if (!res.ok) return { assignments: [] };
+      return res.json();
+    } catch { return { assignments: [] }; }
+  },
+
+  async createAssignment(payload) {
+    const res = await fetch('/api/teacher/assignments/', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+
+  async deleteAssignment(id) {
+    const res = await fetch(`/api/teacher/assignments/${id}/`, {
+      method: 'DELETE',
+      headers: authHeaders(),
+    });
+    return res.ok ? { success: true } : { success: false };
+  },
+
+  async getMessages(classId) {
+    try {
+      const params = classId ? `?class_id=${classId}` : '';
+      const res = await fetch(`/api/teacher/messages/${params}`, { headers: authHeaders() });
+      if (!res.ok) return { threads: [] };
+      return res.json();
+    } catch { return { threads: [] }; }
+  },
+
+  async sendMessage(payload) {
+    const res = await fetch('/api/teacher/messages/', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+
+  async generateTimetable(constraints) {
+    try {
+      const res = await fetch('/api/teacher/timetable/generate/', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify(constraints),
+      });
+      return res.json();
+    } catch { return { success: false, error: 'Server unavailable' }; }
+  },
 };

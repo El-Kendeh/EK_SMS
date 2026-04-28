@@ -168,7 +168,92 @@
 }
 .tch-home__integrity-chips .tch-chip .material-symbols-outlined { color: rgba(255,255,255,0.7); }
 
+/* Action feedback banner */
+.tch-home__action-feedback {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--grade-locked-bg);
+  border: 1px solid var(--grade-locked-border);
+  border-radius: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.tch-home__action-feedback__icon {
+  color: var(--tch-primary);
+  font-size: 22px;
+  flex-shrink: 0;
+}
+.tch-home__action-feedback__body {
+  flex: 1;
+  min-width: 0;
+}
+.tch-home__action-feedback__title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--tch-primary-dark);
+  margin: 0 0 3px;
+}
+.tch-home__action-feedback__detail {
+  font-size: 12px;
+  color: var(--tch-text-secondary);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.tch-home__action-feedback__detail .material-symbols-outlined {
+  font-size: 13px;
+  color: var(--tch-primary);
+}
+
+/* Student activity panel */
+.tch-home__activity-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--tch-border);
+}
+.tch-home__activity-row:last-child { border-bottom: none; }
+.tch-home__activity-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--tch-primary-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.tch-home__activity-icon .material-symbols-outlined { font-size: 16px; color: var(--tch-primary); }
+.tch-home__activity-info { flex: 1; min-width: 0; }
+.tch-home__activity-student {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--tch-text-primary);
+  margin: 0 0 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tch-home__activity-detail {
+  font-size: 11px;
+  color: var(--tch-text-secondary);
+  margin: 0;
+}
+.tch-home__activity-time {
+  font-size: 11px;
+  color: var(--tch-text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 @media (max-width: 600px) {
   .tch-home__banner { padding: 16px; }
   .tch-home__greeting { font-size: 18px; }
+  .tch-home__action-feedback { flex-wrap: wrap; }
+  .tch-home__action-feedback__detail { font-size: 11px; }
 }

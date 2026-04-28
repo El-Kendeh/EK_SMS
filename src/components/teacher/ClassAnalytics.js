@@ -114,6 +114,18 @@ export default function ClassAnalytics() {
       avatarColor: avatarColor(s.studentName),
     }));
 
+    const passMark2 = gradingScheme?.pass_mark || 50;
+    const atRisk = scored
+      .filter(s => s.score < passMark2)
+      .map(s => ({
+        studentName: s.studentName,
+        score: s.score,
+        gradeLetter: s.gradeLetter,
+        initials: initials(s.studentName),
+        avatarColor: avatarColor(s.studentName),
+        severity: s.score < passMark2 * 0.6 ? 'critical' : 'at-risk',
+      }));
+
     return {
       classAverage: avg,
       classAverageLetter: getGradeLetter(avg, boundaries),
@@ -122,6 +134,7 @@ export default function ClassAnalytics() {
       lowestScore: scored[scored.length - 1],
       distribution,
       topPerformers,
+      atRisk,
       totalScored: scored.length,
     };
   }, [gradesData, gradingScheme]);
@@ -371,6 +384,43 @@ export default function ClassAnalytics() {
               ))}
             </div>
           </div>
+
+          {/* Students needing support */}
+          {analytics.atRisk.length > 0 && (
+            <div className="tch-card ca-at-risk-card">
+              <p className="ca-section-title" style={{ margin: '0 0 12px' }}>
+                <span className="material-symbols-outlined" style={{ color: 'var(--tch-error)' }}>warning</span>
+                Students Needing Support
+                <span className="tch-badge tch-badge--red" style={{ marginLeft: 8 }}>{analytics.atRisk.length}</span>
+              </p>
+              <p className="ca-at-risk-sub">
+                These students scored below the pass mark. Consider targeted support or communication with their parents.
+              </p>
+              <div className="ca-performers-list">
+                {analytics.atRisk.map((s, i) => (
+                  <motion.div
+                    key={s.studentName}
+                    className="ca-performer-row"
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.06 }}
+                  >
+                    <span className={`ca-risk-dot ca-risk-dot--${s.severity}`} title={s.severity === 'critical' ? 'Critical' : 'At Risk'} />
+                    <div className="ca-performer-avatar" style={{ background: s.avatarColor }}>
+                      {s.initials}
+                    </div>
+                    <div className="ca-performer-info">
+                      <p className="ca-performer-name">{s.studentName}</p>
+                      <span className={`tch-badge ${s.severity === 'critical' ? 'tch-badge--red' : 'tch-badge--amber'}`}>
+                        {s.severity === 'critical' ? 'Critical' : 'At Risk'}
+                      </span>
+                    </div>
+                    <span className="ca-performer-score" style={{ color: 'var(--tch-error)' }}>{s.score}%</span>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>

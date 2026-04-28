@@ -42,6 +42,10 @@ export function TeacherProvider({ children }) {
 
   const [autoSaveStatus, setAutoSaveStatus] = useState('idle');
 
+  const [actionFeedback, setActionFeedbackRaw] = useState(null);
+  const setActionFeedback = useCallback((feedback) => setActionFeedbackRaw(feedback), []);
+  const clearActionFeedback = useCallback(() => setActionFeedbackRaw(null), []);
+
   const selectedClass = useMemo(
     () => assignedClasses.find(c => c.id === selectedClassId) || null,
     [assignedClasses, selectedClassId]
@@ -74,7 +78,8 @@ export function TeacherProvider({ children }) {
       currentTerm, setCurrentTerm,
       gradeDrafts, updateGradeDraft, clearGradeDraft,
       autoSaveStatus, setAutoSaveStatus,
-      pendingCounts
+      pendingCounts,
+      actionFeedback, setActionFeedback, clearActionFeedback,
     }}>
       {children}
     </TeacherContext.Provider>
