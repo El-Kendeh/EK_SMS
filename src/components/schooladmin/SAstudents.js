@@ -1607,6 +1607,7 @@ export function StudentsPage({ school, openAddSignal }) {
                   <option value="">— Select —</option>
                   <option value="Male">Male</option>
                   <option value="Female">Female</option>
+                  <option value="Other">Other / Prefer not to say</option>
                 </select>
               </label>
               <label className="ska-form-group">
@@ -1640,15 +1641,15 @@ export function StudentsPage({ school, openAddSignal }) {
                 <input className="ska-input" autoComplete="address-level2" value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} />
               </label>
               <label className="ska-form-group">
-                <span>Email Address</span>
+                <span>Student Email Address</span>
                 <input className="ska-input" type="email" autoComplete="email" value={form.email}
                   style={fieldErrors.email ? { borderColor: 'var(--ska-error)' } : {}}
                   onChange={e => { setForm(f => ({ ...f, email: e.target.value })); setFieldErrors(p => ({ ...p, email: '' })); }} />
                 {fieldErrors.email && <span style={{ fontSize: '0.71875rem', color: 'var(--ska-error)', marginTop: 2 }}>{fieldErrors.email}</span>}
               </label>
               <label className="ska-form-group">
-                <span>Phone Number</span>
-                <PhoneInput value={form.phone_number} onChange={v => setForm(f => ({ ...f, phone_number: v }))} defaultCountry={schoolCountryCode} />
+                <span>Student Phone Number</span>
+                <PhoneInput value={form.phone_number} onChange={v => setForm(f => ({ ...f, phone_number: v }))} defaultCountry={schoolCountryCode} autoComplete="tel" />
               </label>
             </div>
           </div>
@@ -1706,15 +1707,17 @@ export function StudentsPage({ school, openAddSignal }) {
                   {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </label>
-              <label className="ska-form-group">
-                <span>Student Status</span>
-                <select className="ska-input" value={form.student_status} onChange={e => setForm(f => ({ ...f, student_status: e.target.value }))}>
-                  <option value="active">Active</option>
-                  <option value="suspended">Suspended</option>
-                  <option value="transferred">Transferred</option>
-                  <option value="graduated">Graduated</option>
-                </select>
-              </label>
+              {modal !== 'add' && (
+                <label className="ska-form-group">
+                  <span>Student Status</span>
+                  <select className="ska-input" value={form.student_status} onChange={e => setForm(f => ({ ...f, student_status: e.target.value }))}>
+                    <option value="active">Active</option>
+                    <option value="suspended">Suspended</option>
+                    <option value="transferred">Transferred</option>
+                    <option value="graduated">Graduated</option>
+                  </select>
+                </label>
+              )}
               <label className="ska-form-group">
                 <span>Enrollment Date</span>
                 <input className="ska-input" type="date" value={form.enrollment_date}
@@ -1763,10 +1766,11 @@ export function StudentsPage({ school, openAddSignal }) {
                 <input className="ska-input" value={form.home_language} placeholder="e.g. Krio, Temne, Mende"
                   onChange={e => setForm(f => ({ ...f, home_language: e.target.value }))} />
               </label>
-              <label className="ska-form-group" style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 8 }}>
+              <label className="ska-form-group" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <input type="checkbox" checked={form.is_repeater}
-                  onChange={e => setForm(f => ({ ...f, is_repeater: e.target.checked }))} />
-                <span>Repeating year / retained student</span>
+                  onChange={e => setForm(f => ({ ...f, is_repeater: e.target.checked }))}
+                  style={{ width: 16, height: 16, accentColor: 'var(--ska-primary)', cursor: 'pointer', flexShrink: 0 }} />
+                <span style={{ fontSize: '0.875rem' }}>Repeating year / retained student</span>
               </label>
               <label className="ska-form-group">
                 <span>Transport Route</span>
@@ -1774,6 +1778,13 @@ export function StudentsPage({ school, openAddSignal }) {
                   placeholder="e.g. Route 3 — Waterloo, Morning Bus"
                   onChange={e => setForm(f => ({ ...f, transport_route: e.target.value }))} />
               </label>
+            </div>
+          </div>
+
+          {/* ── Previous Schooling ───────────────────────────── */}
+          <div className="ska-card ska-card-pad" style={{ marginTop: 16, background: 'var(--ska-surface-high)' }}>
+            <h3 className="ska-card-title" style={{ marginBottom: 12 }}>Previous Schooling</h3>
+            <div className="ska-form-grid">
               <label className="ska-form-group">
                 <span>Previous School Attended</span>
                 <input className="ska-input" value={form.previous_school} onChange={e => setForm(f => ({ ...f, previous_school: e.target.value }))} />
@@ -1797,8 +1808,9 @@ export function StudentsPage({ school, openAddSignal }) {
             <div className="ska-form-grid">
 
               {/* Guardian 1 */}
-              <div style={{ gridColumn: '1 / -1', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--ska-primary)' }}>
-                Guardian 1
+              <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--ska-primary)' }}>Guardian 1</span>
+                <span style={{ fontSize: '0.625rem', fontWeight: 600, padding: '2px 7px', borderRadius: 20, background: 'var(--ska-primary)', color: '#fff', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Primary Contact</span>
               </div>
               <label className="ska-form-group" style={{ gridColumn: '1 / -1' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -1843,7 +1855,9 @@ export function StudentsPage({ school, openAddSignal }) {
                   {fieldErrors.father_email && <span style={{ fontSize: '0.71875rem', color: 'var(--ska-error)', marginTop: 2 }}>{fieldErrors.father_email}</span>}
                 </label>
                 <label className="ska-form-group"><span>Address (if different)</span>
-                  <input className="ska-input" value={form.father_address} onChange={e => setForm(f => ({ ...f, father_address: e.target.value }))} /></label>
+                  <textarea className="ska-input" rows={2} value={form.father_address}
+                    onChange={e => setForm(f => ({ ...f, father_address: e.target.value }))}
+                    style={{ resize: 'vertical', fontFamily: 'inherit' }} /></label>
                 <label className="ska-form-group"><span>Parent Login Username</span>
                   <input className="ska-input" autoComplete="off" value={form.father_username} onChange={e => setForm(f => ({ ...f, father_username: e.target.value }))} /></label>
                 <label className="ska-form-group"><span>Parent Login Password</span>
@@ -1872,6 +1886,9 @@ export function StudentsPage({ school, openAddSignal }) {
               </div>
 
               {showGuardian2 && (<>
+                <div style={{ gridColumn: '1 / -1', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--ska-primary)', marginTop: 4 }}>
+                  Guardian 2
+                </div>
                 <label className="ska-form-group" style={{ gridColumn: '1 / -1' }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     Link Existing Parent Account
@@ -1915,7 +1932,9 @@ export function StudentsPage({ school, openAddSignal }) {
                     {fieldErrors.mother_email && <span style={{ fontSize: '0.71875rem', color: 'var(--ska-error)', marginTop: 2 }}>{fieldErrors.mother_email}</span>}
                   </label>
                   <label className="ska-form-group"><span>Address (if different)</span>
-                    <input className="ska-input" value={form.mother_address} onChange={e => setForm(f => ({ ...f, mother_address: e.target.value }))} /></label>
+                    <textarea className="ska-input" rows={2} value={form.mother_address}
+                      onChange={e => setForm(f => ({ ...f, mother_address: e.target.value }))}
+                      style={{ resize: 'vertical', fontFamily: 'inherit' }} /></label>
                   <label className="ska-form-group"><span>Parent Login Username</span>
                     <input className="ska-input" autoComplete="off" value={form.mother_username} onChange={e => setForm(f => ({ ...f, mother_username: e.target.value }))} /></label>
                   <label className="ska-form-group"><span>Parent Login Password</span>
@@ -1976,8 +1995,9 @@ export function StudentsPage({ school, openAddSignal }) {
             <div style={{ display: 'grid', gap: 12 }}>
               <label className="ska-form-group" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <input type="checkbox" checked={form.sen_iep}
-                  onChange={e => setForm(f => ({ ...f, sen_iep: e.target.checked }))} />
-                <span>Student has an active Individualized Education Plan (IEP)</span>
+                  onChange={e => setForm(f => ({ ...f, sen_iep: e.target.checked }))}
+                  style={{ width: 16, height: 16, accentColor: 'var(--ska-primary)', cursor: 'pointer', flexShrink: 0 }} />
+                <span style={{ fontSize: '0.875rem' }}>Student has an active Individualized Education Plan (IEP)</span>
               </label>
               <label className="ska-form-group">
                 <span>SEN Notes</span>
