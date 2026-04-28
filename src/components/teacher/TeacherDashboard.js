@@ -71,6 +71,24 @@ function TeacherDashboardInner({ onNavigate }) {
   const { pendingCounts } = useTeacher();
   const { profile } = useTeacherProfile();
 
+  // Debug: Log profile for troubleshooting
+  useEffect(() => {
+    if (!profile) {
+      // Show a visible error if profile is missing
+      console.warn('Teacher profile not available. Check authentication and API.');
+    } else {
+      console.log('Teacher profile loaded:', profile);
+    }
+  }, [profile]);
+
+  if (!profile) {
+    return (
+      <div style={{ padding: 40, textAlign: 'center', color: 'var(--ska-error)', fontWeight: 700 }}>
+        <p>Profile not available. Please check your login or contact support.</p>
+      </div>
+    );
+  }
+
   // Load classes on mount
   useTeacherClasses();
 
