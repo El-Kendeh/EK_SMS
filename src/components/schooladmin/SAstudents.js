@@ -763,6 +763,7 @@ export function StudentsPage({ school, openAddSignal }) {
   const [showFormPwd,         setShowFormPwd]         = useState(false);
   const [showFatherPwd,       setShowFatherPwd]       = useState(false);
   const [showMotherPwd,       setShowMotherPwd]       = useState(false);
+  const [showGuardian2,       setShowGuardian2]       = useState(false);
   const [credSuccess,         setCredSuccess]         = useState(null);
   const [linkedParents,       setLinkedParents]       = useState([]);
   const [parentsLoading,      setParentsLoading]      = useState(false);
@@ -802,7 +803,7 @@ export function StudentsPage({ school, openAddSignal }) {
   const closeModal = () => {
     setModal(null); setError(''); setFieldErrors({});
     setStep(0); setDupWarning(null); setDupIgnored(false);
-    setShowFatherPwd(false); setShowMotherPwd(false);
+    setShowFatherPwd(false); setShowMotherPwd(false); setShowGuardian2(false);
   };
 
   const load = useCallback(async (q = '') => {
@@ -841,13 +842,15 @@ export function StudentsPage({ school, openAddSignal }) {
   const emptyForm = {
     first_name: '', middle_name: '', last_name: '', gender: '', date_of_birth: '', place_of_birth: '',
     nationality: '', religion: '', home_address: '', city: '', phone_number: '', email: '',
-    admission_number: '', classroom_id: '', student_status: 'active', student_type: '', hostel_house: '', transport_route: '',
+    admission_number: '', classroom_id: '', student_status: 'active', enrollment_date: '',
+    student_type: '', fee_category: '', home_language: '', intake_term: '', is_repeater: false,
+    hostel_house: '', transport_route: '',
     previous_school: '', last_class_completed: '', leaving_reason: '',
     student_username: '', student_password: '',
     father_relationship: 'Father', father_name: '', father_occupation: '', father_phone: '', father_email: '',
-    father_address: '', father_username: '', father_password: '',
+    father_address: '', father_whatsapp: '', father_username: '', father_password: '', father_existing_id: '',
     mother_relationship: 'Mother', mother_name: '', mother_occupation: '', mother_phone: '', mother_email: '',
-    mother_address: '', mother_username: '', mother_password: '',
+    mother_address: '', mother_whatsapp: '', mother_username: '', mother_password: '', mother_existing_id: '',
     emergency_name: '', emergency_relationship: '', emergency_phone: '', emergency_address: '',
     blood_group: '', allergies: '', medical_conditions: '', doctor_name: '', doctor_phone: '',
     sen_notes: '', sen_iep: false,
@@ -875,7 +878,7 @@ export function StudentsPage({ school, openAddSignal }) {
     setDraftRestored(hasDraft);
     setProfilePhotoPreview(null);
     setShowFormPwd(true);
-    setShowFatherPwd(false); setShowMotherPwd(false);
+    setShowFatherPwd(false); setShowMotherPwd(false); setShowGuardian2(false);
     setError('');
     setFieldErrors({});
     setStep(0); setDupWarning(null); setDupIgnored(false);
@@ -908,17 +911,21 @@ export function StudentsPage({ school, openAddSignal }) {
       home_address: s.home_address || '', city: s.city || '',
       phone_number: s.phone_number || '', email: s.email || '',
       admission_number: s.admission_number || '', classroom_id: s.classroom_id || '',
-      student_status: s.is_active === false ? 'suspended' : 'active',
-      student_type: s.student_type || '', hostel_house: s.hostel_house || '', transport_route: s.transport_route || '',
+      student_status: s.status || 'active',
+      enrollment_date: s.admission_date || '',
+      student_type: s.student_type === 'day' ? 'Day' : s.student_type === 'boarding' ? 'Boarding' : '',
+      fee_category: s.fee_category || '', home_language: s.home_language || '',
+      intake_term: s.intake_term || '', is_repeater: !!s.is_repeater,
+      hostel_house: s.hostel_house || '', transport_route: s.transport_route || '',
       previous_school: s.previous_school || '', last_class_completed: s.last_class_completed || '',
       leaving_reason: s.leaving_reason || '',
       student_username: '', student_password: '',
-      father_relationship: s.father_relationship || 'Father', father_name: s.father_name || '', father_occupation: s.father_occupation || '',
-      father_phone: s.father_phone || '', father_email: s.father_email || '',
-      father_address: s.father_address || '', father_username: s.father_username || '', father_password: '',
-      mother_relationship: s.mother_relationship || 'Mother', mother_name: s.mother_name || '', mother_occupation: s.mother_occupation || '',
-      mother_phone: s.mother_phone || '', mother_email: s.mother_email || '',
-      mother_address: s.mother_address || '', mother_username: s.mother_username || '', mother_password: '',
+      father_relationship: 'Father', father_name: '', father_occupation: '',
+      father_phone: '', father_email: '', father_address: '', father_whatsapp: '',
+      father_username: '', father_password: '', father_existing_id: '',
+      mother_relationship: 'Mother', mother_name: '', mother_occupation: '',
+      mother_phone: '', mother_email: '', mother_address: '', mother_whatsapp: '',
+      mother_username: '', mother_password: '', mother_existing_id: '',
       emergency_name: s.emergency_name || '', emergency_relationship: s.emergency_relationship || '',
       emergency_phone: s.emergency_phone || '', emergency_address: s.emergency_address || '',
       blood_group: s.blood_type || '', allergies: s.allergies || '',
@@ -936,7 +943,7 @@ export function StudentsPage({ school, openAddSignal }) {
     });
     setProfilePhotoPreview(s.passport_picture || null);
     setDraftRestored(false);
-    setShowFatherPwd(false); setShowMotherPwd(false);
+    setShowFatherPwd(false); setShowMotherPwd(false); setShowGuardian2(false);
     setError(''); setFieldErrors({}); setStep(0); setDupWarning(null); setDupIgnored(false); setModal(s);
   };
 
@@ -961,7 +968,8 @@ export function StudentsPage({ school, openAddSignal }) {
     const clean = { ...data };
     if (!clean.student_username) delete clean.student_username;
     if (clean.student_status !== undefined) {
-      clean.is_active = clean.student_status === 'active';
+      clean.status    = clean.student_status;
+      clean.is_active = ['active', 'suspended'].includes(clean.student_status);
       delete clean.student_status;
     }
 
@@ -1575,20 +1583,20 @@ export function StudentsPage({ school, openAddSignal }) {
             <div className="ska-form-grid">
               <label className="ska-form-group">
                 <span>First Name *</span>
-                <input className="ska-input" value={form.first_name}
+                <input className="ska-input" autoComplete="given-name" value={form.first_name}
                   style={fieldErrors.first_name ? { borderColor: 'var(--ska-error)' } : {}}
                   onChange={e => { setForm(f => ({ ...f, first_name: e.target.value })); setFieldErrors(p => ({ ...p, first_name: '' })); }} />
                 {fieldErrors.first_name && <span style={{ fontSize: '0.71875rem', color: 'var(--ska-error)', marginTop: 2 }}>{fieldErrors.first_name}</span>}
               </label>
               <label className="ska-form-group">
                 <span>Middle Name</span>
-                <input className="ska-input" value={form.middle_name}
+                <input className="ska-input" autoComplete="additional-name" value={form.middle_name}
                   placeholder="Optional"
                   onChange={e => setForm(f => ({ ...f, middle_name: e.target.value }))} />
               </label>
               <label className="ska-form-group">
                 <span>Last Name *</span>
-                <input className="ska-input" value={form.last_name}
+                <input className="ska-input" autoComplete="family-name" value={form.last_name}
                   style={fieldErrors.last_name ? { borderColor: 'var(--ska-error)' } : {}}
                   onChange={e => { setForm(f => ({ ...f, last_name: e.target.value })); setFieldErrors(p => ({ ...p, last_name: '' })); }} />
                 {fieldErrors.last_name && <span style={{ fontSize: '0.71875rem', color: 'var(--ska-error)', marginTop: 2 }}>{fieldErrors.last_name}</span>}
@@ -1604,6 +1612,7 @@ export function StudentsPage({ school, openAddSignal }) {
               <label className="ska-form-group">
                 <span>Date of Birth</span>
                 <input className="ska-input" type="date" value={form.date_of_birth}
+                  max={new Date().toISOString().split('T')[0]}
                   style={fieldErrors.date_of_birth ? { borderColor: 'var(--ska-error)' } : {}}
                   onChange={e => { setForm(f => ({ ...f, date_of_birth: e.target.value })); setFieldErrors(p => ({ ...p, date_of_birth: '' })); }} />
                 {fieldErrors.date_of_birth && <span style={{ fontSize: '0.71875rem', color: 'var(--ska-error)', marginTop: 2 }}>{fieldErrors.date_of_birth}</span>}
@@ -1614,23 +1623,25 @@ export function StudentsPage({ school, openAddSignal }) {
               </label>
               <label className="ska-form-group">
                 <span>Nationality</span>
-                <input className="ska-input" value={form.nationality} onChange={e => setForm(f => ({ ...f, nationality: e.target.value }))} />
+                <input className="ska-input" autoComplete="country-name" value={form.nationality} onChange={e => setForm(f => ({ ...f, nationality: e.target.value }))} />
               </label>
               <label className="ska-form-group">
                 <span>Religion</span>
                 <input className="ska-input" value={form.religion} onChange={e => setForm(f => ({ ...f, religion: e.target.value }))} />
               </label>
-              <label className="ska-form-group">
+              <label className="ska-form-group" style={{ gridColumn: '1 / -1' }}>
                 <span>Home Address</span>
-                <input className="ska-input" value={form.home_address} onChange={e => setForm(f => ({ ...f, home_address: e.target.value }))} />
+                <textarea className="ska-input" rows={2} autoComplete="street-address" value={form.home_address}
+                  onChange={e => setForm(f => ({ ...f, home_address: e.target.value }))}
+                  style={{ resize: 'vertical', fontFamily: 'inherit' }} />
               </label>
               <label className="ska-form-group">
                 <span>City / Town</span>
-                <input className="ska-input" value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} />
+                <input className="ska-input" autoComplete="address-level2" value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} />
               </label>
               <label className="ska-form-group">
                 <span>Email Address</span>
-                <input className="ska-input" type="email" value={form.email}
+                <input className="ska-input" type="email" autoComplete="email" value={form.email}
                   style={fieldErrors.email ? { borderColor: 'var(--ska-error)' } : {}}
                   onChange={e => { setForm(f => ({ ...f, email: e.target.value })); setFieldErrors(p => ({ ...p, email: '' })); }} />
                 {fieldErrors.email && <span style={{ fontSize: '0.71875rem', color: 'var(--ska-error)', marginTop: 2 }}>{fieldErrors.email}</span>}
@@ -1696,6 +1707,21 @@ export function StudentsPage({ school, openAddSignal }) {
                 </select>
               </label>
               <label className="ska-form-group">
+                <span>Student Status</span>
+                <select className="ska-input" value={form.student_status} onChange={e => setForm(f => ({ ...f, student_status: e.target.value }))}>
+                  <option value="active">Active</option>
+                  <option value="suspended">Suspended</option>
+                  <option value="transferred">Transferred</option>
+                  <option value="graduated">Graduated</option>
+                </select>
+              </label>
+              <label className="ska-form-group">
+                <span>Enrollment Date</span>
+                <input className="ska-input" type="date" value={form.enrollment_date}
+                  max={new Date().toISOString().split('T')[0]}
+                  onChange={e => setForm(f => ({ ...f, enrollment_date: e.target.value }))} />
+              </label>
+              <label className="ska-form-group">
                 <span>Student Type</span>
                 <select className="ska-input" value={form.student_type}
                   onChange={e => setForm(f => ({ ...f, student_type: e.target.value, hostel_house: e.target.value !== 'Boarding' ? '' : f.hostel_house }))}>
@@ -1713,6 +1739,36 @@ export function StudentsPage({ school, openAddSignal }) {
                 </label>
               )}
               <label className="ska-form-group">
+                <span>Fee Category</span>
+                <select className="ska-input" value={form.fee_category} onChange={e => setForm(f => ({ ...f, fee_category: e.target.value }))}>
+                  <option value="">— Select —</option>
+                  <option value="full_paying">Full-Paying</option>
+                  <option value="partial_scholarship">Partial Scholarship</option>
+                  <option value="full_scholarship">Full Scholarship</option>
+                  <option value="government_sponsored">Government-Sponsored</option>
+                  <option value="bursary">Bursary</option>
+                </select>
+              </label>
+              <label className="ska-form-group">
+                <span>Intake Term</span>
+                <select className="ska-input" value={form.intake_term} onChange={e => setForm(f => ({ ...f, intake_term: e.target.value }))}>
+                  <option value="">— Select —</option>
+                  <option value="TERM1">Term 1</option>
+                  <option value="TERM2">Term 2</option>
+                  <option value="TERM3">Term 3</option>
+                </select>
+              </label>
+              <label className="ska-form-group">
+                <span>Home Language</span>
+                <input className="ska-input" value={form.home_language} placeholder="e.g. Krio, Temne, Mende"
+                  onChange={e => setForm(f => ({ ...f, home_language: e.target.value }))} />
+              </label>
+              <label className="ska-form-group" style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 8 }}>
+                <input type="checkbox" checked={form.is_repeater}
+                  onChange={e => setForm(f => ({ ...f, is_repeater: e.target.checked }))} />
+                <span>Repeating year / retained student</span>
+              </label>
+              <label className="ska-form-group">
                 <span>Transport Route</span>
                 <input className="ska-input" value={form.transport_route}
                   placeholder="e.g. Route 3 — Waterloo, Morning Bus"
@@ -1726,9 +1782,11 @@ export function StudentsPage({ school, openAddSignal }) {
                 <span>Last Class Completed</span>
                 <input className="ska-input" value={form.last_class_completed} onChange={e => setForm(f => ({ ...f, last_class_completed: e.target.value }))} />
               </label>
-              <label className="ska-form-group">
+              <label className="ska-form-group" style={{ gridColumn: '1 / -1' }}>
                 <span>Reason for Leaving Previous School</span>
-                <input className="ska-input" value={form.leaving_reason} onChange={e => setForm(f => ({ ...f, leaving_reason: e.target.value }))} />
+                <textarea className="ska-input" rows={2} value={form.leaving_reason}
+                  onChange={e => setForm(f => ({ ...f, leaving_reason: e.target.value }))}
+                  style={{ resize: 'vertical', fontFamily: 'inherit' }} />
               </label>
             </div>
           </div>
@@ -1742,99 +1800,138 @@ export function StudentsPage({ school, openAddSignal }) {
               <div style={{ gridColumn: '1 / -1', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--ska-primary)' }}>
                 Guardian 1
               </div>
-              <label className="ska-form-group">
-                <span>Relationship</span>
-                <select className="ska-input" value={form.father_relationship}
-                  onChange={e => setForm(f => ({ ...f, father_relationship: e.target.value }))}>
-                  <option value="">— Select —</option>
-                  <option value="Father">Father</option>
-                  <option value="Mother">Mother</option>
-                  <option value="Uncle">Uncle</option>
-                  <option value="Aunt">Aunt</option>
-                  <option value="Grandparent">Grandparent</option>
-                  <option value="Legal Guardian">Legal Guardian</option>
-                  <option value="Stepfather">Stepfather</option>
-                  <option value="Stepmother">Stepmother</option>
-                  <option value="Other">Other</option>
-                </select>
+              <label className="ska-form-group" style={{ gridColumn: '1 / -1' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  Link Existing Parent Account
+                  <span style={{ fontSize: '0.625rem', fontWeight: 600, color: 'var(--ska-text-3)' }}>optional — enter parent ID to link instead of creating new</span>
+                </span>
+                <input className="ska-input" inputMode="numeric" value={form.father_existing_id}
+                  placeholder="e.g. 42 (leave blank to create a new account)"
+                  style={{ maxWidth: 240 }}
+                  onChange={e => setForm(f => ({ ...f, father_existing_id: e.target.value.replace(/\D/g, '') }))} />
               </label>
-              <label className="ska-form-group"><span>{form.father_relationship || 'Guardian 1'} Name</span>
-                <input className="ska-input" value={form.father_name} onChange={e => setForm(f => ({ ...f, father_name: e.target.value }))} /></label>
-              <label className="ska-form-group"><span>Occupation</span>
-                <input className="ska-input" value={form.father_occupation} onChange={e => setForm(f => ({ ...f, father_occupation: e.target.value }))} /></label>
-              <label className="ska-form-group"><span>Phone Number</span>
-                <PhoneInput value={form.father_phone} onChange={v => setForm(f => ({ ...f, father_phone: v }))} defaultCountry={schoolCountryCode} /></label>
-              <label className="ska-form-group"><span>Email Address</span>
-                <input className="ska-input" type="email" value={form.father_email}
-                  style={fieldErrors.father_email ? { borderColor: 'var(--ska-error)' } : {}}
-                  onChange={e => { setForm(f => ({ ...f, father_email: e.target.value })); setFieldErrors(p => ({ ...p, father_email: '' })); }} />
-                {fieldErrors.father_email && <span style={{ fontSize: '0.71875rem', color: 'var(--ska-error)', marginTop: 2 }}>{fieldErrors.father_email}</span>}
-              </label>
-              <label className="ska-form-group"><span>Address (if different)</span>
-                <input className="ska-input" value={form.father_address} onChange={e => setForm(f => ({ ...f, father_address: e.target.value }))} /></label>
-              <label className="ska-form-group"><span>Parent Login Username</span>
-                <input className="ska-input" value={form.father_username} onChange={e => setForm(f => ({ ...f, father_username: e.target.value }))} /></label>
-              <label className="ska-form-group"><span>Parent Login Password</span>
-                <div style={{ position: 'relative' }}>
-                  <input className="ska-input" type={showFatherPwd ? 'text' : 'password'} value={form.father_password}
-                    style={{ paddingRight: 36 }}
-                    onChange={e => setForm(f => ({ ...f, father_password: e.target.value }))} />
-                  <button type="button" title={showFatherPwd ? 'Hide' : 'Show'}
-                    onClick={() => setShowFatherPwd(p => !p)}
-                    style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ska-text-3)', padding: 4 }}>
-                    <Ic name={showFatherPwd ? 'visibility_off' : 'visibility'} size="sm" />
-                  </button>
-                </div>
-              </label>
+              {!form.father_existing_id && (<>
+                <label className="ska-form-group">
+                  <span>Relationship</span>
+                  <select className="ska-input" value={form.father_relationship}
+                    onChange={e => setForm(f => ({ ...f, father_relationship: e.target.value }))}>
+                    <option value="">— Select —</option>
+                    <option value="Father">Father</option>
+                    <option value="Mother">Mother</option>
+                    <option value="Uncle">Uncle</option>
+                    <option value="Aunt">Aunt</option>
+                    <option value="Grandparent">Grandparent</option>
+                    <option value="Legal Guardian">Legal Guardian</option>
+                    <option value="Stepfather">Stepfather</option>
+                    <option value="Stepmother">Stepmother</option>
+                    <option value="Sibling">Sibling</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </label>
+                <label className="ska-form-group"><span>{form.father_relationship || 'Guardian 1'} Name</span>
+                  <input className="ska-input" value={form.father_name} onChange={e => setForm(f => ({ ...f, father_name: e.target.value }))} /></label>
+                <label className="ska-form-group"><span>Occupation</span>
+                  <input className="ska-input" value={form.father_occupation} onChange={e => setForm(f => ({ ...f, father_occupation: e.target.value }))} /></label>
+                <label className="ska-form-group"><span>Phone Number</span>
+                  <PhoneInput value={form.father_phone} onChange={v => setForm(f => ({ ...f, father_phone: v }))} defaultCountry={schoolCountryCode} /></label>
+                <label className="ska-form-group"><span>WhatsApp Number</span>
+                  <PhoneInput value={form.father_whatsapp} onChange={v => setForm(f => ({ ...f, father_whatsapp: v }))} defaultCountry={schoolCountryCode} /></label>
+                <label className="ska-form-group"><span>Email Address</span>
+                  <input className="ska-input" type="email" value={form.father_email}
+                    style={fieldErrors.father_email ? { borderColor: 'var(--ska-error)' } : {}}
+                    onChange={e => { setForm(f => ({ ...f, father_email: e.target.value })); setFieldErrors(p => ({ ...p, father_email: '' })); }} />
+                  {fieldErrors.father_email && <span style={{ fontSize: '0.71875rem', color: 'var(--ska-error)', marginTop: 2 }}>{fieldErrors.father_email}</span>}
+                </label>
+                <label className="ska-form-group"><span>Address (if different)</span>
+                  <input className="ska-input" value={form.father_address} onChange={e => setForm(f => ({ ...f, father_address: e.target.value }))} /></label>
+                <label className="ska-form-group"><span>Parent Login Username</span>
+                  <input className="ska-input" autoComplete="off" value={form.father_username} onChange={e => setForm(f => ({ ...f, father_username: e.target.value }))} /></label>
+                <label className="ska-form-group"><span>Parent Login Password</span>
+                  <div style={{ position: 'relative' }}>
+                    <input className="ska-input" type={showFatherPwd ? 'text' : 'password'} autoComplete="new-password" value={form.father_password}
+                      style={{ paddingRight: 36 }}
+                      onChange={e => setForm(f => ({ ...f, father_password: e.target.value }))} />
+                    <button type="button" title={showFatherPwd ? 'Hide' : 'Show'}
+                      onClick={() => setShowFatherPwd(p => !p)}
+                      style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ska-text-3)', padding: 4 }}>
+                      <Ic name={showFatherPwd ? 'visibility_off' : 'visibility'} size="sm" />
+                    </button>
+                  </div>
+                </label>
+              </>)}
 
-              {/* Guardian 2 */}
-              <div style={{ gridColumn: '1 / -1', marginTop: 8, fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--ska-primary)' }}>
-                Guardian 2
+              {/* Guardian 2 toggle */}
+              <div style={{ gridColumn: '1 / -1', marginTop: 8 }}>
+                <button type="button"
+                  onClick={() => setShowGuardian2(p => !p)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+                    fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--ska-primary)', padding: 0 }}>
+                  <Ic name={showGuardian2 ? 'expand_less' : 'expand_more'} size="sm" />
+                  {showGuardian2 ? 'Hide Guardian 2' : 'Add Guardian 2 (optional)'}
+                </button>
               </div>
-              <label className="ska-form-group">
-                <span>Relationship</span>
-                <select className="ska-input" value={form.mother_relationship}
-                  onChange={e => setForm(f => ({ ...f, mother_relationship: e.target.value }))}>
-                  <option value="">— Select —</option>
-                  <option value="Father">Father</option>
-                  <option value="Mother">Mother</option>
-                  <option value="Uncle">Uncle</option>
-                  <option value="Aunt">Aunt</option>
-                  <option value="Grandparent">Grandparent</option>
-                  <option value="Legal Guardian">Legal Guardian</option>
-                  <option value="Stepfather">Stepfather</option>
-                  <option value="Stepmother">Stepmother</option>
-                  <option value="Other">Other</option>
-                </select>
-              </label>
-              <label className="ska-form-group"><span>{form.mother_relationship || 'Guardian 2'} Name</span>
-                <input className="ska-input" value={form.mother_name} onChange={e => setForm(f => ({ ...f, mother_name: e.target.value }))} /></label>
-              <label className="ska-form-group"><span>Occupation</span>
-                <input className="ska-input" value={form.mother_occupation} onChange={e => setForm(f => ({ ...f, mother_occupation: e.target.value }))} /></label>
-              <label className="ska-form-group"><span>Phone Number</span>
-                <PhoneInput value={form.mother_phone} onChange={v => setForm(f => ({ ...f, mother_phone: v }))} defaultCountry={schoolCountryCode} /></label>
-              <label className="ska-form-group"><span>Email Address</span>
-                <input className="ska-input" type="email" value={form.mother_email}
-                  style={fieldErrors.mother_email ? { borderColor: 'var(--ska-error)' } : {}}
-                  onChange={e => { setForm(f => ({ ...f, mother_email: e.target.value })); setFieldErrors(p => ({ ...p, mother_email: '' })); }} />
-                {fieldErrors.mother_email && <span style={{ fontSize: '0.71875rem', color: 'var(--ska-error)', marginTop: 2 }}>{fieldErrors.mother_email}</span>}
-              </label>
-              <label className="ska-form-group"><span>Address (if different)</span>
-                <input className="ska-input" value={form.mother_address} onChange={e => setForm(f => ({ ...f, mother_address: e.target.value }))} /></label>
-              <label className="ska-form-group"><span>Parent Login Username</span>
-                <input className="ska-input" value={form.mother_username} onChange={e => setForm(f => ({ ...f, mother_username: e.target.value }))} /></label>
-              <label className="ska-form-group"><span>Parent Login Password</span>
-                <div style={{ position: 'relative' }}>
-                  <input className="ska-input" type={showMotherPwd ? 'text' : 'password'} value={form.mother_password}
-                    style={{ paddingRight: 36 }}
-                    onChange={e => setForm(f => ({ ...f, mother_password: e.target.value }))} />
-                  <button type="button" title={showMotherPwd ? 'Hide' : 'Show'}
-                    onClick={() => setShowMotherPwd(p => !p)}
-                    style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ska-text-3)', padding: 4 }}>
-                    <Ic name={showMotherPwd ? 'visibility_off' : 'visibility'} size="sm" />
-                  </button>
-                </div>
-              </label>
+
+              {showGuardian2 && (<>
+                <label className="ska-form-group" style={{ gridColumn: '1 / -1' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    Link Existing Parent Account
+                    <span style={{ fontSize: '0.625rem', fontWeight: 600, color: 'var(--ska-text-3)' }}>optional — enter parent ID to link instead of creating new</span>
+                  </span>
+                  <input className="ska-input" inputMode="numeric" value={form.mother_existing_id}
+                    placeholder="e.g. 42 (leave blank to create a new account)"
+                    style={{ maxWidth: 240 }}
+                    onChange={e => setForm(f => ({ ...f, mother_existing_id: e.target.value.replace(/\D/g, '') }))} />
+                </label>
+                {!form.mother_existing_id && (<>
+                  <label className="ska-form-group">
+                    <span>Relationship</span>
+                    <select className="ska-input" value={form.mother_relationship}
+                      onChange={e => setForm(f => ({ ...f, mother_relationship: e.target.value }))}>
+                      <option value="">— Select —</option>
+                      <option value="Father">Father</option>
+                      <option value="Mother">Mother</option>
+                      <option value="Uncle">Uncle</option>
+                      <option value="Aunt">Aunt</option>
+                      <option value="Grandparent">Grandparent</option>
+                      <option value="Legal Guardian">Legal Guardian</option>
+                      <option value="Stepfather">Stepfather</option>
+                      <option value="Stepmother">Stepmother</option>
+                      <option value="Sibling">Sibling</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </label>
+                  <label className="ska-form-group"><span>{form.mother_relationship || 'Guardian 2'} Name</span>
+                    <input className="ska-input" value={form.mother_name} onChange={e => setForm(f => ({ ...f, mother_name: e.target.value }))} /></label>
+                  <label className="ska-form-group"><span>Occupation</span>
+                    <input className="ska-input" value={form.mother_occupation} onChange={e => setForm(f => ({ ...f, mother_occupation: e.target.value }))} /></label>
+                  <label className="ska-form-group"><span>Phone Number</span>
+                    <PhoneInput value={form.mother_phone} onChange={v => setForm(f => ({ ...f, mother_phone: v }))} defaultCountry={schoolCountryCode} /></label>
+                  <label className="ska-form-group"><span>WhatsApp Number</span>
+                    <PhoneInput value={form.mother_whatsapp} onChange={v => setForm(f => ({ ...f, mother_whatsapp: v }))} defaultCountry={schoolCountryCode} /></label>
+                  <label className="ska-form-group"><span>Email Address</span>
+                    <input className="ska-input" type="email" value={form.mother_email}
+                      style={fieldErrors.mother_email ? { borderColor: 'var(--ska-error)' } : {}}
+                      onChange={e => { setForm(f => ({ ...f, mother_email: e.target.value })); setFieldErrors(p => ({ ...p, mother_email: '' })); }} />
+                    {fieldErrors.mother_email && <span style={{ fontSize: '0.71875rem', color: 'var(--ska-error)', marginTop: 2 }}>{fieldErrors.mother_email}</span>}
+                  </label>
+                  <label className="ska-form-group"><span>Address (if different)</span>
+                    <input className="ska-input" value={form.mother_address} onChange={e => setForm(f => ({ ...f, mother_address: e.target.value }))} /></label>
+                  <label className="ska-form-group"><span>Parent Login Username</span>
+                    <input className="ska-input" autoComplete="off" value={form.mother_username} onChange={e => setForm(f => ({ ...f, mother_username: e.target.value }))} /></label>
+                  <label className="ska-form-group"><span>Parent Login Password</span>
+                    <div style={{ position: 'relative' }}>
+                      <input className="ska-input" type={showMotherPwd ? 'text' : 'password'} autoComplete="new-password" value={form.mother_password}
+                        style={{ paddingRight: 36 }}
+                        onChange={e => setForm(f => ({ ...f, mother_password: e.target.value }))} />
+                      <button type="button" title={showMotherPwd ? 'Hide' : 'Show'}
+                        onClick={() => setShowMotherPwd(p => !p)}
+                        style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ska-text-3)', padding: 4 }}>
+                        <Ic name={showMotherPwd ? 'visibility_off' : 'visibility'} size="sm" />
+                      </button>
+                    </div>
+                  </label>
+                </>)}
+              </>)}
             </div>
           </div>
 

@@ -3417,6 +3417,11 @@ def api_student_detail(request, student_id):
             'previous_school':   student.previous_school,
             'last_class_completed': student.last_class_completed,
             'leaving_reason':    student.leaving_reason,
+            'status':            student.status,
+            'fee_category':      student.fee_category,
+            'home_language':     student.home_language,
+            'intake_term':       student.intake_term,
+            'is_repeater':       student.is_repeater,
             'emergency_name':    student.emergency_name,
             'emergency_relationship': student.emergency_relationship,
             'emergency_phone':   student.emergency_phone,
@@ -3493,11 +3498,37 @@ def api_student_detail(request, student_id):
                 student.disciplinary_notes = ''
         if 'disciplinary_notes' in data:
             student.disciplinary_notes = data['disciplinary_notes'].strip()
+        if 'status' in data:
+            _st = str(data['status']).strip()
+            if _st in ('active', 'suspended', 'transferred', 'graduated'):
+                student.status = _st
+                student.is_active = _st in ('active', 'suspended')
+        if 'student_type' in data:
+            _stype = str(data['student_type']).strip().lower()
+            if _stype in ('day', 'boarding', ''):
+                student.student_type = _stype
+        if 'is_repeater' in data:
+            student.is_repeater = _parse_bool(data['is_repeater'])
+        if 'fee_category' in data:
+            _fc = str(data['fee_category']).strip()
+            if _fc in ('full_paying', 'partial_scholarship', 'full_scholarship', 'government_sponsored', 'bursary', ''):
+                student.fee_category = _fc
+        if 'intake_term' in data:
+            _it = str(data['intake_term']).strip()
+            if _it in ('TERM1', 'TERM2', 'TERM3', ''):
+                student.intake_term = _it
+        _enroll = (data.get('enrollment_date') or data.get('admission_date') or '').strip() if hasattr(data, 'get') else ''
+        if _enroll:
+            try:
+                student.admission_date = _enroll
+            except Exception:
+                pass
         for _f in ('place_of_birth', 'nationality', 'religion', 'home_address', 'city',
                    'previous_school', 'last_class_completed', 'leaving_reason',
                    'emergency_name', 'emergency_relationship', 'emergency_phone', 'emergency_address',
                    'doctor_name', 'doctor_phone',
-                   'middle_name', 'hostel_house', 'transport_route', 'sen_notes'):
+                   'middle_name', 'hostel_house', 'transport_route', 'sen_notes',
+                   'home_language'):
             if _f in data:
                 setattr(student, _f, str(data[_f]).strip())
         if 'sen_iep' in data:
