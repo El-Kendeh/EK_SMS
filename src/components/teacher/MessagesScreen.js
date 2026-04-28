@@ -22,7 +22,7 @@ const AUDIENCE_META = {
 const BLANK_FORM = { subject: '', body: '', recipient_role: 'parents' };
 
 export default function MessagesScreen({ navigateTo }) {
-  const { assignedClasses } = useTeacher();
+  useTeacher();
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCompose, setShowCompose] = useState(false);

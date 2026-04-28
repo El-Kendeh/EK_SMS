@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useMemo } from 'react';
+import { motion } from 'framer-motion';
 import { useTeacher } from '../../context/TeacherContext';
 import { useTeacherStudents } from '../../hooks/useTeacherStudents';
 import { teacherApi } from '../../api/teacherApi';

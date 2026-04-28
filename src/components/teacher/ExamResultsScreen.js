@@ -96,8 +96,6 @@ export default function ExamResultsScreen({ navigateTo }) {
     }
   };
 
-  const selectedExam = exams.find(e => e.id === selectedExamId);
-
   const stats = useMemo(() => {
     if (!examData) return null;
     const entered = examData.results.filter(s => marks[s.student_id] !== undefined && marks[s.student_id] !== '');
