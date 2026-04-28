@@ -114,16 +114,15 @@ export default function ClassAnalytics() {
       avatarColor: avatarColor(s.studentName),
     }));
 
-    const passMark2 = gradingScheme?.pass_mark || 50;
     const atRisk = scored
-      .filter(s => s.score < passMark2)
+      .filter(s => s.score < passMark)
       .map(s => ({
         studentName: s.studentName,
         score: s.score,
         gradeLetter: s.gradeLetter,
         initials: initials(s.studentName),
         avatarColor: avatarColor(s.studentName),
-        severity: s.score < passMark2 * 0.6 ? 'critical' : 'at-risk',
+        severity: s.score < passMark * 0.6 ? 'critical' : 'at-risk',
       }));
 
     return {

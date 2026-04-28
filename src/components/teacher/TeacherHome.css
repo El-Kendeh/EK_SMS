@@ -55,7 +55,8 @@
   border: 1px solid var(--tch-error);
   color: var(--tch-error);
 }
-.tch-home__deadline--warning {
+.tch-home__deadline--warning,
+.tch-home__deadline--amber {
   background: var(--tch-warning-bg);
   border: 1px solid var(--tch-warning);
   color: var(--tch-warning);
