@@ -58,11 +58,11 @@ export const SECURITY_CONFIG = {
   // Content Security Policy
   CSP: {
     'default-src': ["'self'"],
-    'script-src': ["'self'", "'unsafe-inline'"], // Consider removing unsafe-inline
+    'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'blob:'],
     'style-src': ["'self'", "'unsafe-inline'"],
     'img-src': ["'self'", 'data:', 'blob:', 'https:'],
     'font-src': ["'self'", "https://fonts.gstatic.com", "https://*.tawk.to", "https://vercel.live"],
-    'connect-src': ["'self'", 'https://backend.pruhsms.africa', 'https://pruhsms.africa', 'https://*.vercel.app', 'http://localhost:8000', 'wss://*.pusher.com', 'wss://ws-us3.pusher.com', 'https://*.pusher.com'],
+    'connect-src': ["'self'", 'https://backend.pruhsms.africa', 'https://pruhsms.africa', 'https://*.vercel.app', 'http://localhost:8000', 'wss://*.pusher.com', 'wss://ws-us3.pusher.com', 'https://*.pusher.com', 'blob:'],
     'frame-ancestors': ["'none'"],
     'base-uri': ["'self'"],
     'form-action': ["'self'"],
@@ -80,7 +80,7 @@ export const SECURITY_CONFIG = {
   // Security Headers for Production
   PRODUCTION_HEADERS: {
     'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
-    'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' https://fonts.gstatic.com https://*.tawk.to https://vercel.live; connect-src 'self' https://backend.pruhsms.africa https://pruhsms.africa https://*.vercel.app wss://*.pusher.com wss://ws-us3.pusher.com https://*.pusher.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+    'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' https://fonts.gstatic.com https://*.tawk.to https://vercel.live; connect-src 'self' https://backend.pruhsms.africa https://pruhsms.africa https://*.vercel.app blob: wss://*.pusher.com wss://ws-us3.pusher.com https://*.pusher.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
     'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
   },
 };

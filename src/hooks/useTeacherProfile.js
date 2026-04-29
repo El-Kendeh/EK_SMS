@@ -10,9 +10,32 @@ export function useTeacherProfile() {
   useEffect(() => {
     if (profile) return;
     let cancelled = false;
+    
+    const token = localStorage.getItem('token');
+    if (!token) {
+      if (!cancelled) {
+        setError('No authentication token found');
+        setLoading(false);
+      }
+      return;
+    }
+    
     teacherApi.getTeacherProfile()
-      .then(data => { if (!cancelled) setProfile(data.teacher || data); })
-      .catch(err => { if (!cancelled) setError(err.message); })
+      .then(data => { 
+        if (!cancelled) {
+          if (data.success === false) {
+            setError(data.message || 'Failed to load profile');
+          } else {
+            setProfile(data.teacher || data);
+          }
+        }
+      })
+      .catch(err => { 
+        if (!cancelled) {
+          console.error('Teacher profile error:', err);
+          setError(err.message); 
+        }
+      })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [profile, setProfile]);

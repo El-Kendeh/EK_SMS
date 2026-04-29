@@ -1,3 +1,7 @@
+import SECURITY_CONFIG from '../config/security';
+
+const API_BASE = SECURITY_CONFIG.API_URL;
+
 function authHeaders() {
   const token = localStorage.getItem('token');
   return { 'Content-Type': 'application/json', Authorization: `Token ${token}` };
@@ -10,27 +14,27 @@ function authHeadersNoContent() {
 
 export const teacherApi = {
   async getTeacherProfile() {
-    const res = await fetch('/api/teacher/me/', { headers: authHeaders() });
+    const res = await fetch(`${API_BASE}/api/teacher/me/`, { headers: authHeaders() });
     return res.json();
   },
 
   async getAssignedClasses() {
-    const res = await fetch('/api/teacher/classes/', { headers: authHeaders() });
+    const res = await fetch(`${API_BASE}/api/teacher/classes/`, { headers: authHeaders() });
     return res.json();
   },
 
   async getClassStudents(classId) {
-    const res = await fetch(`/api/teacher/students/?class_id=${classId}`, { headers: authHeaders() });
+    const res = await fetch(`${API_BASE}/api/teacher/students/?class_id=${classId}`, { headers: authHeaders() });
     return res.json();
   },
 
   async getClassGrades(classId) {
-    const res = await fetch(`/api/teacher/gradebook/?class_id=${classId}`, { headers: authHeaders() });
+    const res = await fetch(`${API_BASE}/api/teacher/gradebook/?class_id=${classId}`, { headers: authHeaders() });
     return res.json();
   },
 
   async saveGradeDraft(payload) {
-    const res = await fetch('/api/teacher/gradebook/', {
+    const res = await fetch(`${API_BASE}/api/teacher/gradebook/`, {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify(payload),
@@ -40,7 +44,7 @@ export const teacherApi = {
 
   async submitGradesForLocking(gradesArray, subjectId, termId) {
     const student_ids = gradesArray.map(g => g.studentId).filter(Boolean);
-    const res = await fetch('/api/teacher/grades/lock/', {
+    const res = await fetch(`${API_BASE}/api/teacher/grades/lock/`, {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({ student_ids, subject_id: subjectId, term_id: termId }),
@@ -49,7 +53,7 @@ export const teacherApi = {
   },
 
   async lockSingleGrade(gradeId) {
-    const res = await fetch('/api/teacher/grades/lock/', {
+    const res = await fetch(`${API_BASE}/api/teacher/grades/lock/`, {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({ grade_id: gradeId }),
@@ -58,18 +62,18 @@ export const teacherApi = {
   },
 
   async getGradeHistory(gradeId) {
-    const res = await fetch(`/api/teacher/grades/${gradeId}/history/`, { headers: authHeaders() });
+    const res = await fetch(`${API_BASE}/api/teacher/grades/${gradeId}/history/`, { headers: authHeaders() });
     return res.json();
   },
 
   async getGradingScheme() {
-    const res = await fetch('/api/school/grading-scheme/', { headers: authHeaders() });
+    const res = await fetch(`${API_BASE}/api/school/grading-scheme/`, { headers: authHeaders() });
     const data = await res.json();
     return data.success ? data.scheme : null;
   },
 
   async getModificationRequests() {
-    const res = await fetch('/api/teacher/modification-requests/', { headers: authHeaders() });
+    const res = await fetch(`${API_BASE}/api/teacher/modification-requests/`, { headers: authHeaders() });
     return res.json();
   },
 
@@ -80,14 +84,14 @@ export const teacherApi = {
       fd.append('proposed_score', payload.proposedScore);
       fd.append('reason', payload.reason);
       fd.append('evidence_file', payload.evidenceFile);
-      const res = await fetch('/api/teacher/modification-requests/', {
+      const res = await fetch(`${API_BASE}/api/teacher/modification-requests/`, {
         method: 'POST',
         headers: authHeadersNoContent(),
         body: fd,
       });
       return res.json();
     }
-    const res = await fetch('/api/teacher/modification-requests/', {
+    const res = await fetch(`${API_BASE}/api/teacher/modification-requests/`, {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({ grade_id: payload.gradeId, proposed_score: payload.proposedScore, reason: payload.reason }),
@@ -96,7 +100,7 @@ export const teacherApi = {
   },
 
   async withdrawModificationRequest(requestId) {
-    const res = await fetch('/api/teacher/modification-requests/', {
+    const res = await fetch(`${API_BASE}/api/teacher/modification-requests/`, {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({ action: 'withdraw', request_id: requestId }),
@@ -108,22 +112,22 @@ export const teacherApi = {
     const params = new URLSearchParams();
     if (classId)   params.append('class_id', classId);
     if (subjectId) params.append('subject_id', subjectId);
-    const res = await fetch(`/api/teacher/analytics/?${params}`, { headers: authHeaders() });
+    const res = await fetch(`${API_BASE}/api/teacher/analytics/?${params}`, { headers: authHeaders() });
     return res.json();
   },
 
   async getTeacherTimetable() {
-    const res = await fetch('/api/teacher/attendance/', { headers: authHeaders() });
+    const res = await fetch(`${API_BASE}/api/teacher/attendance/`, { headers: authHeaders() });
     return res.json();
   },
 
   async getNotifications() {
-    const res = await fetch('/api/school/notifications/', { headers: authHeaders() });
+    const res = await fetch(`${API_BASE}/api/school/notifications/`, { headers: authHeaders() });
     return res.json();
   },
 
   async markNotificationRead(id) {
-    const res = await fetch(`/api/school/notifications/${id}/read/`, {
+    const res = await fetch(`${API_BASE}/api/school/notifications/${id}/read/`, {
       method: 'POST',
       headers: authHeaders(),
     });
@@ -135,13 +139,13 @@ export const teacherApi = {
   },
 
   async getCurrentTerm() {
-    const res = await fetch('/api/school/terms/', { headers: authHeaders() });
+    const res = await fetch(`${API_BASE}/api/school/terms/`, { headers: authHeaders() });
     const data = await res.json();
     return (data.terms || []).find(t => t.status === 'active') || null;
   },
 
   async getAllTerms() {
-    const res = await fetch('/api/school/terms/', { headers: authHeaders() });
+    const res = await fetch(`${API_BASE}/api/school/terms/`, { headers: authHeaders() });
     const data = await res.json();
     return data.terms || [];
   },
