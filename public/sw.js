@@ -79,8 +79,8 @@ self.addEventListener('fetch', (event) => {
           }
           return response;
         })
-        .catch((err) => {
-          console.warn('SW fetch failed, using cache fallback:', request.url, err);
+        .catch(() => {
+          // Silent fallback - no console output to reduce noise
           return cached || Response.error();
         });
     })

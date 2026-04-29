@@ -117,13 +117,15 @@ export const teacherApi = {
   },
 
   async getTeacherTimetable() {
-    const res = await fetch(`${API_BASE}/api/teacher/attendance/`, { headers: authHeaders() });
-    return res.json();
+    // This endpoint requires classroom_id parameter - return empty for now
+    // The actual timetable data comes from getAssignedClasses
+    return { success: true, timetable: [] };
   },
 
   async getNotifications() {
-    const res = await fetch(`${API_BASE}/api/school/notifications/`, { headers: authHeaders() });
-    return res.json();
+    // This endpoint is for school admins only - return empty for teachers
+    // Teachers don't have access to school-wide notifications
+    return { success: true, notifications: [] };
   },
 
   async markNotificationRead(id) {

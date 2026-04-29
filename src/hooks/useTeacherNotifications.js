@@ -10,14 +10,28 @@ export function useTeacherNotifications() {
   useEffect(() => {
     let cancelled = false;
     teacherApi.getNotifications()
-      .then(data => { if (!cancelled) setNotifications(sortTeacherNotifications(data || [])); })
-      .catch(err => { if (!cancelled) setError(err.message); })
+      .then(data => { 
+        if (!cancelled) {
+          // Handle both array and object responses
+          const notifs = Array.isArray(data) ? data : (data?.notifications || data?.results || []);
+          setNotifications(sortTeacherNotifications(notifs));
+        }
+      })
+      .catch(err => { 
+        if (!cancelled) {
+          console.warn('Failed to load notifications:', err.message);
+          setError(err.message);
+          setNotifications([]); // Set empty array on error
+        }
+      })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, []);
 
-  const unreadCount = notifications.filter(n => !n.isRead).length;
-  const securityAlertCount = notifications.filter(n => n.isSecurityAlert && !n.isRead).length;
+  // Safely handle undefined notifications
+  const safeNotifications = notifications || [];
+  const unreadCount = safeNotifications.filter(n => !n.isRead).length;
+  const securityAlertCount = safeNotifications.filter(n => n.isSecurityAlert && !n.isRead).length;
 
   const markRead = useCallback(async (id) => {
     await teacherApi.markNotificationRead(id);
