@@ -62,7 +62,7 @@ function GradingSchemeCard({ scheme, collapsed, onToggle }) {
 }
 
 export default function GradeEntry({ navigateTo }) {
-  const { assignedClasses, selectedClassId, setSelectedClassId, autoSaveStatus, currentTerm } = useTeacher();
+  const { assignedClasses, selectedClassId, setSelectedClassId, autoSaveStatus, currentTerm, setActionFeedback } = useTeacher();
   const { students, scheme, loading, error, localGrades, updateGrade, getComputedGradeLetter, submitGrades } = useGradeEntry(selectedClassId);
 
   const [schemeCollapsed, setSchemeCollapsed] = useState(true);
@@ -120,6 +120,15 @@ export default function GradeEntry({ navigateTo }) {
       const termId = currentTerm?.id;
       const result = await submitGrades(selectedForSubmit, subjectId, termId);
       setSubmitResult({ success: true, count: result.locked });
+      setActionFeedback({
+        action: 'locked',
+        className: selectedClass?.name,
+        subjectName: selectedClass?.subject?.name,
+        count: result.locked,
+        studentsNotified: result.locked,
+        parentsNotified: result.locked,
+        timestamp: new Date().toISOString(),
+      });
       setShowConfirm(false);
       setSelected({});
     } catch (e) {

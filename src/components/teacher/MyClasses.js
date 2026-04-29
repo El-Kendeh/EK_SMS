@@ -1,8 +1,15 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useTeacher } from '../../context/TeacherContext';
-import { getCompletionStatus } from '../../utils/gradeUtils';
 import './MyClasses.css';
+
+function getEnhancedStatus(stats) {
+  if (!stats || stats.total === 0) return { label: 'No Students', cls: 'tch-badge--grey', icon: 'group_off' };
+  if (stats.locked >= stats.total) return { label: 'Fully Locked', cls: 'tch-badge--green', icon: 'lock' };
+  if (stats.pending === stats.total && !stats.draft) return { label: 'Needs Grading', cls: 'tch-badge--red', icon: 'pending_actions' };
+  if (stats.draft > 0 && stats.pending === 0) return { label: 'Ready to Submit', cls: 'tch-badge--blue', icon: 'upload' };
+  return { label: 'In Progress', cls: 'tch-badge--amber', icon: 'edit_note' };
+}
 
 export default function MyClasses({ navigateTo }) {
   const { assignedClasses, setSelectedClassId } = useTeacher();
@@ -45,8 +52,7 @@ export default function MyClasses({ navigateTo }) {
             const total = stats.total || 1;
             const lockedPct = (stats.locked / total) * 100;
             const draftPct  = (stats.draft  / total) * 100;
-            const status = getCompletionStatus(stats);
-            const isComplete = status === 'complete';
+            const isComplete = stats.total > 0 && stats.locked >= stats.total;
 
             return (
               <motion.div
@@ -72,23 +78,21 @@ export default function MyClasses({ navigateTo }) {
 
                 <p className="myclasses-card__subject">{cls.subject.name}</p>
 
+                {/* Enhanced status badge */}
                 <div className="myclasses-card__stats-row">
                   <span className="tch-chip">
                     <span className="material-symbols-outlined">groups</span>
                     {cls.studentCount} students
                   </span>
-                  {isComplete && (
-                    <span className="tch-badge tch-badge--green">
-                      <span className="material-symbols-outlined">check_circle</span>
-                      Complete
-                    </span>
-                  )}
-                  {!isComplete && stats.pending === stats.total && (
-                    <span className="tch-badge tch-badge--grey">Not Started</span>
-                  )}
-                  {!isComplete && stats.pending !== stats.total && (
-                    <span className="tch-badge tch-badge--amber">In Progress</span>
-                  )}
+                  {(() => {
+                    const s = getEnhancedStatus(stats);
+                    return (
+                      <span className={`tch-badge ${s.cls}`}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 13 }}>{s.icon}</span>
+                        {s.label}
+                      </span>
+                    );
+                  })()}
                 </div>
 
                 {/* Progress bar */}
@@ -124,13 +128,28 @@ export default function MyClasses({ navigateTo }) {
                     disabled={isComplete}
                   >
                     <span className="material-symbols-outlined">edit_note</span>
-                    {isComplete ? 'All Locked' : 'Enter Grades'}
+                    {stats.draft > 0 && !isComplete ? 'Continue Grading' : isComplete ? 'All Locked' : 'Enter Grades'}
                   </button>
                   <button
                     className="tch-btn tch-btn--ghost"
+                    title="View Students"
+                    onClick={() => { setSelectedClassId(cls.id); navigateTo('students'); }}
+                  >
+                    <span className="material-symbols-outlined">groups</span>
+                  </button>
+                  <button
+                    className="tch-btn tch-btn--ghost"
+                    title="Grade History"
                     onClick={() => { setSelectedClassId(cls.id); navigateTo('grade-history'); }}
                   >
                     <span className="material-symbols-outlined">history_edu</span>
+                  </button>
+                  <button
+                    className="tch-btn tch-btn--ghost"
+                    title="Analytics"
+                    onClick={() => { setSelectedClassId(cls.id); navigateTo('analytics'); }}
+                  >
+                    <span className="material-symbols-outlined">analytics</span>
                   </button>
                 </div>
               </motion.div>

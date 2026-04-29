@@ -571,6 +571,7 @@
   color: var(--tch-error);
 }
 .tch-btn--danger:hover { background: var(--tch-error); color: white; }
+.tch-btn--danger:disabled { opacity: 0.5; cursor: not-allowed; }
 .tch-btn--sm {
   padding: 6px 12px;
   font-size: 12px;

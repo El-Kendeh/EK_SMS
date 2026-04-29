@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Attendance Overview - EK-SMS Student Portal</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-tertiary-fixed": "#410005",
+                      "on-surface-variant": "#3c4a42",
+                      "on-surface": "#161d19",
+                      "primary-fixed": "#6ffbbe",
+                      "tertiary-container": "#fc7c78",
+                      "outline-variant": "#bbcabf",
+                      "surface-tint": "#006c49",
+                      "on-secondary": "#ffffff",
+                      "surface": "#f4fbf4",
+                      "secondary-container": "#d4e0f9",
+                      "on-error-container": "#93000a",
+                      "tertiary-fixed-dim": "#ffb3af",
+                      "on-primary-fixed-variant": "#005236",
+                      "surface-variant": "#dde4dd",
+                      "primary-fixed-dim": "#4edea3",
+                      "surface-container-high": "#e3eae3",
+                      "secondary-fixed-dim": "#bbc7df",
+                      "secondary-fixed": "#d7e3fc",
+                      "on-secondary-container": "#576378",
+                      "surface-bright": "#f4fbf4",
+                      "on-primary-container": "#00422b",
+                      "on-tertiary": "#ffffff",
+                      "surface-container-highest": "#dde4dd",
+                      "primary": "#006c49",
+                      "on-error": "#ffffff",
+                      "on-secondary-fixed-variant": "#3c475b",
+                      "on-background": "#161d19",
+                      "inverse-surface": "#2b322d",
+                      "on-tertiary-container": "#711419",
+                      "surface-dim": "#d4dcd5",
+                      "inverse-on-surface": "#ebf3eb",
+                      "tertiary": "#a43a3a",
+                      "on-tertiary-fixed-variant": "#842225",
+                      "background": "#f4fbf4",
+                      "on-primary-fixed": "#002113",
+                      "secondary": "#535f74",
+                      "primary-container": "#10b981",
+                      "outline": "#6c7a71",
+                      "error": "#ba1a1a",
+                      "tertiary-fixed": "#ffdad7",
+                      "surface-container-lowest": "#ffffff",
+                      "on-secondary-fixed": "#101c2e",
+                      "inverse-primary": "#4edea3",
+                      "surface-container-low": "#eef6ee",
+                      "surface-container": "#e8f0e9",
+                      "on-primary": "#ffffff",
+                      "error-container": "#ffdad6"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "unit-4": "1rem",
+                      "unit-6": "1.5rem",
+                      "gutter": "1rem",
+                      "unit-2": "0.5rem",
+                      "base": "4px",
+                      "unit-1": "0.25rem",
+                      "margin-desktop": "2rem",
+                      "margin-mobile": "1rem"
+              },
+              "fontFamily": {
+                      "body-md": ["Inter"],
+                      "display-sm": ["Inter"],
+                      "body-sm": ["Inter"],
+                      "label-caps": ["Inter"],
+                      "h1": ["Inter"],
+                      "status-label": ["Inter"]
+              },
+              "fontSize": {
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "display-sm": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                      "h1": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                      "status-label": ["13px", {"lineHeight": "16px", "fontWeight": "500"}]
+              }
+            },
+          },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+        }
+        body { font-family: 'Inter', sans-serif; background-color: #f4fbf4; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="text-on-background">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-4 h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+<div class="flex items-center gap-3">
+<button class="p-2 transition-colors duration-200 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-full">
+<span class="material-symbols-outlined text-emerald-600 dark:text-emerald-500">menu</span>
+</button>
+<h1 class="text-lg font-bold text-slate-900 dark:text-white">Student Portal</h1>
+</div>
+<div class="flex items-center">
+<button class="p-2 transition-colors duration-200 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-full">
+<span class="material-symbols-outlined text-slate-500 dark:text-slate-400">notifications</span>
+</button>
+</div>
+</header>
+<div class="flex h-screen pt-16">
+<!-- NavigationDrawer (Desktop) -->
+<aside class="hidden md:flex flex-col h-full py-6 fixed left-0 top-16 w-72 bg-slate-900 border-r border-slate-800">
+<div class="px-6 mb-8 flex items-center gap-4">
+<div class="w-12 h-12 rounded-full overflow-hidden border-2 border-emerald-500/20">
+<img alt="Student Profile Picture" class="w-full h-full object-cover" data-alt="professional headshot of a young male student with glasses wearing a clean white t-shirt against a soft gray background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCLZeS2GWonPKtCotMf2eHmBT4Rr9t0IDANT2Eoo1hwPAjsz8ztEMKe9ICaIhv9QkFQwzA_d-Ic3C2D96_0hy8PwI5lFBvT0i5ROkNGSiNkfgLDOyxvUDtAo9H_CcSFyMXqoXfm6qNyMk12_1ozkLgksc1LJZh2kjx2VwqnvjfXFLxMlF1U0SP3UHv7P1_0HqV00R0YqoVrHRgM7slCgaXsQRIwlQnPRcEccVQmBFImtqCx6vAHLk3_gQWOSqbH2sYHpXhPMgYI-YDP"/>
+</div>
+<div>
+<p class="text-white font-inter text-sm font-medium">Alex Rivera</p>
+<p class="text-slate-400 text-[10px] uppercase tracking-wider">Student ID: 2024-001</p>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center px-6 py-3 transition-all duration-150 ease-in-out text-slate-400 hover:text-white hover:bg-slate-800" href="#">
+<span class="material-symbols-outlined mr-3">dashboard</span>
+<span class="font-inter text-sm font-medium">Dashboard</span>
+</a>
+<a class="flex items-center px-6 py-3 transition-all duration-150 ease-in-out text-slate-400 hover:text-white hover:bg-slate-800" href="#">
+<span class="material-symbols-outlined mr-3">grade</span>
+<span class="font-inter text-sm font-medium">Grades</span>
+</a>
+<a class="flex items-center px-6 py-3 transition-all duration-150 ease-in-out bg-emerald-500/10 text-emerald-500 border-l-4 border-emerald-500" href="#">
+<span class="material-symbols-outlined mr-3">fact_check</span>
+<span class="font-inter text-sm font-medium">Attendance</span>
+</a>
+<a class="flex items-center px-6 py-3 transition-all duration-150 ease-in-out text-slate-400 hover:text-white hover:bg-slate-800" href="#">
+<span class="material-symbols-outlined mr-3">calendar_today</span>
+<span class="font-inter text-sm font-medium">Schedule</span>
+</a>
+<a class="flex items-center px-6 py-3 transition-all duration-150 ease-in-out text-slate-400 hover:text-white hover:bg-slate-800" href="#">
+<span class="material-symbols-outlined mr-3">settings</span>
+<span class="font-inter text-sm font-medium">Settings</span>
+</a>
+</nav>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 ml-0 md:ml-72 bg-[#F8F9FB] min-h-screen pb-24 md:pb-8">
+<div class="max-w-6xl mx-auto px-4 md:px-8 py-6">
+<!-- Header -->
+<div class="mb-6">
+<h2 class="font-h1 text-h1 text-on-surface">Attendance Overview</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Academic Year 2023-2024 • Semester 2</p>
+</div>
+<!-- Bento Stats Row -->
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+<div class="bg-white border border-outline-variant p-5 rounded-xl">
+<div class="flex justify-between items-start mb-2">
+<span class="material-symbols-outlined text-emerald-600 bg-emerald-50 p-2 rounded-lg">check_circle</span>
+<span class="text-emerald-600 font-status-label text-status-label font-bold">92% Rate</span>
+</div>
+<p class="font-label-caps text-label-caps text-on-surface-variant uppercase mb-1">Present Days</p>
+<p class="text-3xl font-extrabold text-on-surface">148</p>
+</div>
+<div class="bg-white border border-outline-variant p-5 rounded-xl">
+<div class="flex justify-between items-start mb-2">
+<span class="material-symbols-outlined text-error bg-error-container/20 p-2 rounded-lg">cancel</span>
+</div>
+<p class="font-label-caps text-label-caps text-on-surface-variant uppercase mb-1">Absent Days</p>
+<p class="text-3xl font-extrabold text-on-surface">12</p>
+</div>
+<div class="bg-white border border-outline-variant p-5 rounded-xl">
+<div class="flex justify-between items-start mb-2">
+<span class="material-symbols-outlined text-amber-600 bg-amber-50 p-2 rounded-lg">schedule</span>
+</div>
+<p class="font-label-caps text-label-caps text-on-surface-variant uppercase mb-1">Tardy</p>
+<p class="text-3xl font-extrabold text-on-surface">04</p>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- Calendar View -->
+<div class="lg:col-span-2 bg-white border border-outline-variant rounded-xl overflow-hidden">
+<div class="p-6 border-b border-outline-variant flex justify-between items-center">
+<h3 class="font-label-caps text-label-caps text-on-surface-variant uppercase">Monthly Attendance Log</h3>
+<div class="flex items-center gap-2">
+<button class="p-1 hover:bg-surface-container rounded-md"><span class="material-symbols-outlined text-sm">chevron_left</span></button>
+<span class="font-status-label text-status-label">March 2024</span>
+<button class="p-1 hover:bg-surface-container rounded-md"><span class="material-symbols-outlined text-sm">chevron_right</span></button>
+</div>
+</div>
+<div class="p-6">
+<div class="grid grid-cols-7 gap-2 mb-2">
+<div class="text-center font-label-caps text-[10px] text-on-surface-variant">MON</div>
+<div class="text-center font-label-caps text-[10px] text-on-surface-variant">TUE</div>
+<div class="text-center font-label-caps text-[10px] text-on-surface-variant">WED</div>
+<div class="text-center font-label-caps text-[10px] text-on-surface-variant">THU</div>
+<div class="text-center font-label-caps text-[10px] text-on-surface-variant">FRI</div>
+<div class="text-center font-label-caps text-[10px] text-on-surface-variant">SAT</div>
+<div class="text-center font-label-caps text-[10px] text-on-surface-variant">SUN</div>
+</div>
+<!-- Simple Grid Calendar -->
+<div class="grid grid-cols-7 gap-2">
+<!-- Placeholders for start of month -->
+<div class="aspect-square flex items-center justify-center text-slate-300 text-xs">-</div>
+<div class="aspect-square flex items-center justify-center text-slate-300 text-xs">-</div>
+<div class="aspect-square flex items-center justify-center text-slate-300 text-xs">-</div>
+<div class="aspect-square flex items-center justify-center text-slate-300 text-xs">-</div>
+<!-- Week 1 -->
+<div class="aspect-square relative flex items-center justify-center bg-surface-container-low rounded-lg text-xs font-semibold">
+                                    1 <span class="absolute bottom-1 w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+</div>
+<div class="aspect-square relative flex items-center justify-center bg-surface-container-low rounded-lg text-xs font-semibold">
+                                    2 <span class="absolute bottom-1 w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+</div>
+<div class="aspect-square relative flex items-center justify-center bg-surface-container-low rounded-lg text-xs font-semibold">
+                                    3 <span class="absolute bottom-1 w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+</div>
+<!-- Week 2 -->
+<div class="aspect-square relative flex items-center justify-center bg-surface-container-low rounded-lg text-xs font-semibold">
+                                    4 <span class="absolute bottom-1 w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+</div>
+<div class="aspect-square relative flex items-center justify-center bg-surface-container-low rounded-lg text-xs font-semibold border-2 border-primary-container">
+                                    5 <span class="absolute bottom-1 w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+</div>
+<div class="aspect-square relative flex items-center justify-center bg-surface-container-low rounded-lg text-xs font-semibold">
+                                    6 <span class="absolute bottom-1 w-1.5 h-1.5 bg-error rounded-full"></span>
+</div>
+<div class="aspect-square relative flex items-center justify-center bg-surface-container-low rounded-lg text-xs font-semibold">
+                                    7 <span class="absolute bottom-1 w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+</div>
+<div class="aspect-square relative flex items-center justify-center bg-surface-container-low rounded-lg text-xs font-semibold">
+                                    8 <span class="absolute bottom-1 w-1.5 h-1.5 bg-amber-500 rounded-full"></span>
+</div>
+<div class="aspect-square relative flex items-center justify-center bg-surface-container-low rounded-lg text-xs font-semibold">
+                                    9 <span class="absolute bottom-1 w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+</div>
+<div class="aspect-square relative flex items-center justify-center bg-surface-container-low rounded-lg text-xs font-semibold">
+                                    10 <span class="absolute bottom-1 w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+</div>
+<!-- Rest of month simulated... -->
+<div class="aspect-square relative flex items-center justify-center bg-surface-container-low rounded-lg text-xs font-semibold">
+                                    11 <span class="absolute bottom-1 w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+</div>
+<div class="aspect-square relative flex items-center justify-center bg-surface-container-low rounded-lg text-xs font-semibold">
+                                    12 <span class="absolute bottom-1 w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+</div>
+<div class="aspect-square relative flex items-center justify-center bg-surface-container-low rounded-lg text-xs font-semibold">
+                                    13 <span class="absolute bottom-1 w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+</div>
+<div class="aspect-square relative flex items-center justify-center bg-surface-container-low rounded-lg text-xs font-semibold">
+                                    14 <span class="absolute bottom-1 w-1.5 h-1.5 bg-error rounded-full"></span>
+</div>
+<div class="aspect-square relative flex items-center justify-center bg-surface-container-low rounded-lg text-xs font-semibold">
+                                    15 <span class="absolute bottom-1 w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+</div>
+<div class="aspect-square relative flex items-center justify-center bg-surface-container-low rounded-lg text-xs font-semibold">
+                                    16 <span class="absolute bottom-1 w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+</div>
+<div class="aspect-square relative flex items-center justify-center bg-surface-container-low rounded-lg text-xs font-semibold">
+                                    17 <span class="absolute bottom-1 w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+</div>
+</div>
+<!-- Legend -->
+<div class="mt-6 flex flex-wrap gap-4 pt-6 border-t border-outline-variant/30">
+<div class="flex items-center gap-2">
+<span class="w-2.5 h-2.5 bg-emerald-500 rounded-full"></span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Present</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-2.5 h-2.5 bg-error rounded-full"></span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Absent</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-2.5 h-2.5 bg-amber-500 rounded-full"></span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Tardy</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Details List -->
+<div class="bg-white border border-outline-variant rounded-xl overflow-hidden flex flex-col h-full">
+<div class="p-6 border-b border-outline-variant">
+<h3 class="font-label-caps text-label-caps text-on-surface-variant uppercase">Recent Activity</h3>
+</div>
+<div class="flex-1 overflow-y-auto">
+<div class="divide-y divide-outline-variant/30">
+<!-- Entry 1 -->
+<div class="p-4 hover:bg-surface-container-lowest transition-colors">
+<div class="flex justify-between items-center mb-1">
+<span class="font-status-label text-status-label font-bold text-on-surface">March 14, 2024</span>
+<span class="px-2 py-0.5 bg-error-container/20 text-error font-label-caps text-[10px] rounded uppercase">Absent</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Intro to Algorithms • Section A</p>
+</div>
+<!-- Entry 2 -->
+<div class="p-4 hover:bg-surface-container-lowest transition-colors">
+<div class="flex justify-between items-center mb-1">
+<span class="font-status-label text-status-label font-bold text-on-surface">March 13, 2024</span>
+<span class="px-2 py-0.5 bg-emerald-50 text-emerald-600 font-label-caps text-[10px] rounded uppercase">Present</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Full Day • Multiple Courses</p>
+</div>
+<!-- Entry 3 -->
+<div class="p-4 hover:bg-surface-container-lowest transition-colors">
+<div class="flex justify-between items-center mb-1">
+<span class="font-status-label text-status-label font-bold text-on-surface">March 12, 2024</span>
+<span class="px-2 py-0.5 bg-emerald-50 text-emerald-600 font-label-caps text-[10px] rounded uppercase">Present</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Data Structures • Section C</p>
+</div>
+<!-- Entry 4 -->
+<div class="p-4 hover:bg-surface-container-lowest transition-colors">
+<div class="flex justify-between items-center mb-1">
+<span class="font-status-label text-status-label font-bold text-on-surface">March 11, 2024</span>
+<span class="px-2 py-0.5 bg-amber-50 text-amber-600 font-label-caps text-[10px] rounded uppercase">Tardy</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Linear Algebra • Late 15m</p>
+</div>
+<!-- Entry 5 -->
+<div class="p-4 hover:bg-surface-container-lowest transition-colors">
+<div class="flex justify-between items-center mb-1">
+<span class="font-status-label text-status-label font-bold text-on-surface">March 10, 2024</span>
+<span class="px-2 py-0.5 bg-emerald-50 text-emerald-600 font-label-caps text-[10px] rounded uppercase">Present</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Software Engineering Lab</p>
+</div>
+</div>
+</div>
+<button class="w-full p-4 text-emerald-600 font-label-caps text-label-caps uppercase border-t border-outline-variant hover:bg-emerald-50 transition-colors">
+                            View Full History
+                        </button>
+</div>
+</div>
+<!-- Alert Banner for High Absences -->
+<div class="mt-8 bg-white border border-outline-variant rounded-xl overflow-hidden border-l-4 border-error">
+<div class="p-4 flex gap-4 items-start">
+<span class="material-symbols-outlined text-error" style="font-variation-settings: 'FILL' 1;">priority_high</span>
+<div>
+<p class="font-status-label text-status-label font-bold text-on-surface">Absence Warning</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">You have missed 3 consecutive days in "Intro to Algorithms". Please submit a medical certificate to the registrar to avoid grade penalties.</p>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- BottomNavBar (Mobile) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-2 py-3 md:hidden bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
+<a class="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 px-3 py-1 transition-transform active:scale-90" href="#">
+<span class="material-symbols-outlined">lock</span>
+<span class="font-inter text-[10px] font-bold uppercase mt-1">Grades</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 px-3 py-1 transition-transform active:scale-90" href="#">
+<span class="material-symbols-outlined">event_note</span>
+<span class="font-inter text-[10px] font-bold uppercase mt-1">Schedule</span>
+</a>
+<a class="flex flex-col items-center justify-center text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl px-3 py-1 transition-transform active:scale-90" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">fact_check</span>
+<span class="font-inter text-[10px] font-bold uppercase mt-1">Attendance</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 px-3 py-1 transition-transform active:scale-90" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-inter text-[10px] font-bold uppercase mt-1">Profile</span>
+</a>
+</nav>
+</body></html>

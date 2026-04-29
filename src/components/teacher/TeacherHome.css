@@ -55,7 +55,8 @@
   border: 1px solid var(--tch-error);
   color: var(--tch-error);
 }
-.tch-home__deadline--warning {
+.tch-home__deadline--warning,
+.tch-home__deadline--amber {
   background: var(--tch-warning-bg);
   border: 1px solid var(--tch-warning);
   color: var(--tch-warning);
@@ -168,7 +169,484 @@
 }
 .tch-home__integrity-chips .tch-chip .material-symbols-outlined { color: rgba(255,255,255,0.7); }
 
+/* Action feedback banner */
+.tch-home__action-feedback {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--grade-locked-bg);
+  border: 1px solid var(--grade-locked-border);
+  border-radius: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.tch-home__action-feedback__icon {
+  color: var(--tch-primary);
+  font-size: 22px;
+  flex-shrink: 0;
+}
+.tch-home__action-feedback__body {
+  flex: 1;
+  min-width: 0;
+}
+.tch-home__action-feedback__title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--tch-primary-dark);
+  margin: 0 0 3px;
+}
+.tch-home__action-feedback__detail {
+  font-size: 12px;
+  color: var(--tch-text-secondary);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.tch-home__action-feedback__detail .material-symbols-outlined {
+  font-size: 13px;
+  color: var(--tch-primary);
+}
+
+/* Student activity panel */
+.tch-home__activity-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--tch-border);
+}
+.tch-home__activity-row:last-child { border-bottom: none; }
+.tch-home__activity-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--tch-primary-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.tch-home__activity-icon .material-symbols-outlined { font-size: 16px; color: var(--tch-primary); }
+.tch-home__activity-info { flex: 1; min-width: 0; }
+.tch-home__activity-student {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--tch-text-primary);
+  margin: 0 0 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tch-home__activity-detail {
+  font-size: 11px;
+  color: var(--tch-text-secondary);
+  margin: 0;
+}
+.tch-home__activity-time {
+  font-size: 11px;
+  color: var(--tch-text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Quick Actions ─────────────────────────────────────────────── */
+.tch-home__qa-panel {
+  margin-bottom: 20px;
+}
+.tch-home__qa-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tch-qa-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  transition: filter 0.15s;
+}
+.tch-qa-btn:hover { filter: brightness(0.96); }
+.tch-qa-btn__icon { font-size: 20px; flex-shrink: 0; }
+.tch-qa-btn__label { flex: 1; }
+.tch-qa-btn__arrow { font-size: 18px; flex-shrink: 0; opacity: 0.6; }
+.tch-qa--amber {
+  background: var(--tch-warning-bg);
+  color: #92400E;
+  border: 1px solid var(--tch-warning);
+}
+.tch-qa--danger {
+  background: var(--tch-error-bg);
+  color: #7F1D1D;
+  border: 1px solid var(--tch-error);
+}
+.tch-qa--info {
+  background: var(--tch-info-bg);
+  color: #1E3A8A;
+  border: 1px solid var(--tch-info);
+}
+
+/* ── Attendance Status Panel ───────────────────────────────────── */
+.tch-home__att-panel {
+  margin-bottom: 20px;
+}
+.tch-home__att-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+.tch-home__att-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--tch-border);
+}
+.tch-home__att-chip--done {
+  background: var(--grade-locked-bg);
+  border-color: var(--grade-locked-border);
+}
+.tch-home__att-chip--done .material-symbols-outlined { color: var(--tch-primary); font-size: 20px; }
+.tch-home__att-chip--pending {
+  background: var(--tch-warning-bg);
+  border-color: var(--tch-warning);
+}
+.tch-home__att-chip--pending .material-symbols-outlined { color: var(--tch-warning); font-size: 20px; }
+.tch-home__att-chip-info { flex: 1; min-width: 0; }
+.tch-home__att-chip-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--tch-text-primary);
+  margin: 0 0 2px;
+}
+.tch-home__att-chip-sub {
+  font-size: 11px;
+  color: var(--tch-text-secondary);
+  margin: 0;
+}
+
+/* At-risk students collapsible */
+.tch-home__att-risk {
+  margin-top: 12px;
+  border: 1px solid var(--tch-warning);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.tch-home__att-risk-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #92400E;
+  background: var(--tch-warning-bg);
+  cursor: pointer;
+  list-style: none;
+}
+.tch-home__att-risk-summary .material-symbols-outlined { font-size: 16px; }
+.tch-home__att-risk-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+}
+.tch-home__att-risk-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-top: 1px solid var(--tch-border);
+  flex-wrap: wrap;
+}
+.tch-home__att-risk-name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tch-text-primary);
+  min-width: 120px;
+}
+
+/* ── Academic Calendar Strip ──────────────────────────────────────── */
+.tch-home__cal-strip {
+  margin-bottom: 20px;
+}
+.tch-home__cal-events {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+.tch-home__cal-events::-webkit-scrollbar { display: none; }
+
+.tch-home__cal-event {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--tch-border);
+  background: var(--tch-surface-low);
+  min-width: 160px;
+  flex-shrink: 0;
+}
+.tch-home__cal-event--amber  { background: var(--tch-warning-bg);  border-color: var(--tch-warning); }
+.tch-home__cal-event--green  { background: var(--grade-locked-bg); border-color: var(--grade-locked-border); }
+.tch-home__cal-event--red    { background: var(--tch-error-bg);    border-color: var(--tch-error); }
+.tch-home__cal-event--blue   { background: var(--tch-info-bg);     border-color: var(--tch-info); }
+.tch-home__cal-event--primary{ background: var(--tch-primary-light); border-color: var(--tch-primary); }
+
+.tch-home__cal-event-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+  color: var(--tch-text-secondary);
+  margin-top: 1px;
+}
+.tch-home__cal-event--amber  .tch-home__cal-event-icon  { color: var(--tch-warning); }
+.tch-home__cal-event--red    .tch-home__cal-event-icon  { color: var(--tch-error); }
+.tch-home__cal-event--green  .tch-home__cal-event-icon  { color: var(--tch-primary); }
+.tch-home__cal-event--blue   .tch-home__cal-event-icon  { color: var(--tch-info); }
+.tch-home__cal-event--primary .tch-home__cal-event-icon { color: var(--tch-primary); }
+
+.tch-home__cal-event-body { flex: 1; min-width: 0; }
+.tch-home__cal-event-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--tch-text-primary);
+  margin: 0 0 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tch-home__cal-event-date {
+  font-size: 11px;
+  color: var(--tch-text-secondary);
+  margin: 0;
+  font-weight: 600;
+}
+.tch-home__cal-event-date--urgent {
+  color: var(--tch-error);
+  font-weight: 700;
+}
+
+/* ── Grade Modification Summary ───────────────────────────────────── */
+.tch-home__mod-summary {}
+.tch-home__mod-stats {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.tch-home__mod-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--tch-border);
+  background: var(--tch-surface-low);
+}
+.tch-home__mod-stat .material-symbols-outlined { font-size: 18px; }
+.tch-home__mod-stat--amber { background: var(--tch-warning-bg);  border-color: var(--tch-warning); }
+.tch-home__mod-stat--amber .material-symbols-outlined { color: var(--tch-warning); }
+.tch-home__mod-stat--green { background: var(--grade-locked-bg); border-color: var(--grade-locked-border); }
+.tch-home__mod-stat--green .material-symbols-outlined { color: var(--tch-primary); }
+.tch-home__mod-stat--red   { background: var(--tch-error-bg);    border-color: var(--tch-error); }
+.tch-home__mod-stat--red   .material-symbols-outlined { color: var(--tch-error); }
+
+.tch-home__mod-stat-value {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--tch-text-primary);
+  line-height: 1;
+}
+.tch-home__mod-stat-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--tch-text-secondary);
+}
+.tch-home__mod-note {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--tch-text-secondary);
+  margin: 10px 0 0;
+}
+.tch-home__mod-note .material-symbols-outlined { font-size: 13px; }
+
+/* ── Academic At-Risk Students ────────────────────────────────────── */
+.tch-home__atrisk-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 0;
+  gap: 6px;
+  color: var(--tch-primary);
+  opacity: 0.7;
+}
+.tch-home__atrisk-empty .material-symbols-outlined { font-size: 26px; }
+.tch-home__atrisk-empty p { font-size: 12px; color: var(--tch-text-secondary); margin: 0; text-align: center; }
+
+.tch-home__atrisk-note {
+  font-size: 11px;
+  color: var(--tch-text-secondary);
+  margin: 6px 0 10px;
+  font-style: italic;
+}
+.tch-home__atrisk-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+.tch-home__atrisk-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: var(--tch-surface-low);
+  border-radius: 8px;
+  border: 1px solid var(--tch-border);
+}
+.tch-home__atrisk-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--tch-primary-light);
+  color: var(--tch-primary-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+.tch-home__atrisk-info { flex: 1; min-width: 0; }
+.tch-home__atrisk-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--tch-text-primary);
+  margin: 0 0 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tch-home__atrisk-class {
+  font-size: 11px;
+  color: var(--tch-text-secondary);
+  margin: 0;
+}
+.tch-home__atrisk-more {
+  font-size: 12px;
+  color: var(--tch-primary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px 0 0;
+  width: 100%;
+  text-align: left;
+  font-weight: 600;
+  font-family: inherit;
+}
+.tch-home__atrisk-more:hover { text-decoration: underline; }
+
+/* ── Merged Today's Classes (schedule + attendance) ───────────────── */
+.tch-home__today-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+.tch-home__today-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--tch-border);
+  background: var(--tch-surface-low);
+  transition: background 0.15s;
+}
+.tch-home__today-row--now {
+  background: var(--tch-primary-light);
+  border-color: var(--tch-primary);
+}
+.tch-home__today-time {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 44px;
+  flex-shrink: 0;
+}
+.tch-home__today-start {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--tch-text-primary);
+}
+.tch-home__today-end {
+  font-size: 10px;
+  color: var(--tch-text-secondary);
+  font-weight: 600;
+}
+.tch-home__today-info { flex: 1; min-width: 0; }
+.tch-home__today-subject {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--tch-text-primary);
+  margin: 0 0 3px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tch-home__today-meta {
+  font-size: 11px;
+  color: var(--tch-text-secondary);
+  margin: 0;
+}
+.tch-home__today-att { flex-shrink: 0; }
+.tch-home__now-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--tch-primary);
+  display: inline-block;
+  flex-shrink: 0;
+  animation: tch-pulse 1.8s ease-in-out infinite;
+}
+@keyframes tch-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(1.3); }
+}
+
+/* ── Mobile overrides ─────────────────────────────────────────────── */
 @media (max-width: 600px) {
   .tch-home__banner { padding: 16px; }
   .tch-home__greeting { font-size: 18px; }
+  .tch-home__action-feedback { flex-wrap: wrap; }
+  .tch-home__action-feedback__detail { font-size: 11px; }
+  .tch-qa-btn { padding: 10px 12px; font-size: 12px; }
+  .tch-home__cal-events { gap: 8px; }
+  .tch-home__cal-event { min-width: 140px; padding: 10px 12px; }
+  .tch-home__mod-stats { flex-direction: row; gap: 6px; }
+  .tch-home__mod-stat { padding: 8px 6px; }
+  .tch-home__today-row { padding: 8px 10px; }
+  .tch-home__atrisk-row { padding: 7px 8px; }
 }

@@ -16,49 +16,81 @@ import TeacherProfile from './TeacherProfile';
 import TeacherAttendance from './TeacherAttendance';
 import ClassAnalytics from './ClassAnalytics';
 import TeacherSettings from './TeacherSettings';
+import AssignmentsScreen from './AssignmentsScreen';
+import ModificationsPage from './ModificationsPage';
+import MessagesScreen from './MessagesScreen';
+import GradeCompletionScreen from './GradeCompletionScreen';
+import ExamResultsScreen from './ExamResultsScreen';
+import ReportCardsScreen from './ReportCardsScreen';
+import TeacherResources from './TeacherResources';
+import FeedbackScreen from './FeedbackScreen';
 import './TeacherDashboard.css';
 
 const SECTION_PATHS = {
-  home:            '/dashboard/teacher',
-  classes:         '/teacher/classes',
-  'grade-entry':   '/teacher/grade-entry',
-  'grade-history': '/teacher/grade-history',
-  students:        '/teacher/students',
-  timetable:       '/teacher/timetable',
-  notifications:   '/teacher/notifications',
-  profile:         '/teacher/profile',
-  attendance:      '/teacher/attendance',
-  analytics:       '/teacher/analytics',
-  settings:        '/teacher/settings',
+  home:               '/dashboard/teacher',
+  classes:            '/teacher/classes',
+  'grade-entry':      '/teacher/grade-entry',
+  'grade-history':    '/teacher/grade-history',
+  'grade-completion': '/teacher/grade-completion',
+  students:           '/teacher/students',
+  timetable:          '/teacher/timetable',
+  notifications:      '/teacher/notifications',
+  profile:            '/teacher/profile',
+  attendance:         '/teacher/attendance',
+  analytics:          '/teacher/analytics',
+  assignments:        '/teacher/assignments',
+  'exam-results':     '/teacher/exam-results',
+  'report-cards':     '/teacher/report-cards',
+  modifications:      '/teacher/modifications',
+  messages:           '/teacher/messages',
+  resources:          '/teacher/resources',
+  feedback:           '/teacher/feedback',
+  settings:           '/teacher/settings',
 };
 
 function getInitialSection() {
   const p = window.location.pathname;
-  if (p.includes('/teacher/classes'))       return 'classes';
-  if (p.includes('/teacher/grade-entry'))   return 'grade-entry';
-  if (p.includes('/teacher/grade-history')) return 'grade-history';
-  if (p.includes('/teacher/students'))      return 'students';
-  if (p.includes('/teacher/timetable'))     return 'timetable';
-  if (p.includes('/teacher/notifications')) return 'notifications';
-  if (p.includes('/teacher/profile'))       return 'profile';
-  if (p.includes('/teacher/attendance'))    return 'attendance';
-  if (p.includes('/teacher/analytics'))     return 'analytics';
-  if (p.includes('/teacher/settings'))      return 'settings';
+  if (p.includes('/teacher/classes'))            return 'classes';
+  if (p.includes('/teacher/grade-completion'))   return 'grade-completion';
+  if (p.includes('/teacher/grade-entry'))        return 'grade-entry';
+  if (p.includes('/teacher/grade-history'))      return 'grade-history';
+  if (p.includes('/teacher/students'))           return 'students';
+  if (p.includes('/teacher/timetable'))          return 'timetable';
+  if (p.includes('/teacher/notifications'))      return 'notifications';
+  if (p.includes('/teacher/profile'))            return 'profile';
+  if (p.includes('/teacher/attendance'))         return 'attendance';
+  if (p.includes('/teacher/analytics'))          return 'analytics';
+  if (p.includes('/teacher/assignments'))        return 'assignments';
+  if (p.includes('/teacher/exam-results'))       return 'exam-results';
+  if (p.includes('/teacher/report-cards'))       return 'report-cards';
+  if (p.includes('/teacher/modifications'))      return 'modifications';
+  if (p.includes('/teacher/messages'))           return 'messages';
+  if (p.includes('/teacher/resources'))          return 'resources';
+  if (p.includes('/teacher/feedback'))           return 'feedback';
+  if (p.includes('/teacher/settings'))           return 'settings';
   return 'home';
 }
 
 const NAV_ITEMS = [
-  { key: 'home',           icon: 'dashboard',      label: 'Dashboard' },
-  { key: 'classes',        icon: 'school',          label: 'My Classes' },
-  { key: 'grade-entry',    icon: 'edit_note',       label: 'Grade Entry' },
-  { key: 'grade-history',  icon: 'history_edu',     label: 'Grade History' },
-  { key: 'attendance',     icon: 'how_to_reg',      label: 'Attendance' },
-  { key: 'analytics',      icon: 'analytics',       label: 'Class Analytics' },
-  { key: 'students',       icon: 'groups',          label: 'My Students' },
-  { key: 'timetable',      icon: 'calendar_today',  label: 'Timetable' },
-  { key: 'notifications',  icon: 'notifications',   label: 'Notifications' },
-  { key: 'profile',        icon: 'person',          label: 'Profile' },
-  { key: 'settings',       icon: 'settings',        label: 'Settings' },
+  { key: 'home',              icon: 'dashboard',        label: 'Dashboard' },
+  { key: 'classes',           icon: 'school',           label: 'My Classes' },
+  { key: 'grade-entry',       icon: 'edit_note',        label: 'Grade Entry' },
+  { key: 'grade-history',     icon: 'history_edu',      label: 'Grade History' },
+  { key: 'grade-completion',  icon: 'task_alt',         label: 'Grade Completion' },
+  { key: 'attendance',        icon: 'how_to_reg',       label: 'Attendance' },
+  { key: 'analytics',         icon: 'analytics',        label: 'Class Analytics' },
+  { key: 'students',          icon: 'groups',           label: 'My Students' },
+  { key: 'timetable',         icon: 'calendar_today',   label: 'Timetable' },
+  { key: 'assignments',       icon: 'assignment',       label: 'Assignments' },
+  { key: 'exam-results',      icon: 'fact_check',       label: 'Exam Results' },
+  { key: 'report-cards',      icon: 'description',      label: 'Report Cards' },
+  { key: 'modifications',     icon: 'rate_review',      label: 'Grade Requests' },
+  { key: 'resources',         icon: 'folder_open',      label: 'Resources' },
+  { key: 'feedback',          icon: 'forum',            label: 'Student Feedback' },
+  { key: 'messages',          icon: 'campaign',         label: 'Announcements' },
+  { key: 'notifications',     icon: 'notifications',    label: 'Notifications' },
+  { key: 'profile',           icon: 'person',           label: 'Profile' },
+  { key: 'settings',          icon: 'settings',         label: 'Settings' },
 ];
 
 const MOBILE_NAV_KEYS = ['home', 'classes', 'grade-entry', 'students', 'notifications'];
@@ -125,6 +157,14 @@ function TeacherDashboardInner({ onNavigate }) {
       case 'timetable':      return <TimetableScreen      {...props} />;
       case 'notifications':  return <TeacherNotifications {...props} />;
       case 'profile':        return <TeacherProfile       {...props} />;
+      case 'assignments':        return <AssignmentsScreen      {...props} />;
+      case 'grade-completion':   return <GradeCompletionScreen  {...props} />;
+      case 'exam-results':       return <ExamResultsScreen      {...props} />;
+      case 'report-cards':       return <ReportCardsScreen      {...props} />;
+      case 'modifications':      return <ModificationsPage      {...props} />;
+      case 'resources':          return <TeacherResources       {...props} />;
+      case 'feedback':           return <FeedbackScreen         {...props} />;
+      case 'messages':           return <MessagesScreen         {...props} />;
       case 'settings':       return <TeacherSettings      {...props} onLogout={handleLogout} />;
       default:               return <TeacherHome          {...props} />;
     }
@@ -248,7 +288,7 @@ function TeacherDashboardInner({ onNavigate }) {
               onClick={() => navigateTo(key)}
             >
               <span className="material-symbols-outlined">{item.icon}</span>
-              <span>{item.label === 'My Classes' ? 'Classes' : item.label === 'Grade Entry' ? 'Grades' : item.label}</span>
+              <span>{item.label === 'My Classes' ? 'Classes' : item.label === 'Grade Entry' ? 'Grades' : item.label === 'Announcements' ? 'Announce' : item.label}</span>
               {key === 'grade-entry' && gradeBadgeCount > 0 && (
                 <span className="tch-bottom-nav__dot tch-bottom-nav__dot--amber" />
               )}

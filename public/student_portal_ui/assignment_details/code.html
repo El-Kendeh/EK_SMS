@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "outline": "#6c7a71",
+                    "surface-variant": "#dde4dd",
+                    "surface-dim": "#d4dcd5",
+                    "surface-container-low": "#eef6ee",
+                    "surface-container": "#e8f0e9",
+                    "primary": "#006c49",
+                    "on-error": "#ffffff",
+                    "inverse-primary": "#4edea3",
+                    "primary-fixed-dim": "#4edea3",
+                    "on-primary-fixed-variant": "#005236",
+                    "surface-bright": "#f4fbf4",
+                    "on-secondary-container": "#576378",
+                    "error": "#ba1a1a",
+                    "surface-container-high": "#e3eae3",
+                    "secondary": "#535f74",
+                    "surface-container-lowest": "#ffffff",
+                    "on-secondary-fixed": "#101c2e",
+                    "background": "#020617",
+                    "tertiary-fixed-dim": "#ffb3af",
+                    "secondary-container": "#d4e0f9",
+                    "on-tertiary": "#ffffff",
+                    "on-secondary": "#ffffff",
+                    "secondary-fixed": "#d7e3fc",
+                    "inverse-surface": "#2b322d",
+                    "secondary-fixed-dim": "#bbc7df",
+                    "inverse-on-surface": "#ebf3eb",
+                    "on-surface-variant": "#3c4a42",
+                    "primary-fixed": "#6ffbbe",
+                    "on-primary-container": "#00422b",
+                    "on-surface": "#f4fbf4",
+                    "on-error-container": "#93000a",
+                    "primary-container": "#10b981",
+                    "on-primary-fixed": "#002113",
+                    "tertiary-fixed": "#ffdad7",
+                    "surface-container-highest": "#dde4dd",
+                    "error-container": "#ffdad6",
+                    "surface": "#0f172a",
+                    "on-tertiary-fixed": "#410005",
+                    "on-primary": "#ffffff",
+                    "on-tertiary-container": "#711419",
+                    "tertiary-container": "#fc7c78",
+                    "tertiary": "#a43a3a",
+                    "outline-variant": "#bbcabf",
+                    "surface-tint": "#006c49",
+                    "on-tertiary-fixed-variant": "#842225",
+                    "on-background": "#f4fbf4",
+                    "on-secondary-fixed-variant": "#3c475b"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "unit-6": "1.5rem",
+                    "margin-mobile": "1rem",
+                    "margin-desktop": "2rem",
+                    "gutter": "1rem",
+                    "unit-4": "1rem",
+                    "unit-2": "0.5rem",
+                    "unit-1": "0.25rem",
+                    "base": "4px"
+            },
+            "fontFamily": {
+                    "body-md": ["Inter"],
+                    "body-sm": ["Inter"],
+                    "status-label": ["Inter"],
+                    "h1": ["Inter"],
+                    "display-sm": ["Inter"],
+                    "label-caps": ["Inter"]
+            },
+            "fontSize": {
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "status-label": ["13px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "h1": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "display-sm": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            font-size: 20px;
+        }
+        body { background-color: #020617; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body-md text-on-surface selection:bg-primary-container selection:text-on-primary-container">
+<!-- Navigation Drawer (Desktop) -->
+<aside class="hidden md:flex flex-col h-screen fixed left-0 top-0 bg-slate-900 dark:bg-black border-r border-slate-800 w-[280px] z-50">
+<div class="p-unit-6">
+<h1 class="text-emerald-500 font-black tracking-tighter text-2xl">EK-SMS</h1>
+</div>
+<div class="flex items-center px-6 py-4 mb-4 gap-3">
+<div class="h-10 w-10 rounded-full bg-slate-800 flex items-center justify-center overflow-hidden border border-slate-700">
+<img class="h-full w-full object-cover" data-alt="Portrait of a young male university student with a friendly expression in a modern indoor setting with soft lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCMNd8JZgf0WSGoaZOGz35oP5C6hDnxYKXBvIC6tJDT04OMblcCbM90u-MjZL1zjDWMeJsmU-Xmcym_f2kidaSThb1bUJymGlBf6jCa6NnWNyL5xjmcLyV9FlnDjbZzIeCPG9Vx9aKBctw6S4rgfXB8BmdOn-56gL5Ovcee-YuQ0YF52-fW1cLsTCZSBigw7TxWMJqribtc6t-nokg_PI-jRR70cTymTDt3sosWRTmSJW1WIGqaY4kQi2KBX1AlnB1wtw_ZERM7NkPB"/>
+</div>
+<div>
+<p class="font-['Inter'] text-sm font-medium text-emerald-400">Alex Thompson</p>
+<p class="text-[10px] text-slate-500 uppercase tracking-widest">Student ID: 88291</p>
+</div>
+</div>
+<nav class="flex-1 px-2 space-y-1">
+<a class="text-slate-400 hover:text-slate-200 px-4 py-3 flex items-center gap-3 transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-['Inter'] text-sm font-medium">Dashboard</span>
+</a>
+<a class="text-slate-400 hover:text-slate-200 px-4 py-3 flex items-center gap-3 transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined">calendar_today</span>
+<span class="font-['Inter'] text-sm font-medium">Schedule</span>
+</a>
+<a class="bg-emerald-500/10 text-emerald-400 border-l-4 border-emerald-500 px-4 py-3 flex items-center gap-3 transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined">menu_book</span>
+<span class="font-['Inter'] text-sm font-medium">Courses</span>
+</a>
+<a class="text-slate-400 hover:text-slate-200 px-4 py-3 flex items-center gap-3 transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined">school</span>
+<span class="font-['Inter'] text-sm font-medium">Grades</span>
+</a>
+<a class="text-slate-400 hover:text-slate-200 px-4 py-3 flex items-center gap-3 transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-['Inter'] text-sm font-medium">Settings</span>
+</a>
+</nav>
+</aside>
+<!-- Main Canvas -->
+<main class="min-h-screen md:pl-[280px] pb-24 md:pb-0">
+<!-- TopAppBar -->
+<header class="sticky top-0 w-full z-40 flex items-center justify-between px-4 h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+<div class="flex items-center gap-4">
+<button class="active:opacity-80 transition-all">
+<span class="material-symbols-outlined text-emerald-600 dark:text-emerald-500">arrow_back</span>
+</button>
+<h2 class="font-['Inter'] font-semibold text-lg tracking-tight text-emerald-600 dark:text-emerald-500">Assignment Details</h2>
+</div>
+<div class="h-8 w-8 rounded-full overflow-hidden bg-slate-200 border border-slate-300 dark:border-slate-700">
+<img class="h-full w-full object-cover" data-alt="Student profile avatar thumbnail showing a young man with a slight smile" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBiWohT4MQO7A3Fhl7KbgKNyUG7qOw8SphijExa4kVr7iF5I1Zk2rXOPCey6VzxkwRvZBh9leNUl_9m6QhSPGCvEc0RyyADaOFOi5Oz1jXngOUXfaZ8l8JpOIW5NS_66F9WILl25xz6hlm-OObtG7TPu35J3WROeG7G3qOwjIIkMLI9t6uPU9Mt6CanSATgCkWHtxsZewMksELt7AThC2_0SkPOeYU9_rNLd_zt68gIUGpwnVCmYDJw8GMXFPahcXidHzikYe87zxk4"/>
+</div>
+</header>
+<div class="p-unit-4 md:p-unit-6 max-w-5xl mx-auto space-y-unit-4">
+<!-- Alert Banner -->
+<div class="bg-amber-500/10 border-l-4 border-amber-500 p-4 flex items-start gap-3">
+<span class="material-symbols-outlined text-amber-500">error</span>
+<div>
+<p class="font-status-label text-amber-200 font-bold">Due Tomorrow, 11:59 PM</p>
+<p class="text-body-sm text-amber-200/80">Late submissions will incur a 10% point deduction per day.</p>
+</div>
+</div>
+<!-- Bento Layout Header -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-unit-4">
+<!-- Main Assignment Info -->
+<div class="lg:col-span-2 bg-surface border border-slate-800 p-unit-6 rounded-xl space-y-4">
+<div class="space-y-1">
+<p class="text-label-caps font-label-caps text-emerald-500 uppercase">Mathematics • Advanced Calculus</p>
+<h3 class="text-display-sm font-display-sm text-on-surface">Calculus Assignment 4: Differential Equations</h3>
+</div>
+<div class="flex flex-wrap gap-4 pt-2">
+<div class="bg-slate-800/50 px-3 py-2 rounded border border-slate-700 flex items-center gap-2">
+<span class="material-symbols-outlined text-emerald-500">military_tech</span>
+<span class="text-status-label text-slate-300">100 Max Points</span>
+</div>
+<div class="bg-amber-500/10 px-3 py-2 rounded border border-amber-500/30 flex items-center gap-2">
+<span class="material-symbols-outlined text-amber-500">pending_actions</span>
+<span class="text-status-label text-amber-400">Status: Pending</span>
+</div>
+<div class="bg-slate-800/50 px-3 py-2 rounded border border-slate-700 flex items-center gap-2">
+<span class="material-symbols-outlined text-slate-400">upload_file</span>
+<span class="text-status-label text-slate-300">Not Submitted</span>
+</div>
+</div>
+</div>
+<!-- Trust Section / Integrity -->
+<div class="bg-emerald-950/20 border border-emerald-500/30 p-unit-6 rounded-xl flex flex-col items-center justify-center text-center space-y-3">
+<div class="h-12 w-12 rounded-full bg-emerald-500/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-emerald-400 text-3xl" style="font-variation-settings: 'FILL' 1;">shield</span>
+</div>
+<div>
+<h4 class="font-h1 text-emerald-400">Integrity Verification Active</h4>
+<p class="text-body-sm text-emerald-300/70 mt-1">This assignment is monitored by institutional plagiarism detection software.</p>
+</div>
+</div>
+</div>
+<!-- Content Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-unit-4">
+<!-- Instructions Card -->
+<div class="lg:col-span-2 bg-surface border border-slate-800 rounded-xl overflow-hidden">
+<div class="border-b border-slate-800 px-6 py-4 bg-slate-900/50">
+<h4 class="text-label-caps font-label-caps text-slate-400">INSTRUCTIONS</h4>
+</div>
+<div class="p-6 space-y-6">
+<p class="text-body-md text-slate-300 leading-relaxed">
+                            Complete the exercises on pages 142-145 of the Advanced Calculus textbook. Submit your work as a single PDF file. Ensure all steps are clearly shown for partial credit consideration.
+                        </p>
+<div class="space-y-3">
+<h5 class="text-status-label text-slate-400">Required Resources</h5>
+<div class="flex items-center gap-3 p-3 bg-slate-800/30 rounded border border-slate-700 group cursor-pointer hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined text-emerald-500">description</span>
+<div class="flex-1">
+<p class="text-body-sm font-medium text-slate-200">Assignment_Template_Differential_Eq.docx</p>
+<p class="text-[11px] text-slate-500">245 KB • Word Document</p>
+</div>
+<span class="material-symbols-outlined text-slate-500 group-hover:text-emerald-400">download</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Action Sidebar -->
+<div class="space-y-unit-4">
+<div class="bg-surface border border-slate-800 p-unit-6 rounded-xl space-y-6">
+<h4 class="text-label-caps font-label-caps text-slate-400">SUBMISSION</h4>
+<div class="border-2 border-dashed border-slate-800 rounded-lg p-8 flex flex-col items-center justify-center text-center space-y-2 hover:border-emerald-500/50 transition-colors cursor-pointer group">
+<span class="material-symbols-outlined text-slate-600 group-hover:text-emerald-500 text-4xl mb-2">cloud_upload</span>
+<p class="text-body-sm font-medium text-slate-300">Drag &amp; drop your PDF</p>
+<p class="text-[11px] text-slate-500">Maximum size: 25MB</p>
+</div>
+<div class="space-y-3">
+<button class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-lg font-semibold transition-all active:scale-95 flex items-center justify-center gap-2">
+<span class="material-symbols-outlined">send</span>
+                                Submit Now
+                            </button>
+<button class="w-full bg-transparent hover:bg-slate-800 text-slate-300 border border-slate-700 py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined">download</span>
+                                Download Template
+                            </button>
+</div>
+</div>
+<!-- Additional Context Card -->
+<div class="bg-slate-900/50 border border-slate-800 p-unit-6 rounded-xl flex items-center gap-4">
+<div class="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-emerald-500">info</span>
+</div>
+<div class="flex-1">
+<p class="text-[11px] text-slate-500 leading-tight uppercase font-bold tracking-widest">Grading Policy</p>
+<p class="text-body-sm text-slate-400">Standard rubric applies to all differential calculus tasks.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Mobile) -->
+<nav class="fixed bottom-0 w-full md:hidden flex justify-around items-center px-4 py-2 z-50 pb-safe bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 shadow-[0_-1px_3px_0_rgba(0,0,0,0.05)]">
+<a class="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 active:bg-slate-100 dark:active:bg-slate-800 transition-transform scale-95 active:scale-90" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-['Inter'] text-[10px] font-bold uppercase tracking-wider">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 active:bg-slate-100 dark:active:bg-slate-800 transition-transform scale-95 active:scale-90" href="#">
+<span class="material-symbols-outlined">event_note</span>
+<span class="font-['Inter'] text-[10px] font-bold uppercase tracking-wider">Planner</span>
+</a>
+<a class="flex flex-col items-center justify-center text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl px-3 py-1 transition-transform scale-95 active:scale-90" href="#">
+<span class="material-symbols-outlined">school</span>
+<span class="font-['Inter'] text-[10px] font-bold uppercase tracking-wider">Courses</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 active:bg-slate-100 dark:active:bg-slate-800 transition-transform scale-95 active:scale-90" href="#">
+<span class="material-symbols-outlined">grade</span>
+<span class="font-['Inter'] text-[10px] font-bold uppercase tracking-wider">Grades</span>
+</a>
+</nav>
+</body></html>

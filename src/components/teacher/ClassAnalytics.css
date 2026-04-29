@@ -296,6 +296,28 @@
   white-space: nowrap;
 }
 
+/* At-risk students */
+.ca-at-risk-card {
+  border-left: 3px solid var(--tch-error);
+  padding: 16px 18px;
+}
+
+.ca-at-risk-sub {
+  font-size: 12px;
+  color: var(--tch-text-secondary);
+  margin: 0 0 12px;
+  line-height: 1.5;
+}
+
+.ca-risk-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.ca-risk-dot--critical { background: var(--tch-error); }
+.ca-risk-dot--at-risk  { background: var(--tch-warning); }
+
 /* Mobile */
 @media (max-width: 600px) {
   .ca-kpi-row { grid-template-columns: 1fr 1fr; }

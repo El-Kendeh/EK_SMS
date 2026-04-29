@@ -1336,8 +1336,12 @@
 .ska-modal-body { padding: 20px 24px; }
 
 .ska-modal-actions {
-  display: flex; gap: 10px; justify-content: flex-end;
+  display: flex; gap: 10px; justify-content: space-between; align-items: center;
   padding-top: 20px; border-top: 1px solid var(--ska-border); margin-top: 20px;
+}
+@media (max-width: 400px) {
+  .ska-modal-actions { flex-wrap: wrap; }
+  .ska-modal-actions .ska-btn { flex: 1; justify-content: center; }
 }
 .ska-modal--wide { max-width: 640px; }
 
