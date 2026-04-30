@@ -1,0 +1,53 @@
+.grm-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); display: grid; place-items: center; z-index: 700; padding: 20px; }
+.grm-modal {
+  width: min(440px, 100%);
+  background: var(--teacher-card-bg, #112239);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  color: var(--teacher-text, #e8eef9);
+}
+.grm-modal header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
+.grm-modal header h3 { margin: 0; font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px; color: #22c55e; }
+.grm-modal header button { width: 28px; height: 28px; background: transparent; border: none; color: inherit; cursor: pointer; border-radius: 6px; display: grid; place-items: center; }
+.grm-modal header .material-symbols-outlined { font-size: 18px; }
+
+.grm-body { padding: 18px; display: flex; flex-direction: column; gap: 16px; }
+
+.grm-confirm {
+  background: rgba(34, 197, 94, 0.10);
+  border: 1px solid rgba(34, 197, 94, 0.28);
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: center;
+}
+.grm-confirm strong { font-size: 16px; color: #22c55e; }
+.grm-confirm span { font-size: 12px; opacity: 0.85; }
+
+.grm-body dl { margin: 0; display: grid; grid-template-columns: 1fr 1.5fr; gap: 8px 14px; }
+.grm-body dt { font-size: 10px; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.05em; align-self: center; }
+.grm-body dd { margin: 0; font-size: 12.5px; font-weight: 600; }
+.grm-hash { font-family: ui-monospace, monospace; font-size: 10.5px !important; word-break: break-all; opacity: 0.85; }
+
+.grm-qr { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px; background: rgba(255, 255, 255, 0.03); border-radius: 10px; }
+.grm-qr small { font-size: 11px; opacity: 0.65; }
+
+.grm-note { margin: 0; padding: 10px 12px; background: rgba(91, 140, 255, 0.06); border-left: 3px solid rgba(91, 140, 255, 0.4); border-radius: 4px; font-size: 12px; line-height: 1.5; opacity: 0.9; }
+
+.grm-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.grm-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 16px; border: none; border-radius: 8px;
+  font: inherit; font-weight: 600; font-size: 13px; cursor: pointer;
+}
+.grm-btn--primary { background: var(--teacher-primary, #5b8cff); color: #fff; }
+.grm-btn--ghost { background: rgba(255, 255, 255, 0.06); color: inherit; }
+.grm-btn .material-symbols-outlined { font-size: 16px; }
+
+@media print {
+  .grm-overlay { background: #fff !important; padding: 0 !important; }
+  .grm-modal { box-shadow: none; border: none; max-width: 600px; background: #fff !important; color: #0a1628 !important; }
+  .grm-modal header button, .grm-actions { display: none !important; }
+}

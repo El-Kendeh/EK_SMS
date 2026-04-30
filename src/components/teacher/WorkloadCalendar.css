@@ -1,0 +1,46 @@
+.wcal { padding: 22px; max-width: 1200px; margin: 0 auto; color: var(--teacher-text, #e8eef9); }
+.wcal header h2 { margin: 0 0 4px; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.wcal header p { margin: 0 0 18px; font-size: 13px; opacity: 0.7; }
+.wcal__error { padding: 12px; color: #fca5a5; }
+
+.wcal__summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.wcal__num {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: center;
+}
+.wcal__num strong { font-size: 22px; font-weight: 700; color: #5b8cff; font-variant-numeric: tabular-nums; }
+.wcal__num span { font-size: 10px; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.05em; }
+.wcal__num--warn strong { color: #fbbf24; }
+
+.wcal__week { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+.wcal__day { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 12px; min-height: 220px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+.wcal__day header strong { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7; }
+
+.wcal__day ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+
+.wcal__item { display: flex; align-items: flex-start; gap: 8px; padding: 8px; background: rgba(0, 0, 0, 0.2); border-radius: 8px; }
+.wcal__item .material-symbols-outlined { font-size: 16px; flex-shrink: 0; opacity: 0.85; }
+.wcal__item div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.wcal__item strong { font-size: 12px; font-weight: 600; }
+.wcal__item span { font-size: 10.5px; opacity: 0.7; }
+.wcal__item--class .material-symbols-outlined { color: #5b8cff; }
+.wcal__item--office .material-symbols-outlined { color: #22d3ee; }
+.wcal__item--urgent { background: rgba(239, 68, 68, 0.10); border: 1px solid rgba(239, 68, 68, 0.24); }
+.wcal__item--urgent .material-symbols-outlined { color: #fca5a5; }
+
+.wcal__empty { font-size: 11px; opacity: 0.5; text-align: center; padding: 4px 0; }
+
+@media (max-width: 1000px) { .wcal__week { grid-template-columns: 1fr 1fr 1fr; } }
+@media (max-width: 700px) { .wcal__summary { grid-template-columns: 1fr 1fr; } .wcal__week { grid-template-columns: 1fr; } }
+@media (max-width: 600px) { .wcal { padding: 14px; } }

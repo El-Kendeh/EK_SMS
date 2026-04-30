@@ -1,0 +1,35 @@
+.tcp { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 16px; padding: 22px; color: var(--teacher-text, #e8eef9); }
+.tcp header h2 { margin: 0 0 4px; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.tcp header p { margin: 0 0 18px; font-size: 13px; opacity: 0.7; }
+
+.tcp__grid { display: flex; flex-direction: column; gap: 6px; }
+.tcp__row { display: grid; grid-template-columns: 1.4fr repeat(4, 70px); align-items: center; gap: 8px; padding: 10px 12px; background: rgba(255, 255, 255, 0.02); border-radius: 10px; }
+.tcp__row--head { background: transparent; padding-bottom: 6px; }
+
+.tcp__head-cell { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.7; }
+.tcp__head-cell .material-symbols-outlined { font-size: 18px; }
+.tcp__head-cell small { color: #fbbf24; opacity: 0.85; }
+
+.tcp__cat-cell { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; }
+.tcp__cat-cell .material-symbols-outlined { font-size: 18px; opacity: 0.85; }
+
+.tcp__cell { display: grid; place-items: center; cursor: pointer; position: relative; }
+.tcp__cell input { position: absolute; opacity: 0; pointer-events: none; }
+
+.tcp__switch { width: 36px; height: 20px; border-radius: 999px; background: rgba(255, 255, 255, 0.10); position: relative; transition: background 0.2s; }
+.tcp__switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform 0.2s; }
+.tcp__cell input:checked + .tcp__switch { background: var(--teacher-primary, #5b8cff); }
+.tcp__cell input:checked + .tcp__switch::after { transform: translateX(16px); }
+
+.tcp footer { margin-top: 18px; display: flex; align-items: center; gap: 12px; justify-content: flex-end; }
+.tcp__saved { font-size: 12px; opacity: 0.6; }
+.tcp__error { font-size: 13px; color: #fca5a5; }
+.tcp__btn { padding: 10px 18px; background: var(--teacher-primary, #5b8cff); color: #fff; border: none; border-radius: 8px; font: inherit; font-weight: 600; cursor: pointer; }
+.tcp__btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+@media (max-width: 600px) {
+  .tcp__row { grid-template-columns: 1fr; padding: 12px; }
+  .tcp__row--head { display: none; }
+  .tcp__cat-cell { grid-column: 1 / -1; padding-bottom: 6px; border-bottom: 1px dashed rgba(255, 255, 255, 0.08); }
+  .tcp__cell { width: 100%; flex-direction: row; padding: 4px 0; }
+}

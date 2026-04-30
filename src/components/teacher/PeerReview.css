@@ -1,0 +1,53 @@
+.prv { padding: 22px; max-width: 1080px; margin: 0 auto; color: var(--teacher-text, #e8eef9); }
+.prv header h2 { margin: 0 0 4px; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.prv header p { margin: 0 0 18px; font-size: 13px; opacity: 0.7; }
+.prv__error { padding: 12px; color: #fca5a5; }
+
+.prv__grid { display: grid; grid-template-columns: 1fr 1.2fr; gap: 14px; }
+
+.prv__card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.prv__card h3 { margin: 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7; font-weight: 700; }
+
+.prv__big { padding: 8px 0; display: flex; flex-direction: column; gap: 4px; }
+.prv__big strong { font-size: 32px; font-weight: 700; color: #fbbf24; font-variant-numeric: tabular-nums; }
+.prv__big span { font-size: 12px; opacity: 0.7; }
+
+.prv__breakdown { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.prv__breakdown li { display: grid; grid-template-columns: 24px 1fr 24px; align-items: center; gap: 8px; font-size: 11px; }
+.prv__bar { height: 6px; background: rgba(255, 255, 255, 0.08); border-radius: 999px; overflow: hidden; }
+.prv__bar > div { height: 100%; background: #fbbf24; border-radius: inherit; }
+.prv__breakdown small { opacity: 0.7; font-variant-numeric: tabular-nums; text-align: right; }
+
+.prv__quotes { display: flex; flex-direction: column; gap: 6px; }
+.prv__quotes blockquote { margin: 0; padding: 8px 12px; background: rgba(0, 0, 0, 0.18); border-left: 3px solid rgba(91, 140, 255, 0.4); border-radius: 4px; font-size: 12px; font-style: italic; opacity: 0.9; }
+
+.prv__given { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.prv__given li { padding: 8px 10px; background: rgba(0, 0, 0, 0.18); border-radius: 8px; display: flex; flex-direction: column; gap: 2px; font-size: 12px; }
+.prv__given strong { font-weight: 700; }
+.prv__given span { opacity: 0.7; font-size: 11px; }
+.prv__given em { color: #c084fc; font-style: normal; }
+.prv__given p { margin: 4px 0 0; font-style: italic; opacity: 0.85; }
+.prv__empty { font-size: 12px; opacity: 0.6; padding: 8px 0; }
+
+.prv__add { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; background: rgba(91, 140, 255, 0.18); color: #5b8cff; border: 1px solid rgba(91, 140, 255, 0.30); border-radius: 8px; font: inherit; font-weight: 600; font-size: 13px; cursor: pointer; align-self: flex-start; }
+
+.prv__form { display: flex; flex-direction: column; gap: 10px; padding-top: 8px; border-top: 1px dashed rgba(255, 255, 255, 0.08); }
+.prv__form label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.85; }
+.prv__form input, .prv__form textarea, .prv__form select { padding: 9px 10px; background: rgba(0, 0, 0, 0.18); border: 1px solid rgba(255, 255, 255, 0.10); border-radius: 8px; color: inherit; font: inherit; font-size: 13px; resize: vertical; }
+.prv__check { flex-direction: row !important; align-items: center; gap: 8px; text-transform: none !important; letter-spacing: 0 !important; opacity: 1 !important; font-size: 13px; }
+.prv__check input { width: auto; }
+.prv__form-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.prv__btn { padding: 9px 14px; border: none; border-radius: 8px; font: inherit; font-weight: 600; font-size: 13px; cursor: pointer; }
+.prv__btn--primary { background: var(--teacher-primary, #5b8cff); color: #fff; }
+.prv__btn--ghost { background: rgba(255, 255, 255, 0.06); color: inherit; }
+
+@media (max-width: 800px) { .prv__grid { grid-template-columns: 1fr; } }
+@media (max-width: 600px) { .prv { padding: 14px; } }

@@ -1,0 +1,38 @@
+.pp { padding: 22px; max-width: 1080px; margin: 0 auto; color: var(--teacher-text, #e8eef9); }
+.pp header h2 { margin: 0 0 4px; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.pp header p { margin: 0 0 18px; font-size: 13px; opacity: 0.7; }
+.pp__error { padding: 12px; color: #fca5a5; }
+
+.pp__grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr;
+  gap: 14px;
+}
+
+.pp__card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.pp__card h3 { margin: 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7; font-weight: 700; }
+
+.pp__card--trend { grid-row: span 2; }
+.pp-chart { width: 100%; height: 160px; color: inherit; }
+.pp-empty { font-size: 12px; opacity: 0.6; }
+
+.pp__big { display: flex; flex-direction: column; gap: 4px; padding: 8px 0; }
+.pp__big strong { font-size: 28px; font-weight: 700; color: #5b8cff; font-variant-numeric: tabular-nums; }
+.pp__big span { font-size: 12px; opacity: 0.7; }
+
+@media (max-width: 900px) {
+  .pp__grid { grid-template-columns: 1fr 1fr; }
+  .pp__card--trend { grid-row: auto; grid-column: 1 / -1; }
+}
+@media (max-width: 600px) {
+  .pp { padding: 14px; }
+  .pp__grid { grid-template-columns: 1fr; }
+}

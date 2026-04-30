@@ -1,0 +1,55 @@
+.too { padding: 22px; max-width: 760px; margin: 0 auto; color: var(--teacher-text, #e8eef9); }
+.too header h2 { margin: 0 0 4px; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.too header p { margin: 0 0 18px; font-size: 13px; opacity: 0.7; }
+.too__error { padding: 10px 14px; background: rgba(239, 68, 68, 0.10); color: #fca5a5; border-radius: 8px; font-size: 13px; margin-bottom: 12px; }
+
+.too__day { margin-bottom: 18px; }
+.too__day h3 { margin: 0 0 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7; font-weight: 700; }
+.too__day ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.too__day li {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+}
+.too__day li.is-booked { background: rgba(34, 197, 94, 0.08); border-color: rgba(34, 197, 94, 0.24); }
+.too__day li > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.too__day li strong { font-size: 13px; }
+.too__day li span { font-size: 11px; opacity: 0.7; }
+.too__day li em { font-size: 11px; color: #34d399; font-style: normal; margin-top: 2px; }
+
+.too__pill { font-size: 11px; padding: 4px 10px; border-radius: 999px; background: rgba(91, 140, 255, 0.18); color: #5b8cff; font-weight: 600; flex-shrink: 0; }
+
+.too__btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border: none; border-radius: 8px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.too__btn--primary { background: var(--teacher-primary, #5b8cff); color: #fff; }
+.too__btn--ghost { background: rgba(255, 255, 255, 0.05); color: inherit; }
+.too__btn .material-symbols-outlined { font-size: 16px; }
+
+.too__add { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--teacher-primary, #5b8cff); color: #fff; border: none; border-radius: 8px; font: inherit; font-weight: 600; font-size: 13px; cursor: pointer; }
+
+.too__form {
+  margin-top: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.too__form h3 { margin: 0; font-size: 14px; font-weight: 700; }
+.too__form label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.85; }
+.too__form input, .too__form select {
+  padding: 9px 10px;
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 8px;
+  color: inherit; font: inherit; font-size: 13px;
+}
+.too__form-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+@media (max-width: 600px) {
+  .too { padding: 14px; }
+  .too__day li { flex-direction: column; align-items: stretch; }
+}

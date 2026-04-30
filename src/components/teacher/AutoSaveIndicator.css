@@ -1,0 +1,29 @@
+.tt-asi {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  border: 1px solid transparent;
+}
+.tt-asi .material-symbols-outlined { font-size: 14px; }
+
+.tt-asi--ok    { background: rgba(34, 197, 94, 0.10);  color: #22c55e; border-color: rgba(34, 197, 94, 0.20); }
+.tt-asi--busy  { background: rgba(91, 140, 255, 0.10); color: #5b8cff; border-color: rgba(91, 140, 255, 0.20); }
+.tt-asi--busy  .material-symbols-outlined { animation: spin 1s linear infinite; }
+.tt-asi--error { background: rgba(239, 68, 68, 0.10);  color: #fca5a5; border-color: rgba(239, 68, 68, 0.30); }
+
+.tt-asi.is-pulse { animation: tt-asi-pulse 1s ease-out; }
+@keyframes tt-asi-pulse {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tt-asi--busy .material-symbols-outlined,
+  .tt-asi.is-pulse { animation: none; }
+}

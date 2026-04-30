@@ -1,0 +1,28 @@
+.pcr { padding: 22px; max-width: 920px; margin: 0 auto; color: var(--teacher-text, #e8eef9); }
+.pcr__toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+.pcr__toolbar h2 { margin: 0 0 4px; font-size: 17px; }
+.pcr__toolbar p { margin: 0; font-size: 13px; opacity: 0.7; }
+.pcr__toolbar button { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; background: var(--teacher-primary, #5b8cff); color: #fff; border: none; border-radius: 8px; font: inherit; font-weight: 600; cursor: pointer; }
+
+.pcr__page { background: #fff; color: #0a1628; padding: 32px; border-radius: 8px; font-family: 'Manrope', system-ui, sans-serif; min-height: 1000px; }
+.pcr__head { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1B3FAF; padding-bottom: 14px; margin-bottom: 22px; }
+.pcr__head h1 { margin: 0; font-size: 22px; color: #1B3FAF; }
+.pcr__head p { margin: 4px 0 0; font-size: 13px; opacity: 0.7; }
+
+.pcr table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.pcr th, .pcr td { padding: 8px 10px; border-bottom: 1px solid #e2e8f0; text-align: left; }
+.pcr th { background: #f1f5f9; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; font-size: 11px; }
+
+.pcr__foot { margin-top: 22px; padding-top: 14px; border-top: 1px dashed #cbd5e1; font-size: 11px; opacity: 0.7; }
+.pcr__empty { padding: 30px; text-align: center; opacity: 0.6; }
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff !important; }
+  .pcr { padding: 0; }
+  .pcr__page { padding: 24px; min-height: auto; box-shadow: none; }
+}
+@media (max-width: 600px) {
+  .pcr { padding: 14px; }
+  .pcr__toolbar { flex-direction: column; align-items: stretch; gap: 12px; }
+}
