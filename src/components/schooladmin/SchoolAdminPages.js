@@ -5,6 +5,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ApiClient from '../../api/client';
 import { BrandColorPicker, LogoUpload } from '../BrandingComponents';
+import SECURITY_CONFIG from '../../config/security';
 
 /* ── Shared icon helper ───────────────────────────────────── */
 const Ic = ({ name, size, className = '', style }) => (
