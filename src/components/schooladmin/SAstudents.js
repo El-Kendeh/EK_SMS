@@ -1,5 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import ApiClient from '../../api/client';
+import PhoneInput from '../shared/PhoneInput';
+import { PHONE_COUNTRIES } from '../shared/phone-countries';
+import AddStudentWizard from './Students/AddStudentWizard';
+import BulkImportModal from './Students/BulkImportModal';
+import DraftManager from './Students/DraftManager';
+import { listDrafts } from './Students/students.utils';
+import './Students/Students.css';
 
 const Ic = ({ name, size, className = '' }) => (
   <span className={`ska-icon${size ? ` ska-icon--${size}` : ''} ${className}`} aria-hidden="true">
@@ -47,230 +54,16 @@ const previewUsername = admNo =>
 
 const copyText = text => navigator.clipboard?.writeText(text).catch(() => {});
 
-// ── Phone input with country dial-code selector ────────────────────
-const PHONE_COUNTRY_GROUPS = ['West Africa', 'East & Southern Africa', 'Europe & Americas'];
-const PHONE_COUNTRIES = [
-  // ── West Africa ──────────────────────────────────────────────────
-  { code: 'SL', name: 'Sierra Leone',   dial: '+232', flag: '🇸🇱', placeholder: '76 000 000',      group: 'West Africa' },
-  { code: 'GN', name: 'Guinea',         dial: '+224', flag: '🇬🇳', placeholder: '62 000 000',      group: 'West Africa' },
-  { code: 'LR', name: 'Liberia',        dial: '+231', flag: '🇱🇷', placeholder: '77 000 000',      group: 'West Africa' },
-  { code: 'GM', name: 'Gambia',         dial: '+220', flag: '🇬🇲', placeholder: '3XX XXXX',        group: 'West Africa' },
-  { code: 'SN', name: 'Senegal',        dial: '+221', flag: '🇸🇳', placeholder: '7X XXX XX XX',   group: 'West Africa' },
-  { code: 'ML', name: 'Mali',           dial: '+223', flag: '🇲🇱', placeholder: '6X XX XX XX',    group: 'West Africa' },
-  { code: 'GH', name: 'Ghana',          dial: '+233', flag: '🇬🇭', placeholder: '24 XXX XXXX',    group: 'West Africa' },
-  { code: 'NG', name: 'Nigeria',        dial: '+234', flag: '🇳🇬', placeholder: '70 XXX XXXX',    group: 'West Africa' },
-  { code: 'CI', name: "Côte d'Ivoire", dial: '+225', flag: '🇨🇮', placeholder: '07 XX XX XX XX', group: 'West Africa' },
-  { code: 'GW', name: 'Guinea-Bissau',  dial: '+245', flag: '🇬🇼', placeholder: '96 XXX XXXX',    group: 'West Africa' },
-  { code: 'TG', name: 'Togo',           dial: '+228', flag: '🇹🇬', placeholder: '90 XX XX XX',    group: 'West Africa' },
-  { code: 'BJ', name: 'Benin',          dial: '+229', flag: '🇧🇯', placeholder: '97 XX XX XX',    group: 'West Africa' },
-  { code: 'BF', name: 'Burkina Faso',   dial: '+226', flag: '🇧🇫', placeholder: '70 XX XX XX',    group: 'West Africa' },
-  { code: 'CM', name: 'Cameroon',       dial: '+237', flag: '🇨🇲', placeholder: '6X XX XX XX XX', group: 'West Africa' },
-  // ── East & Southern Africa ────────────────────────────────────────
-  { code: 'ZA', name: 'South Africa',   dial: '+27',  flag: '🇿🇦', placeholder: '71 XXX XXXX',    group: 'East & Southern Africa' },
-  { code: 'KE', name: 'Kenya',          dial: '+254', flag: '🇰🇪', placeholder: '7XX XXX XXX',    group: 'East & Southern Africa' },
-  { code: 'TZ', name: 'Tanzania',       dial: '+255', flag: '🇹🇿', placeholder: '7XX XXX XXX',    group: 'East & Southern Africa' },
-  { code: 'UG', name: 'Uganda',         dial: '+256', flag: '🇺🇬', placeholder: '7XX XXX XXX',    group: 'East & Southern Africa' },
-  { code: 'ET', name: 'Ethiopia',       dial: '+251', flag: '🇪🇹', placeholder: '9XX XXX XXX',    group: 'East & Southern Africa' },
-  // ── Europe & Americas ─────────────────────────────────────────────
-  { code: 'GB', name: 'United Kingdom', dial: '+44',  flag: '🇬🇧', placeholder: '7XXX XXXXXX',    group: 'Europe & Americas' },
-  { code: 'US', name: 'United States',  dial: '+1',   flag: '🇺🇸', placeholder: 'XXX XXX XXXX',   group: 'Europe & Americas' },
-  { code: 'FR', name: 'France',         dial: '+33',  flag: '🇫🇷', placeholder: '6X XX XX XX XX', group: 'Europe & Americas' },
-  { code: 'DE', name: 'Germany',        dial: '+49',  flag: '🇩🇪', placeholder: '1XX XXXXXXX',    group: 'Europe & Americas' },
-];
-const TZ_COUNTRY_MAP = {
-  'Africa/Freetown':'SL','Africa/Conakry':'GN','Africa/Monrovia':'LR',
-  'Africa/Banjul':'GM','Africa/Dakar':'SN','Africa/Bamako':'ML',
-  'Africa/Accra':'GH','Africa/Lagos':'NG','Africa/Abidjan':'CI',
-  'Africa/Bissau':'GW','Africa/Lome':'TG','Africa/Porto-Novo':'BJ',
-  'Africa/Ouagadougou':'BF','Africa/Douala':'CM','Africa/Johannesburg':'ZA',
-  'Africa/Nairobi':'KE','Africa/Dar_es_Salaam':'TZ','Africa/Kampala':'UG',
-  'Africa/Addis_Ababa':'ET','Europe/London':'GB','America/New_York':'US',
-  'America/Chicago':'US','America/Denver':'US','America/Los_Angeles':'US',
-  'Europe/Paris':'FR','Europe/Berlin':'DE',
-};
-function _detectPhoneCountry() {
-  try {
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    if (TZ_COUNTRY_MAP[tz]) return TZ_COUNTRY_MAP[tz];
-    const parts = (navigator.language || '').split('-');
-    if (parts.length > 1) {
-      const code = parts[parts.length - 1].toUpperCase();
-      if (PHONE_COUNTRIES.find(c => c.code === code)) return code;
-    }
-  } catch { /* */ }
-  return 'SL';
+function calculateAge(dob) {
+  if (!dob) return null;
+  const today = new Date();
+  const birth = new Date(dob);
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  return age >= 0 ? age : null;
 }
-function PhoneInput({ value, onChange, placeholder = 'Phone number', defaultCountry }) {
-  const [country, setCountry] = useState(() => {
-    if (value) {
-      const v = value.replace(/\s/g, '');
-      const sorted = [...PHONE_COUNTRIES].sort((a, b) => b.dial.length - a.dial.length);
-      const match = sorted.find(c => v.startsWith(c.dial.replace(/\s/g, '')));
-      if (match) return match;
-    }
-    const code = defaultCountry || _detectPhoneCountry();
-    return PHONE_COUNTRIES.find(c => c.code === code) || PHONE_COUNTRIES[0];
-  });
-  const [open,     setOpen]     = useState(false);
-  const [search,   setSearch]   = useState('');
-  const [dropRect, setDropRect] = useState(null);
-  const wrapRef        = useRef(null);
-  const searchInputRef = useRef(null);
 
-  const getLocal = (val, dial) => {
-    if (!val) return '';
-    const v = val.replace(/\s/g, ''), d = dial.replace(/\s/g, '');
-    return v.startsWith(d) ? v.slice(d.length) : val;
-  };
-  const localNum = getLocal(value, country.dial);
-
-  useEffect(() => {
-    if (!open) return;
-    if (wrapRef.current) {
-      const r = wrapRef.current.getBoundingClientRect();
-      // Clamp left so the dropdown never goes off the right edge of the screen
-      const dropW = 300;
-      const left = Math.min(r.left, window.innerWidth - dropW - 12);
-      setDropRect({ top: r.bottom + 6, left: Math.max(4, left) });
-    }
-    // preventScroll stops the modal from scrolling when this input gains focus,
-    // which would otherwise fire the scroll listener and close the dropdown.
-    const focusTimer = setTimeout(() => searchInputRef.current?.focus({ preventScroll: true }), 50);
-    const close = () => { setOpen(false); setSearch(''); };
-    const onMouseDown = e => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target)) close();
-    };
-    document.addEventListener('mousedown', onMouseDown);
-    return () => {
-      clearTimeout(focusTimer);
-      document.removeEventListener('mousedown', onMouseDown);
-    };
-  }, [open]);
-
-  const selectCountry = c => { setCountry(c); setOpen(false); setSearch(''); onChange(c.dial + localNum); };
-
-  const searchLower = search.toLowerCase();
-  const displayList = search
-    ? PHONE_COUNTRIES.filter(c =>
-        c.name.toLowerCase().includes(searchLower) ||
-        c.dial.includes(search) ||
-        c.code.toLowerCase().includes(searchLower)
-      )
-    : null; // null = show grouped view
-
-  const rowStyle = isSelected => ({
-    display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 14px',
-    border: 'none', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem',
-    color: 'var(--ska-text)', background: isSelected ? 'var(--ska-primary-dim)' : 'transparent',
-  });
-
-  return (
-    <div ref={wrapRef} style={{ position: 'relative', display: 'flex' }}>
-      <button
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        style={{
-          display: 'flex', alignItems: 'center', gap: 5, padding: '0 10px',
-          borderRadius: '8px 0 0 8px', border: '1px solid var(--ska-border)', borderRight: 'none',
-          background: open ? 'var(--ska-primary-dim)' : 'var(--ska-surface-high)',
-          cursor: 'pointer', flexShrink: 0, minHeight: 40, whiteSpace: 'nowrap',
-          transition: 'background 0.15s',
-        }}
-      >
-        <span style={{ fontSize: '1.25rem', lineHeight: 1 }}>{country.flag}</span>
-        <span style={{ fontSize: '0.8125rem', color: 'var(--ska-text-3)', fontWeight: 700 }}>{country.dial}</span>
-        <span className="ska-icon" style={{ fontSize: 14, color: 'var(--ska-text-3)', transition: 'transform 0.15s', transform: open ? 'rotate(180deg)' : 'none' }}>
-          expand_more
-        </span>
-      </button>
-      <input
-        type="tel"
-        className="ska-input"
-        value={localNum}
-        onChange={e => onChange(country.dial + e.target.value)}
-        placeholder={country.placeholder || placeholder}
-        style={{ borderRadius: '0 8px 8px 0', flex: 1 }}
-      />
-      {open && dropRect && (
-        <div style={{
-          position: 'fixed', top: dropRect.top, left: dropRect.left, zIndex: 99999,
-          background: 'var(--ska-surface)', border: '1px solid var(--ska-border)',
-          borderRadius: 12, boxShadow: '0 12px 40px rgba(0,0,0,0.32)',
-          width: 300, maxHeight: 320, overflow: 'hidden',
-          display: 'flex', flexDirection: 'column',
-        }}>
-          {/* Search box */}
-          <div style={{ padding: '8px 10px', borderBottom: '1px solid var(--ska-border)', flexShrink: 0 }}>
-            <div style={{ position: 'relative' }}>
-              <span className="ska-icon" style={{
-                position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)',
-                fontSize: 16, color: 'var(--ska-text-3)', pointerEvents: 'none',
-              }}>search</span>
-              <input
-                ref={searchInputRef}
-                type="text"
-                placeholder="Search country or code…"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                style={{
-                  width: '100%', border: '1px solid var(--ska-border)', borderRadius: 8,
-                  padding: '7px 10px 7px 30px', fontSize: '0.8125rem',
-                  background: 'var(--ska-surface-high)', color: 'var(--ska-text)',
-                  outline: 'none', boxSizing: 'border-box',
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Country list — inline rows (no sub-component) to prevent remount flicker */}
-          <div style={{ overflowY: 'auto', flex: 1, scrollbarWidth: 'thin' }}>
-            {displayList ? (
-              <>
-                {displayList.map(c => (
-                  <button key={c.code} type="button" onClick={() => selectCountry(c)} style={rowStyle(c.code === country.code)}
-                    onMouseEnter={e => { e.currentTarget.style.background = 'var(--ska-surface-high)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = c.code === country.code ? 'var(--ska-primary-dim)' : 'transparent'; }}>
-                    <span style={{ fontSize: '1.25rem', lineHeight: 1, flexShrink: 0 }}>{c.flag}</span>
-                    <span style={{ flex: 1, fontWeight: c.code === country.code ? 700 : 400 }}>{c.name}</span>
-                    <span style={{ fontSize: '0.8125rem', color: 'var(--ska-text-3)', flexShrink: 0, fontFamily: 'monospace' }}>{c.dial}</span>
-                  </button>
-                ))}
-                {displayList.length === 0 && (
-                  <div style={{ padding: '20px 16px', textAlign: 'center', fontSize: '0.8125rem', color: 'var(--ska-text-3)' }}>
-                    No countries found
-                  </div>
-                )}
-              </>
-            ) : (
-              PHONE_COUNTRY_GROUPS.map((grp, gi) => (
-                <React.Fragment key={grp}>
-                  <div style={{
-                    padding: gi === 0 ? '8px 14px 4px' : '10px 14px 4px',
-                    fontSize: '0.625rem', fontWeight: 800, textTransform: 'uppercase',
-                    letterSpacing: '0.1em', color: 'var(--ska-primary)',
-                    borderTop: gi > 0 ? '1px solid var(--ska-border)' : 'none',
-                    background: 'var(--ska-surface)',
-                  }}>
-                    {grp}
-                  </div>
-                  {PHONE_COUNTRIES.filter(c => c.group === grp).map(c => (
-                    <button key={c.code} type="button" onClick={() => selectCountry(c)} style={rowStyle(c.code === country.code)}
-                      onMouseEnter={e => { e.currentTarget.style.background = 'var(--ska-surface-high)'; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = c.code === country.code ? 'var(--ska-primary-dim)' : 'transparent'; }}>
-                      <span style={{ fontSize: '1.25rem', lineHeight: 1, flexShrink: 0 }}>{c.flag}</span>
-                      <span style={{ flex: 1, fontWeight: c.code === country.code ? 700 : 400 }}>{c.name}</span>
-                      <span style={{ fontSize: '0.8125rem', color: 'var(--ska-text-3)', flexShrink: 0, fontFamily: 'monospace' }}>{c.dial}</span>
-                    </button>
-                  ))}
-                </React.Fragment>
-              ))
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ── Credential Success Overlay ─────────────────────────────────────
 function CredentialCard({ info, onDone, onLinkParent }) {
@@ -1026,6 +819,10 @@ export function StudentsPage({ school, openAddSignal }) {
   const [draftRestored,       setDraftRestored]       = useState(false);
   const [formStep,            setFormStep]            = useState(0);
   const [stats,               setStats]               = useState(null);
+  const [showBulkImport,      setShowBulkImport]      = useState(false);
+  const [showDrafts,          setShowDrafts]          = useState(false);
+  const [draftToRestore,      setDraftToRestore]      = useState(null);
+  const [savedDraftCount,     setSavedDraftCount]     = useState(() => listDrafts().length);
   const prevSignal = useRef(openAddSignal);
 
   const loadStats = useCallback(async () => {
@@ -1654,14 +1451,24 @@ export function StudentsPage({ school, openAddSignal }) {
         />
       )}
 
-      <div className="ska-page-head">
+      <div className="ska-page-head ska-page-head--action">
         <div>
           <h1 className="ska-page-title">Students</h1>
           <p className="ska-page-sub">{school?.name} — {students.length} enrolled</p>
         </div>
-        <button className="ska-btn ska-btn--primary" onClick={openAdd}>
-          <Ic name="person_add" size="sm" /> Add Student
-        </button>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {savedDraftCount > 0 && (
+            <button className="ska-btn ska-btn--ghost" onClick={() => setShowDrafts(true)}>
+              <Ic name="drafts" size="sm" /> Drafts ({savedDraftCount})
+            </button>
+          )}
+          <button className="ska-btn ska-btn--ghost" onClick={() => setShowBulkImport(true)}>
+            <Ic name="upload_file" size="sm" /> Bulk import
+          </button>
+          <button className="ska-btn ska-btn--primary" onClick={() => setModal('add')}>
+            <Ic name="person_add" size="sm" /> Add Student
+          </button>
+        </div>
       </div>
 
       {/* ── Metrics bar ─────────────────────────────────────── */}
@@ -1751,9 +1558,63 @@ export function StudentsPage({ school, openAddSignal }) {
         )}
       </div>
 
-      {/* ── Add / Edit Modal ───────────────────────────────────── */}
-      {modal && (
-        <Modal title={modal === 'add' ? 'Register New Student' : 'Edit Student'} onClose={closeModal}>
+      {/* ── Add Wizard (new architecture, replaces inline form) ── */}
+      {modal === 'add' && (
+        <AddStudentWizard
+          mode="add"
+          school={school}
+          classes={classes}
+          allStudents={students}
+          schoolCountryCode={schoolCountryCode}
+          draftToRestore={draftToRestore}
+          onClose={() => {
+            setModal(null);
+            setDraftToRestore(null);
+            setSavedDraftCount(listDrafts().length);
+          }}
+          onSaved={(info) => {
+            setModal(null);
+            setDraftToRestore(null);
+            setSavedDraftCount(listDrafts().length);
+            load(search);
+            loadStats();
+            setCredSuccess(info);
+            if (info.addAnother) {
+              /* Re-open the wizard fresh after a brief delay */
+              setTimeout(() => {
+                setCredSuccess(null);
+                setModal('add');
+              }, 600);
+            }
+          }}
+        />
+      )}
+
+      {/* ── Bulk Import ────────────────────────────────────────── */}
+      {showBulkImport && (
+        <BulkImportModal
+          existingStudents={students}
+          classes={classes}
+          onClose={() => setShowBulkImport(false)}
+          onImported={() => { load(search); loadStats(); }}
+        />
+      )}
+
+      {/* ── Draft Manager ──────────────────────────────────────── */}
+      {showDrafts && (
+        <DraftManager
+          onClose={() => { setShowDrafts(false); setSavedDraftCount(listDrafts().length); }}
+          onRestore={(draft) => {
+            setDraftToRestore(draft);
+            setShowDrafts(false);
+            setModal('add');
+          }}
+        />
+      )}
+
+      {/* ── Edit Modal (legacy inline form, only for non-add) ──── */}
+      {modal && modal !== 'add' && (
+        <Modal title="Edit Student" onClose={closeModal}>
           {error && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
               <p className="ska-form-error" style={{ margin: 0, flex: 1 }}>{error}</p>
@@ -1965,6 +1826,15 @@ export function StudentsPage({ school, openAddSignal }) {
                   style={fieldErrors.date_of_birth ? { borderColor: 'var(--ska-error)' } : {}}
                   onChange={e => { setForm(f => ({ ...f, date_of_birth: e.target.value })); setFieldErrors(p => ({ ...p, date_of_birth: '' })); }} />
                 {fieldErrors.date_of_birth && <span style={{ fontSize: '0.71875rem', color: 'var(--ska-error)', marginTop: 2 }}>{fieldErrors.date_of_birth}</span>}
+                {form.date_of_birth && !fieldErrors.date_of_birth && (() => {
+                  const age = calculateAge(form.date_of_birth);
+                  return age !== null ? (
+                    <span className="ska-age-display">
+                      <Ic name="cake" size="sm" />
+                      Age: {age} year{age !== 1 ? 's' : ''}
+                    </span>
+                  ) : null;
+                })()}
               </label>
               <label className="ska-form-group">
                 <span>Place of Birth</span>

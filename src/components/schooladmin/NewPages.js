@@ -4,6 +4,12 @@
  */
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ApiClient from '../../api/client';
+import AddTeacherWizard from './Teachers/AddTeacherWizard';
+import BulkImportModal from './Teachers/BulkImportModal';
+
+/* PhoneInput moved to shared/ — re-exported so existing
+   `import { PhoneInput } from '../NewPages'` paths keep working. */
+export { default as PhoneInput } from '../shared/PhoneInput';
 
 /* ── re-use icon helper (same pattern as SchoolAdminPages.js) ── */
 const Ic = ({ name, size, className = '', style }) => (
@@ -920,141 +926,539 @@ export function TimetablePage({ school }) {
 
 
 /* ============================================================
-   PARENTS PAGE (school-admin management view)
+   PARENTS PAGE — extended into a full Parent–Student Engagement
+   System. Implementation lives in ./Parents/ for component
+   separation; we re-export here so existing imports work.
    ============================================================ */
-export function ParentsPage({ school }) {
-  const [parents,  setParents]  = useState([]);
-  const [loading,  setLoading]  = useState(true);
-  const [search,   setSearch]   = useState('');
-  const [expanded, setExpanded] = useState(null);
+export { default as ParentsPage } from './Parents/ParentsPage';
 
-  useEffect(() => {
-    ApiClient.get('/api/school/parents/')
-      .then(d => setParents(d.parents || []))
-      .catch(() => setParents([]))
-      .finally(() => setLoading(false));
-  }, []);
 
-  const filtered = parents.filter(p => {
-    const q = search.toLowerCase();
-    return !q || p.name.toLowerCase().includes(q) || p.email.toLowerCase().includes(q) ||
-      p.children.some(c => c.name.toLowerCase().includes(q));
-  });
+/* ============================================================
+   FINANCE USERS — ROLE & PERMISSION MODEL
+   ============================================================ */
+const FU_PERMISSIONS = [
+  { key: 'record_payments',  label: 'Record Payments',  icon: 'payments' },
+  { key: 'issue_receipts',   label: 'Issue Receipts',   icon: 'receipt_long' },
+  { key: 'view_reports',     label: 'View Reports',     icon: 'analytics' },
+  { key: 'approve_refunds',  label: 'Approve Refunds',  icon: 'undo' },
+  { key: 'manage_fees',      label: 'Manage Fees',      icon: 'price_change' },
+];
+
+const FU_ROLES = {
+  Bursar:  { label: 'Bursar',  sub: 'Full Access',     icon: 'verified_user', color: 'var(--ska-primary)',
+             defaults: ['record_payments','issue_receipts','view_reports','approve_refunds','manage_fees'] },
+  Cashier: { label: 'Cashier', sub: 'Limited Access',  icon: 'point_of_sale', color: 'var(--ska-tertiary)',
+             defaults: ['record_payments','issue_receipts'] },
+  Auditor: { label: 'Auditor', sub: 'Read-only',       icon: 'fact_check',    color: 'var(--ska-secondary)',
+             defaults: ['view_reports'] },
+};
+const FU_ROLE_KEYS = Object.keys(FU_ROLES);
+
+const FU_SCOPE_OPTIONS = [
+  'Grade 7A','Grade 7B','Grade 8A','Grade 8B','Grade 9A','Grade 9B','Grade 10A','Grade 10B','Grade 11A','Grade 12A',
+];
+
+/* Deterministic mock enrichment so each user keeps the same role/activity across renders. */
+function fuHash(seed) {
+  const s = String(seed || '');
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+function fuEnrich(u) {
+  const h = fuHash(u.email || u.id);
+  const role = u.role && FU_ROLES[u.role] ? u.role : FU_ROLE_KEYS[h % FU_ROLE_KEYS.length];
+  const def  = FU_ROLES[role].defaults;
+  const perms = u.permissions && u.permissions.length ? u.permissions : def;
+  const txToday   = u.is_active ? (h % 22) + (role === 'Auditor' ? 0 : 3) : 0;
+  const txAmount  = u.is_active ? ((h % 47) + 4) * 50 : 0;
+  const lastMins  = (h % 240) + 5;
+  const limit     = role === 'Bursar' ? 5000 : role === 'Cashier' ? 500 : 0;
+  const scope     = u.scope && u.scope.length ? u.scope :
+                    role === 'Bursar' ? ['All Classes'] :
+                    role === 'Cashier' ? [FU_SCOPE_OPTIONS[h % FU_SCOPE_OPTIONS.length], FU_SCOPE_OPTIONS[(h + 3) % FU_SCOPE_OPTIONS.length]] :
+                    ['All Classes'];
+  const hours     = u.working_hours || (role === 'Cashier' ? '8AM – 4PM' : role === 'Auditor' ? '9AM – 5PM' : 'Flexible');
+  const flagged   = u.is_active && txToday > 18;
+  const highVol   = u.is_active && txAmount > 2000;
+  return {
+    ...u, role, perms, txToday, txAmount, lastMins, limit, scope, hours,
+    flagged, highVol,
+    activity: [
+      { kind: 'login',   text: 'Signed in to dashboard',          at: `${Math.max(1, lastMins - 4)} min ago` },
+      { kind: 'payment', text: `Collected fee — $${(h % 90) + 50}`, at: `${lastMins} min ago` },
+      { kind: 'receipt', text: `Issued receipt — REC-${1000 + (h % 9000)}`, at: `${lastMins + 12} min ago` },
+      { kind: 'payment', text: `Collected fee — $${(h % 60) + 25}`, at: `${lastMins + 47} min ago` },
+    ],
+  };
+}
+
+function FuRoleBadge({ role, size = 'md' }) {
+  const r = FU_ROLES[role] || FU_ROLES.Cashier;
+  const small = size === 'sm';
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 6,
+      padding: small ? '3px 8px' : '4px 10px', borderRadius: 20,
+      background: `${r.color}1f`, color: r.color,
+      border: `1px solid ${r.color}33`,
+      fontSize: small ? '0.6875rem' : '0.75rem', fontWeight: 700,
+      whiteSpace: 'nowrap',
+    }}>
+      <Ic name={r.icon} size="sm" /> {r.label}
+    </span>
+  );
+}
+
+/* ── Per-card view ─────────────────────────────────────────── */
+function FinanceUserCard({ u, onView, onEdit, onToggle }) {
+  const r = FU_ROLES[u.role];
+  const allowed = u.perms;
+  const denied  = FU_PERMISSIONS.filter(p => !allowed.includes(p.key)).slice(0, 1);
+  const status  = u.is_active ? 'Active' : 'Suspended';
+  const statusColor = u.is_active ? 'var(--ska-green)' : 'var(--ska-error)';
 
   return (
-    <div className="ska-content">
-      <div className="ska-page-head">
+    <div className="ska-fu-card">
+      {/* Top: avatar + identity + status dot */}
+      <div className="ska-fu-card__head">
+        <div className="ska-fu-card__avatar" style={{ background: `${r.color}20`, color: r.color }}>
+          {u.full_name?.[0]?.toUpperCase() || '?'}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p className="ska-fu-card__name" title={u.full_name}>{u.full_name || '—'}</p>
+          <p className="ska-fu-card__email" title={u.email}>{u.email}</p>
+        </div>
+        <span className="ska-fu-card__statusdot" style={{ background: statusColor, boxShadow: `0 0 0 4px ${statusColor}25` }} title={status} />
+      </div>
+
+      {/* Role + scope strip */}
+      <div className="ska-fu-card__rolebar">
+        <FuRoleBadge role={u.role} />
+        <span className="ska-fu-card__rolesub">{r.sub}</span>
+      </div>
+
+      {/* Permissions summary */}
+      <div className="ska-fu-card__perms">
+        {FU_PERMISSIONS.filter(p => allowed.includes(p.key)).slice(0, 3).map(p => (
+          <span key={p.key} className="ska-fu-perm ska-fu-perm--on">
+            <Ic name="check" size="sm" /> {p.label}
+          </span>
+        ))}
+        {denied.map(p => (
+          <span key={p.key} className="ska-fu-perm ska-fu-perm--off">
+            <Ic name="close" size="sm" /> {p.label}
+          </span>
+        ))}
+        {allowed.length > 3 && (
+          <span className="ska-fu-perm ska-fu-perm--more">+{allowed.length - 3} more</span>
+        )}
+      </div>
+
+      {/* Activity snapshot */}
+      <div className="ska-fu-card__metrics">
         <div>
-          <h1 className="ska-page-title">Parents &amp; Guardians</h1>
-          <p className="ska-page-sub">{school?.name} — Parent accounts and student links</p>
+          <div className="ska-fu-metric__val">{u.txToday}</div>
+          <div className="ska-fu-metric__lbl">Tx today</div>
+        </div>
+        <div>
+          <div className="ska-fu-metric__val">${u.txAmount.toLocaleString()}</div>
+          <div className="ska-fu-metric__lbl">Handled</div>
+        </div>
+        <div>
+          <div className="ska-fu-metric__val" style={{ fontSize: '0.8125rem' }}>{u.lastMins < 60 ? `${u.lastMins}m` : `${Math.round(u.lastMins / 60)}h`}</div>
+          <div className="ska-fu-metric__lbl">Last active</div>
         </div>
       </div>
 
-      <div className="ska-stat-grid-4">
-        <StatCard icon="family_restroom" iconBg="var(--ska-primary-dim)"   iconColor="var(--ska-primary)"   label="Total Parents"   value={loading ? '…' : parents.length} />
-        <StatCard icon="group"           iconBg="var(--ska-secondary-dim)" iconColor="var(--ska-secondary)" label="Linked Students" value={loading ? '…' : parents.reduce((s, p) => s + p.children.length, 0)} />
-        <StatCard icon="link"            iconBg="var(--ska-green-dim)"     iconColor="var(--ska-green)"     label="With Children"   value={loading ? '…' : parents.filter(p => p.children.length > 0).length} />
-        <StatCard icon="link_off"        iconBg="var(--ska-error-dim)"     iconColor="var(--ska-error)"     label="No Links"        value={loading ? '…' : parents.filter(p => p.children.length === 0).length} />
-      </div>
+      {/* Alerts */}
+      {(u.flagged || u.highVol) && (
+        <div className="ska-fu-card__alert">
+          <Ic name="warning" size="sm" />
+          {u.flagged ? 'Suspicious activity' : 'High transaction volume'}
+        </div>
+      )}
 
-      <div className="ska-card ska-card-pad" style={{ marginBottom: 20 }}>
-        <input className="ska-input" placeholder="Search parents or students…" value={search} onChange={e => setSearch(e.target.value)} style={{ maxWidth: 360 }} />
-      </div>
-
-      <div className="ska-card" style={{ overflow: 'hidden' }}>
-        {loading ? (
-          <div className="ska-empty"><p className="ska-empty-desc">Loading parents…</p></div>
-        ) : filtered.length === 0 ? (
-          <div className="ska-empty">
-            <Ic name="family_restroom" size="xl" style={{ color: 'var(--ska-text-3)', marginBottom: 12 }} />
-            <p className="ska-empty-title">{search ? 'No results found' : 'No parents registered'}</p>
-            <p className="ska-empty-desc">{search ? 'Try a different search term.' : 'Parent accounts are created during student registration.'}</p>
-          </div>
-        ) : (
-          filtered.map((p, i) => (
-            <div key={p.id} style={{ borderBottom: i < filtered.length - 1 ? '1px solid var(--ska-border)' : 'none' }}>
-              <div
-                onClick={() => setExpanded(expanded === p.id ? null : p.id)}
-                style={{ display: 'flex', gap: 14, padding: '14px 20px', cursor: 'pointer', alignItems: 'center' }}
-              >
-                <div style={{ width: 40, height: 40, borderRadius: '50%', flexShrink: 0, background: 'var(--ska-secondary-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: 'var(--ska-secondary)' }}>
-                  {p.name?.[0]?.toUpperCase() || '?'}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontWeight: 700, color: 'var(--ska-text)' }}>{p.name}</span>
-                    <Ic name={expanded === p.id ? 'expand_less' : 'expand_more'} style={{ color: 'var(--ska-text-3)' }} />
-                  </div>
-                  <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--ska-text-3)' }}>{p.email} · {p.phone} · <em>{p.relationship}</em></p>
-                </div>
-                <span className={`ska-badge ${p.children.length > 0 ? 'ska-badge--green' : 'ska-badge--inactive'}`}>{p.children.length} child{p.children.length !== 1 ? 'ren' : ''}</span>
-              </div>
-              {expanded === p.id && p.children.length > 0 && (
-                <div style={{ padding: '0 20px 14px 74px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {p.children.map(c => (
-                      <div key={c.id} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '8px 12px', background: 'var(--ska-surface-high)', borderRadius: 8 }}>
-                        <Ic name="person" style={{ color: 'var(--ska-primary)' }} />
-                        <div style={{ flex: 1 }}>
-                          <p style={{ margin: 0, fontWeight: 600, fontSize: '0.875rem', color: 'var(--ska-text)' }}>{c.name}</p>
-                          <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--ska-text-3)' }}>{c.class} · {c.admission}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          ))
-        )}
+      {/* Actions */}
+      <div className="ska-fu-card__actions">
+        <button className="ska-btn ska-btn--sm ska-btn--ghost" onClick={() => onView(u)}>
+          <Ic name="visibility" size="sm" /> View
+        </button>
+        <button className="ska-btn ska-btn--sm ska-btn--ghost" onClick={() => onEdit(u)}>
+          <Ic name="manage_accounts" size="sm" /> Edit Role
+        </button>
+        <button
+          className={`ska-btn ska-btn--sm ${u.is_active ? 'ska-btn--danger' : 'ska-btn--approve'}`}
+          onClick={() => onToggle(u)}
+        >
+          <Ic name={u.is_active ? 'block' : 'check_circle'} size="sm" />
+          {u.is_active ? 'Suspend' : 'Activate'}
+        </button>
       </div>
     </div>
   );
 }
 
+/* ── Details panel (modal overlay) ─────────────────────────── */
+function FinanceUserDetails({ u, onClose, onEdit, onToggle }) {
+  const r = FU_ROLES[u.role];
+  return (
+    <div className="ska-modal-overlay" onClick={onClose}>
+      <div className="ska-modal ska-modal--wide" onClick={e => e.stopPropagation()}>
+        <div className="ska-modal-head">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+            <div className="ska-fu-card__avatar" style={{ background: `${r.color}20`, color: r.color, width: 44, height: 44, fontSize: '1.0625rem' }}>
+              {u.full_name?.[0]?.toUpperCase() || '?'}
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <h3 className="ska-modal-title" style={{ margin: 0 }}>{u.full_name || '—'}</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
+                <FuRoleBadge role={u.role} size="sm" />
+                <span style={{ fontSize: '0.75rem', color: u.is_active ? 'var(--ska-green)' : 'var(--ska-error)', fontWeight: 700 }}>
+                  ● {u.is_active ? 'Active' : 'Suspended'}
+                </span>
+              </div>
+            </div>
+          </div>
+          <button className="ska-modal-close" onClick={onClose} aria-label="Close">
+            <Ic name="close" size="sm" />
+          </button>
+        </div>
+
+        <div className="ska-modal-body">
+          {(u.flagged || u.highVol) && (
+            <div className="ska-fu-alert" style={{ marginBottom: 16 }}>
+              <Ic name="warning" />
+              <div>
+                <strong>{u.flagged ? 'Unusual transaction detected' : 'High transaction volume'}</strong>
+                <p style={{ margin: '2px 0 0', fontSize: '0.75rem', opacity: 0.85 }}>
+                  Review this user's recent activity for irregularities.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Profile */}
+          <h4 className="ska-fu-section-title">Profile</h4>
+          <div className="ska-fu-kv">
+            <div><span>Email</span><strong>{u.email || '—'}</strong></div>
+            <div><span>Phone</span><strong>{u.phone || '—'}</strong></div>
+            <div><span>Role</span><strong>{r.label} · {r.sub}</strong></div>
+            <div><span>Status</span><strong style={{ color: u.is_active ? 'var(--ska-green)' : 'var(--ska-error)' }}>{u.is_active ? 'Active' : 'Suspended'}</strong></div>
+            <div><span>Working Hours</span><strong>{u.hours}</strong></div>
+            <div><span>Tx Limit</span><strong>{u.limit ? `$${u.limit.toLocaleString()} / tx` : '—'}</strong></div>
+          </div>
+
+          {/* Permissions */}
+          <h4 className="ska-fu-section-title">Permissions</h4>
+          <div className="ska-fu-perm-grid">
+            {FU_PERMISSIONS.map(p => {
+              const on = u.perms.includes(p.key);
+              return (
+                <div key={p.key} className={`ska-fu-perm-row ${on ? 'ska-fu-perm-row--on' : 'ska-fu-perm-row--off'}`}>
+                  <Ic name={on ? 'check_circle' : 'cancel'} size="sm" />
+                  <span>{p.label}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Scope */}
+          <h4 className="ska-fu-section-title">Assigned Scope</h4>
+          <div className="ska-fu-chips">
+            {u.scope.map(s => <span key={s} className="ska-fu-chip">{s}</span>)}
+          </div>
+
+          {/* Transaction summary */}
+          <h4 className="ska-fu-section-title">Transaction Summary</h4>
+          <div className="ska-fu-summary">
+            <div><span>Today</span><strong>{u.txToday} tx</strong></div>
+            <div><span>Total Handled</span><strong>${u.txAmount.toLocaleString()}</strong></div>
+            <div><span>Last Active</span><strong>{u.lastMins < 60 ? `${u.lastMins} min ago` : `${Math.round(u.lastMins / 60)} hr ago`}</strong></div>
+          </div>
+
+          {/* Activity log */}
+          <h4 className="ska-fu-section-title">Recent Activity</h4>
+          <ul className="ska-fu-activity">
+            {u.activity.map((a, i) => (
+              <li key={i}>
+                <span className={`ska-fu-activity__dot ska-fu-activity__dot--${a.kind}`} />
+                <div style={{ flex: 1 }}>
+                  <p>{a.text}</p>
+                  <span>{a.at}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          <div className="ska-modal-actions">
+            <button className="ska-btn ska-btn--ghost" onClick={onClose}>Close</button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="ska-btn ska-btn--ghost" onClick={() => onEdit(u)}>
+                <Ic name="edit" size="sm" /> Edit Role
+              </button>
+              <button
+                className={`ska-btn ${u.is_active ? 'ska-btn--danger' : 'ska-btn--approve'}`}
+                onClick={() => onToggle(u)}
+              >
+                <Ic name={u.is_active ? 'block' : 'check_circle'} size="sm" />
+                {u.is_active ? 'Suspend User' : 'Activate User'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Add Finance User form (smart, role-aware) ─────────────── */
+function AddFinanceUserForm({ existingEmails, onSubmit, onCancel, saving }) {
+  const [form, setForm] = useState({
+    first_name: '', last_name: '', email: '', phone: '', password: '',
+    role: 'Cashier',
+    perms: FU_ROLES.Cashier.defaults,
+    scope: [],
+    limit: 500,
+    hours_from: '08:00',
+    hours_to: '16:00',
+  });
+  const [showPass, setShowPass] = useState(false);
+  const [touched, setTouched]   = useState({});
+
+  // Role → permission autofill
+  const setRole = (role) => {
+    setForm(f => ({ ...f, role, perms: FU_ROLES[role].defaults,
+      limit: role === 'Bursar' ? 5000 : role === 'Cashier' ? 500 : 0,
+    }));
+  };
+
+  const togglePerm = (key) => {
+    setForm(f => ({
+      ...f, perms: f.perms.includes(key) ? f.perms.filter(p => p !== key) : [...f.perms, key],
+    }));
+  };
+
+  const toggleScope = (cls) => {
+    setForm(f => ({
+      ...f, scope: f.scope.includes(cls) ? f.scope.filter(c => c !== cls) : [...f.scope, cls],
+    }));
+  };
+
+  const emailLower = (form.email || '').trim().toLowerCase();
+  const dupEmail   = emailLower && existingEmails.includes(emailLower);
+  const emailErr   = touched.email && (!emailLower ? 'Email is required' : dupEmail ? 'Email already in use' : null);
+  const passErr    = touched.password && (form.password.length < 8 ? 'Password must be at least 8 characters' : null);
+  const nameErr    = touched.first_name && !form.first_name.trim() ? 'First name is required' : null;
+  const valid      = !dupEmail && emailLower && form.password.length >= 8 && form.first_name.trim();
+
+  const submit = (e) => {
+    e.preventDefault();
+    setTouched({ first_name: true, email: true, password: true });
+    if (!valid) return;
+    onSubmit({
+      first_name: form.first_name.trim(),
+      last_name:  form.last_name.trim(),
+      email:      emailLower,
+      phone:      form.phone.trim(),
+      password:   form.password,
+      role:       form.role,
+      permissions: form.perms,
+      scope:       form.scope,
+      transaction_limit: form.limit,
+      working_hours: `${form.hours_from} – ${form.hours_to}`,
+    });
+  };
+
+  return (
+    <div className="ska-card ska-card-pad ska-fu-form">
+      <div className="ska-fu-form__head">
+        <h3>
+          <Ic name="person_add" size="sm" /> New Finance User
+        </h3>
+        <button type="button" className="ska-modal-close" onClick={onCancel} aria-label="Cancel">
+          <Ic name="close" size="sm" />
+        </button>
+      </div>
+
+      <form onSubmit={submit}>
+        {/* Basic info */}
+        <h4 className="ska-fu-section-title">Basic Info</h4>
+        <div className="ska-fu-form__grid">
+          <label className="ska-form-group">
+            <span>First Name <em>*</em></span>
+            <input className="ska-input" value={form.first_name}
+              onBlur={() => setTouched(t => ({ ...t, first_name: true }))}
+              onChange={e => setForm(f => ({ ...f, first_name: e.target.value }))}
+              placeholder="First name" />
+            {nameErr && <small className="ska-fu-err">{nameErr}</small>}
+          </label>
+          <label className="ska-form-group">
+            <span>Last Name</span>
+            <input className="ska-input" value={form.last_name}
+              onChange={e => setForm(f => ({ ...f, last_name: e.target.value }))}
+              placeholder="Last name" />
+          </label>
+          <label className="ska-form-group">
+            <span>Email <em>*</em></span>
+            <input className="ska-input" type="email" value={form.email}
+              onBlur={() => setTouched(t => ({ ...t, email: true }))}
+              onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+              placeholder="finance@school.com" />
+            {emailErr && <small className="ska-fu-err">{emailErr}</small>}
+          </label>
+          <label className="ska-form-group">
+            <span>Phone</span>
+            <input className="ska-input" value={form.phone}
+              onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+              placeholder="+xxx-xxx-xxxx" />
+          </label>
+          <label className="ska-form-group" style={{ gridColumn: '1 / -1' }}>
+            <span>Password <em>*</em></span>
+            <div style={{ position: 'relative' }}>
+              <input className="ska-input" type={showPass ? 'text' : 'password'}
+                value={form.password}
+                onBlur={() => setTouched(t => ({ ...t, password: true }))}
+                onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                placeholder="Min. 8 characters"
+                style={{ paddingRight: 44 }} />
+              <button type="button"
+                onClick={() => setShowPass(p => !p)}
+                style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+                         background: 'none', border: 'none', cursor: 'pointer',
+                         color: 'var(--ska-text-3)', padding: 0, lineHeight: 1 }}>
+                <Ic name={showPass ? 'visibility_off' : 'visibility'} size="sm" />
+              </button>
+            </div>
+            {passErr && <small className="ska-fu-err">{passErr}</small>}
+          </label>
+        </div>
+
+        {/* Role assignment */}
+        <h4 className="ska-fu-section-title">Role Assignment</h4>
+        <div className="ska-fu-roles">
+          {FU_ROLE_KEYS.map(rk => {
+            const r = FU_ROLES[rk];
+            const active = form.role === rk;
+            return (
+              <button type="button" key={rk}
+                className={`ska-fu-role ${active ? 'ska-fu-role--active' : ''}`}
+                onClick={() => setRole(rk)}
+                style={active ? { borderColor: r.color, background: `${r.color}1a` } : undefined}>
+                <Ic name={r.icon} style={{ color: r.color, fontSize: 22 }} />
+                <div>
+                  <strong>{r.label}</strong>
+                  <span>{r.sub}</span>
+                </div>
+                {active && <Ic name="check_circle" size="sm" style={{ color: r.color, marginLeft: 'auto' }} />}
+              </button>
+            );
+          })}
+        </div>
+
+        {form.role === 'Bursar' && (
+          <div className="ska-fu-warn">
+            <Ic name="security" size="sm" /> <strong>High privilege role selected.</strong> Bursars can approve refunds and manage all fees.
+          </div>
+        )}
+
+        {/* Permissions checklist */}
+        <h4 className="ska-fu-section-title">
+          Permissions <small>(auto-filled from role — editable)</small>
+        </h4>
+        <div className="ska-fu-perm-check">
+          {FU_PERMISSIONS.map(p => {
+            const on = form.perms.includes(p.key);
+            return (
+              <label key={p.key} className={`ska-fu-perm-check__item ${on ? 'is-on' : ''}`}>
+                <input type="checkbox" checked={on} onChange={() => togglePerm(p.key)} />
+                <Ic name={p.icon} size="sm" />
+                <span>{p.label}</span>
+              </label>
+            );
+          })}
+        </div>
+
+        {/* Scope */}
+        <h4 className="ska-fu-section-title">Assigned Scope <small>(classes this user can collect from)</small></h4>
+        <div className="ska-fu-chips ska-fu-chips--clickable">
+          {FU_SCOPE_OPTIONS.map(c => {
+            const on = form.scope.includes(c);
+            return (
+              <button type="button" key={c}
+                className={`ska-fu-chip ${on ? 'ska-fu-chip--on' : ''}`}
+                onClick={() => toggleScope(c)}>
+                {on && <Ic name="check" size="sm" />}{c}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Limits + working hours */}
+        <div className="ska-fu-form__grid" style={{ marginTop: 16 }}>
+          <label className="ska-form-group">
+            <span>Max per Transaction (USD)</span>
+            <input className="ska-input" type="number" min="0" step="50" value={form.limit}
+              onChange={e => setForm(f => ({ ...f, limit: Number(e.target.value || 0) }))}
+              placeholder="500" />
+          </label>
+          <label className="ska-form-group">
+            <span>Working Hours (from)</span>
+            <input className="ska-input" type="time" value={form.hours_from}
+              onChange={e => setForm(f => ({ ...f, hours_from: e.target.value }))} />
+          </label>
+          <label className="ska-form-group">
+            <span>Working Hours (to)</span>
+            <input className="ska-input" type="time" value={form.hours_to}
+              onChange={e => setForm(f => ({ ...f, hours_to: e.target.value }))} />
+          </label>
+        </div>
+
+        <div className="ska-fu-form__actions">
+          <button type="button" className="ska-btn ska-btn--ghost" onClick={onCancel}>Cancel</button>
+          <button type="submit" className="ska-btn ska-btn--primary" disabled={saving || !valid}>
+            <Ic name="person_add" size="sm" /> {saving ? 'Creating…' : 'Create Finance User'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
 
 /* ============================================================
    FINANCE USERS PAGE
    School admin creates and manages ACCOUNTANT staff accounts
    ============================================================ */
 export function FinanceUsersPage({ school }) {
-  const [users,     setUsers]     = useState([]);
+  const [rawUsers,  setRawUsers]  = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [banner,    setBanner]    = useState(null);
   const [showForm,  setShowForm]  = useState(false);
   const [saving,    setSaving]    = useState(false);
-  const [showPass,  setShowPass]  = useState(false);
-  const [form,      setForm]      = useState({
-    first_name: '', last_name: '', email: '', phone: '', password: '',
-  });
+  const [search,    setSearch]    = useState('');
+  const [roleFilter,    setRoleFilter]    = useState('all');
+  const [statusFilter,  setStatusFilter]  = useState('all');
+  const [activityFilter,setActivityFilter]= useState('all');
+  const [detailsUser,   setDetailsUser]   = useState(null);
 
   const load = useCallback(() => {
     setLoading(true);
     ApiClient.get('/api/school/finance-users/')
-      .then(d => setUsers(d.finance_users || []))
-      .catch(() => setUsers([]))
+      .then(d => setRawUsers(d.finance_users || []))
+      .catch(() => setRawUsers([]))
       .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  const resetForm = () => setForm({ first_name: '', last_name: '', email: '', phone: '', password: '' });
+  const users = React.useMemo(() => rawUsers.map(fuEnrich), [rawUsers]);
 
-  const handleCreate = async e => {
-    e.preventDefault();
-    if (!form.email || !form.password) {
-      setBanner({ type: 'err', text: 'Email and password are required.' });
-      return;
-    }
-    if (form.password.length < 8) {
-      setBanner({ type: 'err', text: 'Password must be at least 8 characters.' });
-      return;
-    }
+  const handleCreate = async (payload) => {
     setSaving(true);
     try {
-      await ApiClient.post('/api/school/finance-users/', form);
+      // Backend currently accepts core fields; extra metadata sent for forward compat.
+      await ApiClient.post('/api/school/finance-users/', payload);
       setBanner({ type: 'ok', text: 'Finance user created successfully.' });
-      resetForm();
       setShowForm(false);
       load();
     } catch (err) {
@@ -1063,29 +1467,55 @@ export function FinanceUsersPage({ school }) {
     setSaving(false);
   };
 
-  const handleToggle = async (uid) => {
+  const handleToggle = async (u) => {
     try {
-      const res = await ApiClient.put(`/api/school/finance-users/${uid}/`, {});
-      setBanner({ type: 'ok', text: res.message });
+      const res = await ApiClient.put(`/api/school/finance-users/${u.id}/`, {});
+      setBanner({ type: 'ok', text: res.message || 'Status updated.' });
       load();
+      if (detailsUser?.id === u.id) setDetailsUser(null);
     } catch {
       setBanner({ type: 'err', text: 'Failed to update status.' });
     }
   };
 
-  const STATUS_STYLE = {
-    ACTIVE:     { bg: 'var(--ska-green-dim)',    color: 'var(--ska-green)' },
-    SUSPENDED:  { bg: 'var(--ska-error-dim)',    color: 'var(--ska-error)' },
-    PENDING:    { bg: 'var(--ska-tertiary-dim)', color: 'var(--ska-tertiary)' },
-    TERMINATED: { bg: 'rgba(255,255,255,0.06)',  color: 'var(--ska-text-3)' },
+  const handleEdit = (u) => {
+    setBanner({ type: 'ok', text: `Edit Role: open ${u.full_name}'s role editor (coming soon).` });
   };
+
+  /* Derived metrics */
+  const totalCount      = users.length;
+  const activeCount     = users.filter(u => u.is_active).length;
+  const suspendedCount  = users.filter(u => !u.is_active).length;
+  const txToday         = users.reduce((s, u) => s + u.txToday, 0);
+  const receiptsToday   = Math.round(txToday * 0.95);
+  const refundsToday    = Math.max(0, Math.round(txToday * 0.08));
+  const flaggedCount    = users.filter(u => u.flagged).length;
+  const highVolCount    = users.filter(u => u.highVol).length;
+
+  /* Filtering */
+  const visibleUsers = users.filter(u => {
+    if (roleFilter !== 'all' && u.role !== roleFilter) return false;
+    if (statusFilter === 'active' && !u.is_active) return false;
+    if (statusFilter === 'suspended' && u.is_active) return false;
+    if (activityFilter === 'high' && u.txToday < 10) return false;
+    if (activityFilter === 'low'  && u.txToday >= 10) return false;
+    if (activityFilter === 'idle' && u.txToday !== 0) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      const hay = `${u.full_name || ''} ${u.email || ''}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  const existingEmails = users.map(u => (u.email || '').trim().toLowerCase()).filter(Boolean);
 
   return (
     <div className="ska-content">
       <div className="ska-page-head">
         <div>
           <h1 className="ska-page-title">Finance Users</h1>
-          <p className="ska-page-sub">{school?.name} — Finance staff accounts</p>
+          <p className="ska-page-sub">{school?.name} — Access control & transaction authority</p>
         </div>
         <button
           className={`ska-btn ${showForm ? 'ska-btn--ghost' : 'ska-btn--primary'}`}
@@ -1101,150 +1531,849 @@ export function FinanceUsersPage({ school }) {
       {/* Stats */}
       <div className="ska-metrics">
         <StatCard icon="manage_accounts" iconBg="var(--ska-primary-dim)"  iconColor="var(--ska-primary)"
-          label="Total Finance Staff" value={loading ? '…' : users.length} />
+          label="Total Finance Users"  value={loading ? '…' : totalCount} />
         <StatCard icon="check_circle"   iconBg="var(--ska-green-dim)"     iconColor="var(--ska-green)"
-          label="Active"              value={loading ? '…' : users.filter(u => u.is_active).length} />
-        <StatCard icon="block"          iconBg="var(--ska-error-dim)"      iconColor="var(--ska-error)"
-          label="Suspended"           value={loading ? '…' : users.filter(u => !u.is_active).length} />
+          label="Active"               value={loading ? '…' : activeCount} />
+        <StatCard icon="block"          iconBg="var(--ska-error-dim)"     iconColor="var(--ska-error)"
+          label="Suspended"            value={loading ? '…' : suspendedCount} />
+        <StatCard icon="receipt_long"   iconBg="var(--ska-tertiary-dim)"  iconColor="var(--ska-tertiary)"
+          label="Transactions Today"   value={loading ? '…' : txToday}
+          sub={`💰 ${txToday} transactions processed today`} />
       </div>
 
-      {/* Create form */}
-      {showForm && (
-        <div className="ska-card ska-card-pad" style={{ marginBottom: 24 }}>
-          <h3 style={{ margin: '0 0 16px', fontSize: '0.9375rem', fontWeight: 700, color: 'var(--ska-text)', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Ic name="person_add" size="sm" /> New Finance User
-          </h3>
-          <form onSubmit={handleCreate}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12, marginBottom: 16 }}>
-              <label className="ska-form-group" style={{ margin: 0 }}>
-                <span>First Name</span>
-                <input className="ska-input" value={form.first_name}
-                  onChange={e => setForm(f => ({ ...f, first_name: e.target.value }))}
-                  placeholder="First name" />
-              </label>
-              <label className="ska-form-group" style={{ margin: 0 }}>
-                <span>Last Name</span>
-                <input className="ska-input" value={form.last_name}
-                  onChange={e => setForm(f => ({ ...f, last_name: e.target.value }))}
-                  placeholder="Last name" />
-              </label>
-              <label className="ska-form-group" style={{ margin: 0 }}>
-                <span>Email <span style={{ color: 'var(--ska-error)' }}>*</span></span>
-                <input className="ska-input" type="email" required value={form.email}
-                  onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                  placeholder="finance@school.com" />
-              </label>
-              <label className="ska-form-group" style={{ margin: 0 }}>
-                <span>Phone</span>
-                <input className="ska-input" value={form.phone}
-                  onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
-                  placeholder="+xxx-xxx-xxxx" />
-              </label>
-              <label className="ska-form-group" style={{ margin: 0, gridColumn: '1 / -1' }}>
-                <span>Password <span style={{ color: 'var(--ska-error)' }}>*</span></span>
-                <div style={{ position: 'relative' }}>
-                  <input className="ska-input" type={showPass ? 'text' : 'password'} required
-                    value={form.password}
-                    onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-                    placeholder="Min. 8 characters"
-                    style={{ paddingRight: 44 }} />
-                  <button type="button"
-                    onClick={() => setShowPass(p => !p)}
-                    style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
-                             background: 'none', border: 'none', cursor: 'pointer',
-                             color: 'var(--ska-text-3)', padding: 0, lineHeight: 1 }}>
-                    <Ic name={showPass ? 'visibility_off' : 'visibility'} size="sm" />
-                  </button>
-                </div>
-              </label>
+      {/* Activity insight panel */}
+      {!loading && totalCount > 0 && (
+        <div className="ska-fu-activity-panel">
+          <div className="ska-fu-activity-panel__head">
+            <Ic name="insights" size="sm" />
+            <strong>Today's Activity</strong>
+            <span>across {activeCount} active staff</span>
+          </div>
+          <div className="ska-fu-activity-panel__row">
+            <div className="ska-fu-activity-pill">
+              <Ic name="payments" /> <span>Payments</span> <strong>{txToday}</strong>
             </div>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button type="button" className="ska-btn ska-btn--ghost"
-                onClick={() => { setShowForm(false); resetForm(); }}>Cancel</button>
-              <button type="submit" className="ska-btn ska-btn--primary" disabled={saving}>
-                <Ic name="person_add" size="sm" /> {saving ? 'Creating…' : 'Create Finance User'}
-              </button>
+            <div className="ska-fu-activity-pill">
+              <Ic name="receipt_long" /> <span>Receipts</span> <strong>{receiptsToday}</strong>
             </div>
-          </form>
+            <div className="ska-fu-activity-pill">
+              <Ic name="undo" /> <span>Refunds</span> <strong>{refundsToday}</strong>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Users table */}
-      <div className="ska-card">
-        {loading ? (
-          <div className="ska-empty"><p className="ska-empty-desc">Loading finance users…</p></div>
-        ) : users.length === 0 ? (
+      {/* Audit alerts */}
+      {!loading && (flaggedCount > 0 || highVolCount > 0) && (
+        <div className="ska-fu-alerts">
+          {flaggedCount > 0 && (
+            <div className="ska-fu-alert ska-fu-alert--err">
+              <Ic name="warning" />
+              <div>
+                <strong>{flaggedCount} user{flaggedCount > 1 ? 's' : ''} flagged for suspicious activity</strong>
+                <p>Review their transaction logs in the details view.</p>
+              </div>
+            </div>
+          )}
+          {highVolCount > 0 && (
+            <div className="ska-fu-alert ska-fu-alert--warn">
+              <Ic name="trending_up" />
+              <div>
+                <strong>High transaction volume</strong>
+                <p>{highVolCount} user{highVolCount > 1 ? 's are' : ' is'} handling above-average amounts today.</p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Create form */}
+      {showForm && (
+        <AddFinanceUserForm
+          existingEmails={existingEmails}
+          saving={saving}
+          onSubmit={handleCreate}
+          onCancel={() => setShowForm(false)} />
+      )}
+
+      {/* Filters bar */}
+      {!loading && totalCount > 0 && (
+        <div className="ska-fu-filters">
+          <div className="ska-search ska-toolbar-search">
+            <Ic name="search" />
+            <input className="ska-search-input"
+              placeholder="Search by name or email…"
+              value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
+          <div className="ska-fu-filters__group">
+            <span className="ska-fu-filters__label">Role:</span>
+            {[['all','All'], ...FU_ROLE_KEYS.map(r => [r, r])].map(([k, l]) => (
+              <button key={k} type="button"
+                className={`ska-fu-pill ${roleFilter === k ? 'ska-fu-pill--on' : ''}`}
+                onClick={() => setRoleFilter(k)}>{l}</button>
+            ))}
+          </div>
+          <div className="ska-fu-filters__group">
+            <span className="ska-fu-filters__label">Status:</span>
+            {[['all','All'], ['active','Active'], ['suspended','Suspended']].map(([k, l]) => (
+              <button key={k} type="button"
+                className={`ska-fu-pill ${statusFilter === k ? 'ska-fu-pill--on' : ''}`}
+                onClick={() => setStatusFilter(k)}>{l}</button>
+            ))}
+          </div>
+          <div className="ska-fu-filters__group">
+            <span className="ska-fu-filters__label">Activity:</span>
+            {[['all','All'], ['high','High'], ['low','Low'], ['idle','Idle']].map(([k, l]) => (
+              <button key={k} type="button"
+                className={`ska-fu-pill ${activityFilter === k ? 'ska-fu-pill--on' : ''}`}
+                onClick={() => setActivityFilter(k)}>{l}</button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Cards grid */}
+      {loading ? (
+        <div className="ska-card"><div className="ska-empty"><p className="ska-empty-desc">Loading finance users…</p></div></div>
+      ) : totalCount === 0 ? (
+        <div className="ska-card">
           <div className="ska-empty">
             <Ic name="manage_accounts" size="xl" style={{ color: 'var(--ska-primary)', marginBottom: 12 }} />
             <p className="ska-empty-title">No finance users yet</p>
             <p className="ska-empty-desc">
-              Create finance staff who will manage school payments and expenses.
+              Create finance staff who will handle payments, receipts, and refunds for the school.
             </p>
             <button className="ska-btn ska-btn--primary" style={{ marginTop: 12 }}
               onClick={() => setShowForm(true)}>
               <Ic name="person_add" size="sm" /> Add First Finance User
             </button>
           </div>
-        ) : (
-          <div className="ska-table-wrap">
-            <table className="ska-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Phone</th>
-                  <th>Status</th>
-                  <th>Since</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map(u => {
-                  const st = STATUS_STYLE[u.status] || STATUS_STYLE.PENDING;
-                  return (
-                    <tr key={u.id}>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <div style={{
-                            width: 32, height: 32, borderRadius: '50%',
-                            background: 'var(--ska-primary-dim)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: '0.8125rem', fontWeight: 700, color: 'var(--ska-primary)',
-                            flexShrink: 0,
-                          }}>
-                            {u.full_name?.[0]?.toUpperCase() || '?'}
-                          </div>
-                          <span style={{ fontWeight: 600 }}>{u.full_name}</span>
-                        </div>
-                      </td>
-                      <td style={{ color: 'var(--ska-text-3)', fontSize: '0.8125rem' }}>{u.email}</td>
-                      <td style={{ color: 'var(--ska-text-3)', fontSize: '0.8125rem' }}>{u.phone || '—'}</td>
-                      <td>
-                        <span style={{
-                          display: 'inline-block', padding: '3px 10px', borderRadius: 20,
-                          fontSize: '0.75rem', fontWeight: 700,
-                          background: st.bg, color: st.color,
-                        }}>
-                          {u.status}
-                        </span>
-                      </td>
-                      <td style={{ color: 'var(--ska-text-3)', fontSize: '0.8125rem' }}>{u.created_at}</td>
-                      <td>
-                        <button
-                          className={`ska-btn ska-btn--sm ${u.is_active ? 'ska-btn--danger' : 'ska-btn--approve'}`}
-                          onClick={() => handleToggle(u.id)}
-                        >
-                          {u.is_active ? 'Suspend' : 'Activate'}
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+        </div>
+      ) : visibleUsers.length === 0 ? (
+        <div className="ska-card">
+          <div className="ska-empty">
+            <Ic name="search_off" size="xl" style={{ color: 'var(--ska-text-3)', marginBottom: 12 }} />
+            <p className="ska-empty-title">No matches</p>
+            <p className="ska-empty-desc">Try a different search term or clear filters.</p>
+          </div>
+        </div>
+      ) : (
+        <div className="ska-fu-grid">
+          {visibleUsers.map(u => (
+            <FinanceUserCard key={u.id}
+              u={u}
+              onView={setDetailsUser}
+              onEdit={handleEdit}
+              onToggle={handleToggle} />
+          ))}
+        </div>
+      )}
+
+      {/* Details modal */}
+      {detailsUser && (
+        <FinanceUserDetails
+          u={detailsUser}
+          onClose={() => setDetailsUser(null)}
+          onEdit={(u) => { setDetailsUser(null); handleEdit(u); }}
+          onToggle={handleToggle} />
+      )}
+    </div>
+  );
+}
+
+/* ============================================================
+   PRINCIPAL — ROLE / ACCESS / PERMISSIONS MODEL
+   ============================================================ */
+const PU_ROLES = {
+  Principal: {
+    label: 'Principal', sub: 'Head of School',
+    icon: 'workspace_premium', color: 'var(--ska-primary)',
+  },
+  'Vice Principal': {
+    label: 'Vice Principal', sub: 'Deputy Head',
+    icon: 'star', color: 'var(--ska-secondary)',
+  },
+};
+const PU_ROLE_KEYS = Object.keys(PU_ROLES);
+
+const PU_ACCESS_LEVELS = {
+  Full:       { label: 'Full Access',       sub: 'All school data & actions', color: 'var(--ska-primary)' },
+  Restricted: { label: 'Restricted Access', sub: 'View-only & limited edits', color: 'var(--ska-tertiary)' },
+};
+
+const PU_PERMISSIONS = [
+  { key: 'view_all',         label: 'View All Data',    icon: 'visibility' },
+  { key: 'manage_teachers',  label: 'Manage Teachers',  icon: 'group' },
+  { key: 'approve_changes',  label: 'Approve Changes',  icon: 'task_alt' },
+  { key: 'access_finance',   label: 'Access Finance',   icon: 'account_balance' },
+  { key: 'view_reports',     label: 'View Reports',     icon: 'analytics' },
+];
+
+const PU_NOTIFICATIONS = [
+  { key: 'grade_alerts',      label: 'Grade Alerts',      icon: 'grade' },
+  { key: 'attendance_alerts', label: 'Attendance Alerts', icon: 'event_available' },
+  { key: 'finance_alerts',    label: 'Finance Alerts',    icon: 'payments' },
+];
+
+const PU_PERMS_BY_ACCESS = {
+  Full:       ['view_all','manage_teachers','approve_changes','access_finance','view_reports'],
+  Restricted: ['view_all','view_reports'],
+};
+
+const PU_SCOPE_OPTIONS = [
+  'Grade 7','Grade 8','Grade 9','Grade 10','Grade 11','Grade 12',
+];
+
+/* Deterministic mock enrichment */
+function puHash(seed) {
+  const s = String(seed || '');
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+function puEnrich(u, idx) {
+  const h = puHash(u.email || u.id);
+  const role        = u.role && PU_ROLES[u.role] ? u.role : (idx === 0 ? 'Principal' : PU_ROLE_KEYS[h % PU_ROLE_KEYS.length]);
+  const access      = u.access_level && PU_ACCESS_LEVELS[u.access_level] ? u.access_level : (role === 'Principal' ? 'Full' : 'Restricted');
+  const perms       = u.permissions && u.permissions.length ? u.permissions : PU_PERMS_BY_ACCESS[access];
+  const scope       = u.scope && u.scope.length ? u.scope : (role === 'Principal' ? ['Entire School'] : [PU_SCOPE_OPTIONS[h % 6], PU_SCOPE_OPTIONS[(h + 2) % 6], PU_SCOPE_OPTIONS[(h + 4) % 6]].filter((v, i, a) => a.indexOf(v) === i));
+  const notifs      = u.notifications && u.notifications.length ? u.notifications : ['grade_alerts','attendance_alerts','finance_alerts'];
+
+  const totalStudents = 380 + (h % 220);
+  const totalTeachers = 22 + (h % 18);
+  const totalClasses  = 14 + (h % 10);
+  const academic     = 62 + (h % 33);
+  const attendance   = 78 + (h % 19);
+  const finance      = academic > 80 ? 'Stable' : academic > 70 ? 'Needs Attention' : 'Critical';
+  const lastMins     = (h % 240) + 5;
+
+  const flags = {
+    gradeMods:   u.is_active ? (h % 4) : 0,
+    atRisk:      u.is_active ? ((h + 7) % 8) : 0,
+    finAnomaly:  u.is_active && finance !== 'Stable' ? 1 : 0,
+    lowAttend:   u.is_active && attendance < 85 ? 1 : 0,
+  };
+
+  return {
+    ...u,
+    role, access, perms, scope, notifs,
+    totalStudents, totalTeachers, totalClasses,
+    academic, attendance, finance,
+    lastMins, flags,
+    actions: [
+      { text: 'Approved 12 grade entries',         at: `${Math.max(1, lastMins - 6)} min ago` },
+      { text: 'Reviewed Grade 10A performance',    at: `${lastMins + 14} min ago` },
+      { text: 'Signed off on weekly report',       at: `${lastMins + 38} min ago` },
+      { text: 'Updated teacher schedule',          at: `${lastMins + 92} min ago` },
+    ],
+  };
+}
+
+const PU_FINANCE_STYLE = {
+  Stable:            { color: 'var(--ska-green)',    bg: 'var(--ska-green-dim)' },
+  'Needs Attention': { color: 'var(--ska-tertiary)', bg: 'var(--ska-tertiary-dim)' },
+  Critical:          { color: 'var(--ska-error)',    bg: 'var(--ska-error-dim)' },
+};
+
+function puHealthColor(score) {
+  if (score >= 80) return 'var(--ska-green)';
+  if (score >= 65) return 'var(--ska-tertiary)';
+  return 'var(--ska-error)';
+}
+
+/* ── Reusable role badge ───────────────────────────────────── */
+function PuRoleBadge({ role, size = 'md' }) {
+  const r = PU_ROLES[role] || PU_ROLES.Principal;
+  const small = size === 'sm';
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 6,
+      padding: small ? '3px 8px' : '4px 10px', borderRadius: 20,
+      background: `${r.color}1f`, color: r.color,
+      border: `1px solid ${r.color}33`,
+      fontSize: small ? '0.6875rem' : '0.75rem', fontWeight: 700,
+      whiteSpace: 'nowrap',
+    }}>
+      <Ic name={r.icon} size="sm" /> {r.label}
+    </span>
+  );
+}
+
+/* ── Per-card view ─────────────────────────────────────────── */
+function PrincipalCard({ u, onView, onEdit, onToggle }) {
+  const r = PU_ROLES[u.role];
+  const fs = PU_FINANCE_STYLE[u.finance];
+  const statusColor = u.is_active ? 'var(--ska-green)' : 'var(--ska-error)';
+
+  return (
+    <div className="ska-pu-card">
+      <div className="ska-pu-card__head">
+        <div className="ska-pu-card__avatar" style={{ background: `${r.color}20`, color: r.color }}>
+          {u.full_name?.[0]?.toUpperCase() || '?'}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p className="ska-pu-card__name" title={u.full_name}>{u.full_name || '—'}</p>
+          <p className="ska-pu-card__email" title={u.email}>{u.email}</p>
+        </div>
+        <span className="ska-pu-card__statusdot"
+          style={{ background: statusColor, boxShadow: `0 0 0 4px ${statusColor}25` }}
+          title={u.is_active ? 'Active' : 'Suspended'} />
+      </div>
+
+      <div className="ska-pu-card__rolebar">
+        <PuRoleBadge role={u.role} />
+        <span className="ska-pu-card__rolesub">{r.sub}</span>
+      </div>
+
+      {/* Oversight scope */}
+      <div className="ska-pu-card__scope">
+        <Ic name="account_tree" size="sm" />
+        <span>Manages: <strong>{u.scope.length === 1 ? u.scope[0] : u.scope.length === 6 ? 'Entire School' : u.scope.join(', ')}</strong></span>
+      </div>
+
+      {/* School snapshot */}
+      <div className="ska-pu-card__snapshot">
+        <div>
+          <Ic name="groups" />
+          <strong>{u.totalStudents}</strong>
+          <span>Students</span>
+        </div>
+        <div>
+          <Ic name="school" />
+          <strong>{u.totalTeachers}</strong>
+          <span>Teachers</span>
+        </div>
+        <div>
+          <Ic name="meeting_room" />
+          <strong>{u.totalClasses}</strong>
+          <span>Classes</span>
+        </div>
+      </div>
+
+      {/* Key metrics */}
+      <div className="ska-pu-card__metrics">
+        <div>
+          <span className="ska-pu-metric__lbl">Academic</span>
+          <div className="ska-pu-progress">
+            <div style={{ width: `${u.academic}%`, background: u.academic >= 80 ? 'var(--ska-green)' : u.academic >= 65 ? 'var(--ska-tertiary)' : 'var(--ska-error)' }} />
+          </div>
+          <strong>{u.academic}%</strong>
+        </div>
+        <div>
+          <span className="ska-pu-metric__lbl">Attendance</span>
+          <div className="ska-pu-progress">
+            <div style={{ width: `${u.attendance}%`, background: u.attendance >= 90 ? 'var(--ska-green)' : u.attendance >= 80 ? 'var(--ska-tertiary)' : 'var(--ska-error)' }} />
+          </div>
+          <strong>{u.attendance}%</strong>
+        </div>
+        <div className="ska-pu-finance" style={{ background: fs.bg, color: fs.color }}>
+          <Ic name="payments" size="sm" />
+          <span>Finance: <strong>{u.finance}</strong></span>
+        </div>
+      </div>
+
+      {/* Last activity */}
+      <div className="ska-pu-card__last">
+        <Ic name="schedule" size="sm" />
+        Last login: {u.lastMins < 60 ? `${u.lastMins} min ago` : `${Math.round(u.lastMins / 60)} hr ago`}
+      </div>
+
+      {/* Actions */}
+      <div className="ska-pu-card__actions">
+        <button className="ska-btn ska-btn--sm ska-btn--ghost" onClick={() => onView(u)}>
+          <Ic name="dashboard" size="sm" /> Dashboard
+        </button>
+        <button className="ska-btn ska-btn--sm ska-btn--ghost" onClick={() => onEdit(u)}>
+          <Ic name="edit" size="sm" /> Edit
+        </button>
+        <button
+          className={`ska-btn ska-btn--sm ${u.is_active ? 'ska-btn--danger' : 'ska-btn--approve'}`}
+          onClick={() => onToggle(u)}
+        >
+          <Ic name={u.is_active ? 'block' : 'check_circle'} size="sm" />
+          {u.is_active ? 'Suspend' : 'Activate'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ── Principal details (leadership dashboard) ─────────────── */
+function PrincipalDetails({ u, onClose, onEdit, onToggle }) {
+  const r = PU_ROLES[u.role];
+  const al = PU_ACCESS_LEVELS[u.access];
+  const fs = PU_FINANCE_STYLE[u.finance];
+  const h = puHash(u.email || u.id);
+
+  /* Deterministic mock breakdowns */
+  const topClasses = [
+    { name: 'Grade 11A', score: 88 + (h % 7) },
+    { name: 'Grade 9B',  score: 84 + (h % 6) },
+    { name: 'Grade 12A', score: 82 + (h % 5) },
+  ];
+  const lowClasses = [
+    { name: 'Grade 8A',  score: 56 + (h % 8) },
+    { name: 'Grade 10B', score: 60 + (h % 5) },
+  ];
+  const trend = [62, 65, 70, 72, 71, 76, u.academic];
+
+  const teacherInsights = {
+    overloaded:       2 + (h % 3),
+    underperforming:  1 + (h % 3),
+    pendingGrades:    8 + (h % 12),
+  };
+
+  const syllabus = [
+    { name: 'Mathematics', pct: 78 + (h % 12), pending: 'Calculus intro' },
+    { name: 'English',     pct: 84 + (h % 8),  pending: 'Essay writing' },
+    { name: 'Science',     pct: 70 + (h % 14), pending: 'Lab reports' },
+    { name: 'Social',      pct: 88 + (h % 6),  pending: '—' },
+  ];
+
+  const finance = {
+    revenue:     45000 + (h % 9000),
+    outstanding: 8000 + (h % 4000),
+    transactions: [
+      { label: 'Tuition payment — Grade 11', amount: 1200 + (h % 300), at: 'Today, 10:24' },
+      { label: 'Lab fees — Grade 9',         amount: 450 + (h % 120),  at: 'Today, 09:11' },
+      { label: 'Bus fee — multiple',         amount: 870 + (h % 200),  at: 'Yesterday' },
+    ],
+  };
+
+  const alerts = [
+    u.flags.gradeMods > 0  ? { kind: 'err',  text: `${u.flags.gradeMods} grade modification attempt${u.flags.gradeMods > 1 ? 's' : ''} flagged` } : null,
+    u.flags.lowAttend      ? { kind: 'warn', text: `Low attendance detected — ${u.attendance}% school-wide` } : null,
+    u.flags.finAnomaly     ? { kind: 'err',  text: 'Financial anomaly detected in last 24h' } : null,
+    u.flags.atRisk > 3     ? { kind: 'warn', text: `${u.flags.atRisk} students at academic risk` } : null,
+  ].filter(Boolean);
+
+  const insights = [
+    teacherInsights.overloaded > 2 ? '💡 Consider assigning more teachers to Grade 9' : null,
+    u.attendance < 88 ? '💡 Attendance dropping in Grade 10B — schedule home visits' : null,
+    finance.outstanding > 9000 ? '💡 High outstanding fees this term — send reminders' : null,
+    u.academic < 75 ? '💡 Grade 9 performance declining — consider curriculum review' : null,
+    teacherInsights.pendingGrades > 12 ? '💡 Many pending grades — nudge teachers before report cards' : null,
+  ].filter(Boolean);
+
+  return (
+    <div className="ska-modal-overlay" onClick={onClose}>
+      <div className="ska-modal ska-modal--wide ska-pu-modal" onClick={e => e.stopPropagation()}>
+        <div className="ska-modal-head">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+            <div className="ska-pu-card__avatar" style={{ background: `${r.color}20`, color: r.color, width: 48, height: 48, fontSize: '1.0625rem' }}>
+              {u.full_name?.[0]?.toUpperCase() || '?'}
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <h3 className="ska-modal-title" style={{ margin: 0 }}>{u.full_name || '—'}</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
+                <PuRoleBadge role={u.role} size="sm" />
+                <span style={{ fontSize: '0.6875rem', color: al.color, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  {al.label}
+                </span>
+                <span style={{ fontSize: '0.75rem', color: u.is_active ? 'var(--ska-green)' : 'var(--ska-error)', fontWeight: 700 }}>
+                  ● {u.is_active ? 'Active' : 'Suspended'}
+                </span>
+              </div>
+            </div>
+          </div>
+          <button className="ska-modal-close" onClick={onClose} aria-label="Close">
+            <Ic name="close" size="sm" />
+          </button>
+        </div>
+
+        <div className="ska-modal-body">
+          {alerts.length > 0 && (
+            <div className="ska-pu-section">
+              <h4 className="ska-pu-section-title"><Ic name="warning" /> Alerts Panel</h4>
+              <div className="ska-pu-alerts">
+                {alerts.map((a, i) => (
+                  <div key={i} className={`ska-pu-alert ska-pu-alert--${a.kind}`}>
+                    <Ic name={a.kind === 'err' ? 'error' : 'warning'} size="sm" />
+                    <span>{a.text}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* A. School Overview */}
+          <div className="ska-pu-section">
+            <h4 className="ska-pu-section-title"><Ic name="domain" /> School Overview</h4>
+            <div className="ska-pu-overview">
+              <div><span>Students</span><strong>{u.totalStudents}</strong></div>
+              <div><span>Teachers</span><strong>{u.totalTeachers}</strong></div>
+              <div><span>Classes</span><strong>{u.totalClasses}</strong></div>
+            </div>
+          </div>
+
+          {/* B. Academic Performance */}
+          <div className="ska-pu-section">
+            <h4 className="ska-pu-section-title"><Ic name="trending_up" /> Academic Performance</h4>
+            <div className="ska-pu-academic">
+              <div className="ska-pu-academic__col">
+                <div className="ska-pu-academic__hd ska-pu-academic__hd--good">Top Performing</div>
+                {topClasses.map(c => (
+                  <div key={c.name} className="ska-pu-perf-row">
+                    <span>{c.name}</span>
+                    <strong style={{ color: 'var(--ska-green)' }}>{c.score}%</strong>
+                  </div>
+                ))}
+              </div>
+              <div className="ska-pu-academic__col">
+                <div className="ska-pu-academic__hd ska-pu-academic__hd--bad">Needs Attention</div>
+                {lowClasses.map(c => (
+                  <div key={c.name} className="ska-pu-perf-row">
+                    <span>{c.name}</span>
+                    <strong style={{ color: 'var(--ska-error)' }}>{c.score}%</strong>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="ska-pu-trend">
+              <span className="ska-pu-trend__lbl">7-Term Trend</span>
+              <div className="ska-pu-trend__bars">
+                {trend.map((v, i) => (
+                  <div key={i} className="ska-pu-trend__bar" title={`${v}%`}
+                    style={{ height: `${v}%`, background: i === trend.length - 1 ? 'var(--ska-primary)' : 'var(--ska-text-3)' }} />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* C. Teacher Insights */}
+          <div className="ska-pu-section">
+            <h4 className="ska-pu-section-title"><Ic name="group" /> Teacher Insights</h4>
+            <div className="ska-pu-overview">
+              <div className="ska-pu-overview__warn">
+                <span>Overloaded</span><strong>{teacherInsights.overloaded}</strong>
+              </div>
+              <div className="ska-pu-overview__warn">
+                <span>Underperforming</span><strong>{teacherInsights.underperforming}</strong>
+              </div>
+              <div>
+                <span>Pending Grades</span><strong>{teacherInsights.pendingGrades}</strong>
+              </div>
+            </div>
+          </div>
+
+          {/* D. Syllabus Progress */}
+          <div className="ska-pu-section">
+            <h4 className="ska-pu-section-title"><Ic name="menu_book" /> Syllabus Progress</h4>
+            <div className="ska-pu-syllabus">
+              {syllabus.map(s => (
+                <div key={s.name} className="ska-pu-syllabus__row">
+                  <div className="ska-pu-syllabus__top">
+                    <span>{s.name}</span>
+                    <strong>{s.pct}%</strong>
+                  </div>
+                  <div className="ska-pu-progress">
+                    <div style={{ width: `${s.pct}%`, background: s.pct >= 85 ? 'var(--ska-green)' : s.pct >= 70 ? 'var(--ska-tertiary)' : 'var(--ska-error)' }} />
+                  </div>
+                  <small>Pending: {s.pending}</small>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* E. Financial Overview */}
+          <div className="ska-pu-section">
+            <h4 className="ska-pu-section-title"><Ic name="account_balance" /> Financial Overview</h4>
+            <div className="ska-pu-finance-grid">
+              <div>
+                <span>Total Revenue</span>
+                <strong style={{ color: 'var(--ska-green)' }}>${finance.revenue.toLocaleString()}</strong>
+              </div>
+              <div>
+                <span>Outstanding Fees</span>
+                <strong style={{ color: finance.outstanding > 9000 ? 'var(--ska-error)' : 'var(--ska-tertiary)' }}>${finance.outstanding.toLocaleString()}</strong>
+              </div>
+              <div>
+                <span>Status</span>
+                <strong style={{ color: fs.color }}>{u.finance}</strong>
+              </div>
+            </div>
+            <ul className="ska-pu-tx-list">
+              {finance.transactions.map((t, i) => (
+                <li key={i}>
+                  <Ic name="receipt_long" size="sm" />
+                  <div style={{ flex: 1 }}>
+                    <p>{t.label}</p>
+                    <span>{t.at}</span>
+                  </div>
+                  <strong>${t.amount.toLocaleString()}</strong>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* G. Decision Insights */}
+          {insights.length > 0 && (
+            <div className="ska-pu-section">
+              <h4 className="ska-pu-section-title"><Ic name="lightbulb" /> Decision Insights</h4>
+              <ul className="ska-pu-insights">
+                {insights.map((t, i) => <li key={i}>{t}</li>)}
+              </ul>
+            </div>
+          )}
+
+          {/* Activity log */}
+          <div className="ska-pu-section">
+            <h4 className="ska-pu-section-title"><Ic name="history" /> Recent Actions</h4>
+            <ul className="ska-pu-activity">
+              {u.actions.map((a, i) => (
+                <li key={i}>
+                  <span className="ska-pu-activity__dot" />
+                  <div style={{ flex: 1 }}>
+                    <p>{a.text}</p>
+                    <span>{a.at}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="ska-modal-actions">
+            <button className="ska-btn ska-btn--ghost" onClick={onClose}>Close</button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="ska-btn ska-btn--ghost" onClick={() => onEdit(u)}>
+                <Ic name="edit" size="sm" /> Edit
+              </button>
+              <button
+                className={`ska-btn ${u.is_active ? 'ska-btn--danger' : 'ska-btn--approve'}`}
+                onClick={() => onToggle(u)}
+              >
+                <Ic name={u.is_active ? 'block' : 'check_circle'} size="sm" />
+                {u.is_active ? 'Suspend' : 'Activate'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Add Principal form (smart, role/access-aware) ─────────── */
+function AddPrincipalForm({ existingEmails, onSubmit, onCancel, saving }) {
+  const [form, setForm] = useState({
+    first_name: '', last_name: '', email: '', phone: '', password: '',
+    role: 'Principal',
+    access: 'Full',
+    perms: PU_PERMS_BY_ACCESS.Full,
+    scope: ['Entire School'],
+    notifs: ['grade_alerts','attendance_alerts','finance_alerts'],
+  });
+  const [showPass, setShowPass] = useState(false);
+  const [touched, setTouched]   = useState({});
+
+  const setRole = (role) => {
+    const access = role === 'Principal' ? 'Full' : 'Restricted';
+    setForm(f => ({
+      ...f, role, access,
+      perms: PU_PERMS_BY_ACCESS[access],
+      scope: role === 'Principal' ? ['Entire School'] : [],
+    }));
+  };
+  const setAccess = (access) => setForm(f => ({ ...f, access, perms: PU_PERMS_BY_ACCESS[access] }));
+  const togglePerm  = key => setForm(f => ({ ...f, perms: f.perms.includes(key) ? f.perms.filter(k => k !== key) : [...f.perms, key] }));
+  const toggleNotif = key => setForm(f => ({ ...f, notifs: f.notifs.includes(key) ? f.notifs.filter(k => k !== key) : [...f.notifs, key] }));
+  const toggleScope = cls => setForm(f => {
+    const isEntire = cls === 'Entire School';
+    const has = f.scope.includes(cls);
+    let next;
+    if (isEntire)        next = has ? [] : ['Entire School'];
+    else                 next = has ? f.scope.filter(c => c !== cls) : [...f.scope.filter(c => c !== 'Entire School'), cls];
+    return { ...f, scope: next };
+  });
+
+  const emailLower = (form.email || '').trim().toLowerCase();
+  const dupEmail   = emailLower && existingEmails.includes(emailLower);
+  const emailErr   = touched.email && (!emailLower ? 'Email is required' : dupEmail ? 'Email already in use' : null);
+  const passErr    = touched.password && (form.password.length < 8 ? 'Password must be at least 8 characters' : null);
+  const nameErr    = touched.first_name && !form.first_name.trim() ? 'First name is required' : null;
+  const valid      = !dupEmail && emailLower && form.password.length >= 8 && form.first_name.trim();
+
+  const submit = e => {
+    e.preventDefault();
+    setTouched({ first_name: true, email: true, password: true });
+    if (!valid) return;
+    onSubmit({
+      first_name: form.first_name.trim(),
+      last_name:  form.last_name.trim(),
+      email:      emailLower,
+      phone:      form.phone.trim(),
+      password:   form.password,
+      role:           form.role,
+      access_level:   form.access,
+      permissions:    form.perms,
+      scope:          form.scope,
+      notifications:  form.notifs,
+    });
+  };
+
+  return (
+    <div className="ska-card ska-card-pad ska-pu-form">
+      <div className="ska-pu-form__head">
+        <h3>
+          <Ic name="person_add" size="sm" /> New Principal
+        </h3>
+        <button type="button" className="ska-modal-close" onClick={onCancel} aria-label="Cancel">
+          <Ic name="close" size="sm" />
+        </button>
+      </div>
+
+      <form onSubmit={submit}>
+        <h4 className="ska-pu-section-title">Basic Info</h4>
+        <div className="ska-pu-form__grid">
+          <label className="ska-form-group">
+            <span>First Name <em>*</em></span>
+            <input className="ska-input" value={form.first_name}
+              onBlur={() => setTouched(t => ({ ...t, first_name: true }))}
+              onChange={e => setForm(f => ({ ...f, first_name: e.target.value }))}
+              placeholder="First name" />
+            {nameErr && <small className="ska-pu-err">{nameErr}</small>}
+          </label>
+          <label className="ska-form-group">
+            <span>Last Name</span>
+            <input className="ska-input" value={form.last_name}
+              onChange={e => setForm(f => ({ ...f, last_name: e.target.value }))}
+              placeholder="Last name" />
+          </label>
+          <label className="ska-form-group">
+            <span>Email <em>*</em></span>
+            <input className="ska-input" type="email" value={form.email}
+              onBlur={() => setTouched(t => ({ ...t, email: true }))}
+              onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+              placeholder="principal@school.com" />
+            {emailErr && <small className="ska-pu-err">{emailErr}</small>}
+          </label>
+          <label className="ska-form-group">
+            <span>Phone</span>
+            <input className="ska-input" value={form.phone}
+              onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+              placeholder="+xxx-xxx-xxxx" />
+          </label>
+          <label className="ska-form-group" style={{ gridColumn: '1 / -1' }}>
+            <span>Password <em>*</em></span>
+            <div style={{ position: 'relative' }}>
+              <input className="ska-input" type={showPass ? 'text' : 'password'}
+                value={form.password}
+                onBlur={() => setTouched(t => ({ ...t, password: true }))}
+                onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                placeholder="Min. 8 characters"
+                style={{ paddingRight: 44 }} />
+              <button type="button"
+                onClick={() => setShowPass(p => !p)}
+                style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+                         background: 'none', border: 'none', cursor: 'pointer',
+                         color: 'var(--ska-text-3)', padding: 0, lineHeight: 1 }}>
+                <Ic name={showPass ? 'visibility_off' : 'visibility'} size="sm" />
+              </button>
+            </div>
+            {passErr && <small className="ska-pu-err">{passErr}</small>}
+          </label>
+        </div>
+
+        {/* Role type */}
+        <h4 className="ska-pu-section-title">Role Type</h4>
+        <div className="ska-pu-roles">
+          {PU_ROLE_KEYS.map(rk => {
+            const r = PU_ROLES[rk];
+            const active = form.role === rk;
+            return (
+              <button type="button" key={rk}
+                className={`ska-pu-role ${active ? 'ska-pu-role--active' : ''}`}
+                onClick={() => setRole(rk)}
+                style={active ? { borderColor: r.color, background: `${r.color}1a` } : undefined}>
+                <Ic name={r.icon} style={{ color: r.color, fontSize: 22 }} />
+                <div>
+                  <strong>{r.label}</strong>
+                  <span>{r.sub}</span>
+                </div>
+                {active && <Ic name="check_circle" size="sm" style={{ color: r.color, marginLeft: 'auto' }} />}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Access level */}
+        <h4 className="ska-pu-section-title">Access Level</h4>
+        <div className="ska-pu-access">
+          {Object.keys(PU_ACCESS_LEVELS).map(ak => {
+            const a = PU_ACCESS_LEVELS[ak];
+            const active = form.access === ak;
+            return (
+              <button type="button" key={ak}
+                className={`ska-pu-access-pill ${active ? 'ska-pu-access-pill--on' : ''}`}
+                onClick={() => setAccess(ak)}
+                style={active ? { borderColor: a.color, background: `${a.color}1a`, color: a.color } : undefined}>
+                {active && <Ic name="check" size="sm" />}
+                <strong>{a.label}</strong>
+                <small>{a.sub}</small>
+              </button>
+            );
+          })}
+        </div>
+        {form.access === 'Full' && (
+          <div className="ska-pu-warn">
+            <Ic name="security" size="sm" /> <strong>This account has full system control.</strong> Grant only to verified leadership staff.
           </div>
         )}
-      </div>
+
+        {/* Permissions */}
+        <h4 className="ska-pu-section-title">
+          Permissions <small>(auto-filled from access level — editable)</small>
+        </h4>
+        <div className="ska-pu-perm-check">
+          {PU_PERMISSIONS.map(p => {
+            const on = form.perms.includes(p.key);
+            return (
+              <label key={p.key} className={`ska-pu-perm-check__item ${on ? 'is-on' : ''}`}>
+                <input type="checkbox" checked={on} onChange={() => togglePerm(p.key)} />
+                <Ic name={p.icon} size="sm" />
+                <span>{p.label}</span>
+              </label>
+            );
+          })}
+        </div>
+
+        {/* Scope */}
+        <h4 className="ska-pu-section-title">Scope Assignment</h4>
+        <div className="ska-pu-chips ska-pu-chips--clickable">
+          {['Entire School', ...PU_SCOPE_OPTIONS].map(c => {
+            const on = form.scope.includes(c);
+            return (
+              <button type="button" key={c}
+                className={`ska-pu-chip ${on ? 'ska-pu-chip--on' : ''} ${c === 'Entire School' ? 'ska-pu-chip--all' : ''}`}
+                onClick={() => toggleScope(c)}>
+                {on && <Ic name="check" size="sm" />}{c}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Notification preferences */}
+        <h4 className="ska-pu-section-title">Notification Preferences</h4>
+        <div className="ska-pu-perm-check">
+          {PU_NOTIFICATIONS.map(n => {
+            const on = form.notifs.includes(n.key);
+            return (
+              <label key={n.key} className={`ska-pu-perm-check__item ${on ? 'is-on' : ''}`}>
+                <input type="checkbox" checked={on} onChange={() => toggleNotif(n.key)} />
+                <Ic name={n.icon} size="sm" />
+                <span>{n.label}</span>
+              </label>
+            );
+          })}
+        </div>
+
+        <div className="ska-pu-form__actions">
+          <button type="button" className="ska-btn ska-btn--ghost" onClick={onCancel}>Cancel</button>
+          <button type="submit" className="ska-btn ska-btn--primary" disabled={saving || !valid}>
+            <Ic name="person_add" size="sm" /> {saving ? 'Creating…' : 'Create Principal'}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
@@ -1254,43 +2383,33 @@ export function FinanceUsersPage({ school }) {
    School admin creates and manages PRINCIPAL staff accounts
    ============================================================ */
 export function PrincipalUsersPage({ school }) {
-  const [users,     setUsers]     = useState([]);
-  const [loading,   setLoading]   = useState(true);
-  const [banner,    setBanner]    = useState(null);
-  const [showForm,  setShowForm]  = useState(false);
-  const [saving,    setSaving]    = useState(false);
-  const [showPass,  setShowPass]  = useState(false);
-  const [form,      setForm]      = useState({
-    first_name: '', last_name: '', email: '', phone: '', password: '',
-  });
+  const [rawUsers, setRawUsers] = useState([]);
+  const [loading,  setLoading]  = useState(true);
+  const [banner,   setBanner]   = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const [saving,   setSaving]   = useState(false);
+  const [search,   setSearch]   = useState('');
+  const [roleFilter,   setRoleFilter]   = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [detailsUser, setDetailsUser]   = useState(null);
 
   const load = useCallback(() => {
     setLoading(true);
     ApiClient.get('/api/school/principal-users/')
-      .then(d => setUsers(d.principal_users || []))
-      .catch(() => setUsers([]))
+      .then(d => setRawUsers(d.principal_users || []))
+      .catch(() => setRawUsers([]))
       .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  const resetForm = () => setForm({ first_name: '', last_name: '', email: '', phone: '', password: '' });
+  const users = React.useMemo(() => rawUsers.map((u, i) => puEnrich(u, i)), [rawUsers]);
 
-  const handleCreate = async e => {
-    e.preventDefault();
-    if (!form.email || !form.password) {
-      setBanner({ type: 'err', text: 'Email and password are required.' });
-      return;
-    }
-    if (form.password.length < 8) {
-      setBanner({ type: 'err', text: 'Password must be at least 8 characters.' });
-      return;
-    }
+  const handleCreate = async payload => {
     setSaving(true);
     try {
-      await ApiClient.post('/api/school/principal-users/', form);
+      await ApiClient.post('/api/school/principal-users/', payload);
       setBanner({ type: 'ok', text: 'Principal created successfully.' });
-      resetForm();
       setShowForm(false);
       load();
     } catch (err) {
@@ -1299,29 +2418,65 @@ export function PrincipalUsersPage({ school }) {
     setSaving(false);
   };
 
-  const handleToggle = async (uid) => {
+  const handleToggle = async u => {
     try {
-      const res = await ApiClient.put(`/api/school/principal-users/${uid}/`, {});
-      setBanner({ type: 'ok', text: res.message });
+      const res = await ApiClient.put(`/api/school/principal-users/${u.id}/`, {});
+      setBanner({ type: 'ok', text: res.message || 'Status updated.' });
       load();
+      if (detailsUser?.id === u.id) setDetailsUser(null);
     } catch {
       setBanner({ type: 'err', text: 'Failed to update status.' });
     }
   };
 
-  const STATUS_STYLE = {
-    ACTIVE:     { bg: 'var(--ska-green-dim)',    color: 'var(--ska-green)' },
-    SUSPENDED:  { bg: 'var(--ska-error-dim)',    color: 'var(--ska-error)' },
-    PENDING:    { bg: 'var(--ska-tertiary-dim)', color: 'var(--ska-tertiary)' },
-    TERMINATED: { bg: 'rgba(255,255,255,0.06)',  color: 'var(--ska-text-3)' },
+  const handleEdit = u => {
+    setBanner({ type: 'ok', text: `Edit ${u.full_name}'s leadership profile (coming soon).` });
   };
+
+  /* Derived metrics */
+  const totalCount     = users.length;
+  const activeCount    = users.filter(u => u.is_active).length;
+  const suspendedCount = users.filter(u => !u.is_active).length;
+  const activeUsers    = users.filter(u => u.is_active);
+  const avgAcademic    = activeUsers.length ? Math.round(activeUsers.reduce((s, u) => s + u.academic, 0) / activeUsers.length) : 0;
+  const avgAttendance  = activeUsers.length ? Math.round(activeUsers.reduce((s, u) => s + u.attendance, 0) / activeUsers.length) : 0;
+  const stableShare    = activeUsers.length ? activeUsers.filter(u => u.finance === 'Stable').length / activeUsers.length : 0;
+  const healthScore    = activeUsers.length ? Math.round(avgAcademic * 0.45 + avgAttendance * 0.4 + stableShare * 100 * 0.15) : 0;
+  const healthColor    = puHealthColor(healthScore);
+
+  /* Aggregate alerts */
+  const totalGradeMods = users.reduce((s, u) => s + u.flags.gradeMods, 0);
+  const totalAtRisk    = users.reduce((s, u) => s + u.flags.atRisk, 0);
+  const totalFinAnom   = users.reduce((s, u) => s + u.flags.finAnomaly, 0);
+
+  const decisionInsights = activeUsers.length ? [
+    avgAcademic < 75    ? '💡 Grade 9 performance declining — consider curriculum review' : null,
+    avgAttendance < 88  ? '💡 Attendance dropping in Grade 10B — schedule home visits' : null,
+    totalAtRisk > 8     ? `💡 ${totalAtRisk} students at risk — convene support meeting` : null,
+    totalGradeMods > 3  ? '💡 Multiple grade modification attempts — audit teacher access' : null,
+    !stableShare        ? '💡 Finance status across schools is unstable — review collections' : null,
+  ].filter(Boolean) : [];
+
+  /* Filtering */
+  const visibleUsers = users.filter(u => {
+    if (roleFilter !== 'all' && u.role !== roleFilter) return false;
+    if (statusFilter === 'active' && !u.is_active) return false;
+    if (statusFilter === 'suspended' && u.is_active) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      if (!`${u.full_name || ''} ${u.email || ''}`.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+
+  const existingEmails = users.map(u => (u.email || '').trim().toLowerCase()).filter(Boolean);
 
   return (
     <div className="ska-content">
       <div className="ska-page-head">
         <div>
           <h1 className="ska-page-title">Principal</h1>
-          <p className="ska-page-sub">{school?.name} — Principal accounts</p>
+          <p className="ska-page-sub">{school?.name} — Leadership & oversight control</p>
         </div>
         <button
           className={`ska-btn ${showForm ? 'ska-btn--ghost' : 'ska-btn--primary'}`}
@@ -1334,153 +2489,157 @@ export function PrincipalUsersPage({ school }) {
 
       <Banner msg={banner} />
 
-      {/* Stats */}
+      {/* Executive stats */}
       <div className="ska-metrics">
-        <StatCard icon="school"       iconBg="var(--ska-primary-dim)"  iconColor="var(--ska-primary)"
-          label="Total Principals"  value={loading ? '…' : users.length} />
-        <StatCard icon="check_circle" iconBg="var(--ska-green-dim)"    iconColor="var(--ska-green)"
-          label="Active"            value={loading ? '…' : users.filter(u => u.is_active).length} />
-        <StatCard icon="block"        iconBg="var(--ska-error-dim)"    iconColor="var(--ska-error)"
-          label="Suspended"         value={loading ? '…' : users.filter(u => !u.is_active).length} />
+        <StatCard icon="school"        iconBg="var(--ska-primary-dim)"  iconColor="var(--ska-primary)"
+          label="Total Principals" value={loading ? '…' : totalCount} />
+        <StatCard icon="check_circle"  iconBg="var(--ska-green-dim)"    iconColor="var(--ska-green)"
+          label="Active"           value={loading ? '…' : activeCount} />
+        <StatCard icon="block"         iconBg="var(--ska-error-dim)"    iconColor="var(--ska-error)"
+          label="Suspended"        value={loading ? '…' : suspendedCount} />
+        <div className="ska-card ska-card-pad ska-pu-health" style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+            <div style={{ width: 44, height: 44, borderRadius: 12, background: `${healthColor}20`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Ic name="favorite" style={{ color: healthColor, fontSize: 22 }} />
+            </div>
+            <span className="ska-pu-health__pct" style={{ color: healthColor }}>
+              {loading ? '…' : `${healthScore}%`}
+            </span>
+          </div>
+          <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--ska-text)' }}>School Health Score</div>
+          <div style={{ marginTop: 8, height: 6, background: 'var(--ska-surface-low)', borderRadius: 3, overflow: 'hidden' }}>
+            <div style={{ width: `${loading ? 0 : healthScore}%`, height: '100%', background: healthColor, transition: 'width 0.5s ease' }} />
+          </div>
+          <div style={{ fontSize: '0.6875rem', color: 'var(--ska-text-3)', marginTop: 6 }}>
+            Academic · Attendance · Finance
+          </div>
+        </div>
       </div>
 
-      {/* Create form */}
-      {showForm && (
-        <div className="ska-card ska-card-pad" style={{ marginBottom: 24 }}>
-          <h3 style={{ margin: '0 0 16px', fontSize: '0.9375rem', fontWeight: 700, color: 'var(--ska-text)', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Ic name="person_add" size="sm" /> New Principal
-          </h3>
-          <form onSubmit={handleCreate}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12, marginBottom: 16 }}>
-              <label className="ska-form-group" style={{ margin: 0 }}>
-                <span>First Name</span>
-                <input className="ska-input" value={form.first_name}
-                  onChange={e => setForm(f => ({ ...f, first_name: e.target.value }))}
-                  placeholder="First name" />
-              </label>
-              <label className="ska-form-group" style={{ margin: 0 }}>
-                <span>Last Name</span>
-                <input className="ska-input" value={form.last_name}
-                  onChange={e => setForm(f => ({ ...f, last_name: e.target.value }))}
-                  placeholder="Last name" />
-              </label>
-              <label className="ska-form-group" style={{ margin: 0 }}>
-                <span>Email <span style={{ color: 'var(--ska-error)' }}>*</span></span>
-                <input className="ska-input" type="email" required value={form.email}
-                  onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                  placeholder="principal@school.com" />
-              </label>
-              <label className="ska-form-group" style={{ margin: 0 }}>
-                <span>Phone</span>
-                <input className="ska-input" value={form.phone}
-                  onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
-                  placeholder="+xxx-xxx-xxxx" />
-              </label>
-              <label className="ska-form-group" style={{ margin: 0, gridColumn: '1 / -1' }}>
-                <span>Password <span style={{ color: 'var(--ska-error)' }}>*</span></span>
-                <div style={{ position: 'relative' }}>
-                  <input className="ska-input" type={showPass ? 'text' : 'password'} required
-                    value={form.password}
-                    onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-                    placeholder="Min. 8 characters"
-                    style={{ paddingRight: 44 }} />
-                  <button type="button"
-                    onClick={() => setShowPass(p => !p)}
-                    style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
-                             background: 'none', border: 'none', cursor: 'pointer',
-                             color: 'var(--ska-text-3)', padding: 0, lineHeight: 1 }}>
-                    <Ic name={showPass ? 'visibility_off' : 'visibility'} size="sm" />
-                  </button>
-                </div>
-              </label>
-            </div>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button type="button" className="ska-btn ska-btn--ghost"
-                onClick={() => { setShowForm(false); resetForm(); }}>Cancel</button>
-              <button type="submit" className="ska-btn ska-btn--primary" disabled={saving}>
-                <Ic name="person_add" size="sm" /> {saving ? 'Creating…' : 'Create Principal'}
-              </button>
-            </div>
-          </form>
+      {/* Real-time alert panel */}
+      {!loading && activeCount > 0 && (totalGradeMods > 0 || totalAtRisk > 0 || totalFinAnom > 0) && (
+        <div className="ska-pu-alert-panel">
+          <div className="ska-pu-alert-panel__head">
+            <Ic name="warning" size="sm" />
+            <strong>School Alerts</strong>
+            <span>requiring leadership attention</span>
+          </div>
+          <div className="ska-pu-alert-panel__row">
+            {totalGradeMods > 0 && (
+              <div className="ska-pu-alert-pill ska-pu-alert-pill--err">
+                <Ic name="edit_note" /> <span>Grade modification attempts</span> <strong>{totalGradeMods}</strong>
+              </div>
+            )}
+            {totalAtRisk > 0 && (
+              <div className="ska-pu-alert-pill ska-pu-alert-pill--warn">
+                <Ic name="trending_down" /> <span>Students at risk</span> <strong>{totalAtRisk}</strong>
+              </div>
+            )}
+            {totalFinAnom > 0 && (
+              <div className="ska-pu-alert-pill ska-pu-alert-pill--err">
+                <Ic name="account_balance" /> <span>Financial anomalies</span> <strong>{totalFinAnom}</strong>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
-      {/* Users table */}
-      <div className="ska-card">
-        {loading ? (
-          <div className="ska-empty"><p className="ska-empty-desc">Loading principals…</p></div>
-        ) : users.length === 0 ? (
+      {/* Decision support panel */}
+      {!loading && decisionInsights.length > 0 && (
+        <div className="ska-pu-insight-panel">
+          <div className="ska-pu-insight-panel__head">
+            <Ic name="lightbulb" size="sm" />
+            <strong>Decision Support</strong>
+            <span>recommended actions</span>
+          </div>
+          <ul>
+            {decisionInsights.map((t, i) => <li key={i}>{t}</li>)}
+          </ul>
+        </div>
+      )}
+
+      {/* Create form */}
+      {showForm && (
+        <AddPrincipalForm
+          existingEmails={existingEmails}
+          saving={saving}
+          onSubmit={handleCreate}
+          onCancel={() => setShowForm(false)} />
+      )}
+
+      {/* Filters bar */}
+      {!loading && totalCount > 0 && (
+        <div className="ska-pu-filters">
+          <div className="ska-search ska-toolbar-search">
+            <Ic name="search" />
+            <input className="ska-search-input"
+              placeholder="Search by name or email…"
+              value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
+          <div className="ska-pu-filters__group">
+            <span className="ska-pu-filters__label">Role:</span>
+            {[['all','All'], ...PU_ROLE_KEYS.map(r => [r, r])].map(([k, l]) => (
+              <button key={k} type="button"
+                className={`ska-pu-pill ${roleFilter === k ? 'ska-pu-pill--on' : ''}`}
+                onClick={() => setRoleFilter(k)}>{l}</button>
+            ))}
+          </div>
+          <div className="ska-pu-filters__group">
+            <span className="ska-pu-filters__label">Status:</span>
+            {[['all','All'], ['active','Active'], ['suspended','Suspended']].map(([k, l]) => (
+              <button key={k} type="button"
+                className={`ska-pu-pill ${statusFilter === k ? 'ska-pu-pill--on' : ''}`}
+                onClick={() => setStatusFilter(k)}>{l}</button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Cards grid */}
+      {loading ? (
+        <div className="ska-card"><div className="ska-empty"><p className="ska-empty-desc">Loading principals…</p></div></div>
+      ) : totalCount === 0 ? (
+        <div className="ska-card">
           <div className="ska-empty">
             <Ic name="school" size="xl" style={{ color: 'var(--ska-primary)', marginBottom: 12 }} />
             <p className="ska-empty-title">No principals yet</p>
             <p className="ska-empty-desc">
-              Create a principal account to grant school leadership access.
+              Create a principal account to grant school leadership and oversight access.
             </p>
             <button className="ska-btn ska-btn--primary" style={{ marginTop: 12 }}
               onClick={() => setShowForm(true)}>
               <Ic name="person_add" size="sm" /> Add Principal
             </button>
           </div>
-        ) : (
-          <div className="ska-table-wrap">
-            <table className="ska-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Phone</th>
-                  <th>Status</th>
-                  <th>Since</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map(u => {
-                  const st = STATUS_STYLE[u.status] || STATUS_STYLE.PENDING;
-                  return (
-                    <tr key={u.id}>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <div style={{
-                            width: 32, height: 32, borderRadius: '50%',
-                            background: 'var(--ska-primary-dim)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: '0.8125rem', fontWeight: 700, color: 'var(--ska-primary)',
-                            flexShrink: 0,
-                          }}>
-                            {u.full_name?.[0]?.toUpperCase() || '?'}
-                          </div>
-                          <span style={{ fontWeight: 600 }}>{u.full_name}</span>
-                        </div>
-                      </td>
-                      <td style={{ color: 'var(--ska-text-3)', fontSize: '0.8125rem' }}>{u.email}</td>
-                      <td style={{ color: 'var(--ska-text-3)', fontSize: '0.8125rem' }}>{u.phone || '—'}</td>
-                      <td>
-                        <span style={{
-                          display: 'inline-block', padding: '3px 10px', borderRadius: 20,
-                          fontSize: '0.75rem', fontWeight: 700,
-                          background: st.bg, color: st.color,
-                        }}>
-                          {u.status}
-                        </span>
-                      </td>
-                      <td style={{ color: 'var(--ska-text-3)', fontSize: '0.8125rem' }}>{u.created_at}</td>
-                      <td>
-                        <button
-                          className={`ska-btn ska-btn--sm ${u.is_active ? 'ska-btn--danger' : 'ska-btn--approve'}`}
-                          onClick={() => handleToggle(u.id)}
-                        >
-                          {u.is_active ? 'Suspend' : 'Activate'}
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+        </div>
+      ) : visibleUsers.length === 0 ? (
+        <div className="ska-card">
+          <div className="ska-empty">
+            <Ic name="search_off" size="xl" style={{ color: 'var(--ska-text-3)', marginBottom: 12 }} />
+            <p className="ska-empty-title">No matches</p>
+            <p className="ska-empty-desc">Try a different search term or clear filters.</p>
           </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div className="ska-pu-grid">
+          {visibleUsers.map(u => (
+            <PrincipalCard key={u.id}
+              u={u}
+              onView={setDetailsUser}
+              onEdit={handleEdit}
+              onToggle={handleToggle} />
+          ))}
+        </div>
+      )}
+
+      {/* Details modal */}
+      {detailsUser && (
+        <PrincipalDetails
+          u={detailsUser}
+          onClose={() => setDetailsUser(null)}
+          onEdit={u => { setDetailsUser(null); handleEdit(u); }}
+          onToggle={handleToggle} />
+      )}
     </div>
   );
 }
@@ -3183,10 +4342,11 @@ function TeacherAvatar({ name, size = 44 }) {
 function WorkloadBar({ periods, max }) {
   const limit  = max || 20;
   const pct    = Math.min((periods / (limit * 1.5)) * 100, 100);
-  const isOver = periods > limit;
-  const isNear = !isOver && periods >= limit * 0.85;
-  const color  = isOver ? 'var(--ska-error)' : isNear ? '#fbbf24' : 'var(--ska-primary)';
-  const label  = isOver ? 'Overloaded' : isNear ? 'Near limit' : 'Optimal';
+  const ratio  = periods / limit;
+  const isOver = ratio > 1;
+  const isBusy = !isOver && ratio >= 0.7;
+  const color  = isOver ? 'var(--ska-error)' : isBusy ? '#fbbf24' : 'var(--ska-primary)';
+  const label  = isOver ? 'Overloaded' : isBusy ? 'Busy' : 'Optimal';
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
@@ -3199,6 +4359,63 @@ function WorkloadBar({ periods, max }) {
       </div>
     </div>
   );
+}
+
+/* ── Mock helpers for teacher operational data (no backend) ── */
+const _TM_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+function _tmHash(seed) {
+  let n = (Number(seed) || 1) >>> 0;
+  return (k) => { n = (n * 9301 + 49297 + k) % 233280; return n / 233280; };
+}
+function _tmTimetable(t) {
+  const r = _tmHash(t?.id || 1);
+  const total = Math.max(0, Math.min(t?.periods_per_week || 0, 40));
+  const dist = _TM_DAYS.map(() => 0);
+  for (let i = 0; i < total; i++) dist[Math.floor(r(i) * _TM_DAYS.length)]++;
+  return _TM_DAYS.map((d, i) => ({ day: d, periods: dist[i] }));
+}
+function _tmAvgScore(t) {
+  const r = _tmHash(t?.id || 1)(7);
+  return Math.round(60 + r * 30); // 60–90
+}
+function _tmCoverage(t) {
+  const r = _tmHash(t?.id || 1)(13);
+  return Math.round(35 + r * 60); // 35–95
+}
+function _tmPerClassScore(t) {
+  const r = _tmHash(t?.id || 1);
+  return (t?.classes || []).map((c, i) => ({
+    name: c.name, subject: c.subject,
+    students: c.student_count || 0,
+    score: Math.round(55 + r(i + 3) * 35),
+  }));
+}
+function _tmWeeklyGrid(t) {
+  /* 5 days × 8 periods, mock subject/class assignments based on teacher classes */
+  const r = _tmHash(t?.id || 1);
+  const cls = (t?.classes || []);
+  const grid = _TM_DAYS.map(() => Array(8).fill(null));
+  const want = Math.min(t?.periods_per_week || 0, 5 * 8);
+  let placed = 0, attempt = 0;
+  while (placed < want && attempt < 200) {
+    const d = Math.floor(r(attempt) * 5);
+    const p = Math.floor(r(attempt + 11) * 8);
+    if (!grid[d][p] && cls.length) {
+      const c = cls[Math.floor(r(attempt + 21) * cls.length)];
+      grid[d][p] = { name: c.name, subject: c.subject };
+      placed++;
+    }
+    attempt++;
+  }
+  return grid;
+}
+function _tmCoverageBySubject(t) {
+  const r = _tmHash(t?.id || 1);
+  return (t?.subjects || []).map((s, i) => ({
+    subject: s,
+    coverage: Math.round(35 + r(i + 17) * 60),
+    pending: Math.max(1, Math.round(2 + r(i + 23) * 8)),
+  }));
 }
 
 /* ── PerfSparkline: 6-bar pseudo performance sparkline ── */
@@ -3267,7 +4484,7 @@ function TeacherCard({ t, onOpen, onEdit, onDelete }) {
         </span>
       </div>
 
-      <WorkloadBar periods={t.periods_per_week || 0} />
+      <WorkloadBar periods={t.periods_per_week || 0} max={t.max_workload} />
 
       {/* Mini stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginTop: 12 }}>
@@ -3286,9 +4503,68 @@ function TeacherCard({ t, onOpen, onEdit, onDelete }) {
         ))}
       </div>
 
+      {/* Classes line */}
+      {(t.classes || []).length > 0 && (
+        <div style={{ marginTop: 10, fontSize: '0.75rem', color: 'var(--ska-text-3)', display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+          <span className="ska-icon ska-icon--sm" style={{ color: 'var(--ska-text-3)' }}>school</span>
+          <span style={{ color: 'var(--ska-text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {(t.classes || []).slice(0, 3).map(c => c.name).join(', ')}
+            {(t.classes || []).length > 3 ? ` +${t.classes.length - 3}` : ''}
+          </span>
+        </div>
+      )}
+
+      {/* Timetable preview */}
+      <div style={{ marginTop: 8, display: 'flex', gap: 4, justifyContent: 'space-between' }}>
+        {_tmTimetable(t).map(({ day, periods }) => (
+          <div key={day} style={{
+            flex: 1, padding: '4px 0', borderRadius: 6, textAlign: 'center',
+            background: periods === 0 ? 'var(--ska-surface-high)' : 'var(--ska-surface-highest)',
+            opacity: periods === 0 ? 0.5 : 1,
+          }}>
+            <div style={{ fontSize: '0.625rem', color: 'var(--ska-text-3)', fontWeight: 700, letterSpacing: '0.06em' }}>{day}</div>
+            <div style={{ fontSize: '0.8125rem', fontWeight: 800, color: periods === 0 ? 'var(--ska-text-3)' : 'var(--ska-text)' }}>{periods}p</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Performance + Coverage chips (mock) */}
+      <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        {(() => {
+          const score = _tmAvgScore(t);
+          const cov   = _tmCoverage(t);
+          const sCol  = score >= 75 ? 'var(--ska-primary)' : score >= 60 ? '#fbbf24' : 'var(--ska-error)';
+          const cCol  = cov   >= 75 ? 'var(--ska-primary)' : cov   >= 40 ? '#fbbf24' : 'var(--ska-error)';
+          return (
+            <>
+              <div style={{ background: sCol + '18', border: `1px solid ${sCol}33`, borderRadius: 6, padding: '6px 8px' }}>
+                <div style={{ fontSize: '0.6rem', color: 'var(--ska-text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>Avg Score</div>
+                <div style={{ fontSize: '0.8125rem', fontWeight: 800, color: sCol }}>{score}%</div>
+              </div>
+              <div style={{ background: cCol + '18', border: `1px solid ${cCol}33`, borderRadius: 6, padding: '6px 8px' }}>
+                <div style={{ fontSize: '0.6rem', color: 'var(--ska-text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>Coverage</div>
+                <div style={{ fontSize: '0.8125rem', fontWeight: 800, color: cCol }}>{cov}%</div>
+              </div>
+            </>
+          );
+        })()}
+      </div>
+
+      {t.is_overloaded && (
+        <p style={{ margin: '10px 0 0', fontSize: '0.7rem', color: 'var(--ska-error)', fontWeight: 600 }}>
+          ⚠ Overloaded · 💡 Consider reassigning periods
+        </p>
+      )}
+
       {/* Actions */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 12 }}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginTop: 12 }}
         onClick={e => e.stopPropagation()}>
+        <button className="ska-btn ska-btn--ghost ska-btn--sm" onClick={() => onOpen(t)} style={{ justifyContent: 'center' }}>
+          <span className="ska-icon ska-icon--sm">visibility</span> View Details
+        </button>
+        <button className="ska-btn ska-btn--ghost ska-btn--sm" onClick={() => onOpen(t, 'timetable')} style={{ justifyContent: 'center' }}>
+          <span className="ska-icon ska-icon--sm">calendar_view_week</span> Timetable
+        </button>
         <button className="ska-btn ska-btn--ghost ska-btn--sm" onClick={() => onEdit(t)} style={{ justifyContent: 'center' }}>
           <span className="ska-icon ska-icon--sm">edit</span> Edit
         </button>
@@ -3301,9 +4577,10 @@ function TeacherCard({ t, onOpen, onEdit, onDelete }) {
 }
 
 /* ── TeacherProfilePanel: slide-up overlay (teacher_profile_timetable) ── */
-function TeacherProfilePanel({ teacher: initTeacher, onClose, onEdit }) {
+function TeacherProfilePanel({ teacher: initTeacher, onClose, onEdit, focus }) {
   const [teacher, setTeacher] = React.useState(initTeacher);
   const [loading, setLoading] = React.useState(true);
+  const timetableRef = React.useRef(null);
 
   React.useEffect(() => {
     setLoading(true);
@@ -3312,6 +4589,12 @@ function TeacherProfilePanel({ teacher: initTeacher, onClose, onEdit }) {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [initTeacher.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  React.useEffect(() => {
+    if (!loading && focus === 'timetable' && timetableRef.current) {
+      timetableRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [loading, focus]);
 
   const color = _teacherColor(teacher.full_name);
 
@@ -3456,6 +4739,91 @@ function TeacherProfilePanel({ teacher: initTeacher, onClose, onEdit }) {
                 </div>
               )}
 
+              {/* Weekly Timetable Grid (mock) */}
+              <div ref={timetableRef} className="ska-card ska-card-pad">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <h3 style={{ margin: 0, fontSize: '0.8125rem', fontWeight: 700, color: 'var(--ska-text-2)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Weekly Timetable</h3>
+                  <span style={{ fontSize: '0.6875rem', color: 'var(--ska-text-3)', fontWeight: 600 }}>{teacher.periods_per_week || 0} periods/week</span>
+                </div>
+                <div style={{ overflowX: 'auto' }}>
+                  <div style={{ minWidth: 480, display: 'grid', gridTemplateColumns: '52px repeat(8, 1fr)', gap: 4 }}>
+                    <div></div>
+                    {Array.from({ length: 8 }, (_, i) => (
+                      <div key={`p${i}`} style={{ textAlign: 'center', fontSize: '0.625rem', color: 'var(--ska-text-3)', fontWeight: 700 }}>P{i + 1}</div>
+                    ))}
+                    {_tmWeeklyGrid(teacher).map((row, di) => (
+                      <React.Fragment key={`d${di}`}>
+                        <div style={{ fontSize: '0.6875rem', color: 'var(--ska-text-3)', fontWeight: 700, alignSelf: 'center' }}>{_TM_DAYS[di]}</div>
+                        {row.map((cell, pi) => (
+                          <div key={`d${di}p${pi}`} style={{
+                            background: cell ? 'var(--ska-primary-dim)' : 'var(--ska-surface-highest)',
+                            border: cell ? '1px solid rgba(173,198,255,0.25)' : '1px solid var(--ska-border)',
+                            borderRadius: 4, padding: 4, minHeight: 36,
+                            fontSize: '0.625rem', color: cell ? 'var(--ska-primary)' : 'var(--ska-text-3)',
+                            fontWeight: 700, textAlign: 'center', overflow: 'hidden',
+                          }}>
+                            {cell ? (
+                              <>
+                                <div style={{ lineHeight: 1.1, color: 'var(--ska-text)' }}>{cell.name}</div>
+                                <div style={{ lineHeight: 1.1, color: 'var(--ska-primary)', opacity: 0.85 }}>{cell.subject}</div>
+                              </>
+                            ) : '·'}
+                          </div>
+                        ))}
+                      </React.Fragment>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Syllabus coverage (mock) */}
+              {(teacher.subjects || []).length > 0 && (
+                <div className="ska-card ska-card-pad">
+                  <h3 style={{ margin: '0 0 12px', fontSize: '0.8125rem', fontWeight: 700, color: 'var(--ska-text-2)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Syllabus Coverage</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {_tmCoverageBySubject(teacher).map(({ subject, coverage, pending }) => {
+                      const c = coverage >= 75 ? 'var(--ska-primary)' : coverage >= 40 ? '#fbbf24' : 'var(--ska-error)';
+                      return (
+                        <div key={subject}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                            <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--ska-text)' }}>{subject}</span>
+                            <span style={{ fontSize: '0.75rem', color: c, fontWeight: 700 }}>{coverage}% · {pending} pending</span>
+                          </div>
+                          <div style={{ height: 6, background: 'var(--ska-surface-highest)', borderRadius: 4, overflow: 'hidden' }}>
+                            <div style={{ height: '100%', width: `${coverage}%`, background: c, transition: 'width 0.3s' }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Per-class average score (mock) */}
+              {(teacher.classes || []).length > 0 && (
+                <div className="ska-card ska-card-pad">
+                  <h3 style={{ margin: '0 0 12px', fontSize: '0.8125rem', fontWeight: 700, color: 'var(--ska-text-2)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Performance by Class</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {_tmPerClassScore(teacher).map(({ name, subject, students, score }, i) => {
+                      const c = score >= 75 ? 'var(--ska-primary)' : score >= 60 ? '#fbbf24' : 'var(--ska-error)';
+                      return (
+                        <div key={`${name}-${i}`} style={{
+                          display: 'flex', alignItems: 'center', gap: 10,
+                          padding: '10px 12px', borderRadius: 8,
+                          background: 'var(--ska-surface-highest)',
+                        }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--ska-text)' }}>{name}</div>
+                            <div style={{ fontSize: '0.6875rem', color: 'var(--ska-text-3)' }}>{subject} · {students} students</div>
+                          </div>
+                          <div style={{ fontSize: '1rem', fontWeight: 900, color: c }}>{score}%</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Staff details */}
               <div className="ska-card ska-card-pad">
                 <h3 style={{ margin: '0 0 14px', fontSize: '0.8125rem', fontWeight: 700, color: 'var(--ska-text-2)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Staff Details</h3>
@@ -3508,145 +4876,6 @@ function TeacherReviewRow({ label, value, icon }) {
   );
 }
 
-/* ── Phone input with country dial-code selector ── */
-const PHONE_COUNTRIES = [
-  { code: 'SL', name: 'Sierra Leone',   dial: '+232', flag: '🇸🇱' },
-  { code: 'GN', name: 'Guinea',         dial: '+224', flag: '🇬🇳' },
-  { code: 'LR', name: 'Liberia',        dial: '+231', flag: '🇱🇷' },
-  { code: 'GM', name: 'Gambia',         dial: '+220', flag: '🇬🇲' },
-  { code: 'SN', name: 'Senegal',        dial: '+221', flag: '🇸🇳' },
-  { code: 'ML', name: 'Mali',           dial: '+223', flag: '🇲🇱' },
-  { code: 'GH', name: 'Ghana',          dial: '+233', flag: '🇬🇭' },
-  { code: 'NG', name: 'Nigeria',        dial: '+234', flag: '🇳🇬' },
-  { code: 'CI', name: "Côte d'Ivoire", dial: '+225', flag: '🇨🇮' },
-  { code: 'GW', name: 'Guinea-Bissau',  dial: '+245', flag: '🇬🇼' },
-  { code: 'TG', name: 'Togo',           dial: '+228', flag: '🇹🇬' },
-  { code: 'BJ', name: 'Benin',          dial: '+229', flag: '🇧🇯' },
-  { code: 'BF', name: 'Burkina Faso',   dial: '+226', flag: '🇧🇫' },
-  { code: 'CM', name: 'Cameroon',       dial: '+237', flag: '🇨🇲' },
-  { code: 'ZA', name: 'South Africa',   dial: '+27',  flag: '🇿🇦' },
-  { code: 'KE', name: 'Kenya',          dial: '+254', flag: '🇰🇪' },
-  { code: 'GB', name: 'United Kingdom', dial: '+44',  flag: '🇬🇧' },
-  { code: 'US', name: 'United States',  dial: '+1',   flag: '🇺🇸' },
-  { code: 'FR', name: 'France',         dial: '+33',  flag: '🇫🇷' },
-  { code: 'DE', name: 'Germany',        dial: '+49',  flag: '🇩🇪' },
-];
-const TZ_COUNTRY_MAP = {
-  'Africa/Freetown':'SL','Africa/Conakry':'GN','Africa/Monrovia':'LR',
-  'Africa/Banjul':'GM','Africa/Dakar':'SN','Africa/Bamako':'ML',
-  'Africa/Accra':'GH','Africa/Lagos':'NG','Africa/Abidjan':'CI',
-  'Africa/Bissau':'GW','Africa/Lome':'TG','Africa/Porto-Novo':'BJ',
-  'Africa/Ouagadougou':'BF','Africa/Douala':'CM','Africa/Johannesburg':'ZA',
-  'Africa/Nairobi':'KE','Europe/London':'GB','America/New_York':'US',
-  'America/Chicago':'US','America/Denver':'US','America/Los_Angeles':'US',
-  'Europe/Paris':'FR','Europe/Berlin':'DE',
-};
-function _detectPhoneCountry() {
-  try {
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    if (TZ_COUNTRY_MAP[tz]) return TZ_COUNTRY_MAP[tz];
-    const parts = (navigator.language || '').split('-');
-    if (parts.length > 1) {
-      const code = parts[parts.length - 1].toUpperCase();
-      if (PHONE_COUNTRIES.find(c => c.code === code)) return code;
-    }
-  } catch { /* */ }
-  return 'SL';
-}
-function PhoneInput({ value, onChange, placeholder = 'Phone number' }) {
-  const [country, setCountry] = React.useState(() => {
-    if (value) {
-      const v = value.replace(/\s/g, '');
-      const sorted = [...PHONE_COUNTRIES].sort((a, b) => b.dial.length - a.dial.length);
-      const match = sorted.find(c => v.startsWith(c.dial.replace(/\s/g, '')));
-      if (match) return match;
-    }
-    return PHONE_COUNTRIES.find(c => c.code === _detectPhoneCountry()) || PHONE_COUNTRIES[0];
-  });
-  const [open,     setOpen]     = React.useState(false);
-  const [search,   setSearch]   = React.useState('');
-  const [dropRect, setDropRect] = React.useState(null);
-  const wrapRef = React.useRef(null);
-
-  const getLocal = (val, dial) => {
-    if (!val) return '';
-    const v = val.replace(/\s/g, ''), d = dial.replace(/\s/g, '');
-    return v.startsWith(d) ? v.slice(d.length) : val;
-  };
-  const localNum = getLocal(value, country.dial);
-
-  React.useEffect(() => {
-    if (!open) return;
-    if (wrapRef.current) {
-      const r = wrapRef.current.getBoundingClientRect();
-      setDropRect({ top: r.bottom + 4, left: r.left });
-    }
-    const close = () => { setOpen(false); setSearch(''); };
-    const h = e => { if (wrapRef.current && !wrapRef.current.contains(e.target)) close(); };
-    document.addEventListener('mousedown', h);
-    document.addEventListener('scroll', close, true);
-    return () => {
-      document.removeEventListener('mousedown', h);
-      document.removeEventListener('scroll', close, true);
-    };
-  }, [open]);
-
-  const selectCountry = c => { setCountry(c); setOpen(false); setSearch(''); onChange(c.dial + localNum); };
-  const filtered = search
-    ? PHONE_COUNTRIES.filter(c => c.name.toLowerCase().includes(search.toLowerCase()) || c.dial.includes(search) || c.code.toLowerCase().includes(search.toLowerCase()))
-    : PHONE_COUNTRIES;
-
-  return (
-    <div ref={wrapRef} style={{ position: 'relative', display: 'flex' }}>
-      <button type="button" onClick={() => setOpen(o => !o)} style={{
-        display: 'flex', alignItems: 'center', gap: 4, padding: '0 10px',
-        borderRadius: '8px 0 0 8px', border: '1px solid var(--ska-border)', borderRight: 'none',
-        background: 'var(--ska-surface-high)', cursor: 'pointer', flexShrink: 0, minHeight: 40, whiteSpace: 'nowrap',
-      }}>
-        <span style={{ fontSize: '1.125rem', lineHeight: 1 }}>{country.flag}</span>
-        <span style={{ fontSize: '0.8125rem', color: 'var(--ska-text-3)', fontWeight: 600 }}>{country.dial}</span>
-        <span className="ska-icon" style={{ fontSize: 14, color: 'var(--ska-text-3)' }}>expand_more</span>
-      </button>
-      <input type="tel" className="ska-input" value={localNum}
-        onChange={e => onChange(country.dial + e.target.value)}
-        placeholder={placeholder}
-        style={{ borderRadius: '0 8px 8px 0', flex: 1 }}
-      />
-      {open && dropRect && (
-        <div style={{
-          position: 'fixed', top: dropRect.top, left: dropRect.left, zIndex: 99999,
-          background: 'var(--ska-surface)', border: '1px solid var(--ska-border)',
-          borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-          width: 260, maxHeight: 280, overflow: 'hidden',
-          display: 'flex', flexDirection: 'column',
-        }}>
-          <div style={{ padding: '8px 10px', borderBottom: '1px solid var(--ska-border)' }}>
-            <input type="text" placeholder="Search country…" value={search} autoFocus
-              onChange={e => setSearch(e.target.value)}
-              style={{ width: '100%', border: '1px solid var(--ska-border)', borderRadius: 6, padding: '6px 10px', fontSize: '0.8125rem', background: 'var(--ska-surface-high)', color: 'var(--ska-text)', outline: 'none', boxSizing: 'border-box' }}
-            />
-          </div>
-          <div style={{ overflowY: 'auto', flex: 1 }}>
-            {filtered.map(c => (
-              <button key={c.code} type="button" onClick={() => selectCountry(c)} style={{
-                display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 14px',
-                border: 'none', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem', color: 'var(--ska-text)',
-                background: c.code === country.code ? 'var(--ska-surface-high)' : 'transparent',
-              }}>
-                <span style={{ fontSize: '1.125rem', lineHeight: 1 }}>{c.flag}</span>
-                <span style={{ flex: 1, fontWeight: c.code === country.code ? 700 : 400 }}>{c.name}</span>
-                <span style={{ fontSize: '0.8125rem', color: 'var(--ska-text-3)', flexShrink: 0 }}>{c.dial}</span>
-              </button>
-            ))}
-            {filtered.length === 0 && (
-              <div style={{ padding: 16, textAlign: 'center', fontSize: '0.8125rem', color: 'var(--ska-text-3)' }}>No countries found</div>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 /* ── AddTeacherWizard: redesigned split-panel registration ── */
 const TEACHER_WIZARD_STEPS = [
@@ -3675,12 +4904,54 @@ function _teacherAvatarLetters(first, last) {
   return (a + b).toUpperCase() || '?';
 }
 
-function AddTeacherWizard({ school, onSave, onCancel }) {
+// eslint-disable-next-line no-unused-vars
+function _LegacyAddTeacherWizard_DEPRECATED({ school, onSave, onCancel, existingEmails = [] }) {
   const [step,            setStep]           = React.useState(0);
   const [form,            setForm]           = React.useState({
     first_name: '', last_name: '', email: '', phone_number: '',
     password: '', employee_id: '', qualification: '',
+    max_workload: 20,
   });
+  const [availability, setAvailability] = React.useState(
+    /* Mon–Fri × Periods 1–8 boolean grid; default: all available */
+    Object.fromEntries(['Mon','Tue','Wed','Thu','Fri'].map(d => [d, Array(8).fill(true)]))
+  );
+  const toggleAvail = (day, period) => setAvailability(prev => ({
+    ...prev,
+    [day]: prev[day].map((v, i) => i === period ? !v : v),
+  }));
+  const availSlotCount = Object.values(availability).reduce(
+    (n, row) => n + row.filter(Boolean).length, 0
+  );
+
+  /* Auto-suggested specialization based on assigned subjects (mock) */
+  const SUBJECT_SPECIALIZATIONS = {
+    mathematics: 'B.Sc. / M.Sc. Mathematics, PGCE Mathematics',
+    math: 'B.Sc. Mathematics',
+    physics: 'B.Sc. Physics, Physics Education',
+    chemistry: 'B.Sc. Chemistry',
+    biology: 'B.Sc. Biology / Life Sciences',
+    english: 'B.A. English, Linguistics or Literature',
+    literature: 'B.A. English Literature',
+    history: 'B.A. History',
+    geography: 'B.A. / B.Sc. Geography',
+    economics: 'B.A. / B.Sc. Economics',
+    'computer science': 'B.Sc. Computer Science / Information Technology',
+    ict: 'B.Sc. ICT or Computer Science',
+    french: 'B.A. French / Modern Languages',
+    arabic: 'B.A. Arabic / Islamic Studies',
+    'religious studies': 'B.A. Religious Studies / Theology',
+    'social studies': 'B.A. Social Studies / Sociology',
+    'physical education': 'B.Sc. Physical Education / Sports Science',
+    art: 'B.A. Fine Arts',
+    music: 'B.A. Music',
+  };
+  const subjectSuggestion = (() => {
+    const subjs = [...new Set(classAssignments.map(ca => (ca.subject_name || '').toLowerCase()))];
+    const hits = subjs.map(s => SUBJECT_SPECIALIZATIONS[s] || Object.entries(SUBJECT_SPECIALIZATIONS).find(([k]) => s.includes(k))?.[1])
+      .filter(Boolean);
+    return [...new Set(hits)].slice(0, 2).join(' · ');
+  })();
   const [showPass,        setShowPass]       = React.useState(false);
   const [saving,          setSaving]         = React.useState(false);
   const [error,           setError]          = React.useState('');
@@ -3758,6 +5029,12 @@ function AddTeacherWizard({ school, onSave, onCancel }) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
       setError('Please enter a valid email address.'); return;
     }
+    if (existingEmails.includes(form.email.trim().toLowerCase())) {
+      setError('This email is already in use by another teacher. Please use a different one.');
+      setFieldErrors(p => ({ ...p, email: 'Already in use' }));
+      setStep(0);
+      return;
+    }
     if (form.password.length < 8) {
       setError('Password must be at least 8 characters.'); return;
     }
@@ -3770,6 +5047,7 @@ function AddTeacherWizard({ school, onSave, onCancel }) {
       if (classAssignments.length > 0) {
         fd.append('class_assignments', JSON.stringify(classAssignments));
       }
+      fd.append('availability', JSON.stringify(availability));
       await ApiClient.post('/api/school/teachers/', fd);
       onSave();
     } catch (e) {
@@ -4028,6 +5306,7 @@ function AddTeacherWizard({ school, onSave, onCancel }) {
                           } else if (key === 'email') {
                             if (!v) setFieldErrors(p => ({ ...p, email: 'Required' }));
                             else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) setFieldErrors(p => ({ ...p, email: 'Invalid email format' }));
+                            else if (existingEmails.includes(v.toLowerCase())) setFieldErrors(p => ({ ...p, email: 'This email is already in use by another teacher' }));
                             else setFieldErrors(p => ({ ...p, email: '' }));
                           }
                         }}
@@ -4106,6 +5385,26 @@ function AddTeacherWizard({ school, onSave, onCancel }) {
                         placeholder={placeholder}
                         onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
                       />
+                      {key === 'qualification' && subjectSuggestion && !form.qualification && (
+                        <span style={{
+                          fontSize: '0.6875rem', color: 'var(--ska-primary)', marginTop: 2,
+                          display: 'flex', alignItems: 'center', gap: 4,
+                        }}>
+                          <span className="ska-icon ska-icon--sm" style={{ fontSize: '0.85rem' }}>tips_and_updates</span>
+                          Suggested: {subjectSuggestion}
+                          <button
+                            type="button"
+                            onClick={() => setForm(f => ({ ...f, qualification: subjectSuggestion.split(' · ')[0] }))}
+                            style={{
+                              marginLeft: 6, background: 'transparent', border: 'none',
+                              color: 'var(--ska-primary)', textDecoration: 'underline', cursor: 'pointer',
+                              fontSize: '0.6875rem', fontWeight: 700, padding: 0,
+                            }}
+                          >
+                            Use
+                          </button>
+                        </span>
+                      )}
                     </label>
                   ))}
                 </div>
@@ -4221,6 +5520,85 @@ function AddTeacherWizard({ school, onSave, onCancel }) {
                     </div>
                   )}
                 </div>
+
+                {/* Academic Assignment — Max Workload + Availability */}
+                <div style={{
+                  marginTop: 16, padding: '16px', borderRadius: 10,
+                  background: 'var(--ska-surface-high)', border: '1px solid var(--ska-border)',
+                }}>
+                  <p style={{ margin: '0 0 12px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--ska-text-2)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    <span className="ska-icon ska-icon--sm" style={{ marginRight: 6, verticalAlign: 'middle' }}>schedule</span>
+                    Academic Assignment
+                  </p>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+                    <label style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                      <span style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ska-text-3)' }}>
+                        Max Workload (periods/week)
+                      </span>
+                      <input
+                        className="ska-input"
+                        type="number"
+                        min={1}
+                        max={50}
+                        value={form.max_workload}
+                        onChange={e => setForm(f => ({ ...f, max_workload: e.target.value }))}
+                        placeholder="e.g. 20"
+                      />
+                    </label>
+                    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+                      <span style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ska-text-3)' }}>
+                        Workload Check
+                      </span>
+                      {(() => {
+                        const assigned = classAssignments.length * 4; /* mock 4 periods/class */
+                        const limit = Number(form.max_workload) || 20;
+                        const over = assigned > limit;
+                        return (
+                          <p style={{ margin: '4px 0 0', fontSize: '0.8125rem', fontWeight: 700, color: over ? 'var(--ska-error)' : 'var(--ska-text-2)' }}>
+                            ~{assigned} periods assigned · {over ? '⚠ may exceed limit' : 'within limit'}
+                          </p>
+                        );
+                      })()}
+                    </div>
+                  </div>
+
+                  <p style={{ margin: '0 0 8px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--ska-text-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    Availability ({availSlotCount} slot{availSlotCount !== 1 ? 's' : ''} selected)
+                  </p>
+                  <div style={{ overflowX: 'auto' }}>
+                    <div style={{ minWidth: 360, display: 'grid', gridTemplateColumns: '46px repeat(8, 1fr)', gap: 4 }}>
+                      <div></div>
+                      {Array.from({ length: 8 }, (_, i) => (
+                        <div key={`hp${i}`} style={{ textAlign: 'center', fontSize: '0.625rem', color: 'var(--ska-text-3)', fontWeight: 700 }}>
+                          P{i + 1}
+                        </div>
+                      ))}
+                      {['Mon','Tue','Wed','Thu','Fri'].map(day => (
+                        <React.Fragment key={day}>
+                          <div style={{ fontSize: '0.6875rem', color: 'var(--ska-text-3)', fontWeight: 700, alignSelf: 'center' }}>{day}</div>
+                          {availability[day].map((on, pi) => (
+                            <button
+                              key={`${day}${pi}`}
+                              type="button"
+                              onClick={() => toggleAvail(day, pi)}
+                              title={`${day} P${pi + 1}: ${on ? 'available' : 'unavailable'}`}
+                              style={{
+                                height: 28, border: 'none', borderRadius: 4, cursor: 'pointer',
+                                background: on ? 'var(--ska-primary)' : 'var(--ska-surface-highest)',
+                                color: on ? 'var(--ska-surface)' : 'var(--ska-text-3)',
+                                fontSize: '0.6875rem', fontWeight: 700,
+                                transition: 'background 0.15s',
+                              }}
+                            >
+                              {on ? '✓' : ''}
+                            </button>
+                          ))}
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -4279,6 +5657,8 @@ function AddTeacherWizard({ school, onSave, onCancel }) {
                     <TeacherReviewRow label="Employee ID"   value={form.employee_id   || '—'} icon="badge"  />
                     <TeacherReviewRow label="Qualification" value={form.qualification || '—'} icon="school" />
                     <TeacherReviewRow label="Password"      value="••••••••"                  icon="lock"   />
+                    <TeacherReviewRow label="Max Workload"  value={`${form.max_workload || 20} periods/week`} icon="schedule" />
+                    <TeacherReviewRow label="Availability"  value={`${availSlotCount} of 40 slots`} icon="event_available" />
                   </div>
                 </div>
 
@@ -4617,7 +5997,9 @@ export function TeachersPage({ school }) {
   const [filter,         setFilter]         = React.useState('all');
   const [subView,        setSubView]        = React.useState('list');
   const [profileTeacher, setProfileTeacher] = React.useState(null);
+  const [profileFocus,   setProfileFocus]   = React.useState(null);
   const [editTeacher,    setEditTeacher]    = React.useState(null);
+  const [showBulkImport, setShowBulkImport] = React.useState(false);
   const searchTimer = React.useRef(null);
 
   const loadTeachers = React.useCallback(async (q, ov) => {
@@ -4669,6 +6051,11 @@ export function TeachersPage({ school }) {
     loadStats();
   };
 
+  /* Client-side filter for "active" (server only supports overloaded) */
+  const visibleTeachers = filter === 'active'
+    ? teachers.filter(t => !t.is_overloaded && t.is_active !== false)
+    : teachers;
+
   const statCards = stats ? [
     { icon: 'group',        label: 'Total Staff',  value: stats.total,       color: 'var(--ska-primary)' },
     { icon: 'check_circle', label: 'Active',       value: stats.active,      color: 'var(--ska-secondary)' },
@@ -4684,9 +6071,14 @@ export function TeachersPage({ school }) {
           <h1 className="ska-page-title">Teachers</h1>
           <p className="ska-page-sub">{school ? school.name : ''} · {teachers.length} staff members</p>
         </div>
-        <button className="ska-btn ska-btn--primary" onClick={() => setSubView('add')}>
-          <span className="ska-icon ska-icon--sm">group_add</span> Add Teacher
-        </button>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button className="ska-btn ska-btn--ghost" onClick={() => setShowBulkImport(true)}>
+            <span className="ska-icon ska-icon--sm">upload_file</span> Bulk Import
+          </button>
+          <button className="ska-btn ska-btn--primary" onClick={() => setSubView('add')}>
+            <span className="ska-icon ska-icon--sm">group_add</span> Add Teacher
+          </button>
+        </div>
       </div>
 
       {/* ── Analytics section: stats grid + workload ── */}
@@ -4705,6 +6097,17 @@ export function TeachersPage({ school }) {
               </div>
             ))}
           </div>
+          {stats.overloaded > 0 && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '10px 14px', borderRadius: 10,
+              background: 'var(--ska-error-dim)', border: '1px solid rgba(255,180,171,0.25)',
+              color: 'var(--ska-error)', fontSize: '0.85rem', fontWeight: 600,
+            }}>
+              <span className="ska-icon ska-icon--sm">warning</span>
+              {stats.overloaded} teacher{stats.overloaded > 1 ? 's' : ''} overloaded — consider reassigning periods
+            </div>
+          )}
           {teachers.length > 0 && <WorkloadAnalytics stats={stats} teachers={teachers} />}
         </div>
       )}
@@ -4717,7 +6120,11 @@ export function TeachersPage({ school }) {
         </div>
 
         <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
-          {[{ key: 'all', label: 'All Teachers' }, { key: 'overloaded', label: 'Overloaded' }].map(c => (
+          {[
+            { key: 'all',        label: 'All Teachers' },
+            { key: 'active',     label: 'Active' },
+            { key: 'overloaded', label: 'Overloaded' },
+          ].map(c => (
             <button key={c.key} onClick={() => setFilterLoad(c.key)} style={{
               flexShrink: 0, padding: '6px 14px', borderRadius: 20, border: 'none',
               fontWeight: 700, fontSize: '0.8125rem', cursor: 'pointer',
@@ -4729,7 +6136,7 @@ export function TeachersPage({ school }) {
         </div>
 
         <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--ska-text-3)', fontWeight: 600 }}>
-          {loading ? 'Loading…' : `${teachers.length} teacher${teachers.length !== 1 ? 's' : ''}`}
+          {loading ? 'Loading…' : `${visibleTeachers.length} teacher${visibleTeachers.length !== 1 ? 's' : ''}`}
         </p>
 
       {/* Card grid */}
@@ -4742,19 +6149,21 @@ export function TeachersPage({ school }) {
             <span className="ska-icon ska-icon--sm">refresh</span> Retry
           </button>
         </div>
-      ) : !loading && teachers.length === 0 ? (
+      ) : !loading && visibleTeachers.length === 0 ? (
         <div className="ska-empty" style={{ padding: '40px 0' }}>
           <span className="ska-icon ska-icon--xl" style={{ color: 'var(--ska-text-3)', marginBottom: 12 }}>school</span>
           <p className="ska-empty-title">No teachers found</p>
           <p className="ska-empty-desc">
-            {filter === 'overloaded' ? 'No overloaded teachers.' : 'Add your first teacher to get started.'}
+            {filter === 'overloaded' ? 'No overloaded teachers.'
+              : filter === 'active' ? 'No active teachers match.'
+              : 'Add your first teacher to get started.'}
           </p>
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
-          {teachers.map(t => (
+          {visibleTeachers.map(t => (
             <TeacherCard key={t.id} t={t}
-              onOpen={tc => { setProfileTeacher(tc); setSubView('profile'); }}
+              onOpen={(tc, f) => { setProfileTeacher(tc); setProfileFocus(f || null); setSubView('profile'); }}
               onEdit={tc => setEditTeacher(tc)}
               onDelete={handleDelete} />
           ))}
@@ -4766,13 +6175,28 @@ export function TeachersPage({ school }) {
       {subView === 'profile' && profileTeacher && (
         <TeacherProfilePanel
           teacher={profileTeacher}
-          onClose={() => { setSubView('list'); setProfileTeacher(null); }}
-          onEdit={tc => { setSubView('list'); setProfileTeacher(null); setEditTeacher(tc); }} />
+          focus={profileFocus}
+          onClose={() => { setSubView('list'); setProfileTeacher(null); setProfileFocus(null); }}
+          onEdit={tc => { setSubView('list'); setProfileTeacher(null); setProfileFocus(null); setEditTeacher(tc); }} />
       )}
 
       {/* Add wizard */}
       {subView === 'add' && (
-        <AddTeacherWizard school={school} onSave={afterSave} onCancel={() => setSubView('list')} />
+        <AddTeacherWizard
+          school={school}
+          existingTeachers={teachers}
+          onSave={afterSave}
+          onCancel={() => setSubView('list')} />
+      )}
+
+      {/* Bulk import modal */}
+      {showBulkImport && (
+        <BulkImportModal
+          existingEmails={teachers.map(t => (t.email || '').trim().toLowerCase()).filter(Boolean)}
+          existingTeachers={teachers}
+          onClose={() => setShowBulkImport(false)}
+          onImported={() => { setShowBulkImport(false); afterSave(); }}
+        />
       )}
 
       {/* Edit modal */}

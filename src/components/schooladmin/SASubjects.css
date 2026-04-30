@@ -1,0 +1,381 @@
+/* ============================================================
+   EK-SMS — Subject Management System Styles
+   Prefix: subj- (no conflicts with ska- / cls- design systems)
+   ============================================================ */
+
+/* ── Stats grid ── */
+.subj-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.subj-stat-card {
+  cursor: default;
+}
+
+/* ── Filters bar ── */
+.subj-filters {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.subj-search {
+  flex: 1;
+  min-width: 220px;
+}
+
+.subj-select {
+  height: 40px;
+  min-width: 130px;
+  padding: 0 10px;
+  border-radius: var(--ska-radius-sm);
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+/* ── Table wrapper ── */
+.subj-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Subject icon circle in table ── */
+.subj-icon-wrap {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ── Archived rows ── */
+.subj-row--archived td {
+  opacity: 0.5;
+}
+.subj-row--archived .cls-name-text {
+  text-decoration: line-through;
+  color: var(--ska-text-3);
+}
+
+/* ── Teachers pill(s) in table cell ── */
+.subj-teachers-cell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.subj-teacher-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--ska-secondary-dim);
+  color: var(--ska-secondary);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.subj-more-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.07);
+  color: var(--ska-text-3);
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+/* ── Student count cell ── */
+.subj-student-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ska-text-2);
+}
+
+/* ── High usage indicator ── */
+.subj-high-usage {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--ska-tertiary-dim);
+  color: var(--ska-tertiary);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* ============================================================
+   SUBJECT DETAILS PAGE
+   ============================================================ */
+
+/* ── 2-col detail grid ── */
+.subj-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.subj-detail-full {
+  grid-column: 1 / -1;
+}
+
+/* ── Info list in overview card ── */
+.subj-detail-info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.subj-info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--ska-border);
+}
+.subj-info-row:last-child { border-bottom: none; }
+
+.subj-info-row--col {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.subj-info-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ska-text-3);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.subj-info-val {
+  font-size: 0.875rem;
+  color: var(--ska-text-2);
+  font-weight: 600;
+  text-align: right;
+}
+.subj-info-row--col .subj-info-val {
+  text-align: left;
+  margin-top: 4px;
+  line-height: 1.55;
+  color: var(--ska-text-3);
+  font-weight: 400;
+}
+
+/* ── Teacher list in details ── */
+.subj-teacher-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ── Timetable mini grid ── */
+.subj-timetable-mini {
+  border: 1px solid var(--ska-border);
+  border-radius: var(--ska-radius-sm);
+  overflow: hidden;
+}
+
+.subj-tt-head {
+  display: grid;
+  grid-template-columns: 52px repeat(5, 1fr);
+  background: var(--ska-surface-high);
+  border-bottom: 1px solid var(--ska-border);
+}
+
+.subj-tt-period-col {
+  padding: 7px 6px;
+}
+
+.subj-tt-day {
+  padding: 7px 4px;
+  text-align: center;
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ska-text-2);
+  border-left: 1px solid var(--ska-border);
+}
+
+.subj-tt-row {
+  display: grid;
+  grid-template-columns: 52px repeat(5, 1fr);
+  border-bottom: 1px solid var(--ska-border);
+}
+.subj-tt-row:last-child { border-bottom: none; }
+
+.subj-tt-time {
+  padding: 8px 6px;
+  font-size: 0.5625rem;
+  color: var(--ska-text-3);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+}
+
+.subj-tt-cell {
+  border-left: 1px solid var(--ska-border);
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ska-surface-card);
+  transition: background 0.15s;
+  padding: 2px;
+}
+
+.subj-tt-cell--active {
+  background: var(--ska-primary-dim);
+}
+
+.subj-tt-label {
+  font-size: 0.5rem;
+  font-weight: 700;
+  color: var(--ska-primary);
+  text-align: center;
+  line-height: 1.2;
+  padding: 2px 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+/* ── Assessments placeholder ── */
+.subj-assess-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 28px 16px;
+  text-align: center;
+  gap: 6px;
+}
+
+/* ============================================================
+   MODALS
+   ============================================================ */
+
+/* Section divider inside modal */
+.subj-modal-section {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--ska-border);
+}
+
+.subj-modal-section-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--ska-text-2);
+  letter-spacing: 0.02em;
+  margin-bottom: 10px;
+}
+
+.subj-code-hint {
+  font-size: 0.6875rem;
+  font-weight: 400;
+  color: var(--ska-text-3);
+  margin-left: 4px;
+}
+
+/* ── Smart suggestions ── */
+.subj-smart-hint {
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: var(--ska-tertiary);
+  background: var(--ska-tertiary-dim);
+  padding: 1px 6px;
+  border-radius: 999px;
+  margin-left: auto;
+}
+
+.subj-suggested-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.5625rem;
+  font-weight: 700;
+  color: var(--ska-tertiary);
+  background: var(--ska-tertiary-dim);
+  padding: 1px 5px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.subj-assign-suggested {
+  outline: 1px solid var(--ska-tertiary);
+  background: var(--ska-tertiary-dim) !important;
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 1024px) {
+  .subj-stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .subj-detail-grid { grid-template-columns: 1fr; }
+  .subj-detail-full { grid-column: auto; }
+}
+
+@media (max-width: 600px) {
+  .subj-stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .subj-filters    { gap: 8px; }
+  .subj-search     { min-width: 100%; }
+  .subj-select     { flex: 1; min-width: unset; }
+
+  /* Table: card-style rows on mobile */
+  .subj-table-wrap .ska-table thead { display: none; }
+  .subj-table-wrap .ska-table tbody tr {
+    display: block;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--ska-border);
+  }
+  .subj-table-wrap .ska-table tbody td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    font-size: 0.8125rem;
+    border: none;
+  }
+  .subj-table-wrap .ska-table tbody td:first-child {
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--ska-border);
+    margin-bottom: 4px;
+  }
+
+  .subj-detail-grid { grid-template-columns: 1fr; }
+  .subj-detail-full { grid-column: auto; }
+
+  .subj-timetable-mini {
+    overflow-x: auto;
+  }
+  .subj-tt-head,
+  .subj-tt-row {
+    min-width: 340px;
+  }
+}
+
+@media (max-width: 400px) {
+  .subj-stats-grid { grid-template-columns: 1fr; }
+}

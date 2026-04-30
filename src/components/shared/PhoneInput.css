@@ -1,0 +1,105 @@
+/* ============================================================
+   EK-SMS · Shared PhoneInput
+   Portal-rendered dropdown — must stay independent of any
+   ancestor `transform` or `overflow` constraints.
+   ============================================================ */
+.phn-wrap { position: relative; display: flex; }
+.phn-trigger {
+  display: flex; align-items: center; gap: 5px;
+  padding: 0 10px;
+  border-radius: 8px 0 0 8px;
+  border: 1px solid var(--ska-border);
+  border-right: none;
+  background: var(--ska-surface-high);
+  cursor: pointer; flex-shrink: 0; min-height: 40px;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s;
+  color: var(--ska-text);
+}
+.phn-trigger:hover:not(:disabled) { background: var(--ska-surface-highest); }
+.phn-trigger:disabled { opacity: 0.55; cursor: not-allowed; }
+.phn-trigger.is-open { background: var(--ska-primary-dim); border-color: var(--ska-primary); }
+.phn-flag { font-size: 1.25rem; line-height: 1; }
+.phn-dial { font-size: 0.8125rem; color: var(--ska-text-3); font-weight: 700; }
+.phn-trigger .ska-icon { font-size: 14px; color: var(--ska-text-3); }
+
+.phn-input { border-radius: 0 8px 8px 0; flex: 1; min-width: 0; }
+
+/* ── Portal-rendered dropdown ────────────────────────────────── */
+.phn-drop {
+  position: fixed;
+  z-index: 99999;
+  background: var(--ska-surface);
+  border: 1px solid var(--ska-border);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.32);
+  overflow: hidden;
+  display: flex; flex-direction: column;
+  animation: phn-fade 0.12s ease;
+}
+.phn-drop.is-flipped { box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.32); }
+@keyframes phn-fade { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
+.phn-drop__search {
+  position: relative;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--ska-border);
+  flex-shrink: 0;
+}
+.phn-drop__search .ska-icon {
+  position: absolute; left: 18px; top: 50%; transform: translateY(-50%);
+  font-size: 16px; color: var(--ska-text-3); pointer-events: none;
+}
+.phn-drop__search input {
+  width: 100%;
+  border: 1px solid var(--ska-border); border-radius: 8px;
+  padding: 7px 10px 7px 30px; font-size: 0.8125rem;
+  background: var(--ska-surface-high); color: var(--ska-text);
+  outline: none; box-sizing: border-box;
+}
+.phn-drop__search input:focus { border-color: var(--ska-primary); }
+
+.phn-drop__list { overflow-y: auto; flex: 1; scrollbar-width: thin; }
+
+.phn-drop__group {
+  padding: 8px 14px 4px;
+  font-size: 0.625rem; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--ska-primary);
+  background: var(--ska-surface);
+}
+.phn-drop__group:not(:first-child) {
+  border-top: 1px solid var(--ska-border);
+  padding-top: 10px;
+}
+
+.phn-drop__empty {
+  padding: 20px 16px;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--ska-text-3);
+}
+
+.phn-row {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%;
+  padding: 9px 14px;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--ska-text);
+  background: transparent;
+  transition: background 0.12s;
+}
+.phn-row:hover { background: var(--ska-surface-high); }
+.phn-row.is-selected { background: var(--ska-primary-dim); }
+.phn-row.is-selected:hover { background: var(--ska-primary-dim); }
+.phn-row__flag { font-size: 1.25rem; line-height: 1; flex-shrink: 0; }
+.phn-row__name { flex: 1; font-weight: 400; }
+.phn-row.is-selected .phn-row__name { font-weight: 700; }
+.phn-row__dial { font-size: 0.8125rem; color: var(--ska-text-3); flex-shrink: 0; font-family: monospace; }
+
+@media (max-width: 360px) {
+  .phn-drop { width: calc(100vw - 16px) !important; }
+}

@@ -1,0 +1,512 @@
+/* ============================================================
+   EK-SMS — Class Management System Styles
+   Prefix: cls-  (no conflicts with ska- design system)
+   ============================================================ */
+
+/* ── Stats grid ── */
+.cls-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.cls-stat-card {
+  cursor: default;
+}
+
+/* ── Filters bar ── */
+.cls-filters {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.cls-search-box {
+  flex: 1;
+  min-width: 200px;
+  background: var(--ska-surface-card);
+  border: 1px solid var(--ska-border);
+  border-radius: var(--ska-radius-sm);
+  padding: 0 12px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: border-color 0.15s;
+}
+.cls-search-box:focus-within {
+  border-color: var(--ska-secondary);
+}
+.cls-search-box .ska-icon {
+  font-size: 18px;
+  color: var(--ska-text-3);
+  flex-shrink: 0;
+}
+.cls-search-box .ska-search-input {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--ska-text);
+  font-family: var(--ska-font-body);
+  font-size: 0.875rem;
+}
+.cls-search-box .ska-search-input::placeholder { color: var(--ska-text-3); }
+
+.cls-clear-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--ska-text-3);
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+.cls-clear-btn:hover { color: var(--ska-text); }
+.cls-clear-btn .ska-icon { font-size: 16px; }
+
+.cls-select {
+  height: 40px;
+  padding: 0 10px;
+  border-radius: var(--ska-radius-sm);
+  font-size: 0.8125rem;
+  min-width: 130px;
+  cursor: pointer;
+}
+
+/* ── Table wrapper ── */
+.cls-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Avatar circle ── */
+.cls-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--ska-primary-dim);
+  color: var(--ska-primary);
+  font-family: var(--ska-font-headline);
+  font-weight: 800;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  user-select: none;
+}
+.cls-avatar--sm  { width: 30px; height: 30px; font-size: 0.75rem; }
+.cls-avatar--lg  { width: 48px; height: 48px; font-size: 1.1rem; }
+.cls-avatar--teal {
+  background: var(--ska-secondary-dim);
+  color: var(--ska-secondary);
+}
+
+/* ── Name cell ── */
+.cls-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.cls-name-text {
+  font-weight: 700;
+  color: var(--ska-text);
+  font-size: 0.875rem;
+}
+.cls-name-meta {
+  font-size: 0.6875rem;
+  color: var(--ska-text-3);
+  margin-top: 2px;
+}
+
+/* ── Capacity cell ── */
+.cls-cap-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cls-cap-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8125rem;
+  color: var(--ska-text-2);
+}
+.cls-progress-track {
+  height: 5px;
+}
+.cls-cap-warn {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #ffb786;
+  margin-top: 2px;
+}
+.cls-cap-warn--red { color: var(--ska-error); }
+
+/* ── Teacher cell ── */
+.cls-teacher-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cls-teacher-name {
+  font-size: 0.8125rem;
+  color: var(--ska-text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+.cls-unassigned {
+  font-size: 0.8125rem;
+  color: var(--ska-text-3);
+  font-style: italic;
+}
+
+/* ── Row actions ── */
+.cls-row-actions {
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+}
+.cls-row-actions .ska-btn {
+  min-height: unset;
+  padding: 5px 8px;
+}
+
+/* ── Section count badge ── */
+.cls-section-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ska-primary-dim);
+  color: var(--ska-primary);
+  font-size: 0.625rem;
+  font-weight: 800;
+  border-radius: 999px;
+  padding: 1px 7px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+/* ── Back button ── */
+.cls-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  color: var(--ska-secondary);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 4px;
+  font-family: var(--ska-font-body);
+  transition: opacity 0.15s;
+}
+.cls-back-btn:hover { opacity: 0.75; }
+.cls-back-btn .ska-icon { font-size: 18px; }
+
+/* ── Detail overview grid ── */
+.cls-detail-overview {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+/* ── Detail sections grid ── */
+.cls-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* ── Member list (students) ── */
+.cls-member-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.cls-member-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: var(--ska-radius-sm);
+  transition: background 0.15s;
+}
+.cls-member-item:hover {
+  background: var(--ska-surface-low);
+}
+.cls-member-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ska-text);
+}
+.cls-member-id {
+  font-size: 0.6875rem;
+  color: var(--ska-text-3);
+  margin-top: 1px;
+}
+
+/* ── Subject list ── */
+.cls-subject-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cls-subject-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--ska-radius-sm);
+  background: var(--ska-surface-low);
+  transition: background 0.15s;
+}
+.cls-subject-item:hover { background: var(--ska-surface-high); }
+.cls-subject-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ska-primary);
+  flex-shrink: 0;
+}
+.cls-subject-name {
+  font-size: 0.875rem;
+  color: var(--ska-text-2);
+  flex: 1;
+}
+
+/* ── Teacher profile in detail ── */
+.cls-teacher-profile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px;
+  border-radius: var(--ska-radius-sm);
+  background: var(--ska-surface-low);
+}
+.cls-teacher-fullname {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--ska-text);
+}
+.cls-teacher-email {
+  font-size: 0.8125rem;
+  color: var(--ska-text-3);
+  margin-top: 2px;
+}
+.cls-teacher-dept {
+  font-size: 0.75rem;
+  color: var(--ska-secondary);
+  margin-top: 4px;
+  font-weight: 600;
+}
+
+/* ── Timetable preview ── */
+.cls-timetable {
+  border: 1px solid var(--ska-border);
+  border-radius: var(--ska-radius-sm);
+  overflow: hidden;
+}
+.cls-tt-header {
+  display: grid;
+  grid-template-columns: 80px repeat(5, 1fr);
+  background: var(--ska-surface-high);
+  border-bottom: 1px solid var(--ska-border);
+}
+.cls-tt-time-col { padding: 8px; }
+.cls-tt-day {
+  padding: 8px 4px;
+  text-align: center;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ska-text-2);
+  border-left: 1px solid var(--ska-border);
+}
+.cls-tt-row {
+  display: grid;
+  grid-template-columns: 80px repeat(5, 1fr);
+  border-bottom: 1px solid var(--ska-border);
+}
+.cls-tt-row:last-child { border-bottom: none; }
+.cls-tt-time {
+  padding: 10px 8px;
+  font-size: 0.6875rem;
+  color: var(--ska-text-3);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+}
+.cls-tt-cell {
+  border-left: 1px solid var(--ska-border);
+  min-height: 36px;
+  background: var(--ska-surface-card);
+  transition: background 0.15s;
+  cursor: default;
+}
+.cls-tt-cell:hover { background: var(--ska-primary-dim); }
+
+/* ── Add/Edit modal: hint text ── */
+.cls-hint {
+  font-size: 0.6875rem;
+  font-weight: 400;
+  color: var(--ska-text-3);
+}
+
+/* ── Subjects multi-select section (in modal) ── */
+.cls-subjects-section {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--ska-border);
+}
+.cls-subjects-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--ska-text-2);
+  letter-spacing: 0.02em;
+  margin-bottom: 10px;
+}
+
+/* ── Subject / feature chips ── */
+.cls-chips-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.cls-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--ska-surface-low);
+  border: 1px solid var(--ska-border);
+  color: var(--ska-text-2);
+  font-size: 0.8125rem;
+  font-family: var(--ska-font-body);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.cls-chip:hover {
+  background: var(--ska-primary-dim);
+  border-color: rgba(173,198,255,0.3);
+  color: var(--ska-primary);
+}
+.cls-chip--selected {
+  background: var(--ska-primary-dim);
+  border-color: rgba(173,198,255,0.4);
+  color: var(--ska-primary);
+}
+.cls-chip--selected .ska-icon { font-size: 14px; }
+.cls-chip-code {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--ska-text-3);
+  background: rgba(255,255,255,0.06);
+  padding: 1px 5px;
+  border-radius: 4px;
+  margin-left: 2px;
+}
+.cls-chip--selected .cls-chip-code { color: var(--ska-primary); }
+
+/* ── Assign list (students / teacher modal) ── */
+.cls-assign-list {
+  max-height: 360px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.14) transparent;
+  border: 1px solid var(--ska-border);
+  border-radius: var(--ska-radius-sm);
+  padding: 4px;
+  margin-bottom: 4px;
+}
+.cls-assign-list::-webkit-scrollbar       { width: 4px; }
+.cls-assign-list::-webkit-scrollbar-track  { background: transparent; }
+.cls-assign-list::-webkit-scrollbar-thumb  { background: rgba(255,255,255,0.14); border-radius: 4px; }
+
+.cls-assign-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--ska-radius-sm);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.cls-assign-item:hover { background: var(--ska-surface-low); }
+.cls-assign-item--checked { background: var(--ska-primary-dim) !important; }
+.cls-assign-item input[type="checkbox"],
+.cls-assign-item input[type="radio"] {
+  accent-color: var(--ska-primary);
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 900px) {
+  .cls-stats-grid       { grid-template-columns: 1fr 1fr; }
+  .cls-detail-overview  { grid-template-columns: 1fr 1fr; }
+  .cls-detail-grid      { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 600px) {
+  .cls-stats-grid      { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .cls-filters         { gap: 8px; }
+  .cls-search-box      { min-width: 100%; }
+  .cls-select          { min-width: unset; flex: 1; }
+
+  /* Table: card-style on mobile */
+  .cls-table-wrap .ska-table thead { display: none; }
+  .cls-table-wrap .ska-table tbody tr {
+    display: block;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--ska-border);
+  }
+  .cls-table-wrap .ska-table tbody td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    font-size: 0.8125rem;
+    border: none;
+  }
+  .cls-table-wrap .ska-table tbody td:first-child {
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--ska-border);
+    margin-bottom: 4px;
+  }
+  .cls-row-actions { flex-wrap: wrap; gap: 6px; }
+
+  .cls-detail-overview  { grid-template-columns: 1fr 1fr; }
+  .cls-tt-header { grid-template-columns: 60px repeat(5, 1fr); }
+  .cls-tt-row    { grid-template-columns: 60px repeat(5, 1fr); }
+  .cls-tt-time   { font-size: 0.5625rem; padding: 8px 4px; }
+}
+
+@media (max-width: 400px) {
+  .cls-stats-grid      { grid-template-columns: 1fr; }
+  .cls-detail-overview { grid-template-columns: 1fr; }
+}

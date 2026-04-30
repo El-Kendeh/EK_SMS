@@ -5,7 +5,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ApiClient from '../../api/client';
 import { BrandColorPicker, LogoUpload } from '../BrandingComponents';
-import SECURITY_CONFIG from '../../config/security';
 
 /* ── Shared icon helper ───────────────────────────────────── */
 const Ic = ({ name, size, className = '', style }) => (
@@ -1705,149 +1704,745 @@ export function SettingsPage({ school: schoolProp, onSchoolUpdate }) {
 }
 
 /* ============================================================
-   SYLLABUS / CURRICULUM PAGE
+   SYLLABUS / CURRICULUM PAGE — Curriculum Management System
    ============================================================ */
+
+const SYL_TERMS = ['Term 1', 'Term 2', 'Term 3'];
+const SYL_STATUSES = ['not_started', 'in_progress', 'completed'];
+
+const SYL_STATUS_META = {
+  completed:   { label: 'Completed',   icon: 'check_circle',     color: 'var(--ska-green)',     bg: 'var(--ska-green-dim)',     mark: '✔' },
+  in_progress: { label: 'In Progress', icon: 'pending',          color: '#F59E0B',              bg: 'rgba(245,158,11,0.14)',    mark: '⏳' },
+  not_started: { label: 'Not Started', icon: 'radio_button_unchecked', color: 'var(--ska-error)', bg: 'var(--ska-error-dim)',   mark: '✖' },
+};
+
+const SYL_PRIORITY_META = {
+  high:   { label: 'High',   color: 'var(--ska-error)',    bg: 'var(--ska-error-dim)' },
+  medium: { label: 'Medium', color: '#F59E0B',             bg: 'rgba(245,158,11,0.14)' },
+  low:    { label: 'Low',    color: 'var(--ska-secondary)',bg: 'var(--ska-secondary-dim)' },
+};
+
+const SYL_MOCK_TEACHERS = ['Mr. Johnson', 'Mrs. Kamara', 'Mr. Bangura', 'Ms. Conteh', 'Mr. Sesay'];
+
+/* Mock seed: deterministic curriculum per subject keyword. */
+function sylSeedTopics(subjectName, classId) {
+  const s = (subjectName || '').toLowerCase();
+  const tNow = Date.now();
+  const teacher = SYL_MOCK_TEACHERS[(classId?.toString().length || 0) % SYL_MOCK_TEACHERS.length];
+  const mk = (i, title, group, term, status, priority, weeks, desc) => ({
+    id: tNow + i,
+    title, group, term, status, priority,
+    durationWeeks: weeks,
+    description: desc || '',
+    teacher,
+    dateCovered: status === 'completed' ? new Date(Date.now() - (8 - i) * 86400000 * 3).toISOString().slice(0, 10) : null,
+    lastUpdatedBy: teacher,
+  });
+
+  if (s.includes('math')) return [
+    mk(1, 'Linear Equations',     'Algebra',    'Term 1', 'completed',   'high',   2, 'Solve and graph linear equations in one and two variables.'),
+    mk(2, 'Quadratic Equations',  'Algebra',    'Term 1', 'in_progress', 'high',   3, 'Factoring, completing the square, quadratic formula.'),
+    mk(3, 'Angles & Triangles',   'Geometry',   'Term 1', 'completed',   'medium', 2, 'Properties of angles, triangle congruence.'),
+    mk(4, 'Circles',              'Geometry',   'Term 2', 'not_started', 'medium', 2, 'Tangents, chords, sectors.'),
+    mk(5, 'Trigonometric Ratios', 'Trigonometry','Term 2','not_started', 'high',   3, 'Sin, cos, tan and their applications.'),
+    mk(6, 'Probability Basics',   'Statistics', 'Term 3', 'not_started', 'low',    2, 'Sample spaces, probability rules.'),
+    mk(7, 'Mean / Median / Mode', 'Statistics', 'Term 3', 'not_started', 'medium', 1, 'Measures of central tendency.'),
+  ];
+  if (s.includes('eng')) return [
+    mk(1, 'Parts of Speech',      'Grammar',    'Term 1', 'completed',   'medium', 2, ''),
+    mk(2, 'Sentence Structure',   'Grammar',    'Term 1', 'in_progress', 'high',   2, ''),
+    mk(3, 'Comprehension',        'Reading',    'Term 1', 'completed',   'high',   2, ''),
+    mk(4, 'Essay Writing',        'Composition','Term 2', 'not_started', 'high',   3, ''),
+    mk(5, 'Poetry Analysis',      'Literature', 'Term 2', 'not_started', 'low',    2, ''),
+    mk(6, 'Oral Presentation',    'Speaking',   'Term 3', 'not_started', 'medium', 2, ''),
+  ];
+  if (s.includes('sci') || s.includes('phys') || s.includes('chem') || s.includes('bio')) return [
+    mk(1, 'Scientific Method',    'Foundations','Term 1', 'completed',   'medium', 1, ''),
+    mk(2, 'Matter & Its States',  'Chemistry',  'Term 1', 'in_progress', 'high',   2, ''),
+    mk(3, 'Forces & Motion',      'Physics',    'Term 2', 'not_started', 'high',   3, ''),
+    mk(4, 'Cells & Tissues',      'Biology',    'Term 2', 'not_started', 'medium', 2, ''),
+    mk(5, 'Ecosystems',           'Biology',    'Term 3', 'not_started', 'low',    2, ''),
+  ];
+  /* generic fallback */
+  return [
+    mk(1, `${subjectName} — Introduction`, 'General', 'Term 1', 'completed',   'medium', 1, ''),
+    mk(2, `${subjectName} — Core Concepts`,'General', 'Term 1', 'in_progress', 'high',   3, ''),
+    mk(3, `${subjectName} — Practice`,     'General', 'Term 2', 'not_started', 'medium', 2, ''),
+    mk(4, `${subjectName} — Advanced`,     'General', 'Term 3', 'not_started', 'low',    2, ''),
+  ];
+}
+
+/* ── Status pill ── */
+function SylStatusPill({ status }) {
+  const m = SYL_STATUS_META[status] || SYL_STATUS_META.not_started;
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 6,
+      padding: '3px 10px', borderRadius: 20,
+      fontSize: '0.7rem', fontWeight: 700,
+      background: m.bg, color: m.color,
+    }}>
+      <span style={{ fontSize: '0.85rem', lineHeight: 1 }}>{m.mark}</span>
+      {m.label}
+    </span>
+  );
+}
+
+/* ── Priority pill ── */
+function SylPriorityPill({ priority }) {
+  const m = SYL_PRIORITY_META[priority] || SYL_PRIORITY_META.medium;
+  return (
+    <span style={{
+      padding: '2px 8px', borderRadius: 20,
+      fontSize: '0.65rem', fontWeight: 800, letterSpacing: 0.4, textTransform: 'uppercase',
+      background: m.bg, color: m.color,
+    }}>{m.label}</span>
+  );
+}
+
+/* ── Coverage bar ── */
+function SylCoverageBar({ pct }) {
+  const safe = Math.max(0, Math.min(100, pct || 0));
+  const color = safe >= 75 ? 'var(--ska-green)' : safe >= 40 ? '#F59E0B' : 'var(--ska-error)';
+  return (
+    <div style={{ marginTop: 10 }}>
+      <div style={{ height: 8, background: 'var(--ska-surface-high)', borderRadius: 20, overflow: 'hidden' }}>
+        <div style={{ width: `${safe}%`, height: '100%', background: color, transition: 'width .35s ease' }} />
+      </div>
+    </div>
+  );
+}
+
+/* ── Searchable select (lightweight, no extra deps) ── */
+function SylSearchableSelect({ label, value, onChange, options, placeholder }) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState('');
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const onDoc = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, []);
+
+  const selected = options.find(o => String(o.id) === String(value));
+  const filtered = q.trim()
+    ? options.filter(o => o.name.toLowerCase().includes(q.toLowerCase()))
+    : options;
+
+  return (
+    <div className="ska-form-group" style={{ flex: 1, minWidth: 180, margin: 0, position: 'relative' }} ref={ref}>
+      <span>{label}</span>
+      <button
+        type="button"
+        className="ska-input"
+        onClick={() => setOpen(o => !o)}
+        style={{
+          textAlign: 'left', cursor: 'pointer', display: 'flex',
+          alignItems: 'center', justifyContent: 'space-between', width: '100%',
+        }}
+      >
+        <span style={{ color: selected ? 'var(--ska-text)' : 'var(--ska-text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {selected ? selected.name : (placeholder || `— Select ${label} —`)}
+        </span>
+        <Ic name={open ? 'expand_less' : 'expand_more'} size="sm" style={{ color: 'var(--ska-text-3)' }} />
+      </button>
+      {open && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 20,
+          background: 'var(--ska-surface-card)', border: '1px solid var(--ska-border)',
+          borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+          maxHeight: 280, display: 'flex', flexDirection: 'column', overflow: 'hidden',
+        }}>
+          <div style={{ padding: 8, borderBottom: '1px solid var(--ska-border)' }}>
+            <input
+              autoFocus
+              className="ska-input"
+              placeholder={`Search ${label.toLowerCase()}…`}
+              value={q}
+              onChange={e => setQ(e.target.value)}
+              style={{ height: 34, fontSize: '0.85rem' }}
+            />
+          </div>
+          <div style={{ overflowY: 'auto', maxHeight: 220 }}>
+            {filtered.length === 0 ? (
+              <div style={{ padding: 14, color: 'var(--ska-text-3)', fontSize: '0.8125rem', textAlign: 'center' }}>
+                No matches
+              </div>
+            ) : filtered.map(o => (
+              <button
+                key={o.id}
+                type="button"
+                onClick={() => { onChange(String(o.id)); setOpen(false); setQ(''); }}
+                style={{
+                  display: 'block', width: '100%', textAlign: 'left',
+                  padding: '9px 12px', background: String(o.id) === String(value) ? 'var(--ska-primary-dim)' : 'transparent',
+                  color: String(o.id) === String(value) ? 'var(--ska-primary)' : 'var(--ska-text)',
+                  border: 'none', borderBottom: '1px solid var(--ska-border)', cursor: 'pointer',
+                  fontSize: '0.875rem',
+                }}
+              >
+                {o.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function SyllabusPage({ school }) {
   const [classes,  setClasses]  = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [selClass, setSelClass] = useState('');
   const [selSubj,  setSelSubj]  = useState('');
-  const [file,     setFile]     = useState(null);
-  const [uploading, setUploading] = useState(false);
-  const [syllabuses, setSyllabuses] = useState([]);
-  const [banner, setBanner] = useState(null);
+  const [topicsByKey, setTopicsByKey] = useState({}); // { "classId|subjId": [topics] }
+  const [modal,    setModal]    = useState(null); // null | 'add' | topic-object
+  const [form,     setForm]     = useState({
+    title: '', description: '', term: 'Term 1',
+    durationWeeks: 2, priority: 'medium', group: 'General',
+  });
+  const [view,     setView]     = useState('list');   // 'list' | 'timeline'
+  const [search,   setSearch]   = useState('');
+  const [fStatus,  setFStatus]  = useState('all');
+  const [fTerm,    setFTerm]    = useState('all');
+  const [fPriority,setFPriority]= useState('all');
 
-  const loadData = useCallback(() => {
+  useEffect(() => {
     ApiClient.get('/api/school/classes/').then(d => setClasses(d.classes   || [])).catch(() => {});
     ApiClient.get('/api/school/subjects/').then(d => setSubjects(d.subjects || [])).catch(() => {});
-    ApiClient.get('/api/school/syllabus/').then(d => setSyllabuses(d.syllabuses || [])).catch(() => {});
   }, []);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  const ready = !!(selClass && selSubj);
+  const key   = ready ? `${selClass}|${selSubj}` : '';
+  const selectedClass = classes.find(c  => String(c.id) === String(selClass));
+  const selectedSubj  = subjects.find(s => String(s.id) === String(selSubj));
+  const selectedClassName = selectedClass?.name || '';
+  const selectedSubjName  = selectedSubj?.name  || '';
+  const teacher = ready
+    ? SYL_MOCK_TEACHERS[((selectedSubjName.length || 0) + Number(selClass || 0)) % SYL_MOCK_TEACHERS.length]
+    : '';
 
-  const handleUpload = async () => {
-    if (!selClass || !selSubj || !file) {
-      setBanner({ type: 'err', text: 'Please select class, subject and a file.' });
-      return;
-    }
-    
-    setUploading(true);
-    setBanner(null);
-    
-    const formData = new FormData();
-    formData.append('classroom_id', selClass);
-    formData.append('subject_id', selSubj);
-    formData.append('file', file);
-    
-    try {
-      // Custom fetch because ApiClient usually sends JSON
-      const token = localStorage.getItem('token') || '';
-      const response = await fetch(`${SECURITY_CONFIG.API_URL}/api/school/syllabus/upload/`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        setBanner({ type: 'ok', text: 'Syllabus uploaded and AI generated lesson plans successfully.' });
-        setFile(null);
-        loadData();
-      } else {
-        setBanner({ type: 'err', text: data.message || 'Upload failed.' });
-      }
-    } catch (err) {
-      setBanner({ type: 'err', text: 'Error connecting to server.' });
-    }
-    setUploading(false);
+  /* Seed mock data the first time a class+subject pair is opened. */
+  useEffect(() => {
+    if (!ready) return;
+    if (topicsByKey[key]) return;
+    setTopicsByKey(prev => ({ ...prev, [key]: sylSeedTopics(selectedSubjName, selClass) }));
+  }, [ready, key, topicsByKey, selectedSubjName, selClass]);
+
+  const topics = ready ? (topicsByKey[key] || []) : [];
+  const setTopics = (updater) =>
+    setTopicsByKey(prev => ({
+      ...prev,
+      [key]: typeof updater === 'function' ? updater(prev[key] || []) : updater,
+    }));
+
+  /* ── Derived stats ── */
+  const total      = topics.length;
+  const completed  = topics.filter(t => t.status === 'completed').length;
+  const inProgress = topics.filter(t => t.status === 'in_progress').length;
+  const notStarted = topics.filter(t => t.status === 'not_started').length;
+  const pending    = inProgress + notStarted;
+  const coverage   = total ? Math.round(completed / total * 100) : 0;
+
+  /* ── Filter / search ── */
+  const visible = topics.filter(t => {
+    if (fStatus   !== 'all' && t.status   !== fStatus)   return false;
+    if (fTerm     !== 'all' && t.term     !== fTerm)     return false;
+    if (fPriority !== 'all' && t.priority !== fPriority) return false;
+    if (search.trim() && !`${t.title} ${t.group} ${t.description}`.toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
+
+  /* ── Group visible topics for the list view: term → group → topics ── */
+  const grouped = SYL_TERMS.map(term => {
+    const inTerm = visible.filter(t => t.term === term);
+    const groups = {};
+    inTerm.forEach(t => { (groups[t.group] = groups[t.group] || []).push(t); });
+    return { term, groups, count: inTerm.length };
+  });
+
+  /* ── Per-term analytics (uses unfiltered topics) ── */
+  const termStats = SYL_TERMS.map(term => {
+    const list = topics.filter(t => t.term === term);
+    const done = list.filter(t => t.status === 'completed').length;
+    return { term, total: list.length, completed: done, pct: list.length ? Math.round(done / list.length * 100) : 0 };
+  });
+
+  /* ── Alerts ── */
+  const alerts = [];
+  if (total > 0 && coverage < 30) alerts.push({ severity: 'high', text: 'Behind schedule — coverage is below 30%.' });
+  if (pending > 0 && pending / Math.max(total, 1) > 0.6) alerts.push({ severity: 'medium', text: `Too many pending topics (${pending} of ${total}).` });
+
+  /* ── Actions ── */
+  const openAdd = () => {
+    setForm({ title: '', description: '', term: 'Term 1', durationWeeks: 2, priority: 'medium', group: 'General' });
+    setModal('add');
   };
+  const openEdit = (t) => {
+    setForm({
+      title: t.title, description: t.description || '',
+      term: t.term, durationWeeks: t.durationWeeks || 2,
+      priority: t.priority || 'medium', group: t.group || 'General',
+    });
+    setModal(t);
+  };
+  const handleSave = () => {
+    if (!form.title.trim()) return;
+    if (modal === 'add') {
+      setTopics(ts => [...ts, {
+        id: Date.now(), ...form,
+        durationWeeks: Number(form.durationWeeks) || 1,
+        status: 'not_started', dateCovered: null,
+        teacher, lastUpdatedBy: teacher,
+      }]);
+    } else {
+      setTopics(ts => ts.map(t => t.id === modal.id ? {
+        ...t, ...form,
+        durationWeeks: Number(form.durationWeeks) || 1,
+        lastUpdatedBy: teacher,
+      } : t));
+    }
+    setModal(null);
+  };
+  const setStatus = (id, status) => {
+    const today = new Date().toISOString().slice(0, 10);
+    setTopics(ts => ts.map(t => t.id === id ? {
+      ...t, status,
+      dateCovered: status === 'completed' ? today : null,
+      lastUpdatedBy: teacher,
+    } : t));
+  };
+  const deleteTopic = id => { if (window.confirm('Remove this topic?')) setTopics(ts => ts.filter(t => t.id !== id)); };
 
-  const ready = selClass && selSubj;
-  
-  // Filter syllabuses for current selection, or show all if none selected
-  const displaySyllabuses = (selClass && selSubj) 
-    ? syllabuses.filter(s => s.classroom === classes.find(c=>c.id==selClass)?.name && s.subject === subjects.find(sub=>sub.id==selSubj)?.name)
-    : syllabuses;
+  /* ── Build week → topic map for timeline ── */
+  const buildTimeline = () => {
+    const result = SYL_TERMS.map(term => {
+      const items = topics.filter(t => t.term === term);
+      let cursor = 1;
+      const lanes = items.map(t => {
+        const span = { start: cursor, end: cursor + (t.durationWeeks || 1) - 1, topic: t };
+        cursor += (t.durationWeeks || 1);
+        return span;
+      });
+      return { term, lanes, totalWeeks: Math.max(cursor - 1, 1) };
+    });
+    return result;
+  };
+  const timeline = ready ? buildTimeline() : [];
 
   return (
     <div className="ska-content">
       <div className="ska-page-head">
         <div>
-          <h1 className="ska-page-title">Syllabus &amp; Lesson Plans</h1>
-          <p className="ska-page-sub">{school?.name} — Upload syllabus (Word/PDF) and generate AI lesson plans</p>
+          <h1 className="ska-page-title">Syllabus &amp; Curriculum</h1>
+          <p className="ska-page-sub">{school?.name} — Plan, track and monitor what is taught.</p>
         </div>
-      </div>
-
-      <Banner msg={banner} />
-
-      {/* Selectors and Upload */}
-      <div className="ska-card ska-card-pad" style={{ marginBottom: 20 }}>
-        <h2 className="ska-card-title" style={{ marginBottom: 16 }}>Upload Syllabus</h2>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          <label className="ska-form-group" style={{ flex: 1, minWidth: 160, margin: 0 }}>
-            <span>Class</span>
-            <select className="ska-input" value={selClass} onChange={e => setSelClass(e.target.value)}>
-              <option value="">— Select Class —</option>
-              {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </label>
-          <label className="ska-form-group" style={{ flex: 1, minWidth: 160, margin: 0 }}>
-            <span>Subject</span>
-            <select className="ska-input" value={selSubj} onChange={e => setSelSubj(e.target.value)}>
-              <option value="">— Select Subject —</option>
-              {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-          </label>
-          <label className="ska-form-group" style={{ flex: 1, minWidth: 200, margin: 0 }}>
-            <span>Syllabus File (.pdf, .docx)</span>
-            <input type="file" className="ska-input" accept=".pdf,.doc,.docx" onChange={e => setFile(e.target.files[0])} />
-          </label>
-          <button className="ska-btn ska-btn--primary" onClick={handleUpload} disabled={uploading || !ready || !file}>
-            <Ic name={uploading ? "sync" : "cloud_upload"} size="sm" className={uploading ? "ska-spin" : ""} /> 
-            {uploading ? 'Generating AI Plans...' : 'Upload & Generate'}
+        {ready && (
+          <button className="ska-btn ska-btn--primary" onClick={openAdd}>
+            <Ic name="add" size="sm" /> Add Topic
           </button>
-        </div>
-      </div>
-
-      {/* Display AI Generated Lesson Plans */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-        {displaySyllabuses.length === 0 ? (
-          <div className="ska-card">
-            <div className="ska-empty" style={{ padding: '48px 24px' }}>
-              <Ic name="auto_awesome" size="xl" style={{ color: 'var(--ska-primary)', marginBottom: 12 }} />
-              <p className="ska-empty-title">No Lesson Plans</p>
-              <p className="ska-empty-desc">Upload a syllabus above to automatically generate AI lesson plans for the term.</p>
-            </div>
-          </div>
-        ) : (
-          displaySyllabuses.map((syllabus, idx) => (
-            <div key={idx} className="ska-card ska-card-pad">
-              <div className="ska-card-head" style={{ marginBottom: 16 }}>
-                <h2 className="ska-card-title">{syllabus.subject} — {syllabus.classroom}</h2>
-                <a href={SECURITY_CONFIG.API_URL + syllabus.file_url} target="_blank" rel="noreferrer" className="ska-btn ska-btn--ghost ska-btn--sm">
-                  <Ic name="download" size="sm" /> View Original Syllabus
-                </a>
-              </div>
-              <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: 12 }}>AI Generated Weekly Lesson Plan</h3>
-              <div style={{ display: 'grid', gap: 12 }}>
-                {syllabus.plans?.map(plan => (
-                  <div key={plan.week_number} style={{
-                    padding: '16px', borderRadius: 8, background: 'var(--ska-surface-low)',
-                    borderLeft: '4px solid var(--ska-primary)'
-                  }}>
-                    <h4 style={{ margin: '0 0 8px 0', fontSize: '0.9rem', color: 'var(--ska-primary)' }}>Week {plan.week_number}</h4>
-                    <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--ska-text-2)', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
-                      {plan.content}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))
         )}
       </div>
+
+      {/* Stats */}
+      <div className="ska-stat-grid-4">
+        <StatCard icon="import_contacts" iconBg="var(--ska-primary-dim)"   iconColor="var(--ska-primary)"   label="Total Topics" value={total} />
+        <StatCard icon="check_circle"    iconBg="var(--ska-green-dim)"     iconColor="var(--ska-green)"     label="Covered"      value={completed}      sub={`${inProgress} in progress`} />
+        <StatCard icon="pending"         iconBg="var(--ska-tertiary-dim)"  iconColor="var(--ska-tertiary)"  label="Pending"      value={pending}        sub={`${notStarted} not started`} />
+        <div className="ska-card ska-card-pad" style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+            <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--ska-secondary-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Ic name="percent" style={{ color: 'var(--ska-secondary)', fontSize: 22 }} />
+            </div>
+          </div>
+          <div style={{ fontSize: '1.875rem', fontWeight: 800, color: 'var(--ska-text)', fontFamily: 'var(--ska-font-headline)', lineHeight: 1.1 }}>
+            {total ? `${coverage}%` : '—'}
+          </div>
+          <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--ska-text)', marginTop: 4 }}>Coverage</div>
+          {total > 0 && <SylCoverageBar pct={coverage} />}
+        </div>
+      </div>
+
+      {/* Selectors + context panel */}
+      <div className="ska-card ska-card-pad" style={{ marginTop: 20, marginBottom: 20, overflow: 'visible' }}>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+          <SylSearchableSelect
+            label="Class"
+            value={selClass}
+            onChange={(v) => { setSelClass(v); }}
+            options={classes}
+          />
+          <SylSearchableSelect
+            label="Subject"
+            value={selSubj}
+            onChange={(v) => { setSelSubj(v); }}
+            options={subjects}
+          />
+        </div>
+        {ready && (
+          <div style={{
+            marginTop: 14, padding: '12px 14px', borderRadius: 10,
+            background: 'var(--ska-surface-high)', border: '1px solid var(--ska-border)',
+            display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 16,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+              <Ic name="school" size="sm" style={{ color: 'var(--ska-primary)' }} />
+              <div>
+                <div style={{ fontWeight: 800, color: 'var(--ska-text)', fontSize: '0.95rem' }}>
+                  {selectedClassName} — {selectedSubjName}
+                </div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--ska-text-3)', marginTop: 2 }}>
+                  Teacher: <strong style={{ color: 'var(--ska-text-2)' }}>{teacher}</strong>
+                  &nbsp;·&nbsp; Term: <strong style={{ color: 'var(--ska-text-2)' }}>First Term (active)</strong>
+                </div>
+              </div>
+            </div>
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: 4, background: 'var(--ska-surface-low)', padding: 4, borderRadius: 10 }}>
+              <button
+                type="button"
+                onClick={() => setView('list')}
+                className="ska-btn ska-btn--sm"
+                style={{
+                  background: view === 'list' ? 'var(--ska-primary-dim)' : 'transparent',
+                  color: view === 'list' ? 'var(--ska-primary)' : 'var(--ska-text-3)',
+                }}
+              >
+                <Ic name="format_list_bulleted" size="sm" /> List
+              </button>
+              <button
+                type="button"
+                onClick={() => setView('timeline')}
+                className="ska-btn ska-btn--sm"
+                style={{
+                  background: view === 'timeline' ? 'var(--ska-primary-dim)' : 'transparent',
+                  color: view === 'timeline' ? 'var(--ska-primary)' : 'var(--ska-text-3)',
+                }}
+              >
+                <Ic name="timeline" size="sm" /> Timeline
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Alerts */}
+      {ready && alerts.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+          {alerts.map((a, i) => (
+            <div key={i} style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '10px 14px', borderRadius: 10,
+              background: a.severity === 'high' ? 'var(--ska-error-dim)' : 'rgba(245,158,11,0.14)',
+              border: `1px solid ${a.severity === 'high' ? 'rgba(255,180,171,0.25)' : 'rgba(245,158,11,0.3)'}`,
+              color: a.severity === 'high' ? 'var(--ska-error)' : '#F59E0B',
+              fontSize: '0.85rem', fontWeight: 600,
+            }}>
+              <Ic name="warning" size="sm" />
+              {a.text}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!ready ? (
+        <div className="ska-card">
+          <div className="ska-empty" style={{ padding: '48px 24px' }}>
+            <Ic name="import_contacts" size="xl" style={{ color: 'var(--ska-primary)', marginBottom: 12 }} />
+            <p className="ska-empty-title">Select a class and subject</p>
+            <p className="ska-empty-desc">Choose above to view, plan and track curriculum coverage.</p>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Filters bar */}
+          <div className="ska-card ska-card-pad" style={{ marginBottom: 16 }}>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+              <label className="ska-form-group" style={{ flex: 2, minWidth: 200, margin: 0 }}>
+                <span>Search</span>
+                <input className="ska-input" placeholder="Search topic name, area or description…"
+                  value={search} onChange={e => setSearch(e.target.value)} />
+              </label>
+              <label className="ska-form-group" style={{ flex: 1, minWidth: 130, margin: 0 }}>
+                <span>Status</span>
+                <select className="ska-input" value={fStatus} onChange={e => setFStatus(e.target.value)}>
+                  <option value="all">All</option>
+                  {SYL_STATUSES.map(s => <option key={s} value={s}>{SYL_STATUS_META[s].label}</option>)}
+                </select>
+              </label>
+              <label className="ska-form-group" style={{ flex: 1, minWidth: 120, margin: 0 }}>
+                <span>Term</span>
+                <select className="ska-input" value={fTerm} onChange={e => setFTerm(e.target.value)}>
+                  <option value="all">All</option>
+                  {SYL_TERMS.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </label>
+              <label className="ska-form-group" style={{ flex: 1, minWidth: 120, margin: 0 }}>
+                <span>Priority</span>
+                <select className="ska-input" value={fPriority} onChange={e => setFPriority(e.target.value)}>
+                  <option value="all">All</option>
+                  <option value="high">High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
+                </select>
+              </label>
+              {(search || fStatus !== 'all' || fTerm !== 'all' || fPriority !== 'all') && (
+                <button className="ska-btn ska-btn--ghost ska-btn--sm"
+                  onClick={() => { setSearch(''); setFStatus('all'); setFTerm('all'); setFPriority('all'); }}
+                  style={{ marginBottom: 1 }}>
+                  <Ic name="filter_alt_off" size="sm" /> Clear
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Per-term analytics */}
+          <div className="ska-card ska-card-pad" style={{ marginBottom: 20 }}>
+            <h3 style={{ margin: '0 0 12px', fontSize: '0.95rem', fontWeight: 800, color: 'var(--ska-text)' }}>Term Analytics</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+              {termStats.map(s => (
+                <div key={s.term} style={{
+                  padding: 12, borderRadius: 10,
+                  background: 'var(--ska-surface-high)', border: '1px solid var(--ska-border)',
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--ska-text)' }}>{s.term}</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--ska-text-3)' }}>{s.completed}/{s.total} topics</span>
+                  </div>
+                  <SylCoverageBar pct={s.pct} />
+                  <div style={{ fontSize: '0.75rem', color: 'var(--ska-text-3)', marginTop: 6 }}>
+                    {s.total === 0 ? 'No topics yet' : `${s.pct}% complete`}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* CONTENT — list or timeline */}
+          {topics.length === 0 ? (
+            <div className="ska-card">
+              <div className="ska-empty" style={{ padding: '48px 24px' }}>
+                <Ic name="post_add" size="xl" style={{ color: 'var(--ska-text-3)', marginBottom: 12 }} />
+                <p className="ska-empty-title">No topics yet</p>
+                <p className="ska-empty-desc">Add curriculum topics for {selectedSubjName} — {selectedClassName}.</p>
+                <button className="ska-btn ska-btn--primary" style={{ marginTop: 16 }} onClick={openAdd}>
+                  <Ic name="add" size="sm" /> Add First Topic
+                </button>
+              </div>
+            </div>
+          ) : visible.length === 0 ? (
+            <div className="ska-card">
+              <div className="ska-empty" style={{ padding: '40px 24px' }}>
+                <Ic name="search_off" size="xl" style={{ color: 'var(--ska-text-3)', marginBottom: 12 }} />
+                <p className="ska-empty-title">No matching topics</p>
+                <p className="ska-empty-desc">Try clearing search or filters.</p>
+              </div>
+            </div>
+          ) : view === 'timeline' ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {timeline.map(({ term, lanes, totalWeeks }) => lanes.length === 0 ? null : (
+                <div key={term} className="ska-card ska-card-pad">
+                  <div className="ska-card-head" style={{ marginBottom: 14 }}>
+                    <h2 className="ska-card-title">{term}</h2>
+                    <span className="ska-badge ska-badge--cyan">{totalWeeks} week{totalWeeks !== 1 ? 's' : ''}</span>
+                  </div>
+                  <div style={{ overflowX: 'auto', paddingBottom: 4 }}>
+                    <div style={{ minWidth: Math.max(totalWeeks * 70, 320) }}>
+                      {/* week ruler */}
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: `repeat(${totalWeeks}, minmax(60px, 1fr))`,
+                        gap: 4, marginBottom: 6,
+                      }}>
+                        {Array.from({ length: totalWeeks }, (_, i) => (
+                          <div key={i} style={{
+                            textAlign: 'center', fontSize: '0.7rem', color: 'var(--ska-text-3)',
+                            fontWeight: 700, padding: '2px 0',
+                          }}>W{i + 1}</div>
+                        ))}
+                      </div>
+                      {/* lanes */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {lanes.map(({ start, end, topic }) => {
+                          const m = SYL_STATUS_META[topic.status];
+                          return (
+                            <div key={topic.id} style={{
+                              display: 'grid',
+                              gridTemplateColumns: `repeat(${totalWeeks}, minmax(60px, 1fr))`,
+                              gap: 4,
+                            }}>
+                              <div
+                                title={`${topic.title} — ${m.label}`}
+                                style={{
+                                  gridColumn: `${start} / ${end + 1}`,
+                                  background: m.bg, color: m.color,
+                                  borderLeft: `3px solid ${m.color}`,
+                                  borderRadius: 6, padding: '6px 10px',
+                                  fontSize: '0.8rem', fontWeight: 700,
+                                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                }}
+                              >
+                                {m.mark} {topic.title}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              {grouped.map(({ term, groups, count }) => count === 0 ? null : (
+                <div key={term} className="ska-card ska-card-pad">
+                  <div className="ska-card-head" style={{ marginBottom: 16 }}>
+                    <h2 className="ska-card-title">{term}</h2>
+                    <span className="ska-badge ska-badge--cyan">{count} topic{count !== 1 ? 's' : ''}</span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    {Object.entries(groups).map(([groupName, items]) => (
+                      <div key={groupName}>
+                        <div style={{
+                          fontSize: '0.7rem', fontWeight: 800, letterSpacing: 0.6, textTransform: 'uppercase',
+                          color: 'var(--ska-text-3)', marginBottom: 8,
+                        }}>
+                          {groupName}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          {items.map(t => {
+                            const m = SYL_STATUS_META[t.status];
+                            return (
+                              <div key={t.id} style={{
+                                display: 'flex', alignItems: 'flex-start', gap: 12,
+                                padding: '12px 14px', borderRadius: 10,
+                                background: 'var(--ska-surface-high)',
+                                borderLeft: `3px solid ${m.color}`,
+                              }}>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                    <p style={{
+                                      margin: 0, fontWeight: 700, fontSize: '0.95rem', color: 'var(--ska-text)',
+                                      textDecoration: t.status === 'completed' ? 'line-through' : 'none',
+                                      opacity: t.status === 'completed' ? 0.75 : 1,
+                                    }}>
+                                      {t.title}
+                                    </p>
+                                    <SylStatusPill status={t.status} />
+                                    <SylPriorityPill priority={t.priority} />
+                                    <span style={{ fontSize: '0.7rem', color: 'var(--ska-text-3)' }}>
+                                      <Ic name="schedule" size="sm" style={{ verticalAlign: 'middle', marginRight: 2 }} />
+                                      {t.durationWeeks}w
+                                    </span>
+                                  </div>
+                                  {t.description && (
+                                    <p style={{ margin: '6px 0 0', fontSize: '0.8125rem', color: 'var(--ska-text-3)' }}>{t.description}</p>
+                                  )}
+                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, marginTop: 6, fontSize: '0.72rem', color: 'var(--ska-text-3)' }}>
+                                    <span><Ic name="person" size="sm" style={{ verticalAlign: 'middle' }} /> {t.teacher}</span>
+                                    {t.dateCovered && <span><Ic name="event_available" size="sm" style={{ verticalAlign: 'middle' }} /> Covered {t.dateCovered}</span>}
+                                    <span><Ic name="history" size="sm" style={{ verticalAlign: 'middle' }} /> Updated by {t.lastUpdatedBy}</span>
+                                  </div>
+                                </div>
+                                <div style={{ display: 'flex', gap: 4, flexShrink: 0, flexDirection: 'column', alignItems: 'flex-end' }}>
+                                  <select
+                                    className="ska-input"
+                                    value={t.status}
+                                    onChange={e => setStatus(t.id, e.target.value)}
+                                    style={{ height: 30, padding: '0 8px', fontSize: '0.75rem', minWidth: 130 }}
+                                    title="Change status"
+                                  >
+                                    {SYL_STATUSES.map(s => (
+                                      <option key={s} value={s}>{SYL_STATUS_META[s].label}</option>
+                                    ))}
+                                  </select>
+                                  <div style={{ display: 'flex', gap: 4 }}>
+                                    <button className="ska-btn ska-btn--ghost ska-btn--sm" onClick={() => openEdit(t)} title="Edit">
+                                      <Ic name="edit" size="sm" />
+                                    </button>
+                                    <button className="ska-btn ska-btn--ghost ska-btn--sm ska-btn--danger" onClick={() => deleteTopic(t.id)} title="Delete">
+                                      <Ic name="delete" size="sm" />
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Add / Edit modal */}
+      {modal && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', zIndex: 300,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+        }} onClick={e => e.target === e.currentTarget && setModal(null)}>
+          <div style={{ background: 'var(--ska-surface)', borderRadius: 16, padding: 28, width: '100%', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h3 style={{ margin: 0, fontWeight: 800, fontSize: '1.125rem', color: 'var(--ska-text)' }}>
+                {modal === 'add' ? 'Add Topic' : 'Edit Topic'}
+              </h3>
+              <button className="ska-btn ska-btn--ghost ska-btn--sm" onClick={() => setModal(null)}>
+                <Ic name="close" size="sm" />
+              </button>
+            </div>
+            <div className="ska-form-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <label className="ska-form-group" style={{ gridColumn: '1 / -1' }}>
+                <span>Topic Name *</span>
+                <input className="ska-input" placeholder="e.g. Quadratic Equations"
+                  value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
+              </label>
+              <label className="ska-form-group" style={{ gridColumn: '1 / -1' }}>
+                <span>Description</span>
+                <textarea className="ska-input" rows={3} style={{ resize: 'vertical' }}
+                  placeholder="What students will learn from this topic…"
+                  value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
+              </label>
+              <label className="ska-form-group">
+                <span>Group / Area</span>
+                <input className="ska-input" placeholder="e.g. Algebra"
+                  value={form.group} onChange={e => setForm(f => ({ ...f, group: e.target.value }))} />
+              </label>
+              <label className="ska-form-group">
+                <span>Term</span>
+                <select className="ska-input" value={form.term} onChange={e => setForm(f => ({ ...f, term: e.target.value }))}>
+                  {SYL_TERMS.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </label>
+              <label className="ska-form-group">
+                <span>Estimated Duration (weeks)</span>
+                <input className="ska-input" type="number" min={1} max={20}
+                  value={form.durationWeeks}
+                  onChange={e => setForm(f => ({ ...f, durationWeeks: e.target.value }))} />
+              </label>
+              <label className="ska-form-group">
+                <span>Priority</span>
+                <select className="ska-input" value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value }))}>
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </label>
+            </div>
+            <div className="ska-modal-actions">
+              <button className="ska-btn ska-btn--ghost" onClick={() => setModal(null)}>Cancel</button>
+              <button className="ska-btn ska-btn--primary" onClick={handleSave} disabled={!form.title.trim()}>
+                {modal === 'add' ? 'Add Topic' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
