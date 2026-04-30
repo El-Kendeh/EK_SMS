@@ -28,14 +28,6 @@ export default function PersonalStep({
     if (existingEmails.includes(v.toLowerCase())) return setError('email', 'Already in use');
     setError('email', '');
   };
-  const blurPhone = () => {
-    const v = (form.phone_number || '').trim();
-    if (!v) return; // optional
-    if (!isPhone(v)) return setError('phone_number', 'Invalid number');
-    if (existingPhones.includes(v)) return setError('phone_number', 'Already in use');
-    setError('phone_number', '');
-  };
-
   const toggleLang = (lang) => {
     const cur = form.languages || [];
     const next = cur.includes(lang) ? cur.filter(l => l !== lang) : [...cur, lang];

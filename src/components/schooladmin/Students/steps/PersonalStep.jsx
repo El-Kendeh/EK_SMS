@@ -37,12 +37,6 @@ export default function PersonalStep({
     if (!v) return setError('email', '');
     setError('email', isEmail(v) ? '' : 'Enter a valid email');
   };
-  const blurPhone = () => {
-    const v = (form.phone_number || '').trim();
-    if (!v) return setError('phone_number', '');
-    setError('phone_number', isPhone(v) ? '' : 'Invalid phone');
-  };
-
   return (
     <div className="stu-step">
       <p className="stu-step__intro">Personal &amp; identity details. We'll auto-detect siblings and possible duplicate enrolments as you type.</p>

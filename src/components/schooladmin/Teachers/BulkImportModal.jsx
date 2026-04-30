@@ -15,7 +15,6 @@ export default function BulkImportModal({ existingEmails, existingTeachers, onCl
   const inputRef = useRef(null);
   const [file,    setFile]    = useState(null);
   const [rows,    setRows]    = useState([]);
-  const [headers, setHeaders] = useState([]);
   const [stats,   setStats]   = useState({ ok: 0, fail: 0 });
   const [submitting, setSubmitting] = useState(false);
   const [progress, setProgress]     = useState(0);
@@ -37,7 +36,7 @@ export default function BulkImportModal({ existingEmails, existingTeachers, onCl
     const reader = new FileReader();
     reader.onload = (e) => {
       const raw  = parseCsv(e.target.result);
-      if (raw.length === 0) { setRows([]); setHeaders([]); return; }
+      if (raw.length === 0) { setRows([]); return; }
       const head = raw[0].map(h => h.trim());
       const data = raw.slice(1).map(r => {
         const obj = {};
@@ -47,7 +46,6 @@ export default function BulkImportModal({ existingEmails, existingTeachers, onCl
         });
         return obj;
       });
-      setHeaders(head);
       setRows(data);
       setResults([]);
       setDoneCount(0);
@@ -104,7 +102,7 @@ export default function BulkImportModal({ existingEmails, existingTeachers, onCl
   };
 
   const reset = () => {
-    setFile(null); setRows([]); setHeaders([]); setResults([]); setDoneCount(0); setProgress(0);
+    setFile(null); setRows([]); setResults([]); setDoneCount(0); setProgress(0);
     if (inputRef.current) inputRef.current.value = '';
   };
 

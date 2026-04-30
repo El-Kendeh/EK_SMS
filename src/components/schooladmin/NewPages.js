@@ -6,9 +6,10 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ApiClient from '../../api/client';
 import AddTeacherWizard from './Teachers/AddTeacherWizard';
 import BulkImportModal from './Teachers/BulkImportModal';
+import PhoneInput from '../shared/PhoneInput';
 
-/* PhoneInput moved to shared/ — re-exported so existing
-   `import { PhoneInput } from '../NewPages'` paths keep working. */
+/* Re-exported so existing `import { PhoneInput } from '../NewPages'`
+   paths keep working. */
 export { default as PhoneInput } from '../shared/PhoneInput';
 
 /* ── re-use icon helper (same pattern as SchoolAdminPages.js) ── */
