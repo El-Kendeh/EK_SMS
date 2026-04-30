@@ -1348,7 +1348,7 @@ export default function SchoolAdminDashboard({ onNavigate }) {
   else if (activePage === 'bursar_ledger')  pageContent = <BursarLedgerPage school={school} />;
   else if (activePage === 'bursar_audit')   pageContent = <BursarAuditPage school={school} />;
   else if (activePage === 'finance_users')  pageContent = <FinanceUsersPage school={school} admin={admin} />;
-  else if (activePage === 'principal')      pageContent = <PrincipalUsersPage school={school} admin={admin} />;
+  else if (activePage === 'principal')      pageContent = <PrincipalUsersPage school={school} admin={admin} onNavigate={setActivePage} />;
   else if (activePage === 'timetable')     pageContent = <TimetablePage school={school} />;
   else if (activePage === 'analytics')     pageContent = <AnalyticsPage school={school} />;
   else if (activePage === 'parents')       pageContent = <ParentsPage school={school} />;
