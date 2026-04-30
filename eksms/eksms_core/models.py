@@ -1740,3 +1740,34 @@ class RemedialRequest(models.Model):
 
     def __str__(self):
         return f"Remedial: {self.student} — {self.subject} ({self.status})"
+
+class Syllabus(models.Model):
+    """Uploaded Syllabus for a Class and Subject"""
+    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='syllabuses', null=True, blank=True)
+    classroom = models.ForeignKey(ClassRoom, on_delete=models.CASCADE)
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
+    uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    file = models.FileField(upload_to='syllabuses/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name_plural = "Syllabuses"
+        unique_together = ('classroom', 'subject', 'school')
+
+    def __str__(self):
+        return f"Syllabus: {self.subject} for {self.classroom}"
+
+
+class LessonPlan(models.Model):
+    """AI Generated Weekly Lesson Plan"""
+    syllabus = models.ForeignKey(Syllabus, on_delete=models.CASCADE, related_name='lesson_plans')
+    week_number = models.PositiveIntegerField()
+    content = models.TextField(help_text="AI generated lesson plan content")
+    generated_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['syllabus', 'week_number']
+        unique_together = ('syllabus', 'week_number')
+
+    def __str__(self):
+        return f"Week {self.week_number} Lesson Plan for {self.syllabus}"

@@ -91,6 +91,7 @@ from .views import (
     api_student_parents,
     api_student_parent_detail,
 )
+from .views_syllabus import api_syllabus_upload, api_syllabus_list
 from .secure_views import csrf_token_view
 from django.conf import settings
 from django.conf.urls.static import static
@@ -152,6 +153,8 @@ urlpatterns = [
     path('api/school/subjects/<int:subject_id>/', api_subject_detail, name='api_subject_detail'),
     path('api/school/academic-years/',                    api_academic_years,        name='api_academic_years'),
     path('api/school/academic-years/<int:year_id>/',      api_academic_year_detail,  name='api_academic_year_detail'),
+    path('api/school/syllabus/upload/', api_syllabus_upload, name='api_syllabus_upload'),
+    path('api/school/syllabus/', api_syllabus_list, name='api_syllabus_list'),
     # Terms / Grades / Attendance
     path('api/school/terms/',                   api_terms,            name='api_terms'),
     path('api/school/terms/<int:term_id>/',     api_term_detail,      name='api_term_detail'),

@@ -1711,209 +1711,142 @@ export function SyllabusPage({ school }) {
   const [subjects, setSubjects] = useState([]);
   const [selClass, setSelClass] = useState('');
   const [selSubj,  setSelSubj]  = useState('');
-  const [topics,   setTopics]   = useState([]);
-  const [modal,    setModal]    = useState(null); // null | 'add' | topic-object
-  const [form,     setForm]     = useState({ title: '', term: 'Term 1', objectives: '' });
+  const [file,     setFile]     = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [syllabuses, setSyllabuses] = useState([]);
+  const [banner, setBanner] = useState(null);
 
-  const TERMS = ['Term 1', 'Term 2', 'Term 3'];
-
-  useEffect(() => {
+  const loadData = useCallback(() => {
     ApiClient.get('/api/school/classes/').then(d => setClasses(d.classes   || [])).catch(() => {});
     ApiClient.get('/api/school/subjects/').then(d => setSubjects(d.subjects || [])).catch(() => {});
+    ApiClient.get('/api/school/syllabus/').then(d => setSyllabuses(d.syllabuses || [])).catch(() => {});
   }, []);
 
-  const openAdd  = () => { setForm({ title: '', term: 'Term 1', objectives: '' }); setModal('add'); };
-  const openEdit = t  => { setForm({ title: t.title, term: t.term, objectives: t.objectives }); setModal(t); };
+  useEffect(() => { loadData(); }, [loadData]);
 
-  const handleSave = () => {
-    if (!form.title.trim()) return;
-    if (modal === 'add') {
-      setTopics(ts => [...ts, { id: Date.now(), ...form, done: false }]);
-    } else {
-      setTopics(ts => ts.map(t => t.id === modal.id ? { ...t, ...form } : t));
+  const handleUpload = async () => {
+    if (!selClass || !selSubj || !file) {
+      setBanner({ type: 'err', text: 'Please select class, subject and a file.' });
+      return;
     }
-    setModal(null);
+    
+    setUploading(true);
+    setBanner(null);
+    
+    const formData = new FormData();
+    formData.append('classroom_id', selClass);
+    formData.append('subject_id', selSubj);
+    formData.append('file', file);
+    
+    try {
+      // Custom fetch because ApiClient usually sends JSON
+      const token = localStorage.getItem('token') || '';
+      const response = await fetch(`${SECURITY_CONFIG.API_URL}/api/school/syllabus/upload/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        setBanner({ type: 'ok', text: 'Syllabus uploaded and AI generated lesson plans successfully.' });
+        setFile(null);
+        loadData();
+      } else {
+        setBanner({ type: 'err', text: data.message || 'Upload failed.' });
+      }
+    } catch (err) {
+      setBanner({ type: 'err', text: 'Error connecting to server.' });
+    }
+    setUploading(false);
   };
 
-  const toggleDone  = id => setTopics(ts => ts.map(t => t.id === id ? { ...t, done: !t.done } : t));
-  const deleteTopic = id => { if (window.confirm('Remove this topic?')) setTopics(ts => ts.filter(t => t.id !== id)); };
-
-  const ready    = selClass && selSubj;
-  const covered  = topics.filter(t => t.done).length;
-  const coverage = topics.length ? Math.round(covered / topics.length * 100) : null;
-
-  const byTerm = TERMS.map(term => ({ term, items: topics.filter(t => t.term === term) }));
-
-  const selectedClassName = classes.find(c => String(c.id) === String(selClass))?.name || '';
-  const selectedSubjName  = subjects.find(s => String(s.id) === String(selSubj))?.name || '';
+  const ready = selClass && selSubj;
+  
+  // Filter syllabuses for current selection, or show all if none selected
+  const displaySyllabuses = (selClass && selSubj) 
+    ? syllabuses.filter(s => s.classroom === classes.find(c=>c.id==selClass)?.name && s.subject === subjects.find(sub=>sub.id==selSubj)?.name)
+    : syllabuses;
 
   return (
     <div className="ska-content">
       <div className="ska-page-head">
         <div>
-          <h1 className="ska-page-title">Syllabus &amp; Curriculum</h1>
-          <p className="ska-page-sub">{school?.name} — Topics and learning objectives</p>
+          <h1 className="ska-page-title">Syllabus &amp; Lesson Plans</h1>
+          <p className="ska-page-sub">{school?.name} — Upload syllabus (Word/PDF) and generate AI lesson plans</p>
         </div>
-        {ready && (
-          <button className="ska-btn ska-btn--primary" onClick={openAdd}>
-            <Ic name="add" size="sm" /> Add Topic
-          </button>
-        )}
       </div>
 
-      {/* Stats */}
-      <div className="ska-stat-grid-4">
-        <StatCard icon="import_contacts" iconBg="var(--ska-primary-dim)"   iconColor="var(--ska-primary)"   label="Total Topics" value={topics.length} />
-        <StatCard icon="check_circle"    iconBg="var(--ska-green-dim)"     iconColor="var(--ska-green)"     label="Covered"      value={covered}       sub="Marked complete" />
-        <StatCard icon="pending"         iconBg="var(--ska-tertiary-dim)"  iconColor="var(--ska-tertiary)"  label="Pending"      value={topics.length - covered} sub="Not yet covered" />
-        <StatCard icon="percent"         iconBg="var(--ska-secondary-dim)" iconColor="var(--ska-secondary)" label="Coverage"     value={coverage !== null ? `${coverage}%` : '—'} />
-      </div>
+      <Banner msg={banner} />
 
-      {/* Selectors */}
+      {/* Selectors and Upload */}
       <div className="ska-card ska-card-pad" style={{ marginBottom: 20 }}>
+        <h2 className="ska-card-title" style={{ marginBottom: 16 }}>Upload Syllabus</h2>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
           <label className="ska-form-group" style={{ flex: 1, minWidth: 160, margin: 0 }}>
             <span>Class</span>
-            <select className="ska-input" value={selClass}
-              onChange={e => { setSelClass(e.target.value); setTopics([]); }}>
+            <select className="ska-input" value={selClass} onChange={e => setSelClass(e.target.value)}>
               <option value="">— Select Class —</option>
               {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </label>
           <label className="ska-form-group" style={{ flex: 1, minWidth: 160, margin: 0 }}>
             <span>Subject</span>
-            <select className="ska-input" value={selSubj}
-              onChange={e => { setSelSubj(e.target.value); setTopics([]); }}>
+            <select className="ska-input" value={selSubj} onChange={e => setSelSubj(e.target.value)}>
               <option value="">— Select Subject —</option>
               {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </label>
+          <label className="ska-form-group" style={{ flex: 1, minWidth: 200, margin: 0 }}>
+            <span>Syllabus File (.pdf, .docx)</span>
+            <input type="file" className="ska-input" accept=".pdf,.doc,.docx" onChange={e => setFile(e.target.files[0])} />
+          </label>
+          <button className="ska-btn ska-btn--primary" onClick={handleUpload} disabled={uploading || !ready || !file}>
+            <Ic name={uploading ? "sync" : "cloud_upload"} size="sm" className={uploading ? "ska-spin" : ""} /> 
+            {uploading ? 'Generating AI Plans...' : 'Upload & Generate'}
+          </button>
         </div>
-        {ready && (
-          <p style={{ margin: '10px 0 0', fontSize: '0.8125rem', color: 'var(--ska-text-3)' }}>
-            Curriculum for <strong style={{ color: 'var(--ska-text)' }}>{selectedSubjName}</strong> — <strong style={{ color: 'var(--ska-text)' }}>{selectedClassName}</strong>
-          </p>
-        )}
       </div>
 
-      {!ready ? (
-        <div className="ska-card">
-          <div className="ska-empty" style={{ padding: '48px 24px' }}>
-            <Ic name="import_contacts" size="xl" style={{ color: 'var(--ska-primary)', marginBottom: 12 }} />
-            <p className="ska-empty-title">Select a class and subject</p>
-            <p className="ska-empty-desc">Choose above to manage curriculum topics and learning objectives.</p>
+      {/* Display AI Generated Lesson Plans */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        {displaySyllabuses.length === 0 ? (
+          <div className="ska-card">
+            <div className="ska-empty" style={{ padding: '48px 24px' }}>
+              <Ic name="auto_awesome" size="xl" style={{ color: 'var(--ska-primary)', marginBottom: 12 }} />
+              <p className="ska-empty-title">No Lesson Plans</p>
+              <p className="ska-empty-desc">Upload a syllabus above to automatically generate AI lesson plans for the term.</p>
+            </div>
           </div>
-        </div>
-      ) : topics.length === 0 ? (
-        <div className="ska-card">
-          <div className="ska-empty" style={{ padding: '48px 24px' }}>
-            <Ic name="post_add" size="xl" style={{ color: 'var(--ska-text-3)', marginBottom: 12 }} />
-            <p className="ska-empty-title">No topics yet</p>
-            <p className="ska-empty-desc">Add curriculum topics and learning objectives for this class and subject.</p>
-            <button className="ska-btn ska-btn--primary" style={{ marginTop: 16 }} onClick={openAdd}>
-              <Ic name="add" size="sm" /> Add First Topic
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          {byTerm.map(({ term, items }) => items.length === 0 ? null : (
-            <div key={term} className="ska-card ska-card-pad">
+        ) : (
+          displaySyllabuses.map((syllabus, idx) => (
+            <div key={idx} className="ska-card ska-card-pad">
               <div className="ska-card-head" style={{ marginBottom: 16 }}>
-                <h2 className="ska-card-title">{term}</h2>
-                <span className="ska-badge ska-badge--cyan">{items.length} topic{items.length !== 1 ? 's' : ''}</span>
+                <h2 className="ska-card-title">{syllabus.subject} — {syllabus.classroom}</h2>
+                <a href={SECURITY_CONFIG.API_URL + syllabus.file_url} target="_blank" rel="noreferrer" className="ska-btn ska-btn--ghost ska-btn--sm">
+                  <Ic name="download" size="sm" /> View Original Syllabus
+                </a>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {items.map((t, i) => (
-                  <div key={t.id} style={{
-                    display: 'flex', alignItems: 'flex-start', gap: 12,
-                    padding: '12px 14px', borderRadius: 8,
-                    background: t.done ? 'var(--ska-green-dim)' : 'var(--ska-surface-high)',
-                    borderLeft: `3px solid ${t.done ? 'var(--ska-green)' : 'var(--ska-border)'}`,
-                    transition: 'background 0.2s',
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: 12 }}>AI Generated Weekly Lesson Plan</h3>
+              <div style={{ display: 'grid', gap: 12 }}>
+                {syllabus.plans?.map(plan => (
+                  <div key={plan.week_number} style={{
+                    padding: '16px', borderRadius: 8, background: 'var(--ska-surface-low)',
+                    borderLeft: '4px solid var(--ska-primary)'
                   }}>
-                    <button
-                      onClick={() => toggleDone(t.id)}
-                      title={t.done ? 'Mark as pending' : 'Mark as covered'}
-                      style={{
-                        width: 22, height: 22, borderRadius: 6, flexShrink: 0, cursor: 'pointer',
-                        border: `2px solid ${t.done ? 'var(--ska-green)' : 'var(--ska-border)'}`,
-                        background: t.done ? 'var(--ska-green)' : 'transparent',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      }}
-                    >
-                      {t.done && <Ic name="check" style={{ color: '#000', fontSize: '14px' }} />}
-                    </button>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{
-                        margin: 0, fontWeight: 700, fontSize: '0.9375rem', color: 'var(--ska-text)',
-                        textDecoration: t.done ? 'line-through' : 'none', opacity: t.done ? 0.65 : 1,
-                      }}>
-                        {i + 1}. {t.title}
-                      </p>
-                      {t.objectives && (
-                        <p style={{ margin: '4px 0 0', fontSize: '0.8125rem', color: 'var(--ska-text-3)' }}>{t.objectives}</p>
-                      )}
-                    </div>
-                    <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                      <button className="ska-btn ska-btn--ghost ska-btn--sm" onClick={() => openEdit(t)}>
-                        <Ic name="edit" size="sm" />
-                      </button>
-                      <button className="ska-btn ska-btn--ghost ska-btn--sm ska-btn--danger" onClick={() => deleteTopic(t.id)}>
-                        <Ic name="delete" size="sm" />
-                      </button>
-                    </div>
+                    <h4 style={{ margin: '0 0 8px 0', fontSize: '0.9rem', color: 'var(--ska-primary)' }}>Week {plan.week_number}</h4>
+                    <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--ska-text-2)', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
+                      {plan.content}
+                    </p>
                   </div>
                 ))}
               </div>
             </div>
-          ))}
-        </div>
-      )}
-
-      {/* Add / Edit modal */}
-      {modal && (
-        <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', zIndex: 300,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
-        }} onClick={e => e.target === e.currentTarget && setModal(null)}>
-          <div style={{ background: 'var(--ska-surface)', borderRadius: 16, padding: 28, width: '100%', maxWidth: 480 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h3 style={{ margin: 0, fontWeight: 800, fontSize: '1.125rem', color: 'var(--ska-text)' }}>
-                {modal === 'add' ? 'Add Topic' : 'Edit Topic'}
-              </h3>
-              <button className="ska-btn ska-btn--ghost ska-btn--sm" onClick={() => setModal(null)}>
-                <Ic name="close" size="sm" />
-              </button>
-            </div>
-            <div className="ska-form-grid" style={{ gridTemplateColumns: '1fr' }}>
-              <label className="ska-form-group">
-                <span>Topic Title *</span>
-                <input className="ska-input" placeholder="e.g. Introduction to Algebra"
-                  value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
-              </label>
-              <label className="ska-form-group">
-                <span>Term</span>
-                <select className="ska-input" value={form.term} onChange={e => setForm(f => ({ ...f, term: e.target.value }))}>
-                  {TERMS.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </label>
-              <label className="ska-form-group">
-                <span>Learning Objectives <span style={{ color: 'var(--ska-text-3)', fontSize: '0.75rem' }}>(optional)</span></span>
-                <textarea className="ska-input" rows={3} style={{ resize: 'vertical' }}
-                  placeholder="What students will learn from this topic…"
-                  value={form.objectives} onChange={e => setForm(f => ({ ...f, objectives: e.target.value }))} />
-              </label>
-            </div>
-            <div className="ska-modal-actions">
-              <button className="ska-btn ska-btn--ghost" onClick={() => setModal(null)}>Cancel</button>
-              <button className="ska-btn ska-btn--primary" onClick={handleSave} disabled={!form.title.trim()}>
-                {modal === 'add' ? 'Add Topic' : 'Save Changes'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          ))
+        )}
+      </div>
     </div>
   );
 }
