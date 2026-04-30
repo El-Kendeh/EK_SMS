@@ -792,25 +792,6 @@ function OverviewPage({ stats, school, onNav, onAddStudent }) {
 }
 
 /* ============================================================
-   MODAL — generic slide-in form dialog
-   ============================================================ */
-function Modal({ title, onClose, children }) {
-  return (
-    <div className="ska-modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="ska-modal">
-        <div className="ska-modal-head">
-          <h2 className="ska-modal-title">{title}</h2>
-          <button className="ska-modal-close" onClick={onClose} aria-label="Close">
-            <Ic name="close" size="sm" />
-          </button>
-        </div>
-        <div className="ska-modal-body">{children}</div>
-      </div>
-    </div>
-  );
-}
-
-/* ============================================================
    STUB PAGE — placeholder for sections not yet built
    ============================================================ */
 function StubPage({ title, icon, description }) {
