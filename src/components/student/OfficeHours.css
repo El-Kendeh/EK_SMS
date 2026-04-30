@@ -1,0 +1,86 @@
+.oh { padding: 22px; max-width: 760px; margin: 0 auto; color: var(--student-text, #e8eef9); }
+
+.oh header h2 { margin: 0 0 4px; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.oh header p { margin: 0 0 18px; font-size: 13px; opacity: 0.7; }
+
+.oh__subject { margin-bottom: 22px; }
+.oh__subject h3 {
+  margin: 0 0 10px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.7;
+  font-weight: 700;
+}
+
+.oh__subject ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.oh__subject li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  flex-wrap: wrap;
+}
+
+.oh__subject li.is-booked { background: rgba(34, 197, 94, 0.08); border-color: rgba(34, 197, 94, 0.24); }
+
+.oh__slot-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.oh__slot-info strong { font-size: 14px; font-weight: 700; }
+.oh__slot-info span { font-size: 12px; opacity: 0.7; }
+.oh__slot-info em { font-size: 11px; color: #34d399; font-style: normal; margin-top: 4px; }
+
+.oh__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.oh__btn--book { background: var(--student-primary, #5b8cff); color: #fff; }
+.oh__btn--cancel { background: rgba(239, 68, 68, 0.16); color: #fca5a5; }
+.oh__btn--ghost { background: rgba(255, 255, 255, 0.05); color: inherit; }
+.oh__btn .material-symbols-outlined { font-size: 16px; }
+
+.oh__pill {
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  opacity: 0.7;
+}
+
+.oh__booker {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+.oh__booker input {
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 8px;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+}
+.oh__booker-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+.oh__error { padding: 10px 14px; border-radius: 8px; background: rgba(239, 68, 68, 0.10); color: #fca5a5; font-size: 13px; }
+
+@media (max-width: 600px) {
+  .oh { padding: 14px; }
+  .oh__subject li { flex-direction: column; align-items: stretch; }
+  .oh__btn, .oh__pill { width: 100%; justify-content: center; }
+}

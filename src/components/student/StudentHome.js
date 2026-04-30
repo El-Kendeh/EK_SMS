@@ -3,6 +3,10 @@ import { motion } from 'framer-motion';
 import { studentApi } from '../../api/studentApi';
 import { useStudentProfile } from '../../hooks/useStudentProfile';
 import { useLowData } from '../../context/LowDataContext';
+import { useTicker } from '../../hooks/useTicker';
+import TamperCounter from './TamperCounter';
+import StreaksCard from './StreaksCard';
+import VoiceSummary from '../common/VoiceSummary';
 import {
   getTermProgress,
   ordinalSuffix,
@@ -191,6 +195,7 @@ export default function StudentHome({ navigateTo }) {
   const [grades, setGrades] = useState([]);
   const [recentNotifs, setRecentNotifs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [timetable, setTimetable] = useState(null);
   const [nextClass, setNextClass] = useState(null);
   const [upcomingAssignments, setUpcomingAssignments] = useState([]);
   const [insights, setInsights] = useState({});
@@ -209,6 +214,7 @@ export default function StudentHome({ navigateTo }) {
       setInsights(insightsData || {});
       setCurrentTerm(term);
       setRecentNotifs(notifs);
+      setTimetable(timetable);
       setNextClass(getNextClassFromTimetable(timetable));
       setUpcomingAssignments(
         assignments.filter((a) => a.status === 'pending').slice(0, 3)
@@ -228,6 +234,12 @@ export default function StudentHome({ navigateTo }) {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Tick every 30s to keep next-class countdown live and term-progress fresh
+  const minuteTick = useTicker(30_000);
+  useEffect(() => {
+    if (timetable) setNextClass(getNextClassFromTimetable(timetable));
+  }, [minuteTick, timetable]);
 
   const scroll = (dir) => {
     if (scrollRef.current) {
@@ -321,13 +333,16 @@ export default function StudentHome({ navigateTo }) {
         </div>
       </div>
 
-      {/* Trust / integrity banner */}
-      <div className="stu-trust-banner">
-        <span className="material-symbols-outlined stu-trust-banner__icon" style={{ fontVariationSettings: "'FILL' 1" }}>verified_user</span>
-        <div className="stu-trust-banner__body">
-          <strong>Your grades are permanently recorded and tamper-proof.</strong>
-          <span> Any unauthorized modification attempt is automatically blocked, logged, and visible to you.</span>
+      {/* Trust / integrity banner with live tamper counter */}
+      <div className="stu-trust-banner stu-trust-banner--rich">
+        <div className="stu-trust-banner__lead">
+          <span className="material-symbols-outlined stu-trust-banner__icon" style={{ fontVariationSettings: "'FILL' 1" }}>verified_user</span>
+          <div className="stu-trust-banner__body">
+            <strong>Your grades are permanently recorded and tamper-proof.</strong>
+            <span> Any unauthorized modification attempt is automatically blocked, logged, and visible to you.</span>
+          </div>
         </div>
+        <TamperCounter onClickDetails={() => navigateTo?.('grades')} />
       </div>
 
       {/* At-Risk Alerts */}
@@ -715,6 +730,12 @@ export default function StudentHome({ navigateTo }) {
                 )}
               </div>
             )}
+          </div>
+
+          {/* Voice + streaks duo */}
+          <div className="stu-home__voice-streaks-row">
+            <VoiceSummary />
+            <StreaksCard />
           </div>
 
           {/* Achievements */}

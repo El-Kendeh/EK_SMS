@@ -18,7 +18,7 @@ const FILE_TYPE = {
   default: { icon: 'insert_drive_file', bg: '#F9FAFB', color: '#6B7280' },
 };
 
-function ResourceFile({ file }) {
+function ResourceFile({ file, isNew, onOpen }) {
   const meta = FILE_TYPE[file.type] || FILE_TYPE.default;
 
   if (file.locked) {
@@ -44,15 +44,22 @@ function ResourceFile({ file }) {
   }
 
   return (
-    <div className="sres-file">
+    <div className={`sres-file ${isNew ? 'sres-file--new' : ''}`}>
       <div className="sres-file__icon" style={{ background: meta.bg }}>
         <span className="material-symbols-outlined" style={{ color: meta.color }}>{meta.icon}</span>
       </div>
       <div className="sres-file__info">
-        <div className="sres-file__name">{file.title}</div>
+        <div className="sres-file__name">
+          {file.title}
+          {isNew && <span className="sres-file__new-pill">NEW</span>}
+        </div>
         <div className="sres-file__size">{file.size} · {file.type.toUpperCase()}</div>
       </div>
-      <button className="sres-file__download" aria-label={`Download ${file.title}`}>
+      <button
+        className="sres-file__download"
+        aria-label={`Download ${file.title}`}
+        onClick={() => onOpen?.(file)}
+      >
         <span className="material-symbols-outlined">download</span>
         <span className="sres-file__download-label">Download</span>
       </button>
@@ -60,7 +67,7 @@ function ResourceFile({ file }) {
   );
 }
 
-function SubjectCard({ subject, filter, search, index }) {
+function SubjectCard({ subject, filter, search, index, lastVisits, onOpen }) {
   const q = search.toLowerCase();
   const subjectMatches = q &&
     (subject.subjectCode.toLowerCase().includes(q) ||
@@ -95,7 +102,12 @@ function SubjectCard({ subject, filter, search, index }) {
         </span>
       </div>
       <div className="sres-subject-card__files">
-        {files.map((f) => <ResourceFile key={f.id} file={f} />)}
+        {files.map((f) => {
+          const seenAt = lastVisits?.[f.id];
+          const uploadedAt = f.uploadedAt ? new Date(f.uploadedAt).getTime() : 0;
+          const isNew = !seenAt || (uploadedAt && new Date(seenAt).getTime() < uploadedAt);
+          return <ResourceFile key={f.id} file={f} isNew={isNew} onOpen={onOpen} />;
+        })}
       </div>
     </motion.div>
   );
@@ -106,16 +118,26 @@ export default function StudentResources() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
+  const [lastVisits, setLastVisits] = useState({});
 
   const load = useCallback(async () => {
     try {
-      const data = await studentApi.getResources();
+      const [data, visits] = await Promise.all([
+        studentApi.getResources(),
+        studentApi.getResourceLastVisit().catch(() => ({})),
+      ]);
       setResources(data);
+      setLastVisits(visits || {});
     } catch {
       // show empty state
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  const handleOpenFile = useCallback((file) => {
+    studentApi.markResourceVisited(file.id).catch(() => {});
+    setLastVisits((cur) => ({ ...cur, [file.id]: new Date().toISOString() }));
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -235,6 +257,8 @@ export default function StudentResources() {
                 filter={filter}
                 search={search}
                 index={i}
+                lastVisits={lastVisits}
+                onOpen={handleOpenFile}
               />
             ))}
           </AnimatePresence>

@@ -9,6 +9,7 @@ import Register from './components/Register';
 import SchoolAdminDashboard from './components/schooladmin/dashboard';
 import TeacherDashboard from './components/teacher/TeacherDashboard';
 import StudentDashboard from './components/student/StudentDashboard';
+import VerifyPage from './components/student/VerifyPage';
 import ForceChangePassword from './components/ForceChangePassword';
 
 /* ── Impersonation banner (shown when a superadmin is viewing as a school admin) ── */
@@ -217,6 +218,19 @@ function App() {
       <div className="App loading-container">
         <div className="loading-spinner">Loading...</div>
       </div>
+    );
+  }
+
+  // Public verification page (scan-from-QR). Reachable at /verify/<hash>.
+  // No auth required; renders before the app shell so it works for non-students too.
+  const verifyMatch = window.location.pathname.match(/^\/verify\/([^/]+)\/?$/);
+  if (verifyMatch) {
+    return (
+      <ThemeProvider>
+        <div className="App">
+          <VerifyPage hash={decodeURIComponent(verifyMatch[1])} />
+        </div>
+      </ThemeProvider>
     );
   }
 

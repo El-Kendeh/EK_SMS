@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useStudentProfile } from '../../hooks/useStudentProfile';
+import ChannelPreferences from './ChannelPreferences';
+import WhoSawMyData from './WhoSawMyData';
 import { studentApi } from '../../api/studentApi';
 import { getAvatarColor, getInitials, maskPhone, maskEmail, formatRelativeTime } from '../../utils/studentUtils';
 import './StudentProfile.css';
@@ -194,6 +196,34 @@ export default function StudentProfile() {
         <span className="material-symbols-outlined">info</span>
         <p>Profile information is in read-only mode. Please contact the school administration office to update your records.</p>
       </motion.div>
+
+      {/* SMS code (Liberia low-bandwidth fallback) */}
+      <motion.section className="sprof-section" custom={1.3} variants={sectionVariants} initial="hidden" animate="visible">
+        <h3 className="sprof-section__title">
+          <span className="material-symbols-outlined">sms</span>
+          SMS Quick-Access
+        </h3>
+        <div className="sprof-sms-card">
+          <p>
+            From any phone, text <code>GRADES {profile?.studentNumber || 'STU-XXX'}</code> to the school's number to receive your latest term average via SMS.
+            Useful when data is unavailable or the app is offline.
+          </p>
+          <div className="sprof-sms-code">
+            <span>Your SMS code</span>
+            <strong>{profile?.smsCode || `EK${(profile?.studentNumber || '').slice(-4) || '0000'}`}</strong>
+          </div>
+        </div>
+      </motion.section>
+
+      {/* Notification preferences */}
+      <motion.section className="sprof-section" custom={1.6} variants={sectionVariants} initial="hidden" animate="visible">
+        <ChannelPreferences />
+      </motion.section>
+
+      {/* Who's seen my data */}
+      <motion.section className="sprof-section" custom={1.8} variants={sectionVariants} initial="hidden" animate="visible">
+        <WhoSawMyData />
+      </motion.section>
 
       {/* Academic info */}
       <motion.section className="sprof-section" custom={2} variants={sectionVariants} initial="hidden" animate="visible">

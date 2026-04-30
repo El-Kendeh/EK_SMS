@@ -1,12 +1,14 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { studentApi } from '../../api/studentApi';
+import QRCode from '../common/QRCode';
 import './VerificationModal.css';
 
 export default function VerificationModal({ reportCard, onClose }) {
   const [copied, setCopied] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [verifyResult, setVerifyResult] = useState(null);
-  const canvasRef = useRef(null);
+  const [verifyDetail, setVerifyDetail] = useState(null);
 
   useEffect(() => {
     if (!reportCard) return;
@@ -15,68 +17,31 @@ export default function VerificationModal({ reportCard, onClose }) {
     return () => document.removeEventListener('keydown', handleKey);
   }, [reportCard, onClose]);
 
-  // Draw a simple QR-like pattern on canvas as placeholder
-  useEffect(() => {
-    if (!reportCard || !canvasRef.current) return;
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    const size = 120;
-    canvas.width = size;
-    canvas.height = size;
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, size, size);
+  const verifyUrl = reportCard?.verificationHash
+    ? `${window.location.origin}/verify/${encodeURIComponent(reportCard.verificationHash)}`
+    : '';
 
-    // Use verificationHash to seed a deterministic pattern
-    const hash = reportCard.verificationHash || 'abcdef1234567890';
-    const cellSize = 8;
-    const cols = Math.floor(size / cellSize);
-    ctx.fillStyle = '#101C2E';
-
-    // Finder squares (corners)
-    const drawFinder = (x, y) => {
-      ctx.fillStyle = '#101C2E';
-      ctx.fillRect(x, y, cellSize * 7, cellSize * 7);
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(x + cellSize, y + cellSize, cellSize * 5, cellSize * 5);
-      ctx.fillStyle = '#101C2E';
-      ctx.fillRect(x + cellSize * 2, y + cellSize * 2, cellSize * 3, cellSize * 3);
-    };
-    drawFinder(0, 0);
-    drawFinder(size - cellSize * 7, 0);
-    drawFinder(0, size - cellSize * 7);
-
-    // Data dots from hash
-    ctx.fillStyle = '#101C2E';
-    for (let r = 0; r < cols; r++) {
-      for (let c = 0; c < cols; c++) {
-        const idx = (r * cols + c) % hash.length;
-        const charCode = hash.charCodeAt(idx);
-        // Skip finder square areas
-        const inTL = r < 8 && c < 8;
-        const inTR = r < 8 && c >= cols - 8;
-        const inBL = r >= cols - 8 && c < 8;
-        if (inTL || inTR || inBL) continue;
-        if (charCode % 2 === 0) {
-          ctx.fillRect(c * cellSize, r * cellSize, cellSize - 1, cellSize - 1);
-        }
-      }
-    }
-  }, [reportCard]);
-
-  const handleCopy = () => {
-    if (!reportCard?.verificationHash) return;
-    navigator.clipboard.writeText(reportCard.verificationHash).then(() => {
+  const handleCopy = (text) => () => {
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
   };
 
   const handleVerify = async () => {
+    if (!reportCard?.verificationHash) return;
     setVerifying(true);
     setVerifyResult(null);
-    await new Promise((r) => setTimeout(r, 1400));
-    setVerifyResult(reportCard?.isValid !== false ? 'valid' : 'invalid');
-    setVerifying(false);
+    try {
+      const result = await studentApi.verifyHash(reportCard.verificationHash);
+      setVerifyDetail(result);
+      setVerifyResult(result?.valid ? 'valid' : 'invalid');
+    } catch (e) {
+      setVerifyResult('invalid');
+    } finally {
+      setVerifying(false);
+    }
   };
 
   const shortHash = reportCard?.verificationHash
@@ -145,11 +110,11 @@ export default function VerificationModal({ reportCard, onClose }) {
                   <span>Status</span>
                   <span>{reportCard.status === 'published' ? 'Published' : 'Draft'}</span>
                 </div>
-                {reportCard.verificationUrl && (
+                {verifyUrl && (
                   <div className="vmod-info-row vmod-info-row--url">
                     <span>Verification URL</span>
                     <a
-                      href={reportCard.verificationUrl}
+                      href={verifyUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="vmod-verify-link"
@@ -159,12 +124,24 @@ export default function VerificationModal({ reportCard, onClose }) {
                     </a>
                   </div>
                 )}
+                {verifyDetail?.valid && (
+                  <>
+                    <div className="vmod-info-row">
+                      <span>Signed by</span>
+                      <span>{verifyDetail.signedBy}</span>
+                    </div>
+                    <div className="vmod-info-row">
+                      <span>Chain position</span>
+                      <span>#{verifyDetail.chainPosition}</span>
+                    </div>
+                  </>
+                )}
               </div>
 
-              {/* QR code */}
+              {/* QR code — real, scannable */}
               <div className="vmod-qr">
                 <div className="vmod-qr-box">
-                  <canvas ref={canvasRef} />
+                  <QRCode value={verifyUrl} size={180} ariaLabel="Scan to verify report card" />
                 </div>
                 <span className="vmod-qr-label">Scan to verify at any institution</span>
               </div>
@@ -172,7 +149,7 @@ export default function VerificationModal({ reportCard, onClose }) {
               {/* Hash row */}
               <div className="vmod-hash">
                 <code>SHA-256: {shortHash}</code>
-                <button className="vmod-hash-copy" onClick={handleCopy} title="Copy full hash">
+                <button className="vmod-hash-copy" onClick={handleCopy(reportCard?.verificationHash)} title="Copy full hash">
                   <span className="material-symbols-outlined">{copied ? 'check' : 'content_copy'}</span>
                 </button>
               </div>

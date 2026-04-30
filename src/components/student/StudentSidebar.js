@@ -1,25 +1,55 @@
+import { useState } from 'react';
 import { useNotifications } from '../../context/NotificationContext';
 import { useLowData } from '../../context/LowDataContext';
+import AccessibilityControls from '../common/AccessibilityControls';
 import './StudentSidebar.css';
 
-const NAV_ITEMS = [
-  { section: 'home',          icon: 'dashboard',    label: 'Dashboard' },
-  { section: 'timetable',     icon: 'calendar_month', label: 'Timetable' },
-  { section: 'assignments',   icon: 'assignment',   label: 'Assignments' },
-  { section: 'grades',        icon: 'auto_stories', label: 'My Grades' },
-  { section: 'report-cards',  icon: 'description',  label: 'Report Cards' },
-  { section: 'attendance',    icon: 'fact_check',   label: 'Attendance' },
-  { section: 'resources',     icon: 'folder_open',  label: 'Resources' },
-  { section: 'events',        icon: 'event_note',   label: 'Events' },
-  { section: 'messages',      icon: 'chat',         label: 'Messages',    badge: 'messages' },
-  { section: 'financials',    icon: 'payments',     label: 'Financials' },
-  { section: 'notifications', icon: 'notifications', label: 'Notifications' },
-  { section: 'profile',       icon: 'person',       label: 'Profile' },
+const NAV_GROUPS = [
+  {
+    id: 'academic',
+    label: 'Academic',
+    items: [
+      { section: 'home',          icon: 'dashboard',        label: 'Dashboard' },
+      { section: 'timetable',     icon: 'calendar_month',   label: 'Timetable' },
+      { section: 'assignments',   icon: 'assignment',       label: 'Assignments' },
+      { section: 'grades',        icon: 'auto_stories',     label: 'My Grades' },
+      { section: 'report-cards',  icon: 'description',      label: 'Report Cards' },
+      { section: 'attendance',    icon: 'fact_check',       label: 'Attendance' },
+      { section: 'study-planner', icon: 'event_note',       label: 'Study Planner' },
+    ],
+  },
+  {
+    id: 'community',
+    label: 'Community',
+    items: [
+      { section: 'messages',       icon: 'chat',            label: 'Messages',     badge: 'messages' },
+      { section: 'office-hours',   icon: 'co_present',      label: 'Office Hours' },
+      { section: 'study-groups',   icon: 'groups',          label: 'Study Groups' },
+      { section: 'wellbeing',      icon: 'favorite',        label: 'Wellbeing' },
+      { section: 'resources',      icon: 'folder_open',     label: 'Resources' },
+      { section: 'events',         icon: 'event',           label: 'Events' },
+      { section: 'notifications',  icon: 'notifications',   label: 'Notifications' },
+    ],
+  },
+  {
+    id: 'me',
+    label: 'Me',
+    items: [
+      { section: 'financials',     icon: 'payments',        label: 'Financials' },
+      { section: 'documents',      icon: 'folder_special',  label: 'Document Vault' },
+      { section: 'id-card',        icon: 'badge',           label: 'Student ID' },
+      { section: 'print-summary',  icon: 'print',           label: 'Print summary' },
+      { section: 'profile',        icon: 'person',          label: 'Profile' },
+      { section: 'safe-report',    icon: 'privacy_tip',     label: 'Safe Report' },
+      { section: 'verify',         icon: 'verified_user',   label: 'Verify a Document' },
+    ],
+  },
 ];
 
 export default function StudentSidebar({ activeSection, navigateTo, isOpen, onToggle, onLogout, msgUnread = 0 }) {
   const { unreadCount } = useNotifications();
   const { lowData, toggleLowData } = useLowData();
+  const [collapsedGroups, setCollapsedGroups] = useState({});
 
   const isMobile = window.innerWidth < 768;
   const collapsed = !isOpen && !isMobile;
@@ -31,10 +61,10 @@ export default function StudentSidebar({ activeSection, navigateTo, isOpen, onTo
     mobileOpen  ? 'mobile-open'  : '',
   ].filter(Boolean).join(' ');
 
+  const toggleGroup = (id) => setCollapsedGroups((s) => ({ ...s, [id]: !s[id] }));
+
   return (
     <aside className={sidebarClass} aria-label="Student navigation">
-
-      {/* Desktop collapse toggle */}
       {!isMobile && (
         <button
           className="stu-sidebar__toggle"
@@ -45,7 +75,6 @@ export default function StudentSidebar({ activeSection, navigateTo, isOpen, onTo
         </button>
       )}
 
-      {/* Brand */}
       <div className="stu-sidebar__brand">
         <div className="stu-sidebar__brand-icon">
           <span className="material-symbols-outlined">school</span>
@@ -58,38 +87,61 @@ export default function StudentSidebar({ activeSection, navigateTo, isOpen, onTo
         )}
       </div>
 
-      {/* Nav items */}
       <nav className="stu-sidebar__nav">
-        {NAV_ITEMS.map((item) => {
-          const { section, icon, label } = item;
-          const isActive = activeSection === section;
-          const badgeCount = section === 'notifications' ? unreadCount
-            : (item.badge === 'messages' ? msgUnread : 0);
-          const showBadge = badgeCount > 0;
-
+        {NAV_GROUPS.map((group) => {
+          const isGroupCollapsed = collapsedGroups[group.id] && !collapsed;
           return (
-            <button
-              key={section}
-              className={`stu-nav-item ${isActive ? 'active' : ''}`}
-              onClick={() => navigateTo(section)}
-              aria-label={label}
-              aria-current={isActive ? 'page' : undefined}
-            >
-              <span className="material-symbols-outlined stu-nav-item__icon">{icon}</span>
-              <span className="stu-nav-item__label">{label}</span>
-              {showBadge && (
-                <span className="stu-nav-item__badge">
-                  {badgeCount > 9 ? '9+' : badgeCount}
-                </span>
+            <div key={group.id} className="stu-sidebar__group">
+              {!collapsed && (
+                <button
+                  type="button"
+                  className="stu-sidebar__group-label"
+                  onClick={() => toggleGroup(group.id)}
+                  aria-expanded={!isGroupCollapsed}
+                >
+                  <span>{group.label}</span>
+                  <span className="material-symbols-outlined">
+                    {isGroupCollapsed ? 'expand_more' : 'expand_less'}
+                  </span>
+                </button>
               )}
-            </button>
+              {!isGroupCollapsed && group.items.map((item) => {
+                const { section, icon, label } = item;
+                const isActive = activeSection === section;
+                const badgeCount = section === 'notifications' ? unreadCount
+                  : (item.badge === 'messages' ? msgUnread : 0);
+                const showBadge = badgeCount > 0;
+
+                return (
+                  <button
+                    key={section}
+                    className={`stu-nav-item ${isActive ? 'active' : ''}`}
+                    onClick={() => navigateTo(section)}
+                    aria-label={label}
+                    aria-current={isActive ? 'page' : undefined}
+                  >
+                    <span className="material-symbols-outlined stu-nav-item__icon">{icon}</span>
+                    <span className="stu-nav-item__label">{label}</span>
+                    {showBadge && (
+                      <span className="stu-nav-item__badge">
+                        {badgeCount > 9 ? '9+' : badgeCount}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           );
         })}
       </nav>
 
-      {/* Footer */}
       <div className="stu-sidebar__footer">
-        {/* Low-data toggle */}
+        {!collapsed && (
+          <div className="stu-sidebar__a11y">
+            <AccessibilityControls compact={collapsed} />
+          </div>
+        )}
+
         <button
           className={`stu-sidebar__low-data ${lowData ? 'active' : ''}`}
           onClick={toggleLowData}

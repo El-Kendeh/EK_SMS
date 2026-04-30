@@ -1,44 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import QRCode from '../common/QRCode';
 import './CertificateModal.css';
-
-function MiniQR({ hash, size = 120 }) {
-  const canvasRef = useRef(null);
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !hash) return;
-    const ctx = canvas.getContext('2d');
-    const cell = Math.floor(size / 21);
-    const gridSize = cell * 21;
-    canvas.width = gridSize;
-    canvas.height = gridSize;
-
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, gridSize, gridSize);
-
-    // seed from hash
-    let seed = 0;
-    for (let i = 0; i < hash.length; i++) seed = (seed * 31 + hash.charCodeAt(i)) >>> 0;
-    const rng = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
-
-    ctx.fillStyle = '#101C2E';
-    for (let r = 0; r < 21; r++) {
-      for (let c = 0; c < 21; c++) {
-        if (rng() > 0.5) ctx.fillRect(c * cell, r * cell, cell, cell);
-      }
-    }
-    // finder squares
-    [[0,0],[14,0],[0,14]].forEach(([x,y]) => {
-      ctx.fillStyle = '#101C2E';
-      ctx.fillRect(x*cell, y*cell, 7*cell, 7*cell);
-      ctx.fillStyle = '#fff';
-      ctx.fillRect((x+1)*cell, (y+1)*cell, 5*cell, 5*cell);
-      ctx.fillStyle = '#101C2E';
-      ctx.fillRect((x+2)*cell, (y+2)*cell, 3*cell, 3*cell);
-    });
-  }, [hash, size]);
-  return <canvas ref={canvasRef} style={{ width: size, height: size, borderRadius: 8 }} />;
-}
 
 export default function CertificateModal({ reportCard, onClose }) {
   useEffect(() => {
@@ -160,7 +123,11 @@ export default function CertificateModal({ reportCard, onClose }) {
                 <div className="cert-verify">
                   <div className="cert-verify__qr-wrap">
                     <p className="cert-verify__label">Instant Verification</p>
-                    <MiniQR hash={reportCard.verificationHash} size={128} />
+                    <QRCode
+                      value={`${window.location.origin}/verify/${encodeURIComponent(reportCard.verificationHash || '')}`}
+                      size={128}
+                      ariaLabel="Scan to verify this certificate"
+                    />
                     <p className="cert-verify__hash">{(reportCard.verificationHash || '').slice(0, 40)}…</p>
                   </div>
                   <div className="cert-verify__badge">

@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { studentApi } from '../../api/studentApi';
 import { ordinalSuffix } from '../../utils/studentUtils';
 import VerificationModal from './VerificationModal';
 import CertificateModal from './CertificateModal';
+import QRCode from '../common/QRCode';
 import './StudentReportCards.css';
 
 function formatGeneratedDate(iso) {
@@ -12,51 +13,8 @@ function formatGeneratedDate(iso) {
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-function MiniQR({ hash, size = 60 }) {
-  const canvasRef = useRef(null);
-
-  useEffect(() => {
-    if (!canvasRef.current) return;
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    canvas.width = size;
-    canvas.height = size;
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, size, size);
-
-    const seed = hash || 'placeholder';
-    const cell = 5;
-    const cols = Math.floor(size / cell);
-
-    const drawFinder = (x, y, s) => {
-      ctx.fillStyle = '#101C2E';
-      ctx.fillRect(x, y, s, s);
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(x + cell, y + cell, s - cell * 2, s - cell * 2);
-      ctx.fillStyle = '#101C2E';
-      ctx.fillRect(x + cell * 2, y + cell * 2, s - cell * 4, s - cell * 4);
-    };
-    const f = cell * 5;
-    drawFinder(0, 0, f);
-    drawFinder(size - f, 0, f);
-    drawFinder(0, size - f, f);
-
-    ctx.fillStyle = '#101C2E';
-    for (let r = 0; r < cols; r++) {
-      for (let c = 0; c < cols; c++) {
-        const inTL = r < 6 && c < 6;
-        const inTR = r < 6 && c >= cols - 6;
-        const inBL = r >= cols - 6 && c < 6;
-        if (inTL || inTR || inBL) continue;
-        const idx = (r * cols + c) % seed.length;
-        if (seed.charCodeAt(idx) % 3 !== 0) {
-          ctx.fillRect(c * cell, r * cell, cell - 1, cell - 1);
-        }
-      }
-    }
-  }, [hash, size]);
-
-  return <canvas ref={canvasRef} />;
+function verifyUrl(hash) {
+  return hash ? `${window.location.origin}/verify/${encodeURIComponent(hash)}` : '';
 }
 
 const cardVariants = {
@@ -174,7 +132,7 @@ export default function StudentReportCards() {
               </div>
             </div>
             <div className="srep-qr-wrap">
-              <MiniQR hash={card.verificationHash} size={60} />
+              <QRCode value={verifyUrl(card.verificationHash)} size={60} />
             </div>
           </div>
 

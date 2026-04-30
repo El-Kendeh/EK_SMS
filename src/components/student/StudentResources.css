@@ -394,3 +394,25 @@
   .sres-file__download { padding: 6px 8px; }
   .sres__featured-title { font-size: 18px; }
 }
+
+.sres-file--new { position: relative; }
+.sres-file--new::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--student-primary, #5b8cff);
+  border-radius: 3px 0 0 3px;
+}
+.sres-file__new-pill {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 7px;
+  background: var(--student-primary, #5b8cff);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  border-radius: 999px;
+  vertical-align: middle;
+}

@@ -1,0 +1,59 @@
+.tamper-counter {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--student-text, #e8eef9);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  width: 100%;
+  transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+}
+
+.tamper-counter:hover { transform: translateY(-1px); background: rgba(255, 255, 255, 0.06); }
+
+.tamper-counter .material-symbols-outlined { font-size: 26px; flex-shrink: 0; }
+
+.tamper-counter__main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.tamper-counter__main strong {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.tamper-counter__label {
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.tamper-counter__sub {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.tamper-counter--safe { border-color: rgba(34, 197, 94, 0.35); background: rgba(34, 197, 94, 0.08); }
+.tamper-counter--safe .material-symbols-outlined { color: #22c55e; }
+
+.tamper-counter--warn { border-color: rgba(245, 158, 11, 0.35); background: rgba(245, 158, 11, 0.08); }
+.tamper-counter--warn .material-symbols-outlined { color: #f59e0b; }
+
+.tamper-counter--danger { border-color: rgba(239, 68, 68, 0.40); background: rgba(239, 68, 68, 0.08); }
+.tamper-counter--danger .material-symbols-outlined { color: #ef4444; }
+
+@media (max-width: 600px) {
+  .tamper-counter { padding: 10px 12px; gap: 10px; }
+  .tamper-counter__sub { display: none; }
+}

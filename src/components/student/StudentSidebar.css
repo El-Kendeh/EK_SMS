@@ -308,3 +308,33 @@
     display: none;
   }
 }
+
+/* Group labels */
+.stu-sidebar__group { display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px; }
+
+.stu-sidebar__group-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px 4px;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.4);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.stu-sidebar__group-label:hover { color: rgba(255, 255, 255, 0.7); }
+.stu-sidebar__group-label .material-symbols-outlined { font-size: 14px; }
+
+.stu-sidebar.collapsed .stu-sidebar__group-label { display: none; }
+
+.stu-sidebar__a11y {
+  padding: 8px 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  margin-top: 8px;
+}
+.stu-sidebar.collapsed .stu-sidebar__a11y { display: none; }

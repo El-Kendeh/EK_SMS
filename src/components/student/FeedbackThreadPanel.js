@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { studentApi } from '../../api/studentApi';
+import { useAutoSave } from '../../hooks/useAutoSave';
 import './FeedbackThreadPanel.css';
 
 export default function FeedbackThreadPanel({ grade, onClose }) {
   const [thread, setThread] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [input, setInput] = useState('');
+  const [input, setInput, draftMeta] = useAutoSave(`stu_fbk_${grade?.id || 'none'}`, '');
   const [sending, setSending] = useState(false);
   const bottomRef = useRef(null);
 
@@ -40,9 +41,10 @@ export default function FeedbackThreadPanel({ grade, onClose }) {
       const msg = await studentApi.sendFeedbackMessage(grade.id, input.trim());
       setThread((prev) => ({ ...prev, messages: [...prev.messages, msg] }));
       setInput('');
+      draftMeta.clear();
       setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 80);
-    } catch {
-      // silent fail
+    } catch (err) {
+      setError('Could not send your message. Your draft has been kept.');
     } finally {
       setSending(false);
     }

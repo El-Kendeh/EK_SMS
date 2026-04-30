@@ -7,6 +7,25 @@ export default function SecurityReportModal({ gradeId, subjectName, onClose, onC
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [objectionOpen, setObjectionOpen] = useState(false);
+  const [objectionMsg, setObjectionMsg] = useState('');
+  const [copyParent, setCopyParent] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(null);
+
+  const handleSubmitObjection = async () => {
+    if (!gradeId || !objectionMsg.trim()) return;
+    setSubmitting(true);
+    try {
+      const res = await studentApi.submitModificationObjection(gradeId, { message: objectionMsg.trim(), copyParent });
+      setSubmitted(res);
+      setObjectionMsg('');
+    } catch (e) {
+      setError('Could not submit your objection. Try again later.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     if (!gradeId) return;
@@ -141,12 +160,67 @@ export default function SecurityReportModal({ gradeId, subjectName, onClose, onC
                     </button>
                     <button
                       className="srm-btn srm-btn--ghost"
-                      onClick={() => { onClose(); onContactSchool?.(); }}
+                      onClick={() => setObjectionOpen((v) => !v)}
+                      aria-expanded={objectionOpen}
                     >
-                      <span className="material-symbols-outlined">mail</span>
-                      Contact School
+                      <span className="material-symbols-outlined">{objectionOpen ? 'close' : 'flag'}</span>
+                      {objectionOpen ? 'Hide objection form' : 'File an objection'}
                     </button>
                   </div>
+
+                  {/* Objection form */}
+                  {objectionOpen && !submitted && (
+                    <div className="srm-objection">
+                      <h4>
+                        <span className="material-symbols-outlined">flag</span>
+                        Tell the registrar what you saw
+                      </h4>
+                      <p>
+                        Your objection is recorded in the audit trail and goes to the school admin.
+                        Your linked guardian can be copied if you wish.
+                      </p>
+                      <textarea
+                        rows={4}
+                        value={objectionMsg}
+                        onChange={(e) => setObjectionMsg(e.target.value)}
+                        placeholder="Describe what you noticed and any context (optional but helpful)…"
+                        className="srm-objection__textarea"
+                      />
+                      <label className="srm-objection__check">
+                        <input type="checkbox" checked={copyParent} onChange={(e) => setCopyParent(e.target.checked)} />
+                        Send a copy to my linked guardian
+                      </label>
+                      <div className="srm-objection__actions">
+                        <button
+                          className="srm-btn srm-btn--primary"
+                          disabled={submitting || !objectionMsg.trim()}
+                          onClick={handleSubmitObjection}
+                        >
+                          {submitting ? (
+                            <>
+                              <span className="material-symbols-outlined" style={{ animation: 'spin 1s linear infinite' }}>autorenew</span>
+                              Submitting…
+                            </>
+                          ) : (
+                            <>
+                              <span className="material-symbols-outlined">send</span>
+                              Submit objection
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {submitted && (
+                    <div className="srm-objection srm-objection--success">
+                      <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1", color: '#22c55e' }}>check_circle</span>
+                      <div>
+                        <strong>Objection received.</strong>
+                        <p>Ticket <code>{submitted.ticketId}</code>. The registrar will respond in 1–2 school days.</p>
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
             </div>

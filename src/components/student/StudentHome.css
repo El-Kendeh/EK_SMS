@@ -106,6 +106,39 @@
   font-weight: 700;
 }
 
+/* Rich variant: stacks trust banner with the live tamper counter */
+.stu-trust-banner--rich {
+  flex-direction: column;
+  gap: 14px;
+}
+
+.stu-trust-banner--rich .stu-trust-banner__lead {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+@media (min-width: 769px) {
+  .stu-trust-banner--rich {
+    flex-direction: row;
+    align-items: center;
+    gap: 18px;
+  }
+  .stu-trust-banner--rich .stu-trust-banner__lead { flex: 1; }
+  .stu-trust-banner--rich .tamper-counter { width: clamp(260px, 36%, 360px); }
+}
+
+.stu-home__voice-streaks-row {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 14px;
+  margin: 22px 0 24px;
+}
+
+@media (max-width: 768px) {
+  .stu-home__voice-streaks-row { grid-template-columns: 1fr; }
+}
+
 /* ── Stats row ── */
 .stu-home__stats {
   display: grid;

@@ -592,3 +592,22 @@
   .stu-goal-tracker { padding: 18px 16px; }
   .stu-goal-row { gap: 10px; padding: 10px 12px; }
 }
+
+.stu-row-expand {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+.stu-row-expand:hover { background: rgba(255, 255, 255, 0.1); }
+.stu-row-expand.is-open { background: var(--student-primary, #5b8cff); color: #fff; }
+.stu-row-expand .material-symbols-outlined { font-size: 16px; }
+.stu-grades-acc-row td { padding: 0 !important; background: transparent; }
+.row--expanded td { border-bottom: none !important; }

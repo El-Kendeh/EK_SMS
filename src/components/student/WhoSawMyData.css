@@ -1,0 +1,116 @@
+.who-saw {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  padding: 18px;
+  color: var(--student-text, #e8eef9);
+}
+
+.who-saw__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.who-saw__head h3 {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.who-saw__head p {
+  margin: 0;
+  font-size: 12px;
+  opacity: 0.7;
+  max-width: 420px;
+}
+
+.who-saw__tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.who-saw__tab {
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: transparent;
+  color: inherit;
+  padding: 6px 12px;
+  font-size: 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.who-saw__tab.is-active {
+  background: var(--student-primary, #5b8cff);
+  border-color: transparent;
+  color: #fff;
+  font-weight: 600;
+}
+
+.who-saw__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.who-saw__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.who-saw__avatar {
+  width: 42px; height: 42px; border-radius: 11px;
+  display: grid; place-items: center;
+  background: rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+}
+
+.who-saw__row--parent  .who-saw__avatar { background: rgba(91, 140, 255, 0.18); color: #5b8cff; }
+.who-saw__row--teacher .who-saw__avatar { background: rgba(34, 197, 94, 0.18);  color: #22c55e; }
+.who-saw__row--admin   .who-saw__avatar { background: rgba(245, 158, 11, 0.18); color: #f59e0b; }
+.who-saw__row--system  .who-saw__avatar { background: rgba(168, 85, 247, 0.18); color: #a855f7; }
+
+.who-saw__body { flex: 1; min-width: 0; }
+.who-saw__top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; }
+.who-saw__top strong { font-weight: 600; }
+
+.who-saw__badge { font-size: 10px; padding: 2px 8px; border-radius: 999px; font-weight: 600; letter-spacing: 0.02em; }
+.who-saw__badge--parent  { background: rgba(91, 140, 255, 0.18); color: #5b8cff; }
+.who-saw__badge--teacher { background: rgba(34, 197, 94, 0.18);  color: #22c55e; }
+.who-saw__badge--admin   { background: rgba(245, 158, 11, 0.18); color: #f59e0b; }
+.who-saw__badge--system  { background: rgba(168, 85, 247, 0.18); color: #a855f7; }
+
+.who-saw__meta { font-size: 11px; opacity: 0.7; margin-top: 4px; display: flex; gap: 6px; flex-wrap: wrap; }
+.who-saw__meta .dot { opacity: 0.5; }
+
+.who-saw__time { font-size: 11px; opacity: 0.7; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+
+.who-saw__empty, .who-saw__error {
+  margin: 8px 0 0;
+  padding: 14px;
+  font-size: 13px;
+  text-align: center;
+  opacity: 0.7;
+}
+.who-saw__error { color: #ef4444; }
+
+.who-saw--compact { padding: 12px; }
+.who-saw--compact .who-saw__head h3 { font-size: 13px; }
+
+@media (max-width: 600px) {
+  .who-saw__head { flex-direction: column; align-items: stretch; }
+  .who-saw__tabs { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; }
+  .who-saw__row { flex-wrap: wrap; }
+  .who-saw__time { width: 100%; text-align: right; }
+}

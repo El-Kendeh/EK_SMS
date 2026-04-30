@@ -22,6 +22,22 @@ import {
   mockGradeInsights,
   mockEvents,
 } from '../mock/studentMockData';
+import {
+  mockTamperCount,
+  mockWhoSawMyData,
+  mockChannelPreferences,
+  mockWhistleblowerCategories,
+  mockOfficeHourSlots,
+  mockCounsellor,
+  mockStudyGroups,
+  mockStreaks,
+  mockDigitalId,
+  mockDocumentVault,
+  mockStudyPlan,
+  mockResourceLastVisit,
+  mockTermVoiceSummary,
+  mockObjectionsLog,
+} from '../mock/studentMockExtras';
 
 const USE_MOCK = process.env.REACT_APP_USE_MOCK_DATA === 'true';
 const delay = (ms) => new Promise((res) => setTimeout(res, ms));
@@ -379,5 +395,321 @@ export const studentApi = {
   async getEvents() {
     if (USE_MOCK) { await delay(400); return mockEvents; }
     return apiClient.get('/api/student/events/');
+  },
+
+  // ───────────────────────────────────────────────────────────────────────
+  // NEW ENDPOINTS — Phase 2+
+  // ───────────────────────────────────────────────────────────────────────
+
+  // ── Verification (public hash check) ─────────────────────────────────────
+  async verifyHash(hash) {
+    if (USE_MOCK) {
+      await delay(700);
+      const card = mockReportCards.find((rc) => rc.verificationHash === hash);
+      if (!card) return { valid: false, reason: 'Hash not found in registry' };
+      return {
+        valid: true,
+        signedBy: 'El-Kendeh Smart School',
+        signedAt: card.generatedAt,
+        student: mockStudent.fullName,
+        studentNumber: mockStudent.studentNumber,
+        term: card.termName,
+        academicYear: card.academicYear,
+        average: card.average,
+        chainPosition: card.chainPosition || 142,
+        chainTip: card.chainTip || 'b7c1...49ea',
+      };
+    }
+    return apiClient.get(`/api/verify/${encodeURIComponent(hash)}/`);
+  },
+
+  // ── Tamper-attempt counter (visible to student) ─────────────────────────
+  async getTamperCount() {
+    if (USE_MOCK) { await delay(250); return mockTamperCount; }
+    return apiClient.get('/api/student/tamper-count/');
+  },
+
+  // ── Who's seen my data (extends parental access log) ────────────────────
+  async getWhoSawMyData() {
+    if (USE_MOCK) { await delay(400); return mockWhoSawMyData; }
+    return apiClient.get('/api/student/access-log/');
+  },
+
+  // ── Modification objection (student-side response to attempt) ───────────
+  async submitModificationObjection(gradeId, { message, copyParent }) {
+    if (USE_MOCK) {
+      await delay(800);
+      mockObjectionsLog.push({
+        id: `obj-${Date.now()}`, gradeId, submittedAt: new Date().toISOString(),
+        status: 'received', message, copyParent: !!copyParent,
+      });
+      return { success: true, ticketId: `OBJ-${Date.now().toString(36).toUpperCase()}` };
+    }
+    return apiClient.post(`/api/student/grades/${gradeId}/objection/`, { message, copy_parent: !!copyParent });
+  },
+
+  // ── Channel preferences ─────────────────────────────────────────────────
+  async getChannelPreferences() {
+    if (USE_MOCK) { await delay(300); return mockChannelPreferences; }
+    return apiClient.get('/api/student/channel-preferences/');
+  },
+
+  async updateChannelPreferences(prefs) {
+    if (USE_MOCK) {
+      await delay(400);
+      Object.assign(mockChannelPreferences, prefs);
+      return { success: true };
+    }
+    return apiClient.patch('/api/student/channel-preferences/', prefs);
+  },
+
+  // ── Whistleblower (anonymous safe report) ───────────────────────────────
+  async getWhistleblowerCategories() {
+    if (USE_MOCK) { await delay(150); return mockWhistleblowerCategories; }
+    return apiClient.get('/api/whistleblower/categories/');
+  },
+
+  async submitWhistleblowerReport({ category, message, evidenceFiles }) {
+    // Backend MUST not log identity, IP, or UA. Frontend must use a separate, anonymized fetch path.
+    if (USE_MOCK) {
+      await delay(900);
+      const id = `WB-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
+      return { success: true, ticketId: id, followUpKey: id, note: 'Save this key to follow up anonymously.' };
+    }
+    return apiClient.post('/api/whistleblower/submit/', { category, message, evidence: evidenceFiles?.length || 0 });
+  },
+
+  async checkWhistleblowerStatus(followUpKey) {
+    if (USE_MOCK) {
+      await delay(500);
+      return { ticketId: followUpKey, status: 'received', updates: [{ at: new Date().toISOString(), text: 'Logged. Investigation pending.' }] };
+    }
+    return apiClient.get(`/api/whistleblower/${encodeURIComponent(followUpKey)}/`);
+  },
+
+  // ── Goals (server-synced score targets) ─────────────────────────────────
+  async getGoals(termId) {
+    if (USE_MOCK) {
+      await delay(250);
+      // Pull localStorage saved goals for compatibility with old UI
+      const raw = (() => { try { return JSON.parse(localStorage.getItem('stu_goals') || '[]'); } catch { return []; } })();
+      return raw;
+    }
+    return apiClient.get(`/api/student/goals/?term_id=${termId}`);
+  },
+
+  async setGoal({ subjectId, target, term }) {
+    if (USE_MOCK) {
+      await delay(250);
+      const raw = (() => { try { return JSON.parse(localStorage.getItem('stu_goals') || '[]'); } catch { return []; } })();
+      const idx = raw.findIndex((g) => g.subjectId === subjectId && g.term === term);
+      const entry = { subjectId, target, term, updatedAt: new Date().toISOString() };
+      if (idx >= 0) raw[idx] = entry; else raw.push(entry);
+      try { localStorage.setItem('stu_goals', JSON.stringify(raw)); } catch {}
+      return entry;
+    }
+    return apiClient.put('/api/student/goals/', { subject_id: subjectId, target, term });
+  },
+
+  // ── Office Hours ────────────────────────────────────────────────────────
+  async getOfficeHourSlots() {
+    if (USE_MOCK) { await delay(300); return mockOfficeHourSlots; }
+    return apiClient.get('/api/student/office-hours/');
+  },
+
+  async claimOfficeHourSlot(slotId, { topic }) {
+    if (USE_MOCK) {
+      await delay(500);
+      const slot = mockOfficeHourSlots.find((s) => s.id === slotId);
+      if (!slot) throw new Error('Slot not found');
+      if (slot.booked) throw new Error('Slot already booked');
+      slot.booked = true; slot.bookedBy = 'self'; slot.topic = topic;
+      return { success: true, slot };
+    }
+    return apiClient.post(`/api/student/office-hours/${slotId}/claim/`, { topic });
+  },
+
+  async cancelOfficeHourSlot(slotId) {
+    if (USE_MOCK) {
+      await delay(400);
+      const slot = mockOfficeHourSlots.find((s) => s.id === slotId);
+      if (!slot) throw new Error('Slot not found');
+      slot.booked = false; slot.bookedBy = null; slot.topic = null;
+      return { success: true };
+    }
+    return apiClient.delete(`/api/student/office-hours/${slotId}/claim/`);
+  },
+
+  // ── Counsellor / Wellbeing ───────────────────────────────────────────────
+  async getCounsellorThread() {
+    if (USE_MOCK) { await delay(400); return mockCounsellor; }
+    return apiClient.get('/api/student/counsellor/');
+  },
+
+  async sendCounsellorMessage(text, { anonymous } = {}) {
+    if (USE_MOCK) {
+      await delay(400);
+      const msg = { id: `wb-${Date.now()}`, sender: anonymous ? 'anonymous' : 'student', text, sentAt: new Date().toISOString() };
+      mockCounsellor.thread.push(msg);
+      return msg;
+    }
+    return apiClient.post('/api/student/counsellor/', { text, anonymous: !!anonymous });
+  },
+
+  // ── Study Groups ─────────────────────────────────────────────────────────
+  async getStudyGroups() {
+    if (USE_MOCK) { await delay(300); return mockStudyGroups; }
+    return apiClient.get('/api/student/study-groups/');
+  },
+
+  async joinStudyGroup(groupId) {
+    if (USE_MOCK) {
+      await delay(500);
+      const g = mockStudyGroups.find((g) => g.id === groupId);
+      if (g) { g.joined = true; g.members += 1; }
+      return { success: true };
+    }
+    return apiClient.post(`/api/student/study-groups/${groupId}/join/`);
+  },
+
+  async leaveStudyGroup(groupId) {
+    if (USE_MOCK) {
+      await delay(400);
+      const g = mockStudyGroups.find((g) => g.id === groupId);
+      if (g) { g.joined = false; g.members = Math.max(0, g.members - 1); }
+      return { success: true };
+    }
+    return apiClient.post(`/api/student/study-groups/${groupId}/leave/`);
+  },
+
+  // ── Streaks / Habit cards ────────────────────────────────────────────────
+  async getStreaks() {
+    if (USE_MOCK) { await delay(200); return mockStreaks; }
+    return apiClient.get('/api/student/streaks/');
+  },
+
+  // ── Digital ID Card ──────────────────────────────────────────────────────
+  async getDigitalId() {
+    if (USE_MOCK) {
+      await delay(400);
+      return { ...mockDigitalId, verifyUrl: `${window.location.origin}/verify/${encodeURIComponent('id-' + mockDigitalId.studentNumber)}` };
+    }
+    return apiClient.get('/api/student/digital-id/');
+  },
+
+  // ── Document Vault & Transcript Request ──────────────────────────────────
+  async getDocumentVault() {
+    if (USE_MOCK) { await delay(400); return mockDocumentVault; }
+    return apiClient.get('/api/student/documents/');
+  },
+
+  async uploadDocument({ title, type, file }) {
+    if (USE_MOCK) {
+      await delay(900);
+      const entry = {
+        id: `doc-${Date.now()}`,
+        title: title || file?.name || 'Untitled',
+        type: type || 'other',
+        status: 'pending',
+        uploadedAt: new Date().toISOString(),
+        size: file?.size || 0,
+      };
+      mockDocumentVault.uploads.unshift(entry);
+      return entry;
+    }
+    const fd = new FormData();
+    fd.append('title', title || '');
+    fd.append('type', type || 'other');
+    if (file) fd.append('file', file);
+    return apiClient.post('/api/student/documents/', fd);
+  },
+
+  async requestTranscript({ purpose, address, deliveryMethod = 'digital' }) {
+    if (USE_MOCK) {
+      await delay(700);
+      const entry = {
+        id: `tr-${Date.now()}`,
+        purpose, address, deliveryMethod,
+        requestedAt: new Date().toISOString(),
+        status: 'received',
+      };
+      mockDocumentVault.transcriptRequests.unshift(entry);
+      return entry;
+    }
+    return apiClient.post('/api/student/transcript/request/', { purpose, address, delivery_method: deliveryMethod });
+  },
+
+  // ── Study Planner ────────────────────────────────────────────────────────
+  async getStudyPlan() {
+    if (USE_MOCK) {
+      await delay(250);
+      try { const ls = JSON.parse(localStorage.getItem('stu_study_plan') || 'null'); if (ls) return ls; } catch {}
+      return mockStudyPlan;
+    }
+    return apiClient.get('/api/student/study-plan/');
+  },
+
+  async saveStudyPlan(blocks) {
+    if (USE_MOCK) {
+      await delay(300);
+      try { localStorage.setItem('stu_study_plan', JSON.stringify(blocks)); } catch {}
+      return { success: true };
+    }
+    return apiClient.put('/api/student/study-plan/', blocks);
+  },
+
+  // ── Resource last-visit (for "new since" markers) ────────────────────────
+  async getResourceLastVisit() {
+    if (USE_MOCK) {
+      await delay(200);
+      try { const ls = JSON.parse(localStorage.getItem('stu_resource_visits') || 'null'); if (ls) return ls; } catch {}
+      return { ...mockResourceLastVisit };
+    }
+    return apiClient.get('/api/student/resources/last-visit/');
+  },
+
+  async markResourceVisited(resourceId) {
+    if (USE_MOCK) {
+      await delay(150);
+      try {
+        const ls = JSON.parse(localStorage.getItem('stu_resource_visits') || '{}');
+        ls[resourceId] = new Date().toISOString();
+        localStorage.setItem('stu_resource_visits', JSON.stringify(ls));
+      } catch {}
+      return { success: true };
+    }
+    return apiClient.post(`/api/student/resources/${resourceId}/visit/`);
+  },
+
+  // ── Voice summary (TTS source text) ──────────────────────────────────────
+  async getVoiceSummary() {
+    if (USE_MOCK) { await delay(300); return { text: mockTermVoiceSummary }; }
+    return apiClient.get('/api/student/voice-summary/');
+  },
+
+  // ── Subject deep-dive (aggregator) ───────────────────────────────────────
+  async getSubjectDeepDive(subjectId) {
+    if (USE_MOCK) {
+      await delay(700);
+      const grade = mockGrades.find((g) => g.subject?.id === subjectId || g.subject?.code === subjectId);
+      const insights = (mockGradeInsights || []).find((i) => i.subjectId === subjectId);
+      const c = grade?.components;
+      return {
+        subject: grade?.subject || { id: subjectId, name: 'Subject', code: subjectId, color: '#5b8cff' },
+        currentGrade: grade ? { score: grade.score, gradeLetter: grade.gradeLetter, status: grade.status } : null,
+        breakdown: c ? {
+          ca:      { score: c.ca?.score        ?? null, weight: c.ca?.weight        ?? 20, max: 20 },
+          midTerm: { score: c.midterm?.score   ?? null, weight: c.midterm?.weight   ?? 20, max: 30 },
+          final:   { score: c.finalExam?.score ?? null, weight: c.finalExam?.weight ?? 60, max: 50 },
+        } : null,
+        history: mockGradeHistory[grade?.id] || [],
+        trend: insights ? insights.points : [],
+        teacher: grade?.teacher || 'Mr. Daniel Sesay',
+        resources: (mockResources?.find?.((r) => r.subjectCode === (grade?.subject?.code))?.files) || [],
+        peerReviewCount: 2,
+        nextClass: null,
+      };
+    }
+    return apiClient.get(`/api/student/subjects/${subjectId}/deep-dive/`);
   },
 };

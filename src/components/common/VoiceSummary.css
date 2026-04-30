@@ -1,0 +1,40 @@
+.voice-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: rgba(91, 140, 255, 0.08);
+  border: 1px solid rgba(91, 140, 255, 0.24);
+  border-radius: 12px;
+  color: var(--student-text, #e8eef9);
+}
+
+.voice-summary > .material-symbols-outlined {
+  color: #5b8cff;
+  font-size: 22px;
+}
+
+.voice-summary.is-speaking > .material-symbols-outlined {
+  animation: vs-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes vs-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.18); } }
+
+.voice-summary__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.voice-summary__body strong { font-size: 13px; }
+.voice-summary__body span { font-size: 11px; opacity: 0.7; }
+
+.voice-summary button {
+  width: 34px; height: 34px;
+  border-radius: 8px;
+  background: rgba(91, 140, 255, 0.18);
+  color: #5b8cff;
+  border: none;
+  cursor: pointer;
+  display: grid; place-items: center;
+}
+.voice-summary button:hover { background: rgba(91, 140, 255, 0.3); }
+
+@media (prefers-reduced-motion: reduce) {
+  .voice-summary.is-speaking > .material-symbols-outlined { animation: none; }
+}

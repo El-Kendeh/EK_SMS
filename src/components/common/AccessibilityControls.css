@@ -1,0 +1,53 @@
+.a11y {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.a11y__btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.a11y__btn:hover { background: rgba(255, 255, 255, 0.08); }
+
+.a11y__btn .material-symbols-outlined { font-size: 18px; }
+
+.a11y__btn.is-active {
+  background: rgba(91, 140, 255, 0.18);
+  border-color: rgba(91, 140, 255, 0.45);
+  color: var(--student-primary, #5b8cff);
+}
+
+.a11y--compact { flex-direction: row; }
+.a11y--compact .a11y__btn { padding: 8px; justify-content: center; }
+
+/* High contrast & color-blind targets — opt-in CSS that other components honour */
+[data-contrast='high'] {
+  --student-text: #ffffff;
+  --student-text-secondary: #d6dffa;
+  --student-card-bg: #000000;
+}
+
+[data-cblind='on'] {
+  /* Replace red/green with blue/orange — safer for deuteranopia/protanopia */
+  --cb-positive: #2563eb;
+  --cb-negative: #ea580c;
+}
+[data-cblind='on'] .ga-row--ca  .ga-row__fill { background: linear-gradient(90deg, #38bdf8, #7dd3fc); }
+[data-cblind='on'] .ga-row--mid .ga-row__fill { background: linear-gradient(90deg, #ea580c, #fdba74); }
+[data-cblind='on'] .ga-row--fin .ga-row__fill { background: linear-gradient(90deg, #2563eb, #60a5fa); }
+[data-cblind='on'] .ga__chip--up   { background: rgba(37, 99, 235, 0.16); color: #2563eb; }
+[data-cblind='on'] .ga__chip--down { background: rgba(234, 88, 12, 0.16); color: #ea580c; }
+[data-cblind='on'] .ghp-event__delta-cell--before strong { color: #ea580c; }
+[data-cblind='on'] .ghp-event__delta-cell--after strong { color: #2563eb; }

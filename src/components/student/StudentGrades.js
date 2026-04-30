@@ -9,6 +9,7 @@ import SecurityReportModal from './SecurityReportModal';
 import RemedialActionModal from './RemedialActionModal';
 import FeedbackThreadPanel from './FeedbackThreadPanel';
 import PeerReviewPanel from './PeerReviewPanel';
+import GradeAccordion from './GradeAccordion';
 import './StudentGrades.css';
 
 export default function StudentGrades({ navigateTo }) {
@@ -26,6 +27,7 @@ export default function StudentGrades({ navigateTo }) {
   const [targets, setTargets] = useState(
     () => JSON.parse(localStorage.getItem('stu_grade_targets') || '{}')
   );
+  const [expandedId, setExpandedId] = useState(null);
 
   const updateTarget = (gradeId, value) => {
     setTargets(prev => {
@@ -38,6 +40,15 @@ export default function StudentGrades({ navigateTo }) {
       localStorage.setItem('stu_grade_targets', JSON.stringify(next));
       return next;
     });
+  };
+
+  const saveTargetServerSide = (grade, target) => {
+    updateTarget(grade.id, target);
+    studentApi.setGoal({
+      subjectId: grade.subject?.id,
+      target,
+      term: selectedTermId,
+    }).catch(() => {/* fail silently — local copy is authoritative offline */});
   };
 
   // Load terms
@@ -244,15 +255,25 @@ export default function StudentGrades({ navigateTo }) {
                     const avatarColor = getAvatarColor(grade.teacher?.fullName || '');
 
                     return (
+                      <>
                       <motion.tr
                         key={grade.id}
-                        className={isFailing ? 'row--failing' : ''}
+                        className={`${isFailing ? 'row--failing' : ''} ${expandedId === grade.id ? 'row--expanded' : ''}`}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: idx * 0.05 }}
                       >
-                        {/* Subject */}
+                        {/* Subject + expand */}
                         <td>
+                          <button
+                            className={`stu-row-expand ${expandedId === grade.id ? 'is-open' : ''}`}
+                            onClick={() => setExpandedId((cur) => cur === grade.id ? null : grade.id)}
+                            aria-expanded={expandedId === grade.id}
+                            aria-controls={`grade-acc-${grade.id}`}
+                            title="Show CA / Mid-term / Final breakdown"
+                          >
+                            <span className="material-symbols-outlined">{expandedId === grade.id ? 'expand_less' : 'expand_more'}</span>
+                          </button>
                           <div className={`stu-subject-name ${isFailing ? 'stu-subject-name--failing' : ''}`}>
                             {grade.subject?.name}
                           </div>
@@ -361,6 +382,18 @@ export default function StudentGrades({ navigateTo }) {
                           </div>
                         </td>
                       </motion.tr>
+                      {expandedId === grade.id && (
+                        <tr className="stu-grades-acc-row" id={`grade-acc-${grade.id}`}>
+                          <td colSpan={7}>
+                            <GradeAccordion
+                              grade={grade}
+                              target={targets[grade.id] ?? null}
+                              onSetTarget={(t) => saveTargetServerSide(grade, t)}
+                            />
+                          </td>
+                        </tr>
+                      )}
+                      </>
                     );
                   })}
             </tbody>

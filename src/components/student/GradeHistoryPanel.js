@@ -212,6 +212,15 @@ export default function GradeHistoryPanel({ grade, onClose }) {
                   const cfg = getEventConfig(event.eventType);
                   const isSecurity = event.isSecurityEvent;
 
+                  // Find previous score-bearing event for delta diff
+                  let prevWithScore = null;
+                  for (let j = idx - 1; j >= 0; j--) {
+                    if (history[j]?.score != null) { prevWithScore = history[j]; break; }
+                  }
+                  const showDelta =
+                    (event.eventType === 'UPDATE' || event.eventType === 'MODIFY_APPROVED') &&
+                    event.score != null && prevWithScore && prevWithScore.score !== event.score;
+
                   return (
                     <motion.div
                       key={event.id}
@@ -220,7 +229,6 @@ export default function GradeHistoryPanel({ grade, onClose }) {
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: idx * 0.06 }}
                     >
-                      {/* Connecting line */}
                       {idx < history.length - 1 && <div className="ghp-event__line" />}
 
                       <div className="ghp-event__dot-wrap">
@@ -247,12 +255,40 @@ export default function GradeHistoryPanel({ grade, onClose }) {
                         <div className="ghp-event__by">{event.recordedBy}</div>
                         <div className="ghp-event__time">{formatRelativeTime(event.recordedAt)}</div>
 
-                        {event.score !== undefined && !isSecurity && (
+                        {event.score !== undefined && !isSecurity && !showDelta && (
                           <div
                             className="ghp-event__score"
                             style={{ background: cfg.bg, color: cfg.color }}
                           >
                             {event.score}% · {event.gradeLetter}
+                          </div>
+                        )}
+
+                        {showDelta && (
+                          <div className="ghp-event__delta">
+                            <div className="ghp-event__delta-row">
+                              <div className="ghp-event__delta-cell ghp-event__delta-cell--before">
+                                <span>Before</span>
+                                <strong>{prevWithScore.score}% · {prevWithScore.gradeLetter}</strong>
+                              </div>
+                              <span className="material-symbols-outlined ghp-event__delta-arrow">arrow_forward</span>
+                              <div className="ghp-event__delta-cell ghp-event__delta-cell--after">
+                                <span>After</span>
+                                <strong>{event.score}% · {event.gradeLetter}</strong>
+                              </div>
+                            </div>
+                            {event.reason && (
+                              <p className="ghp-event__delta-reason">
+                                <span className="material-symbols-outlined">notes</span>
+                                {event.reason}
+                              </p>
+                            )}
+                            {event.approvedBy && (
+                              <p className="ghp-event__delta-approver">
+                                <span className="material-symbols-outlined">how_to_reg</span>
+                                Approved by <strong>{event.approvedBy}</strong>
+                              </p>
+                            )}
                           </div>
                         )}
 
