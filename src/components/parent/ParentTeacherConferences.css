@@ -1,0 +1,60 @@
+.ptc { padding: 22px; max-width: 760px; margin: 0 auto; color: var(--par-text, #e8eef9); }
+
+.ptc header h2 { margin: 0 0 4px; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.ptc header p { margin: 0 0 18px; font-size: 13px; opacity: 0.7; }
+
+.ptc__list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.ptc__list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  flex-wrap: wrap;
+}
+.ptc__list li.is-booked { background: rgba(34, 197, 94, 0.08); border-color: rgba(34, 197, 94, 0.24); }
+
+.ptc__slot { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ptc__slot strong { font-size: 14px; font-weight: 700; }
+.ptc__slot span { font-size: 12px; opacity: 0.7; }
+.ptc__slot em { font-size: 11px; color: #34d399; font-style: normal; margin-top: 4px; }
+
+.ptc__btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px;
+  border-radius: 8px; border: none;
+  font: inherit; font-size: 13px; font-weight: 600;
+  cursor: pointer;
+}
+.ptc__btn--book { background: var(--par-primary, #5b8cff); color: #fff; }
+.ptc__btn--cancel { background: rgba(239, 68, 68, 0.16); color: #fca5a5; }
+.ptc__btn--ghost { background: rgba(255, 255, 255, 0.05); color: inherit; }
+.ptc__btn .material-symbols-outlined { font-size: 16px; }
+
+.ptc__pill { font-size: 11px; padding: 4px 10px; border-radius: 999px; background: rgba(255, 255, 255, 0.05); opacity: 0.7; }
+
+.ptc__booker {
+  width: 100%;
+  display: flex; flex-direction: column; gap: 8px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.10);
+  overflow: hidden;
+}
+.ptc__booker input {
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 8px;
+  color: inherit; font: inherit;
+}
+.ptc__booker-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+.ptc__error { padding: 10px 14px; border-radius: 8px; background: rgba(239, 68, 68, 0.10); color: #fca5a5; font-size: 13px; }
+.ptc__empty { padding: 20px; text-align: center; opacity: 0.6; }
+
+@media (max-width: 600px) {
+  .ptc { padding: 14px; }
+  .ptc__list li { flex-direction: column; align-items: stretch; }
+}

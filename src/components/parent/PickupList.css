@@ -1,0 +1,96 @@
+.pkl { padding: 22px; max-width: 760px; margin: 0 auto; color: var(--par-text, #e8eef9); }
+.pkl header h2 { margin: 0 0 4px; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.pkl header p { margin: 0 0 18px; font-size: 13px; opacity: 0.7; }
+.pkl__error { padding: 10px 14px; background: rgba(239, 68, 68, 0.10); color: #fca5a5; border-radius: 8px; font-size: 13px; margin-bottom: 12px; }
+
+.pkl__list { list-style: none; padding: 0; margin: 0 0 18px; display: flex; flex-direction: column; gap: 10px; }
+.pkl__list li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+}
+
+.pkl__avatar {
+  width: 44px; height: 44px; border-radius: 50%;
+  display: grid; place-items: center;
+  color: #fff; font-weight: 700;
+  flex-shrink: 0;
+}
+
+.pkl__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pkl__body strong { font-size: 14px; font-weight: 700; }
+.pkl__body span { font-size: 12px; opacity: 0.7; }
+.pkl__body small { font-size: 11px; color: #fbbf24; margin-top: 2px; }
+
+.pkl__chips { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
+.pkl__chip { font-size: 10px; padding: 2px 8px; border-radius: 999px; background: rgba(91, 140, 255, 0.18); color: #5b8cff; }
+
+.pkl__actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+.pkl__btn { display: inline-flex; align-items: center; gap: 4px; padding: 8px 12px; border: none; border-radius: 8px; font: inherit; font-weight: 600; font-size: 12px; cursor: pointer; background: var(--par-primary, #5b8cff); color: #fff; }
+.pkl__btn--ghost { background: rgba(255, 255, 255, 0.06); color: inherit; }
+.pkl__btn--remove { background: rgba(239, 68, 68, 0.12); color: #fca5a5; padding: 8px; }
+.pkl__btn .material-symbols-outlined { font-size: 14px; }
+
+.pkl__add {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 16px;
+  background: var(--par-primary, #5b8cff);
+  color: #fff;
+  border: none; border-radius: 8px;
+  font: inherit; font-weight: 600; font-size: 13px;
+  cursor: pointer;
+}
+
+.pkl__form {
+  margin-top: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.pkl__form h3 { margin: 0; font-size: 14px; font-weight: 700; }
+.pkl__form label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.85; }
+.pkl__form input, .pkl__form select {
+  padding: 9px 10px;
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 8px;
+  color: inherit; font: inherit; font-size: 13px;
+}
+
+.pkl__form fieldset { border: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.pkl__form fieldset legend { font-size: 11px; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.04em; padding: 0; }
+.pkl__check { flex-direction: row !important; align-items: center; gap: 8px; text-transform: none !important; letter-spacing: 0 !important; opacity: 1 !important; font-size: 13px; }
+.pkl__check input { margin: 0; width: auto; }
+
+.pkl__colors > div { display: flex; gap: 8px; }
+.pkl__colors button { width: 26px; height: 26px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; }
+.pkl__colors button.is-active { border-color: #fff; }
+
+.pkl__form-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+.pkl-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: grid; place-items: center; z-index: 700; padding: 20px; }
+.pkl-modal {
+  background: var(--par-card-bg, #112239);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 22px;
+  width: min(280px, 100%);
+  text-align: center;
+  color: inherit;
+}
+.pkl-modal h3 { margin: 0 0 4px; font-size: 16px; }
+.pkl-modal p { margin: 0 0 16px; font-size: 12px; opacity: 0.7; }
+.pkl-modal small { display: block; margin-top: 10px; font-size: 10px; opacity: 0.5; word-break: break-all; }
+
+@media (max-width: 600px) {
+  .pkl { padding: 14px; }
+  .pkl__list li { flex-wrap: wrap; }
+}

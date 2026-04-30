@@ -1,0 +1,74 @@
+.pfs { padding: 22px; max-width: 920px; margin: 0 auto; color: var(--par-text, #e8eef9); }
+
+.pfs__toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+.pfs__toolbar h2 { margin: 0 0 4px; font-size: 17px; }
+.pfs__toolbar p { margin: 0; font-size: 13px; opacity: 0.7; }
+.pfs__toolbar button {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 18px;
+  background: var(--par-primary, #5b8cff);
+  color: #fff; border: none; border-radius: 8px;
+  font: inherit; font-weight: 600; cursor: pointer;
+}
+
+.pfs__page {
+  background: #fff;
+  color: #0a1628;
+  padding: 32px;
+  border-radius: 8px;
+  font-family: 'Manrope', system-ui, sans-serif;
+  min-height: 1000px;
+}
+
+.pfs__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid #1B3FAF;
+  padding-bottom: 14px;
+  margin-bottom: 22px;
+}
+.pfs__head h1 { margin: 0; font-size: 22px; color: #1B3FAF; }
+.pfs__head p { margin: 4px 0 0; font-size: 13px; opacity: 0.7; }
+
+.pfs__child {
+  margin-bottom: 22px;
+  padding-bottom: 18px;
+  border-bottom: 1px dashed #cbd5e1;
+}
+.pfs__child:last-of-type { border-bottom: 0; margin-bottom: 0; }
+.pfs__child h3 { margin: 0 0 12px; font-size: 16px; color: #1B3FAF; }
+.pfs__child dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px 24px;
+}
+.pfs__child dt { font-size: 11px; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.05em; }
+.pfs__child dd { margin: 2px 0 0; font-size: 14px; font-weight: 600; }
+
+.pfs__foot {
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px dashed #cbd5e1;
+  font-size: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  word-break: break-all;
+}
+.pfs__foot code { font-family: ui-monospace, monospace; }
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff !important; }
+  .pfs { padding: 0; }
+  .pfs__page { padding: 24px; min-height: auto; box-shadow: none; }
+}
+
+@media (max-width: 600px) {
+  .pfs { padding: 14px; }
+  .pfs__toolbar { flex-direction: column; align-items: stretch; gap: 12px; }
+  .pfs__page { padding: 20px; }
+  .pfs__child dl { grid-template-columns: 1fr; }
+}

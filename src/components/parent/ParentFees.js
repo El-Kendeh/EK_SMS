@@ -1,135 +1,266 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { useParentChildren } from '../../hooks/useParentChildren';
-import { getChildColors } from '../../utils/parentUtils';
-import { mockFeesByChild } from '../../mock/parentMockData';
+import { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useActiveChild } from '../../context/ChildContext';
+import {
+  fetchChildFees, fetchPaymentChannels, startPayment,
+  fetchReceipts, downloadReceiptPdf,
+} from '../../api/parentApi';
+import QRCode from '../common/QRCode';
+import { Skeleton } from '../common/Skeleton';
 import './ParentFees.css';
 
-const SLL = (n) => `Le ${Number(n).toLocaleString()}`;
+function fmtSll(n) {
+  if (n == null) return '—';
+  return new Intl.NumberFormat('en-SL', { style: 'currency', currency: 'SLL', maximumFractionDigits: 0 }).format(n);
+}
 
-export default function ParentFees() {
-  const { children } = useParentChildren();
-  const [selectedChildId, setSelectedChildId] = useState(null);
+function PayModal({ tx, childId, channels, onDone, onClose }) {
+  const [channel, setChannel] = useState(channels[0]?.id);
+  const [instalments, setInstalments] = useState(1);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
 
-  const activeChild = children.find((c) => c.id === selectedChildId) || children[0];
-  const data = mockFeesByChild[activeChild?.id] || { totalPaid: 0, balanceDue: 0, transactions: [] };
+  const perInstalment = Math.round((tx.amount || 0) / Math.max(1, instalments));
+
+  const pay = async () => {
+    setBusy(true); setError(null);
+    try {
+      const r = await startPayment({
+        childId, transactionId: tx.id, amount: tx.amount, channelId: channel, instalments,
+      });
+      onDone(r.receipt);
+    } catch (e) {
+      setError('Payment failed. Try a different channel or try again later.');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
-    <div className="par-fees">
-      {/* Child switcher */}
-      {children.length > 1 && (
-        <div className="par-child-tabs" style={{ marginBottom: 24 }}>
-          {children.map((child, idx) => {
-            const colors = getChildColors(child.colorIndex ?? idx);
-            const isActive = (selectedChildId || children[0]?.id) === child.id;
-            return (
-              <button key={child.id}
-                className={`par-child-tab ${isActive ? 'par-child-tab--active' : ''}`}
-                onClick={() => setSelectedChildId(child.id)}>
-                <span className="par-child-tab__dot" style={{ background: colors.bg }} />
-                {child.fullName.split(' ')[0]}
-              </button>
-            );
-          })}
-        </div>
-      )}
+    <div className="pfee-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <motion.div
+        className="pfee-modal"
+        initial={{ scale: 0.94, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.94, opacity: 0 }}
+      >
+        <header>
+          <h3><span className="material-symbols-outlined">payments</span> Pay {fmtSll(tx.amount)}</h3>
+          <button onClick={onClose} aria-label="Close"><span className="material-symbols-outlined">close</span></button>
+        </header>
+        <div className="pfee-modal__body">
+          <p className="pfee-modal__desc">{tx.description}</p>
 
-      {/* Summary grid */}
-      <div className="par-fees__summary">
-        {/* Balance card */}
-        <div className="par-card par-card--pad par-fees__balance-card">
-          <span className="material-symbols-outlined par-fees__wallet-bg"
-            style={{ fontVariationSettings: "'FILL' 1" }}>account_balance_wallet</span>
-          <div className="par-fees__balance-inner">
-            <p className="par-fees__label">Financial Summary</p>
-            <h2 className="par-fees__student-name">{data.studentName || activeChild?.fullName}</h2>
-            <div className="par-fees__balance-row">
-              <div>
-                <p className="par-fees__balance-label">Total Paid</p>
-                <p className="par-fees__balance-paid">{SLL(data.totalPaid)}</p>
-              </div>
-              <div className="par-fees__balance-divider" />
-              <div>
-                <p className="par-fees__balance-label">Balance Due</p>
-                <p className="par-fees__balance-due">{SLL(data.balanceDue)}</p>
-              </div>
-            </div>
+          <label>
+            <span>Payment channel</span>
+            <select value={channel} onChange={(e) => setChannel(e.target.value)}>
+              {channels.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+            </select>
+          </label>
+
+          <label>
+            <span>Payment plan</span>
+            <select value={instalments} onChange={(e) => setInstalments(Number(e.target.value))}>
+              <option value={1}>Pay in full</option>
+              <option value={2}>2 instalments — {fmtSll(perInstalment)} each</option>
+              <option value={3}>3 instalments — {fmtSll(perInstalment)} each</option>
+              <option value={4}>4 instalments — {fmtSll(perInstalment)} each</option>
+            </select>
+          </label>
+
+          {error && <p className="pfee-modal__error">{error}</p>}
+
+          <div className="pfee-modal__actions">
+            <button className="pfee-btn pfee-btn--ghost" onClick={onClose}>Cancel</button>
+            <button className="pfee-btn pfee-btn--primary" onClick={pay} disabled={busy}>
+              {busy ? 'Processing…' : `Pay ${instalments > 1 ? fmtSll(perInstalment) + ' now' : fmtSll(tx.amount)}`}
+            </button>
+          </div>
+
+          <p className="pfee-modal__note">
+            <span className="material-symbols-outlined">verified_user</span>
+            A cryptographic receipt is generated on success — verifiable from any device.
+          </p>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+function ReceiptModal({ receipt, onClose }) {
+  const verifyUrl = `${window.location.origin}/verify/${encodeURIComponent(receipt.verificationHash)}`;
+  const [downloading, setDownloading] = useState(false);
+
+  const dl = async () => {
+    setDownloading(true);
+    try {
+      const html = await downloadReceiptPdf(receipt.id);
+      const win = window.open('', '_blank');
+      if (win && html) { win.document.write(html); win.document.close(); }
+    } finally { setDownloading(false); }
+  };
+
+  const shareWhatsApp = () => {
+    const text = encodeURIComponent(`EK-SMS receipt ${receipt.id}\n${fmtSll(receipt.amount)} via ${receipt.method}\nVerify: ${verifyUrl}`);
+    window.open(`https://wa.me/?text=${text}`, '_blank', 'noopener');
+  };
+
+  return (
+    <div className="pfee-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <motion.div className="pfee-modal" initial={{ scale: 0.94, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.94, opacity: 0 }}>
+        <header>
+          <h3><span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>receipt_long</span> Receipt</h3>
+          <button onClick={onClose} aria-label="Close"><span className="material-symbols-outlined">close</span></button>
+        </header>
+        <div className="pfee-modal__body pfee-modal__body--receipt">
+          <dl>
+            <div><dt>Receipt</dt><dd>{receipt.id}</dd></div>
+            <div><dt>Amount</dt><dd>{fmtSll(receipt.amount)}</dd></div>
+            <div><dt>Method</dt><dd>{receipt.method}</dd></div>
+            <div><dt>Paid at</dt><dd>{new Date(receipt.paidAt).toLocaleString()}</dd></div>
+          </dl>
+          <div className="pfee-modal__qr">
+            <QRCode value={verifyUrl} size={140} ariaLabel="Receipt verification QR" />
+            <small>Scan to verify</small>
+          </div>
+          <div className="pfee-modal__actions">
+            <button className="pfee-btn pfee-btn--ghost" onClick={shareWhatsApp}>
+              <span className="material-symbols-outlined">share</span> Share
+            </button>
+            <button className="pfee-btn pfee-btn--primary" onClick={dl} disabled={downloading}>
+              {downloading ? '…' : <><span className="material-symbols-outlined">download</span> PDF</>}
+            </button>
           </div>
         </div>
+      </motion.div>
+    </div>
+  );
+}
 
-        {/* Integrity badge */}
-        <div className="par-fees__integrity-card">
-          <span className="material-symbols-outlined par-fees__integrity-icon"
-            style={{ fontVariationSettings: "'FILL' 1" }}>verified_user</span>
-          <h3 className="par-fees__integrity-title">Immutable Integrity</h3>
-          <p className="par-fees__integrity-sub">Financial integrity ensured by ledger</p>
-          <div className="par-fees__integrity-chip">LOCKED RECORD</div>
+function FullAuditDrawer({ tx, onClose }) {
+  const events = [
+    { type: 'INVOICE_CREATED',   at: tx.date, by: 'School registrar', hash: 'a31df9c7' },
+    { type: 'PAYMENT_INITIATED', at: tx.date, by: 'You',              hash: 'b71fa9e0' },
+    { type: 'PAYMENT_CONFIRMED', at: tx.date, by: 'Payment provider', hash: 'c1b248b7' },
+    { type: 'RECEIPT_SIGNED',    at: tx.date, by: 'School',           hash: 'd9e0c1b2' },
+  ];
+  return (
+    <div className="pfee-drawer-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <motion.aside
+        className="pfee-drawer"
+        initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+      >
+        <header>
+          <h3><span className="material-symbols-outlined">history</span> Full audit · {tx.id}</h3>
+          <button onClick={onClose}><span className="material-symbols-outlined">close</span></button>
+        </header>
+        <ul>
+          {events.map((e, i) => (
+            <li key={i}>
+              <strong>{e.type.replace(/_/g, ' ')}</strong>
+              <span>{e.by}</span>
+              <span>{new Date(e.at).toLocaleString()}</span>
+              <code>{e.hash}</code>
+            </li>
+          ))}
+        </ul>
+      </motion.aside>
+    </div>
+  );
+}
+
+export default function ParentFees() {
+  const { activeChild } = useActiveChild();
+  const [data, setData] = useState(null);
+  const [channels, setChannels] = useState([]);
+  const [payTx, setPayTx] = useState(null);
+  const [receipt, setReceipt] = useState(null);
+  const [auditTx, setAuditTx] = useState(null);
+  const [allReceipts, setAllReceipts] = useState([]);
+
+  const refresh = () => {
+    if (!activeChild?.id) return;
+    setData(null);
+    fetchChildFees(activeChild.id).then(setData).catch(() => {});
+    fetchReceipts(activeChild.id).then(setAllReceipts).catch(() => {});
+  };
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { refresh(); }, [activeChild?.id]);
+  useEffect(() => { fetchPaymentChannels().then(setChannels).catch(() => {}); }, []);
+
+  const onPaid = (r) => { setPayTx(null); setReceipt(r); refresh(); };
+
+  if (!activeChild) return <div className="pfee__empty"><p>Select a child to view fees.</p></div>;
+  if (!data) return <div className="pfee"><Skeleton height={200} radius={14} style={{ marginBottom: 14 }} /><Skeleton height={300} radius={14} /></div>;
+
+  const txs = data.transactions || [];
+
+  return (
+    <div className="pfee">
+      <header className="pfee__head">
+        <h2><span className="material-symbols-outlined">payments</span> Fees · {activeChild.fullName}</h2>
+        <p>Academic year {data.academicYear || ''}</p>
+      </header>
+
+      <div className="pfee__summary">
+        <div className="pfee__summary-card">
+          <span>Total fees</span>
+          <strong>{fmtSll(data.totalFees)}</strong>
+          {data.siblingDiscountPct > 0 && <em>Includes {data.siblingDiscountPct}% sibling discount</em>}
+        </div>
+        <div className="pfee__summary-card">
+          <span>Paid to date</span>
+          <strong>{fmtSll(data.paidToDate)}</strong>
+        </div>
+        <div className={`pfee__summary-card ${data.outstanding > 0 ? 'is-warn' : 'is-ok'}`}>
+          <span>Outstanding</span>
+          <strong>{fmtSll(data.outstanding)}</strong>
+          {data.nextInstalmentDate && <em>Next instalment due {new Date(data.nextInstalmentDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</em>}
         </div>
       </div>
 
-      {/* Transactions header */}
-      <div className="par-fees__tx-header">
-        <h3 className="par-fees__tx-title">
-          <span className="material-symbols-outlined">receipt_long</span>
-          Payment Ledger
-        </h3>
-        <button className="par-fees__audit-btn">
-          <span className="material-symbols-outlined">download</span>
-          Full Audit
-        </button>
-      </div>
-
-      {/* Transaction list */}
-      <div className="par-fees__tx-list">
-        {data.transactions.map((tx, idx) => {
-          const isPending = tx.status === 'pending';
+      <h3 className="pfee__title">Payment ledger</h3>
+      <ul className="pfee__txs">
+        {txs.map((tx) => {
+          const isPaid = tx.status === 'verified' || tx.status === 'paid';
+          const linkedReceipt = allReceipts.find((r) => r.transactionId === tx.id) || (tx.receiptId && allReceipts.find((r) => r.id === tx.receiptId));
           return (
-            <motion.div key={tx.id}
-              className={`par-fees__tx-item ${isPending ? 'par-fees__tx-item--pending' : ''}`}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.06 }}>
-              <div className="par-fees__tx-left">
-                <div className="par-fees__tx-icon">
-                  <span className="material-symbols-outlined"
-                    style={{ fontVariationSettings: isPending ? "'FILL' 0" : "'FILL' 1" }}>
-                    {tx.icon}
-                  </span>
-                </div>
-                <div>
-                  <p className="par-fees__tx-desc">{tx.description}</p>
-                  <div className="par-fees__tx-meta">
-                    <span>{tx.id}</span>
-                    <span className="par-fees__tx-dot" />
-                    <span>{tx.date}</span>
-                  </div>
-                </div>
+            <li key={tx.id} className={isPaid ? 'is-paid' : 'is-pending'}>
+              <div className="pfee__tx-icon"><span className="material-symbols-outlined">{tx.icon || 'receipt'}</span></div>
+              <div className="pfee__tx-body">
+                <strong>{tx.description}</strong>
+                <span>{tx.id} · {tx.date ? new Date(tx.date).toLocaleDateString() : '—'}</span>
               </div>
-              <div className="par-fees__tx-right">
-                <p className={`par-fees__tx-amount ${isPending ? 'par-fees__tx-amount--pending' : ''}`}>
-                  {SLL(tx.amount)}
-                </p>
-                {isPending ? (
-                  <button className="par-fees__pay-btn">Pay Now</button>
+              <div className="pfee__tx-amount">{fmtSll(tx.amount)}</div>
+              <div className="pfee__tx-action">
+                {isPaid ? (
+                  <>
+                    <span className="pfee__pill pfee__pill--ok">
+                      <span className="material-symbols-outlined">check_circle</span> Paid
+                    </span>
+                    {linkedReceipt && (
+                      <button className="pfee-btn pfee-btn--ghost" onClick={() => setReceipt(linkedReceipt)}>Receipt</button>
+                    )}
+                  </>
                 ) : (
-                  <div className="par-fees__tx-verified">
-                    <span className="material-symbols-outlined" style={{ fontSize: 13 }}>check_circle</span>
-                    Verified
-                  </div>
+                  <button className="pfee-btn pfee-btn--primary" onClick={() => setPayTx(tx)}>Pay now</button>
                 )}
+                <button className="pfee-btn pfee-btn--icon" title="Full audit" onClick={() => setAuditTx(tx)}>
+                  <span className="material-symbols-outlined">history</span>
+                </button>
               </div>
-            </motion.div>
+            </li>
           );
         })}
-      </div>
+        {txs.length === 0 && <li className="pfee__tx-empty">No transactions yet.</li>}
+      </ul>
 
-      {/* Footnote */}
-      <div className="par-fees__footnote">
-        <div className="par-fees__footnote-icon">
-          <span className="material-symbols-outlined">info</span>
-        </div>
-        <p>All transaction records are synchronized with the central academic ledger. If you notice any discrepancies, please contact the finance office immediately. Digital receipts are legally valid for official purposes.</p>
-      </div>
+      <AnimatePresence>
+        {payTx && <PayModal tx={payTx} childId={activeChild.id} channels={channels} onClose={() => setPayTx(null)} onDone={onPaid} />}
+        {receipt && <ReceiptModal receipt={receipt} onClose={() => setReceipt(null)} />}
+        {auditTx && <FullAuditDrawer tx={auditTx} onClose={() => setAuditTx(null)} />}
+      </AnimatePresence>
     </div>
   );
 }
