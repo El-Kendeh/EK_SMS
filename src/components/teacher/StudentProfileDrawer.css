@@ -196,3 +196,41 @@
   color: var(--tch-text-secondary);
   margin: 0;
 }
+
+/* ── Mobile (≤600px) — tighten hero, score, and rows ── */
+@media (max-width: 600px) {
+  .spd-hero { gap: 12px; margin-bottom: 16px; }
+  .spd-avatar { width: 52px; height: 52px; font-size: 16px; }
+  .spd-name { font-size: 15px; }
+  .spd-num  { font-size: 11px; }
+
+  .spd-grade-card { padding: 14px; margin-bottom: 16px; }
+  .spd-score      { font-size: 28px; letter-spacing: -0.5px; }
+  .spd-letter     { font-size: 18px; }
+  .spd-section-label { font-size: 10px; }
+
+  .spd-info-row { padding: 9px 12px; font-size: 12px; }
+
+  .spd-tabs { padding: 0 12px; gap: 0; }
+  .spd-tab-btn { padding: 9px 10px; font-size: 11px; }
+
+  .spd-grade-row {
+    padding: 8px 12px; gap: 6px;
+    align-items: flex-start;
+  }
+  .spd-grade-subject { font-size: 12px; flex: 1 1 100%; min-width: 0; }
+  .spd-score-chip { font-size: 9px; padding: 2px 5px; }
+  .spd-total-badge { font-size: 12px; }
+
+  .spd-rc-item { padding: 10px 0; gap: 10px; }
+  .spd-rc-icon { font-size: 20px; }
+  .spd-rc-term { font-size: 12px; }
+  .spd-rc-meta { font-size: 10px; }
+}
+
+/* ── Tiny phones (≤360px) — drop avatar to keep room for name ── */
+@media (max-width: 360px) {
+  .spd-avatar { width: 44px; height: 44px; font-size: 14px; }
+  .spd-score  { font-size: 24px; }
+  .spd-tab-btn { padding: 8px 8px; font-size: 10.5px; }
+}
