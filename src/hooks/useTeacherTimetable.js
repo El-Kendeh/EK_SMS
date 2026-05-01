@@ -9,7 +9,16 @@ export function useTeacherTimetable() {
   useEffect(() => {
     let cancelled = false;
     teacherApi.getTeacherTimetable()
-      .then(data => { if (!cancelled) setTimetable(data); })
+      .then(data => {
+        if (cancelled) return;
+        // Normalise shape: callers expect { periods: [...] }.
+        // Backend may return { timetable: [...] } or { periods: [...] }
+        // or a bare array — flatten all of them.
+        const periods = Array.isArray(data)
+          ? data
+          : (data?.periods || data?.timetable || []);
+        setTimetable({ periods });
+      })
       .catch(err => { if (!cancelled) setError(err.message); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };

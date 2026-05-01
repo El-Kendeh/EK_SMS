@@ -37,16 +37,18 @@ export function isPeriodUpcomingToday(period) {
   return getCurrentTime() < period.startTime;
 }
 export function getPeriodsForDay(periods, day) {
-  return periods.filter(p => p.day === day).sort((a, b) => a.startTime.localeCompare(b.startTime));
+  const arr = Array.isArray(periods) ? periods : [];
+  return arr.filter(p => p.day === day).sort((a, b) => a.startTime.localeCompare(b.startTime));
 }
 export function getWorkloadSummary(periods) {
-  const teachingPeriods = periods.filter(p => p.type === 'teaching');
+  const arr = Array.isArray(periods) ? periods : [];
+  const teachingPeriods = arr.filter(p => p.type === 'teaching');
   const totalMinutes = teachingPeriods.reduce((acc, p) => {
     const [sh, sm] = p.startTime.split(':').map(Number);
     const [eh, em] = p.endTime.split(':').map(Number);
     return acc + ((eh * 60 + em) - (sh * 60 + sm));
   }, 0);
-  return { teachingHours: Math.round(totalMinutes / 60 * 10) / 10, teachingPeriods: teachingPeriods.length, dutyPeriods: periods.filter(p => p.type === 'duty').length };
+  return { teachingHours: Math.round(totalMinutes / 60 * 10) / 10, teachingPeriods: teachingPeriods.length, dutyPeriods: arr.filter(p => p.type === 'duty').length };
 }
 export function getGreeting(firstName) {
   const hour = new Date().getHours();
