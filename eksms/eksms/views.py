@@ -470,6 +470,10 @@ def api_login(request):
             role = 'student'
         elif hasattr(user, 'parent_profile'):
             role = 'parent'
+        elif (hasattr(user, 'school_staff_account')
+              and getattr(user.school_staff_account, 'role', '') == 'PRINCIPAL'
+              and user.school_staff_account.is_active):
+            role = 'principal'
         elif user.is_staff:
             role = 'admin'
         
@@ -517,6 +521,19 @@ def api_login(request):
         
         if role == 'superadmin':
             redirect_url = '/superadmindashboard'
+        elif role == 'principal':
+            redirect_url = '/principal'
+            try:
+                s = user.school_staff_account.school
+                badge_url = None
+                if s and s.badge:
+                    try:
+                        badge_url = request.build_absolute_uri(s.badge.url)
+                    except Exception:
+                        badge_url = None
+                school_data = {'id': s.id, 'name': s.name, 'badge': badge_url} if s else None
+            except Exception:
+                school_data = None
         elif role == 'school_admin':
             redirect_url = '/sa-dashboard'
             s = user.school_admin_profile.school
@@ -2979,6 +2996,8 @@ def api_students(request):
             
             data.append({
                 'id':               s.id,
+                'user_id':          s.user_id,
+                'username':         s.user.username,
                 'admission_number': s.admission_number,
                 'first_name':       s.user.first_name,
                 'last_name':        s.user.last_name,
@@ -3643,7 +3662,10 @@ def api_teachers(request):
                 continue
             pic_url = request.build_absolute_uri(t.profile_picture.url) if t.profile_picture else ''
             data.append({
-                'id': t.id, 'employee_id': t.employee_id,
+                'id': t.id,
+                'user_id':   t.user_id,
+                'username':  t.user.username,
+                'employee_id': t.employee_id,
                 'first_name': t.user.first_name, 'last_name': t.user.last_name,
                 'full_name': t.user.get_full_name(), 'email': t.user.email,
                 'phone_number': t.phone_number, 'qualification': t.qualification,
@@ -3652,6 +3674,9 @@ def api_teachers(request):
                 'subjects': subjects, 'classes': classes,
                 'periods_per_week': periods, 'student_count': student_cnt,
                 'is_overloaded': is_overloaded,
+                'years_experience': t.years_experience,
+                'degrees':        t.degrees or [],
+                'certifications': t.certifications or [],
             })
         return JsonResponse({'success': True, 'teachers': data, 'count': len(data)})
 

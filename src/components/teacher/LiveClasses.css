@@ -1,0 +1,98 @@
+.lcl { display: flex; flex-direction: column; gap: 16px; }
+
+.lcl__head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+.lcl__head h1 { margin: 0; font-size: 1.25rem; font-weight: 800; }
+.lcl__head p { margin: 4px 0 0; color: var(--tch-text-secondary); font-size: 0.875rem; }
+
+.lcl__cta {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border-radius: 8px;
+  background: var(--tch-primary, #1B3FAF); color: white;
+  border: none; cursor: pointer; font-weight: 700; font-size: 0.875rem;
+}
+
+.lcl__err {
+  padding: 10px 14px; border-radius: 8px;
+  background: rgba(220,38,38,0.08); color: #dc2626;
+  font-size: 0.85rem;
+}
+
+.lcl__form {
+  display: grid; gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  background: var(--tch-surface, white);
+  padding: 16px; border-radius: 12px;
+  border: 1px solid var(--tch-border, #e2e8f0);
+}
+.lcl__form label { display: flex; flex-direction: column; gap: 4px; font-size: 0.8125rem; }
+.lcl__form label > span { font-weight: 700; color: var(--tch-text-secondary, #475569); text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.7rem; }
+.lcl__form input, .lcl__form select, .lcl__form textarea {
+  padding: 8px 10px; border-radius: 6px;
+  border: 1px solid var(--tch-border, #e2e8f0);
+  font-size: 0.875rem; font-family: inherit;
+}
+.lcl__form-full { grid-column: 1 / -1; }
+.lcl__form-actions {
+  grid-column: 1 / -1; display: flex; gap: 8px; justify-content: flex-end;
+}
+
+.lcl__btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 8px 14px; border-radius: 8px;
+  border: 1px solid var(--tch-border, #e2e8f0);
+  background: var(--tch-surface, white);
+  cursor: pointer; font-weight: 700; font-size: 0.8125rem;
+  text-decoration: none; color: inherit;
+}
+.lcl__btn--primary { background: var(--tch-primary, #1B3FAF); color: white; border-color: transparent; }
+.lcl__btn--ghost   { background: transparent; }
+.lcl__btn--danger  { color: #dc2626; border-color: rgba(220,38,38,0.3); }
+.lcl__btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.lcl__list { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.lcl__card {
+  background: var(--tch-surface, white);
+  border: 1px solid var(--tch-border, #e2e8f0);
+  border-radius: 12px; padding: 14px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.lcl__card--cancelled { opacity: 0.55; }
+.lcl__card--ended     { opacity: 0.7; }
+.lcl__card header { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.lcl__card h3 { margin: 0; font-size: 0.95rem; font-weight: 800; }
+
+.lcl__badge {
+  padding: 2px 8px; border-radius: 6px;
+  font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;
+}
+.lcl__badge--scheduled { background: rgba(27,63,175,0.1); color: #1B3FAF; }
+.lcl__badge--live      { background: rgba(220,38,38,0.1); color: #dc2626; }
+.lcl__badge--ended     { background: rgba(100,116,139,0.1); color: #475569; }
+.lcl__badge--cancelled { background: rgba(217,119,6,0.1); color: #d97706; }
+
+.lcl__meta {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  margin: 0; font-size: 0.75rem; color: var(--tch-text-secondary, #475569);
+}
+.lcl__meta span { display: inline-flex; align-items: center; gap: 4px; }
+.lcl__meta .material-symbols-outlined { font-size: 14px; }
+
+.lcl__desc { margin: 0; font-size: 0.825rem; line-height: 1.4; color: var(--tch-text); }
+
+.lcl__actions { display: flex; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
+
+.lcl__empty, .lcl__skel {
+  padding: 40px 20px; text-align: center;
+  background: var(--tch-surface, white); border-radius: 12px;
+  border: 1px dashed var(--tch-border, #e2e8f0);
+  color: var(--tch-text-secondary, #475569);
+}
+.lcl__empty .material-symbols-outlined { font-size: 36px; display: block; margin-bottom: 8px; }
+
+@media (max-width: 600px) {
+  .lcl__head { flex-direction: column; align-items: stretch; }
+  .lcl__cta { justify-content: center; }
+  .lcl__list { grid-template-columns: 1fr; }
+  .lcl__form { grid-template-columns: 1fr; }
+  .lcl__btn { min-height: 40px; }
+}

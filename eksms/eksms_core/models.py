@@ -196,6 +196,14 @@ class Teacher(models.Model):
     employee_id = models.CharField(max_length=50, help_text="Must be unique per school")
     phone_number = models.CharField(max_length=20, blank=True)
     qualification = models.CharField(max_length=255, blank=True)
+    # Extended credentials (added for testing-team profile feedback)
+    degrees           = models.JSONField(default=list, blank=True,
+                                         help_text="List of {institution, degree, year, field}")
+    certifications    = models.JSONField(default=list, blank=True,
+                                         help_text="List of {name, issuer, year, expires}")
+    years_experience  = models.PositiveIntegerField(default=0)
+    bio               = models.TextField(blank=True, help_text="Short professional biography")
+    linkedin_url      = models.URLField(blank=True, default='')
     profile_picture = models.ImageField(upload_to='teacher_photos/', blank=True, null=True, help_text="Teacher profile photo")
     hire_date            = models.DateField(default=timezone.now)
     is_active            = models.BooleanField(default=True)
@@ -1771,3 +1779,93 @@ class LessonPlan(models.Model):
 
     def __str__(self):
         return f"Week {self.week_number} Lesson Plan for {self.syllabus}"
+
+
+# ---------------------------------------------------------------------------
+# Live Classes — teacher-hosted virtual sessions per class/subject
+# ---------------------------------------------------------------------------
+class LiveClass(models.Model):
+    PROVIDER_CHOICES = [
+        ('jitsi',  'Jitsi Meet'),
+        ('meet',   'Google Meet'),
+        ('zoom',   'Zoom'),
+        ('teams',  'Microsoft Teams'),
+        ('other',  'Other'),
+    ]
+    STATUS_CHOICES = [
+        ('scheduled', 'Scheduled'),
+        ('live',      'Live now'),
+        ('ended',     'Ended'),
+        ('cancelled', 'Cancelled'),
+    ]
+    school           = models.ForeignKey(School, on_delete=models.CASCADE, related_name='live_classes')
+    teacher          = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='live_classes')
+    classroom        = models.ForeignKey(ClassRoom, on_delete=models.CASCADE, related_name='live_classes')
+    subject          = models.ForeignKey(Subject, on_delete=models.SET_NULL, null=True, blank=True,
+                                         related_name='live_classes')
+    title            = models.CharField(max_length=200)
+    description      = models.TextField(blank=True)
+    scheduled_start  = models.DateTimeField()
+    duration_minutes = models.PositiveIntegerField(default=60)
+    meeting_provider = models.CharField(max_length=10, choices=PROVIDER_CHOICES, default='jitsi')
+    meeting_url      = models.URLField(max_length=500, blank=True,
+                                       help_text="Auto-generated for jitsi, manual for others")
+    status           = models.CharField(max_length=10, choices=STATUS_CHOICES, default='scheduled')
+    created_by       = models.ForeignKey(User, on_delete=models.SET_NULL, null=True,
+                                         related_name='created_live_classes')
+    created_at       = models.DateTimeField(auto_now_add=True)
+    updated_at       = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-scheduled_start']
+        indexes  = [
+            models.Index(fields=['classroom', '-scheduled_start']),
+            models.Index(fields=['teacher', '-scheduled_start']),
+            models.Index(fields=['school', 'status', '-scheduled_start']),
+        ]
+        verbose_name = "Live Class"
+        verbose_name_plural = "Live Classes"
+
+    def __str__(self):
+        return f"{self.title} — {self.classroom} @ {self.scheduled_start:%Y-%m-%d %H:%M}"
+
+
+# ---------------------------------------------------------------------------
+# AI Document Capture — OCR + structured extraction jobs
+# ---------------------------------------------------------------------------
+class AIDocumentCapture(models.Model):
+    DOC_TYPE_CHOICES = [
+        ('student_roster',   'Student Roster'),
+        ('teacher_roster',   'Teacher Roster'),
+        ('grade_sheet',      'Grade Sheet'),
+        ('attendance_sheet', 'Attendance Sheet'),
+        ('other',            'Other Document'),
+    ]
+    STATUS_CHOICES = [
+        ('pending',   'Pending'),
+        ('processing','Processing'),
+        ('done',      'Done'),
+        ('failed',    'Failed'),
+        ('imported',  'Imported'),
+    ]
+    school        = models.ForeignKey(School, on_delete=models.CASCADE, related_name='ai_document_captures')
+    uploaded_by   = models.ForeignKey(User, on_delete=models.SET_NULL, null=True,
+                                      related_name='ai_document_captures')
+    document_type = models.CharField(max_length=20, choices=DOC_TYPE_CHOICES, default='other')
+    file          = models.FileField(upload_to='ai_captures/')
+    raw_text      = models.TextField(blank=True, help_text="OCR/text extracted from file")
+    structured    = models.JSONField(default=dict, blank=True,
+                                     help_text="AI-parsed structured data (rows, fields)")
+    status        = models.CharField(max_length=12, choices=STATUS_CHOICES, default='pending')
+    error_message = models.TextField(blank=True)
+    created_at    = models.DateTimeField(auto_now_add=True)
+    processed_at  = models.DateTimeField(null=True, blank=True)
+    imported_at   = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "AI Document Capture"
+        verbose_name_plural = "AI Document Captures"
+
+    def __str__(self):
+        return f"{self.get_document_type_display()} ({self.status}) — {self.school.name}"

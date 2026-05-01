@@ -37,6 +37,7 @@ import TeacherChannelPreferences from './TeacherChannelPreferences';
 import BehaviourIncidents from './BehaviourIncidents';
 import SubstituteMode from './SubstituteMode';
 import LessonPlans from './LessonPlans';
+import LiveClasses from './LiveClasses';
 import PrintClassRoster from './PrintClassRoster';
 import WorkloadCalendar from './WorkloadCalendar';
 import PersonalPerformance from './PersonalPerformance';
@@ -82,6 +83,7 @@ const SECTION_PATHS = {
   behaviour:          '/teacher/behaviour',
   substitute:         '/teacher/substitute',
   'lesson-plans':     '/teacher/lesson-plans',
+  'live-classes':     '/teacher/live-classes',
   'print-roster':     '/teacher/print-roster',
   workload:           '/teacher/workload',
   performance:        '/teacher/performance',
@@ -114,6 +116,7 @@ const NAV_GROUPS = [
       { key: 'grade-history',     icon: 'history_edu',      label: 'Grade History' },
       { key: 'grade-completion',  icon: 'task_alt',         label: 'Grade Completion' },
       { key: 'lesson-plans',      icon: 'menu_book',        label: 'Lesson Plans' },
+      { key: 'live-classes',      icon: 'video_call',       label: 'Live Classes' },
     ],
   },
   {
@@ -240,6 +243,7 @@ function TeacherDashboardInner({ onNavigate }) {
       case 'behaviour':         return <BehaviourIncidents />;
       case 'substitute':        return <SubstituteMode />;
       case 'lesson-plans':      return <LessonPlans />;
+      case 'live-classes':      return <LiveClasses />;
       case 'print-roster':      return <PrintClassRoster />;
       case 'workload':          return <WorkloadCalendar />;
       case 'performance':       return <PersonalPerformance />;

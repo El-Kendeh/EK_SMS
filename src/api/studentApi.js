@@ -712,4 +712,15 @@ export const studentApi = {
     }
     return apiClient.get(`/api/student/subjects/${subjectId}/deep-dive/`);
   },
+
+  // ── Username self-edit ──
+  async changeUsername(newUsername) {
+    return apiClient.post('/api/student/change-username/', { new_username: newUsername });
+  },
+
+  // ── Live classes (read-only for student) ──
+  async listLiveClasses(params = {}) {
+    const qs = new URLSearchParams(params).toString();
+    return apiClient.get(`/api/live-classes/${qs ? `?${qs}` : ''}`);
+  },
 };

@@ -12,6 +12,7 @@ const NAV_GROUPS = [
       { section: 'home',          icon: 'dashboard',        label: 'Dashboard' },
       { section: 'timetable',     icon: 'calendar_month',   label: 'Timetable' },
       { section: 'assignments',   icon: 'assignment',       label: 'Assignments' },
+      { section: 'live-classes',  icon: 'video_call',       label: 'Live Classes' },
       { section: 'grades',        icon: 'auto_stories',     label: 'My Grades' },
       { section: 'report-cards',  icon: 'description',      label: 'Report Cards' },
       { section: 'attendance',    icon: 'fact_check',       label: 'Attendance' },

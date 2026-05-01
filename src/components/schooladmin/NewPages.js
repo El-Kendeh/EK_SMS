@@ -7,6 +7,7 @@ import ApiClient from '../../api/client';
 import AddTeacherWizard from './Teachers/AddTeacherWizard';
 import BulkImportModal from './Teachers/BulkImportModal';
 import PhoneInput from '../shared/PhoneInput';
+import ResendCredentialsButton from './ResendCredentialsButton';
 
 /* Re-exported so existing `import { PhoneInput } from '../NewPages'`
    paths keep working. */
@@ -2877,6 +2878,9 @@ function TeacherCard({ t, onOpen, onEdit, onDelete }) {
         <button className="ska-btn ska-btn--ghost ska-btn--sm ska-btn--danger" onClick={() => onDelete(t.id)} style={{ justifyContent: 'center' }}>
           <span className="ska-icon ska-icon--sm">delete</span> Remove
         </button>
+        <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'center', marginTop: 4 }}>
+          <ResendCredentialsButton userId={t.user_id} />
+        </div>
       </div>
     </div>
   );

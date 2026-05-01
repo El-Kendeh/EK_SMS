@@ -122,6 +122,48 @@ export default function StudentProfile() {
     finally { setTwoFALoading(false); }
   };
 
+  // Username edit state
+  const initialUsername = (() => {
+    try { return JSON.parse(localStorage.getItem('user') || '{}').username || ''; }
+    catch { return ''; }
+  })();
+  const [usernameDraft, setUsernameDraft] = useState(initialUsername);
+  const [usernameMsg, setUsernameMsg] = useState(null);
+  const [usernameSaving, setUsernameSaving] = useState(false);
+
+  const handleSaveUsername = async () => {
+    setUsernameMsg(null);
+    const next = (usernameDraft || '').trim();
+    if (next === initialUsername) {
+      setUsernameMsg({ type: 'err', text: 'No change.' }); return;
+    }
+    if (next.length < 3 || next.length > 30) {
+      setUsernameMsg({ type: 'err', text: 'Must be 3-30 characters.' }); return;
+    }
+    if (!/^[A-Za-z0-9_.@+-]+$/.test(next)) {
+      setUsernameMsg({ type: 'err', text: 'Only letters, numbers, and . _ @ + - allowed.' }); return;
+    }
+    setUsernameSaving(true);
+    try {
+      const res = await studentApi.changeUsername(next);
+      if (res.success) {
+        setUsernameMsg({ type: 'ok', text: 'Username updated.' });
+        // keep localStorage user in sync
+        try {
+          const u = JSON.parse(localStorage.getItem('user') || '{}');
+          u.username = res.username;
+          localStorage.setItem('user', JSON.stringify(u));
+        } catch {}
+      } else {
+        setUsernameMsg({ type: 'err', text: res.message || 'Update failed.' });
+      }
+    } catch (err) {
+      setUsernameMsg({ type: 'err', text: err.message || 'Network error.' });
+    }
+    setUsernameSaving(false);
+    setTimeout(() => setUsernameMsg(null), 4000);
+  };
+
   // Password change state
   const [currentPw, setCurrentPw] = useState('');
   const [newPw, setNewPw] = useState('');
@@ -312,6 +354,46 @@ export default function StudentProfile() {
           </div>
           <p className="sprof-2fa-card__text">Your account security is partially managed by your guardian's device.</p>
           <div className="sprof-2fa-badge">Status: Enforced</div>
+        </div>
+      </motion.section>
+
+      {/* Edit username */}
+      <motion.section className="sprof-section" custom={5.5} variants={sectionVariants} initial="hidden" animate="visible">
+        <div className="sprof-change-pw">
+          <div className="sprof-change-pw__title">
+            <span className="material-symbols-outlined">badge</span>
+            Username
+          </div>
+          {usernameMsg && (
+            <p style={{
+              padding: '8px 12px', borderRadius: 8, fontSize: '0.825rem', marginBottom: 12,
+              background: usernameMsg.type === 'ok' ? 'rgba(52,211,153,0.12)' : 'rgba(248,113,113,0.12)',
+              color:      usernameMsg.type === 'ok' ? '#059669' : '#dc2626',
+            }}>{usernameMsg.text}</p>
+          )}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <input
+              className="sprof-pw-input"
+              style={{ flex: 1, minWidth: 200 }}
+              value={usernameDraft}
+              onChange={(e) => setUsernameDraft(e.target.value)}
+              autoComplete="off"
+              maxLength={30}
+              aria-label="Username"
+            />
+            <button
+              className="sprof-pw-submit"
+              type="button"
+              disabled={usernameSaving}
+              onClick={handleSaveUsername}
+              style={{ width: 'auto' }}
+            >
+              {usernameSaving ? 'Saving…' : 'Update Username'}
+            </button>
+          </div>
+          <p style={{ marginTop: 8, fontSize: '0.75rem', color: '#94A3B8' }}>
+            3-30 characters. Letters, numbers, and . _ @ + - allowed. Used for sign-in only — your name stays the same.
+          </p>
         </div>
       </motion.section>
 

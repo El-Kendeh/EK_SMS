@@ -18,6 +18,7 @@ import {
 } from './SAExtraPages';
 import { ClassesPage } from './SAClasses';
 import { SubjectsPage } from './SASubjects';
+import AIDocumentCapture from './AIDocumentCapture';
 
 /* ============================================================
    HELPERS
@@ -63,6 +64,7 @@ const NAV_ITEMS = [
   { key: 'exam_officers',  icon: 'verified_user',    label: 'Exam Officers' },
   { key: 'teacher_assign', icon: 'assignment_ind',   label: 'Assignments' },
   { key: 'promotions',     icon: 'move_up',          label: 'Promotions' },
+  { key: 'ai_capture',     icon: 'document_scanner',  label: 'AI Doc Capture' },
 ];
 const NAV_ITEMS_BOTTOM = [
   { key: 'notifications', icon: 'notifications',    label: 'Notifications' },
@@ -1345,6 +1347,7 @@ export default function SchoolAdminDashboard({ onNavigate }) {
   else if (activePage === 'exam_officers')  pageContent = <ExamOfficersPage />;
   else if (activePage === 'teacher_assign') pageContent = <TeacherAssignmentsPage />;
   else if (activePage === 'promotions')     pageContent = <StudentPromotionPage />;
+  else if (activePage === 'ai_capture')     pageContent = <AIDocumentCapture />;
   else if (activePage === 'settings')   pageContent = (
     <SettingsPage
       school={school}

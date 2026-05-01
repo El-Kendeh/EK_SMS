@@ -92,6 +92,14 @@ from .views import (
     api_student_parent_detail,
 )
 from .views_syllabus import api_syllabus_upload, api_syllabus_list
+from .views_extras import (
+    api_resend_credentials,
+    api_student_change_username,
+    api_live_classes, api_live_class_detail,
+    api_ai_document_capture, api_ai_capture_list,
+    api_principal_overview, api_principal_grade_approvals, api_principal_report_cards,
+    api_teacher_credentials,
+)
 from .secure_views import csrf_token_view
 from django.conf import settings
 from django.conf.urls.static import static
@@ -276,6 +284,26 @@ urlpatterns = [
     path('api/school/academic-years/<int:year_id>/archive/',            api_archive_academic_year,         name='api_archive_academic_year'),
     # Public document verification
     path('verify/<str:token>/',                              verify_grade_document,        name='verify_grade_document'),
+
+    # ── New for testing-team feedback round ─────────────────────────────────
+    # Credentials reset (school admin → user)
+    path('api/school/users/resend-credentials/', api_resend_credentials,
+         name='api_resend_credentials'),
+    # Student username self-edit
+    path('api/student/change-username/', api_student_change_username,
+         name='api_student_change_username'),
+    # Live classes
+    path('api/live-classes/',                api_live_classes,        name='api_live_classes'),
+    path('api/live-classes/<int:lc_id>/',    api_live_class_detail,   name='api_live_class_detail'),
+    # AI document capture
+    path('api/school/ai-capture/',           api_ai_document_capture, name='api_ai_document_capture'),
+    path('api/school/ai-capture/list/',      api_ai_capture_list,     name='api_ai_capture_list'),
+    # Principal dashboard
+    path('api/principal/overview/',          api_principal_overview,        name='api_principal_overview'),
+    path('api/principal/grade-approvals/',   api_principal_grade_approvals, name='api_principal_grade_approvals'),
+    path('api/principal/report-cards/',      api_principal_report_cards,    name='api_principal_report_cards'),
+    # Teacher extended credentials
+    path('api/teacher/credentials/',         api_teacher_credentials, name='api_teacher_credentials'),
 
     # Root URL redirects to admin
     path('', RedirectView.as_view(url='admin/', permanent=False)),

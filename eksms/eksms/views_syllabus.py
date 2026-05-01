@@ -1,14 +1,10 @@
 import json
+import os
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
-import google.generativeai as genai
-import docx
-import PyPDF2
 from eksms_core.models import Syllabus, LessonPlan, ClassRoom, Subject
 from .views import _get_authed_user
-
-import os
 
 @require_http_methods(["POST"])
 @csrf_exempt
@@ -21,14 +17,14 @@ def api_syllabus_upload(request):
         classroom_id = request.POST.get('classroom_id')
         subject_id = request.POST.get('subject_id')
         file = request.FILES.get('file')
-        
+
         if not all([classroom_id, subject_id, file]):
             return JsonResponse({'success': False, 'message': 'Classroom, Subject and File are required.'}, status=400)
-            
+
         classroom = ClassRoom.objects.get(id=classroom_id)
         subject = Subject.objects.get(id=subject_id)
         school = user.school_admin_profile.school if hasattr(user, 'school_admin_profile') else classroom.school
-        
+
         # Save Syllabus
         syllabus, created = Syllabus.objects.update_or_create(
             classroom=classroom,
@@ -36,25 +32,43 @@ def api_syllabus_upload(request):
             school=school,
             defaults={'file': file, 'uploaded_by': user}
         )
-        
+
         # Read file text
         text = ""
         file_path = syllabus.file.path
         ext = os.path.splitext(file_path)[1].lower()
         if ext == '.pdf':
+            try:
+                import PyPDF2
+            except ImportError:
+                return JsonResponse({'success': False, 'message': 'PyPDF2 not installed on server.'}, status=500)
             with open(file_path, 'rb') as f:
                 reader = PyPDF2.PdfReader(f)
                 text = " ".join([page.extract_text() for page in reader.pages if page.extract_text()])
         elif ext == '.docx':
+            try:
+                import docx
+            except ImportError:
+                return JsonResponse({'success': False, 'message': 'python-docx not installed on server.'}, status=500)
             doc = docx.Document(file_path)
             text = " ".join([para.text for para in doc.paragraphs])
         else:
-            # If plain text or other
             with open(file_path, 'r', encoding='utf-8') as f:
                 text = f.read()
 
         # Call AI to generate lesson plan
-        genai.configure(api_key=os.environ.get('GEMINI_API_KEY'))
+        try:
+            import google.generativeai as genai
+        except ImportError:
+            return JsonResponse({'success': False,
+                                 'message': 'AI provider (google-generativeai) not installed.'},
+                                status=503)
+        api_key = os.environ.get('GEMINI_API_KEY')
+        if not api_key:
+            return JsonResponse({'success': False,
+                                 'message': 'GEMINI_API_KEY not configured on server.'},
+                                status=503)
+        genai.configure(api_key=api_key)
         model = genai.GenerativeModel('gemini-1.5-flash')
         prompt = f"Based on the following syllabus for {subject.name} (Class: {classroom.name}), generate a weekly lesson plan. Return it as a JSON array where each object has 'week_number' (integer) and 'content' (string describing the lesson plan for that week).\n\nSyllabus:\n{text}"
         response = model.generate_content(prompt)

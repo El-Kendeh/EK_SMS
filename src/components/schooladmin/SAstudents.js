@@ -6,6 +6,7 @@ import AddStudentWizard from './Students/AddStudentWizard';
 import BulkImportModal from './Students/BulkImportModal';
 import DraftManager from './Students/DraftManager';
 import { listDrafts } from './Students/students.utils';
+import ResendCredentialsButton from './ResendCredentialsButton';
 import './Students/Students.css';
 
 const Ic = ({ name, size, className = '' }) => (
@@ -1539,13 +1540,14 @@ export function StudentsPage({ school, openAddSignal }) {
                   <td style={{ fontSize: '0.8125rem' }}>{s.email || '—'}</td>
                   <td style={{ fontSize: '0.8125rem' }}>{s.phone_number || '—'}</td>
                   <td>
-                    <div style={{ display: 'flex', gap: 6 }}>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                       <button className="ska-btn ska-btn--ghost ska-btn--sm" onClick={() => setViewStudent(s)} title="View Profile">
                         <Ic name="person" size="sm" />
                       </button>
                       <button className="ska-btn ska-btn--ghost ska-btn--sm" onClick={() => openEdit(s)}>
                         <Ic name="edit" size="sm" />
                       </button>
+                      <ResendCredentialsButton userId={s.user_id} label="" />
                       <button className="ska-btn ska-btn--ghost ska-btn--sm ska-btn--danger" onClick={() => handleDelete(s.id)}>
                         <Ic name="delete" size="sm" />
                       </button>

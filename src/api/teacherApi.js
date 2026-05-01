@@ -795,4 +795,42 @@ export const teacherApi = {
     }
     return this.submitGradesForLocking(gradesArray, subjectId, termId).then((r) => ({ ...r, receipt: r.receipt || null }));
   },
+
+  // ── Extended credentials (degrees, certifications, years_experience) ──
+  async getCredentials() {
+    const res = await fetch(`${API_BASE}/api/teacher/credentials/`, { headers: authHeaders() });
+    return res.json();
+  },
+  async updateCredentials(payload) {
+    const res = await fetch(`${API_BASE}/api/teacher/credentials/`, {
+      method: 'PATCH', headers: authHeaders(), body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+
+  // ── Live classes ──
+  async listLiveClasses(params = {}) {
+    const qs = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/api/live-classes/${qs ? `?${qs}` : ''}`,
+                            { headers: authHeaders() });
+    return res.json();
+  },
+  async createLiveClass(payload) {
+    const res = await fetch(`${API_BASE}/api/live-classes/`, {
+      method: 'POST', headers: authHeaders(), body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+  async updateLiveClass(id, payload) {
+    const res = await fetch(`${API_BASE}/api/live-classes/${id}/`, {
+      method: 'PATCH', headers: authHeaders(), body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+  async deleteLiveClass(id) {
+    const res = await fetch(`${API_BASE}/api/live-classes/${id}/`, {
+      method: 'DELETE', headers: authHeaders(),
+    });
+    return res.json();
+  },
 };

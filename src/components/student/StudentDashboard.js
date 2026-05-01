@@ -27,6 +27,7 @@ import DocumentVault from './DocumentVault';
 import PrintTermSummary from './PrintTermSummary';
 import VerifyPage from './VerifyPage';
 import SubjectDeepDive from './SubjectDeepDive';
+import StudentLiveClasses from './StudentLiveClasses';
 import KeyboardShortcuts from '../common/KeyboardShortcuts';
 import LiveNotificationToast from '../common/LiveNotificationToast';
 import ErrorBoundary from '../common/ErrorBoundary';
@@ -55,6 +56,7 @@ const SECTION_PATHS = {
   'print-summary':'/student/print-summary',
   verify:         '/student/verify',
   subject:        '/student/subject',
+  'live-classes': '/student/live-classes',
 };
 
 function getInitialSection() {
@@ -141,6 +143,7 @@ function StudentDashboardInner({ onNavigate }) {
       case 'print-summary':  return <PrintTermSummary />;
       case 'verify':         return <VerifyPage hash={null} />;
       case 'subject':        return <SubjectDeepDive subjectId={subjectId} navigateTo={navigateTo} />;
+      case 'live-classes':   return <StudentLiveClasses />;
       default:               return <StudentHome          {...props} />;
     }
   };
