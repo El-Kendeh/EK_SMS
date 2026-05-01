@@ -990,10 +990,97 @@ export function ReportsPage({ school }) {
     { value: 'finance',      label: 'Fee Collection Report' },
   ];
 
+  /* Build a CSV from the selected report type using the existing data
+     endpoints. Streams the file straight to the user. */
   const handleGenerate = async () => {
     setGenerating(true);
-    await new Promise(r => setTimeout(r, 1200));
-    setGenerated(true);
+    try {
+      let rows = [];
+      let headers = [];
+      const filenameBase = `report-${form.type}-${new Date().toISOString().slice(0,10)}`;
+
+      const params = new URLSearchParams();
+      if (form.classId)   params.append('classroom_id', form.classId);
+      if (form.subjectId) params.append('subject_id',   form.subjectId);
+      if (form.yearId)    params.append('year_id',      form.yearId);
+      const qs = params.toString();
+
+      if (form.type === 'performance') {
+        const data = await ApiClient.get(`/api/school/grades/${qs ? `?${qs}` : ''}`);
+        const grades = data.grades || data || [];
+        headers = ['Student', 'Class', 'Subject', 'CA', 'Mid-Term', 'Final', 'Total', 'Grade'];
+        rows = grades.map(g => [
+          g.student_name || g.student || '',
+          g.classroom_name || g.classroom || '',
+          g.subject_name || g.subject || '',
+          g.ca_score ?? '', g.midterm_score ?? '', g.final_score ?? '',
+          g.total_score ?? '', g.grade_letter || '',
+        ]);
+      } else if (form.type === 'attendance') {
+        const data = await ApiClient.get(`/api/school/attendance/${qs ? `?${qs}` : ''}`);
+        const att = data.attendance || data || [];
+        headers = ['Student', 'Class', 'Date', 'Status'];
+        rows = att.map(a => [
+          a.student_name || a.student || '',
+          a.classroom_name || a.classroom || '',
+          a.date || '', a.status || '',
+        ]);
+      } else if (form.type === 'merit' || form.type === 'transcripts') {
+        const data = await ApiClient.get(`/api/school/students/${qs ? `?${qs}` : ''}`);
+        const students = data.students || [];
+        headers = ['Admission #', 'Name', 'Class', 'Average', 'Attendance %', 'Flagged'];
+        rows = students
+          .sort((a, b) => (b.avg_grade ?? 0) - (a.avg_grade ?? 0))
+          .map(s => [
+            s.admission_number, s.full_name, s.classroom || '',
+            s.avg_grade ?? '—', s.attendance_rate ?? '—',
+            s.is_flagged ? 'Yes' : 'No',
+          ]);
+      } else if (form.type === 'retention') {
+        const data = await ApiClient.get('/api/school/students/');
+        const students = data.students || [];
+        headers = ['Admission #', 'Name', 'Status', 'Class'];
+        rows = students.map(s => [
+          s.admission_number, s.full_name, s.status || 'active', s.classroom || '',
+        ]);
+      } else if (form.type === 'finance') {
+        const data = await ApiClient.get('/api/school/finance/fees/');
+        const fees = data.fees || [];
+        headers = ['Student', 'Description', 'Amount', 'Paid', 'Balance', 'Status', 'Due'];
+        rows = fees.map(f => [
+          f.student_name || '', f.description || f.term || '',
+          f.amount ?? 0, f.amount_paid ?? 0, f.balance ?? 0,
+          f.status || '', f.due_date || '',
+        ]);
+      }
+
+      if (!rows.length) {
+        alert('No data found for the selected filters. Adjust filters and try again.');
+        setGenerating(false);
+        return;
+      }
+
+      const csv = [
+        headers.join(','),
+        ...rows.map(r => r.map(v =>
+          `"${String(v ?? '').replace(/"/g, '""')}"`
+        ).join(',')),
+      ].join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = `${filenameBase}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      setGenerated(true);
+    } catch (e) {
+      alert(e?.message || 'Failed to generate report.');
+    }
     setGenerating(false);
   };
 
@@ -2495,6 +2582,63 @@ export function BursarLedgerPage({ school }) {
     (tx.student_name || '').toLowerCase().includes(search.toLowerCase())
   );
 
+  /* CSV download — works without external deps; users can save as PDF from the
+     browser's print dialog if they need PDF. */
+  const handleExportPDF = () => {
+    if (!filtered.length) {
+      alert('No fee records to export.');
+      return;
+    }
+    const headers = ['Student', 'Description', 'Amount', 'Paid', 'Balance', 'Status', 'Due Date'];
+    const csv = [
+      headers.join(','),
+      ...filtered.map(tx => [
+        `"${(tx.student_name || '').replace(/"/g, '""')}"`,
+        `"${(tx.description || tx.term || '').replace(/"/g, '""')}"`,
+        tx.amount ?? 0,
+        tx.amount_paid ?? 0,
+        tx.balance ?? 0,
+        tx.status || '',
+        tx.due_date || '',
+      ].join(',')),
+    ].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `bursar-ledger-${activeYear || 'export'}-${new Date().toISOString().slice(0,10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  /* Batch process — confirm, mark all unpaid as paid in full. */
+  const [batchBusy, setBatchBusy] = useState(false);
+  const handleProcessBatch = async () => {
+    const unpaid = filtered.filter(tx => Number(tx.balance) > 0);
+    if (!unpaid.length) {
+      alert('No outstanding balances to process.');
+      return;
+    }
+    if (!window.confirm(
+      `Mark ${unpaid.length} outstanding fee record(s) as fully paid? This cannot be undone.`
+    )) return;
+    setBatchBusy(true);
+    let ok = 0; let fail = 0;
+    for (const tx of unpaid) {
+      try {
+        await ApiClient.put(`/api/school/finance/fees/${tx.id}/`, { amount_paid: tx.amount });
+        ok++;
+      } catch { fail++; }
+    }
+    setBatchBusy(false);
+    alert(`Processed: ${ok} paid${fail ? `, ${fail} failed` : ''}.`);
+    // refresh
+    ApiClient.get('/api/school/finance/fees/').then(d => setFees(d.fees || [])).catch(() => {});
+    ApiClient.get('/api/school/finance/stats/').then(d => d.success && setStats(d)).catch(() => {});
+  };
+
   const StatSkeleton = () => (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 28 }}>
       {[1, 2, 3].map(i => (
@@ -2512,8 +2656,22 @@ export function BursarLedgerPage({ school }) {
           <p className="ska-page-sub">{activeYear ? `${activeYear} · All Students` : 'All Students'}</p>
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <button className="ska-btn ska-btn--ghost" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Ic name="picture_as_pdf" size="sm" /> Export PDF</button>
-          <button className="ska-btn ska-btn--primary" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Ic name="payments" size="sm" /> Process Batch</button>
+          <button
+            className="ska-btn ska-btn--ghost"
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+            onClick={handleExportPDF}
+            title="Download fee records as CSV (open and save as PDF if needed)"
+          >
+            <Ic name="picture_as_pdf" size="sm" /> Export PDF
+          </button>
+          <button
+            className="ska-btn ska-btn--primary"
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+            onClick={handleProcessBatch}
+            disabled={batchBusy}
+          >
+            <Ic name="payments" size="sm" /> {batchBusy ? 'Processing…' : 'Process Batch'}
+          </button>
         </div>
       </div>
 

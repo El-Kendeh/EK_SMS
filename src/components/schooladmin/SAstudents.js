@@ -854,16 +854,28 @@ export function StudentsPage({ school, openAddSignal }) {
     setFormStep(0);
   };
 
+  const [loadError, setLoadError] = useState('');
   const load = useCallback(async (q = '') => {
     setLoading(true);
     setLoadFailed(false);
+    setLoadError('');
     try {
       const params = q ? `?q=${encodeURIComponent(q)}` : '';
       const data   = await ApiClient.get(`/api/school/students/${params}`);
       setStudents(data.students || []);
-    } catch {
+    } catch (err) {
       setStudents([]);
       setLoadFailed(true);
+      const msg = err?.message || '';
+      if (err?.status === 401 || err?.status === 403) {
+        setLoadError('Your session has expired or you don\'t have permission. Please sign in again.');
+      } else if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || err?.status === 0) {
+        setLoadError('Cannot reach the server. Check that the backend is running.');
+      } else if (err?.status >= 500) {
+        setLoadError(`Server error (${err.status}). ${msg || 'See backend logs for details.'}`);
+      } else {
+        setLoadError(msg || 'Unknown error loading students.');
+      }
     }
     setLoading(false);
   }, []);
@@ -1508,7 +1520,7 @@ export function StudentsPage({ school, openAddSignal }) {
           <div className="ska-empty">
             <Ic name="wifi_off" size="xl" style={{ color: 'var(--ska-text-3)', marginBottom: 12 }} />
             <p className="ska-empty-title">Could not load students</p>
-            <p className="ska-empty-desc">Check your connection and try again.</p>
+            <p className="ska-empty-desc">{loadError || 'Check your connection and try again.'}</p>
             <button className="ska-btn ska-btn--ghost" style={{ marginTop: 14 }} onClick={() => load(search)}>
               <Ic name="refresh" size="sm" /> Retry
             </button>

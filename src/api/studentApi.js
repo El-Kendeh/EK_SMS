@@ -212,12 +212,12 @@ export const studentApi = {
 
   async markNotificationRead(id) {
     if (USE_MOCK) { await delay(200); return { success: true }; }
-    return apiClient.patch(`/api/student/notifications/${id}/`, { is_read: true });
+    return apiClient.post('/api/student/notifications/', { notification_id: id });
   },
 
   async markAllNotificationsRead() {
     if (USE_MOCK) { await delay(300); return { success: true }; }
-    return apiClient.patch('/api/student/notifications/mark-all-read/');
+    return apiClient.post('/api/student/notifications/', { mark_all: true });
   },
 
   // ── Security Health ───────────────────────────────────────────────────

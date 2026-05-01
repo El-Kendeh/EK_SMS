@@ -108,7 +108,10 @@ export async function markParentNotificationRead(notifId) {
 
 export async function markAllParentNotificationsRead() {
   if (USE_MOCK) { await delay(200); return { success: true }; }
-  return api('/api/parent/notifications/mark-all-read/', { method: 'POST' });
+  return api('/api/parent/notifications/', {
+    method: 'POST',
+    body: JSON.stringify({ mark_all: true }),
+  });
 }
 
 // ── Profile ──────────────────────────────────────────────────────────────────

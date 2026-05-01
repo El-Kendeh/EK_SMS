@@ -3,7 +3,10 @@ import ApiClient from '../../api/client';
 
 /* ---- CSV export helper ---- */
 function exportCSV(rows, filename) {
-  if (!rows.length) return;
+  if (!rows.length) {
+    alert('No grade alerts to export. Adjust filters or wait until activity is recorded.');
+    return;
+  }
   const headers = Object.keys(rows[0]);
   const csv = [
     headers.join(','),
@@ -14,7 +17,9 @@ function exportCSV(rows, filename) {
   const a    = document.createElement('a');
   a.href     = url;
   a.download = filename;
+  document.body.appendChild(a);
   a.click();
+  document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
 

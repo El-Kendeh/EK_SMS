@@ -3349,6 +3349,13 @@ def api_students(request):
                 ),
             )
 
+        _log_security_event(
+            'student_created',
+            f'{actor.username} enrolled student {student.admission_number} ({student_user.get_full_name()})',
+            severity='info', actor=actor,
+            ip=request.META.get('REMOTE_ADDR'),
+            metadata={'student_id': student.id, 'classroom_id': student.classroom_id},
+        )
         response_data = {
             'success': True,
             'message': 'Student added.',
@@ -3767,6 +3774,13 @@ def api_teachers(request):
                 email_sent = True
             except Exception:
                 email_sent = False
+        _log_security_event(
+            'teacher_created',
+            f'{actor.username} created teacher {teacher.employee_id} ({user.get_full_name()})',
+            severity='info', actor=actor,
+            ip=request.META.get('REMOTE_ADDR'),
+            metadata={'teacher_id': teacher.id, 'assignments': len(created_assignments)},
+        )
         return JsonResponse({
             'success': True, 'message': 'Teacher added.',
             'id': teacher.id, 'full_name': user.get_full_name(),
@@ -4651,12 +4665,29 @@ def api_finance_expenses(request):
             body = json.loads(request.body)
         except json.JSONDecodeError:
             return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        title = (body.get('title') or '').strip()
+        amount_raw = body.get('amount')
+        try:
+            amount = float(amount_raw) if amount_raw not in (None, '') else 0.0
+        except (TypeError, ValueError):
+            return JsonResponse({'success': False, 'message': 'Amount must be a number.'}, status=400)
+        if not title:
+            return JsonResponse({'success': False, 'message': 'Title is required.'}, status=400)
+        if amount <= 0:
+            return JsonResponse({'success': False, 'message': 'Amount must be greater than zero.'}, status=400)
         exp = Expense.objects.create(
             school=school,
-            title=body.get('title', ''),
-            amount=float(body.get('amount', 0)),
+            title=title,
+            amount=amount,
             category=body.get('category', 'other'),
             date=body.get('date') or datetime.date.today(),
+        )
+        _log_security_event(
+            'expense_recorded',
+            f'{actor.username} recorded expense "{exp.title}" ({exp.amount} {exp.category})',
+            severity='info', actor=actor,
+            ip=request.META.get('REMOTE_ADDR'),
+            metadata={'expense_id': exp.id},
         )
         return JsonResponse({'success': True, 'id': exp.id, 'message': 'Expense recorded.'})
 
@@ -6844,12 +6875,23 @@ def api_student_notifications(request):
 
     if request.method == 'POST':
         try:
-            data     = json.loads(request.body)
-            notif_id = data.get('notification_id')
-            NotificationRead.objects.get_or_create(notification_id=notif_id, user=user)
-            return JsonResponse({'success': True})
-        except Exception as e:
-            return JsonResponse({'success': False, 'message': str(e)}, status=400)
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        # Mark-all path: { "mark_all": true } from the bell-clear flow
+        if data.get('mark_all'):
+            visible_ids = list(Notification.objects.filter(
+                school=student.school, is_active=True,
+                recipient_role__in=['all', 'students'],
+            ).values_list('id', flat=True))
+            for nid in visible_ids:
+                NotificationRead.objects.get_or_create(notification_id=nid, user=user)
+            return JsonResponse({'success': True, 'count': len(visible_ids)})
+        notif_id = data.get('notification_id')
+        if not notif_id:
+            return JsonResponse({'success': False, 'message': 'notification_id required.'}, status=400)
+        NotificationRead.objects.get_or_create(notification_id=notif_id, user=user)
+        return JsonResponse({'success': True})
 
     if request.method == 'GET':
         notifs = Notification.objects.filter(
@@ -8481,21 +8523,32 @@ def api_parent_notifications(request):
         notifs = Notification.objects.filter(
             Q(recipient_user=user) | Q(school=parent.school, recipient_role='parent')
         ).order_by('-created_at')[:50]
+        read_ids = set(NotificationRead.objects.filter(user=user)
+                                              .values_list('notification_id', flat=True))
         data = [{
             'id':         n.id,
             'title':      n.title,
             'body':       n.body,
             'type':       n.notif_type,
             'created_at': str(n.created_at),
+            'is_read':    n.id in read_ids,
         } for n in notifs]
-        return JsonResponse({'success': True, 'notifications': data})
+        unread = sum(1 for d in data if not d['is_read'])
+        return JsonResponse({'success': True, 'notifications': data, 'unread_count': unread})
 
     if request.method == 'POST':
         try:
             body = json.loads(request.body)
-            nid  = body.get('notification_id')
         except json.JSONDecodeError:
             return JsonResponse({'success': False, 'message': 'Invalid JSON (parent notif).'}, status=400)
+        if body.get('mark_all'):
+            visible_ids = list(Notification.objects.filter(
+                Q(recipient_user=user) | Q(school=parent.school, recipient_role='parent')
+            ).values_list('id', flat=True))
+            for nid in visible_ids:
+                NotificationRead.objects.get_or_create(notification_id=nid, user=user)
+            return JsonResponse({'success': True, 'count': len(visible_ids)})
+        nid = body.get('notification_id')
         if not nid:
             return JsonResponse({'success': False, 'message': 'notification_id required.'}, status=400)
         NotificationRead.objects.get_or_create(notification_id=nid, user=user)
