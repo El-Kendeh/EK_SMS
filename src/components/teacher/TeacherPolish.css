@@ -1,0 +1,629 @@
+/* ============================================================
+   TeacherPolish.css — global polish layer for the Teacher dashboard.
+   Imported once from TeacherDashboard.js. Loaded LAST so its rules
+   refine the existing visual layer without touching 48 component CSS
+   files.
+
+   Design language: soft elevation, larger radii, refined motion,
+   consistent focus ring, denser typographic rhythm. Works in both
+   light and dark themes via existing --tch-* tokens.
+   ============================================================ */
+
+:root {
+  /* ── Refined token additions (don't override existing colour tokens) ── */
+  --tch-radius-sm:    6px;
+  --tch-radius-md:    10px;
+  --tch-radius-lg:    14px;
+  --tch-radius-xl:    18px;
+
+  --tch-shadow-1:     0 1px 2px rgba(15, 27, 45, 0.04),
+                      0 1px 1px rgba(15, 27, 45, 0.02);
+  --tch-shadow-2:     0 1px 2px rgba(15, 27, 45, 0.05),
+                      0 4px 12px rgba(15, 27, 45, 0.05);
+  --tch-shadow-3:     0 4px 6px rgba(15, 27, 45, 0.05),
+                      0 12px 32px rgba(15, 27, 45, 0.08);
+  --tch-shadow-hover: 0 2px 4px rgba(15, 27, 45, 0.06),
+                      0 12px 28px rgba(15, 27, 45, 0.10);
+
+  --tch-ease-out:     cubic-bezier(0.2, 0, 0, 1);
+  --tch-ease-spring:  cubic-bezier(0.34, 1.56, 0.64, 1);
+  --tch-dur-fast:     150ms;
+  --tch-dur-base:     220ms;
+  --tch-dur-slow:     320ms;
+
+  --tch-ring:         0 0 0 3px rgba(16, 185, 129, 0.18);
+  --tch-ring-strong:  0 0 0 3px rgba(16, 185, 129, 0.32);
+}
+
+[data-theme="dark"] {
+  --tch-shadow-1:     0 1px 2px rgba(0, 0, 0, 0.45),
+                      0 1px 1px rgba(0, 0, 0, 0.30);
+  --tch-shadow-2:     0 2px 4px rgba(0, 0, 0, 0.45),
+                      0 6px 18px rgba(0, 0, 0, 0.40);
+  --tch-shadow-3:     0 6px 12px rgba(0, 0, 0, 0.50),
+                      0 16px 40px rgba(0, 0, 0, 0.55);
+  --tch-shadow-hover: 0 4px 8px rgba(0, 0, 0, 0.50),
+                      0 16px 36px rgba(0, 0, 0, 0.60);
+}
+
+/* ── Base typographic rhythm in the teacher shell ── */
+.tch-shell {
+  font-feature-settings: "ss01", "cv11", "tnum" 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+.tch-shell h1, .tch-shell h2, .tch-shell h3 {
+  letter-spacing: -0.011em;
+}
+
+/* ============================================================
+   CARDS — softer elevation, larger radii, hover lift
+   ============================================================ */
+.tch-card,
+.tch-card--pad {
+  border-radius: var(--tch-radius-lg);
+  border: 1px solid var(--tch-border);
+  background: var(--tch-surface);
+  box-shadow: var(--tch-shadow-1);
+  transition: box-shadow var(--tch-dur-base) var(--tch-ease-out),
+              border-color var(--tch-dur-base) var(--tch-ease-out),
+              transform var(--tch-dur-base) var(--tch-ease-out);
+}
+.tch-card:hover {
+  box-shadow: var(--tch-shadow-2);
+}
+[role="button"].tch-card:hover,
+.tch-home__class-row:hover,
+.tch-home__cal-event:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--tch-shadow-hover);
+}
+
+/* ============================================================
+   BUTTONS — clean fills, soft hover, real focus ring
+   ============================================================ */
+.tch-btn {
+  border-radius: var(--tch-radius-md);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  transition:
+    background var(--tch-dur-fast) var(--tch-ease-out),
+    color      var(--tch-dur-fast) var(--tch-ease-out),
+    border-color var(--tch-dur-fast) var(--tch-ease-out),
+    transform  var(--tch-dur-fast) var(--tch-ease-out),
+    box-shadow var(--tch-dur-base) var(--tch-ease-out);
+  position: relative;
+  isolation: isolate;
+}
+.tch-btn:hover { transform: translateY(-1px); }
+.tch-btn:active { transform: translateY(0); }
+.tch-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--tch-ring);
+}
+
+.tch-btn--primary {
+  background: var(--tch-primary);
+  color: #fff;
+  border: 1px solid transparent;
+  box-shadow: 0 1px 2px rgba(6, 95, 70, 0.15),
+              0 4px 12px rgba(16, 185, 129, 0.18);
+}
+.tch-btn--primary:hover {
+  background: #0EA572;
+  box-shadow: 0 2px 6px rgba(6, 95, 70, 0.22),
+              0 10px 24px rgba(16, 185, 129, 0.28);
+}
+.tch-btn--ghost {
+  border: 1px solid var(--tch-border);
+  background: var(--tch-surface);
+  color: var(--tch-text-primary);
+}
+.tch-btn--ghost:hover {
+  background: var(--tch-surface-low);
+  border-color: var(--tch-text-secondary);
+}
+.tch-btn--danger {
+  background: transparent;
+  color: var(--tch-error);
+  border: 1px solid color-mix(in srgb, var(--tch-error) 35%, transparent);
+}
+.tch-btn--danger:hover {
+  background: color-mix(in srgb, var(--tch-error) 8%, transparent);
+}
+.tch-btn--sm { padding: 6px 12px; font-size: 0.8125rem; }
+
+/* ============================================================
+   BADGES & CHIPS — pill shape, refined contrast
+   ============================================================ */
+.tch-badge {
+  border-radius: 999px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 3px 9px;
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+}
+.tch-badge--primary {
+  background: var(--tch-primary-light);
+  color: var(--tch-primary-dark);
+  border-color: color-mix(in srgb, var(--tch-primary) 22%, transparent);
+}
+.tch-badge--green {
+  background: color-mix(in srgb, var(--tch-primary) 12%, transparent);
+  color: var(--tch-primary-dark);
+}
+.tch-badge--amber {
+  background: color-mix(in srgb, var(--tch-warning) 14%, transparent);
+  color: var(--tch-warning);
+  border-color: color-mix(in srgb, var(--tch-warning) 25%, transparent);
+}
+.tch-badge--grey {
+  background: var(--tch-surface-low);
+  color: var(--tch-text-secondary);
+  border-color: var(--tch-border);
+}
+
+[data-theme="dark"] .tch-badge--primary {
+  color: #6EE7B7;
+}
+[data-theme="dark"] .tch-badge--green {
+  color: #6EE7B7;
+}
+
+.tch-chip {
+  border-radius: 999px;
+  border: 1px solid var(--tch-border);
+  background: var(--tch-surface);
+  padding: 3px 10px;
+  font-size: 11px;
+  color: var(--tch-text-secondary);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: border-color var(--tch-dur-fast) var(--tch-ease-out),
+              color var(--tch-dur-fast) var(--tch-ease-out);
+}
+.tch-chip:hover {
+  border-color: var(--tch-text-secondary);
+  color: var(--tch-text-primary);
+}
+
+/* ============================================================
+   INPUTS — restrained borders, focus ring instead of heavy outline
+   ============================================================ */
+.tch-input,
+.tch-shell input[type="text"],
+.tch-shell input[type="email"],
+.tch-shell input[type="password"],
+.tch-shell input[type="number"],
+.tch-shell input[type="search"],
+.tch-shell input[type="date"],
+.tch-shell input[type="datetime-local"],
+.tch-shell select,
+.tch-shell textarea {
+  border-radius: var(--tch-radius-md);
+  border: 1px solid var(--tch-border);
+  background: var(--tch-surface);
+  color: var(--tch-text-primary);
+  transition: border-color var(--tch-dur-fast) var(--tch-ease-out),
+              box-shadow   var(--tch-dur-fast) var(--tch-ease-out);
+}
+.tch-input:focus,
+.tch-shell input:focus,
+.tch-shell select:focus,
+.tch-shell textarea:focus {
+  outline: none;
+  border-color: var(--tch-primary);
+  box-shadow: var(--tch-ring);
+}
+
+/* ============================================================
+   STAT CARDS — number-led, generous breathing room
+   ============================================================ */
+.tch-stat-card {
+  background: var(--tch-surface);
+  border: 1px solid var(--tch-border);
+  border-radius: var(--tch-radius-lg);
+  padding: 18px 20px;
+  box-shadow: var(--tch-shadow-1);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow var(--tch-dur-base) var(--tch-ease-out),
+              transform  var(--tch-dur-base) var(--tch-ease-out);
+}
+.tch-stat-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--tch-primary), transparent);
+  opacity: 0;
+  transition: opacity var(--tch-dur-base) var(--tch-ease-out);
+}
+.tch-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--tch-shadow-2);
+}
+.tch-stat-card:hover::before {
+  opacity: 1;
+}
+.tch-stat-card__label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--tch-text-secondary);
+  margin: 0;
+}
+.tch-stat-card__value {
+  font-size: 1.85rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--tch-text-primary);
+  margin: 0;
+  line-height: 1.05;
+}
+.tch-stat-card__sub {
+  font-size: 0.75rem;
+  color: var(--tch-text-secondary);
+  margin: 2px 0 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.tch-stat-card__sub--amber { color: var(--tch-warning); }
+.tch-stat-card__sub--primary { color: var(--tch-primary); }
+
+.tch-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+/* ============================================================
+   HOME HERO — richer gradient, subtle pattern, depth
+   ============================================================ */
+.tch-home__banner {
+  background: linear-gradient(135deg,
+    var(--tch-primary-dark) 0%,
+    #064E3B 50%,
+    #0F1F2E 100%);
+  border-radius: var(--tch-radius-xl);
+  padding: 28px 28px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--tch-shadow-2);
+  border: 1px solid rgba(16, 185, 129, 0.15);
+}
+.tch-home__banner::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(900px 220px at 100% 0%,
+      rgba(16, 185, 129, 0.18), transparent 60%),
+    radial-gradient(600px 200px at 0% 100%,
+      rgba(59, 130, 246, 0.10), transparent 60%);
+  pointer-events: none;
+}
+.tch-home__banner > * { position: relative; z-index: 1; }
+
+.tch-home__greeting {
+  font-size: clamp(1.4rem, 1.05rem + 1.4vw, 1.75rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0 0 6px;
+  color: #FFFFFF;
+}
+.tch-home__date {
+  font-size: 0.8125rem;
+  color: rgba(226, 240, 252, 0.78);
+  margin: 0;
+  letter-spacing: 0.005em;
+}
+.tch-home__term-badge {
+  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255,255,255,0.18);
+  backdrop-filter: blur(8px);
+  padding: 8px 14px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #FFFFFF;
+}
+
+/* ── Deadline + 2FA banners — softer treatment ── */
+.tch-home__deadline {
+  border-radius: var(--tch-radius-md);
+  border-width: 1px;
+  border-style: solid;
+  padding: 14px 16px;
+  margin-bottom: 18px;
+  font-size: 0.8125rem;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: var(--tch-shadow-1);
+}
+.tch-home__deadline--danger {
+  background: color-mix(in srgb, var(--tch-error) 8%, var(--tch-surface));
+  color: var(--tch-error);
+  border-color: color-mix(in srgb, var(--tch-error) 35%, transparent);
+}
+.tch-home__deadline--warning,
+.tch-home__deadline--amber {
+  background: color-mix(in srgb, var(--tch-warning) 10%, var(--tch-surface));
+  color: var(--tch-warning);
+  border-color: color-mix(in srgb, var(--tch-warning) 35%, transparent);
+}
+.tch-home__deadline--info {
+  background: color-mix(in srgb, var(--tch-info) 8%, var(--tch-surface));
+  color: var(--tch-info);
+  border-color: color-mix(in srgb, var(--tch-info) 35%, transparent);
+}
+
+/* ── Section labels (sticky-feeling micro-headers) ── */
+.tch-home__section-label {
+  font-size: 0.6875rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--tch-text-secondary);
+  margin: 0;
+}
+
+/* ── Home class rows — interactive, warm ── */
+.tch-home__class-row {
+  border: 1px solid var(--tch-border);
+  background: var(--tch-surface);
+  border-radius: var(--tch-radius-md);
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: border-color var(--tch-dur-fast) var(--tch-ease-out),
+              background   var(--tch-dur-fast) var(--tch-ease-out),
+              transform    var(--tch-dur-fast) var(--tch-ease-out),
+              box-shadow   var(--tch-dur-base) var(--tch-ease-out);
+}
+.tch-home__class-row:hover {
+  border-color: color-mix(in srgb, var(--tch-primary) 35%, var(--tch-border));
+  background: color-mix(in srgb, var(--tch-primary) 4%, var(--tch-surface));
+  transform: translateY(-1px);
+  box-shadow: var(--tch-shadow-2);
+}
+.tch-home__class-row-name {
+  font-weight: 700;
+  letter-spacing: -0.005em;
+}
+
+/* ── Today's classes — clearer "now" indicator ── */
+.tch-home__today-row {
+  border-radius: var(--tch-radius-md);
+  border: 1px solid var(--tch-border);
+  background: var(--tch-surface);
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: border-color var(--tch-dur-fast) var(--tch-ease-out);
+}
+.tch-home__today-row--now {
+  border-color: var(--tch-primary);
+  background: color-mix(in srgb, var(--tch-primary) 6%, var(--tch-surface));
+  box-shadow: 0 0 0 1px var(--tch-primary) inset, var(--tch-shadow-1);
+}
+.tch-home__now-dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--tch-primary);
+  margin-right: 6px;
+  vertical-align: middle;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--tch-primary) 25%, transparent);
+  animation: tch-pulse 1.6s ease-out infinite;
+}
+@keyframes tch-pulse {
+  0%   { box-shadow: 0 0 0 0   color-mix(in srgb, var(--tch-primary) 35%, transparent); }
+  70%  { box-shadow: 0 0 0 8px color-mix(in srgb, var(--tch-primary) 0%,  transparent); }
+  100% { box-shadow: 0 0 0 0   color-mix(in srgb, var(--tch-primary) 0%,  transparent); }
+}
+
+/* ── Calendar event chips — softer cards ── */
+.tch-home__cal-event {
+  border-radius: var(--tch-radius-md);
+  padding: 10px 12px;
+  border: 1px solid var(--tch-border);
+  background: var(--tch-surface);
+  transition: transform var(--tch-dur-fast) var(--tch-ease-out),
+              box-shadow var(--tch-dur-base) var(--tch-ease-out);
+}
+.tch-home__cal-event:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--tch-shadow-2);
+}
+
+/* ── Quick action buttons — friendly tinted pills ── */
+.tch-qa-btn {
+  border-radius: var(--tch-radius-md);
+  padding: 12px 14px;
+  border: 1px solid var(--tch-border);
+  background: var(--tch-surface);
+  font-weight: 600;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+  transition: border-color var(--tch-dur-fast) var(--tch-ease-out),
+              background   var(--tch-dur-fast) var(--tch-ease-out),
+              transform    var(--tch-dur-fast) var(--tch-ease-out);
+}
+.tch-qa-btn:hover {
+  transform: translateX(2px);
+  border-color: var(--tch-primary);
+}
+.tch-qa-btn__icon {
+  flex-shrink: 0;
+  font-size: 20px;
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  background: var(--tch-primary-light);
+  color: var(--tch-primary);
+  display: flex; align-items: center; justify-content: center;
+}
+.tch-qa-btn__label { flex: 1; }
+.tch-qa-btn__arrow {
+  color: var(--tch-text-secondary);
+  font-size: 18px;
+  transition: transform var(--tch-dur-fast) var(--tch-ease-out);
+}
+.tch-qa-btn:hover .tch-qa-btn__arrow {
+  transform: translateX(3px);
+  color: var(--tch-primary);
+}
+.tch-qa--amber .tch-qa-btn__icon {
+  background: color-mix(in srgb, var(--tch-warning) 15%, transparent);
+  color: var(--tch-warning);
+}
+.tch-qa--danger .tch-qa-btn__icon {
+  background: color-mix(in srgb, var(--tch-error) 12%, transparent);
+  color: var(--tch-error);
+}
+.tch-qa--info .tch-qa-btn__icon {
+  background: color-mix(in srgb, var(--tch-info) 12%, transparent);
+  color: var(--tch-info);
+}
+
+/* ============================================================
+   SIDEBAR — sharper hierarchy, refined active state
+   ============================================================ */
+.tch-sidebar {
+  border-right: 1px solid color-mix(in srgb, #FFFFFF 6%, transparent);
+}
+.tch-sidebar__brand {
+  padding: 24px 20px 18px;
+  border-bottom: 1px solid color-mix(in srgb, #FFFFFF 5%, transparent);
+}
+.tch-sidebar__user {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--tch-radius-md);
+  margin: 12px 12px 14px;
+  padding: 12px 14px;
+}
+.tch-sidebar__avatar {
+  border: 2px solid rgba(16, 185, 129, 0.45);
+  background: linear-gradient(135deg, var(--tch-primary), #0EA572);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.32);
+}
+.tch-sidebar__nav { padding: 4px 10px 12px; }
+.tch-sidebar__group-label {
+  font-size: 0.6rem !important;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.42) !important;
+  font-weight: 800 !important;
+  padding: 12px 8px 6px !important;
+}
+.tch-sidebar__nav-item,
+.tch-sidebar a[role="button"],
+.tch-sidebar button[class*="nav-item"] {
+  border-radius: var(--tch-radius-md);
+  padding: 10px 12px;
+  transition: background var(--tch-dur-fast) var(--tch-ease-out),
+              color      var(--tch-dur-fast) var(--tch-ease-out);
+}
+.tch-sidebar__nav-item:hover,
+.tch-sidebar button[class*="nav-item"]:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.tch-sidebar__nav-item--active,
+.tch-sidebar button[class*="nav-item"][aria-current="page"],
+.tch-sidebar button[class*="nav-item--active"] {
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--tch-primary) 22%, transparent),
+    color-mix(in srgb, var(--tch-primary) 8%, transparent));
+  color: #fff;
+  box-shadow: inset 3px 0 0 var(--tch-primary);
+}
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+.tch-header {
+  border-bottom: 1px solid var(--tch-border);
+  backdrop-filter: blur(12px);
+  background: color-mix(in srgb, var(--tch-bg) 80%, transparent);
+}
+[data-theme="dark"] .tch-header {
+  background: color-mix(in srgb, var(--tch-bg) 75%, transparent);
+}
+
+/* ============================================================
+   SCROLLBAR (subtle, branded)
+   ============================================================ */
+.tch-shell *::-webkit-scrollbar { width: 10px; height: 10px; }
+.tch-shell *::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--tch-text-secondary) 25%, transparent);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.tch-shell *::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--tch-text-secondary) 45%, transparent);
+  background-clip: padding-box;
+  border: 2px solid transparent;
+}
+.tch-shell *::-webkit-scrollbar-track { background: transparent; }
+
+/* ============================================================
+   GLOBAL FOCUS RING — for any interactive element we miss
+   ============================================================ */
+.tch-shell button:focus-visible,
+.tch-shell a:focus-visible,
+.tch-shell [role="button"]:focus-visible {
+  outline: none;
+  box-shadow: var(--tch-ring);
+  border-radius: var(--tch-radius-sm);
+}
+
+/* ============================================================
+   Mobile refinements (≤600px)
+   ============================================================ */
+@media (max-width: 600px) {
+  .tch-home__banner { padding: 22px 18px; border-radius: var(--tch-radius-lg); }
+  .tch-stat-card { padding: 14px 16px; }
+  .tch-stat-card__value { font-size: 1.5rem; }
+  .tch-stats-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+  .tch-card, .tch-card--pad { border-radius: var(--tch-radius-md); }
+  .tch-btn { min-height: 40px; }
+}
+
+@media (max-width: 400px) {
+  .tch-home__banner { padding: 18px 16px; }
+  .tch-stats-grid { grid-template-columns: 1fr 1fr; }
+  .tch-home__greeting { font-size: 1.2rem; }
+}
+
+/* ============================================================
+   Reduced motion
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .tch-card, .tch-btn, .tch-stat-card, .tch-home__class-row,
+  .tch-home__today-row, .tch-home__cal-event, .tch-qa-btn,
+  .tch-qa-btn__arrow, .tch-home__now-dot {
+    transition: none !important;
+    animation: none !important;
+  }
+}

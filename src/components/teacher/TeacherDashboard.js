@@ -54,6 +54,7 @@ import ErrorBoundary from '../common/ErrorBoundary';
 import VerifyPage from '../student/VerifyPage';
 
 import './TeacherDashboard.css';
+import './TeacherPolish.css';
 
 const SECTION_PATHS = {
   home:               '/dashboard/teacher',
