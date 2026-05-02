@@ -368,6 +368,22 @@
   color: var(--ska-text-3);
 }
 
+/* Add Class form: 2-col layout (form + live preview) collapses to 1-col on tablets */
+.cls-form-and-preview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 280px);
+  gap: 20px;
+}
+.cls-preview {
+  align-self: start;
+  position: sticky;
+  top: 0;
+}
+@media (max-width: 900px) {
+  .cls-form-and-preview { grid-template-columns: 1fr; }
+  .cls-preview { position: static; }
+}
+
 /* ── Subjects multi-select section (in modal) ── */
 .cls-subjects-section {
   margin-top: 18px;

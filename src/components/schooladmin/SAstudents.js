@@ -866,15 +866,22 @@ export function StudentsPage({ school, openAddSignal }) {
     } catch (err) {
       setStudents([]);
       setLoadFailed(true);
+      // Surface in DevTools so users / testers can paste the actual error
+      // when filing bug reports — the human-readable line below may hide details.
+      console.error('[Students] Failed to load:', {
+        status: err?.status, message: err?.message, data: err?.data, error: err,
+      });
       const msg = err?.message || '';
       if (err?.status === 401 || err?.status === 403) {
-        setLoadError('Your session has expired or you don\'t have permission. Please sign in again.');
+        setLoadError('Your session has expired or you don\'t have permission. Please sign out and sign in again.');
       } else if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || err?.status === 0) {
-        setLoadError('Cannot reach the server. Check that the backend is running.');
+        setLoadError('Cannot reach the server. Confirm the backend is online.');
       } else if (err?.status >= 500) {
         setLoadError(`Server error (${err.status}). ${msg || 'See backend logs for details.'}`);
+      } else if (err?.status === 404) {
+        setLoadError('Endpoint not found (404). The backend may be on an older version.');
       } else {
-        setLoadError(msg || 'Unknown error loading students.');
+        setLoadError(msg || 'Unknown error loading students. Open DevTools → Console for details.');
       }
     }
     setLoading(false);
@@ -1478,7 +1485,7 @@ export function StudentsPage({ school, openAddSignal }) {
           <button className="ska-btn ska-btn--ghost" onClick={() => setShowBulkImport(true)}>
             <Ic name="upload_file" size="sm" /> Bulk import
           </button>
-          <button className="ska-btn ska-btn--primary" onClick={() => setModal('add')}>
+          <button className="ska-btn ska-btn--primary" onClick={openAdd}>
             <Ic name="person_add" size="sm" /> Add Student
           </button>
         </div>
@@ -1597,7 +1604,7 @@ export function StudentsPage({ school, openAddSignal }) {
               /* Re-open the wizard fresh after a brief delay */
               setTimeout(() => {
                 setCredSuccess(null);
-                setModal('add');
+                openAdd();
               }, 600);
             }
           }}

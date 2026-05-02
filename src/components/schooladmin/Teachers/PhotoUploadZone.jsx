@@ -1,4 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
+// Self-contained CSS so PhotoUploadZone works in any wizard (Students,
+// Teachers, etc.) without the consumer needing to load Teachers.css.
+import './Teachers.css';
 
 const Ic = ({ name, size, style }) => (
   <span className={`ska-icon${size ? ` ska-icon--${size}` : ''}`} aria-hidden="true" style={style}>{name}</span>

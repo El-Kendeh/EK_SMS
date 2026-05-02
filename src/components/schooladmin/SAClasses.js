@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import ApiClient from '../../api/client';
+import ClassProfileDrawer from './ClassProfileDrawer';
 import './Classes.css';
 
 /* ─── Material Symbol icon shorthand ─── */
@@ -49,6 +50,74 @@ function capColor(status) {
   if (status === 'full') return 'var(--ska-error)';
   if (status === 'warn') return '#ffb786';
   return 'var(--ska-green)';
+}
+
+/* ============================================================
+   QUICK STATS STRIP — actionable chips above the table
+   ============================================================ */
+function QuickStatsStrip({ classes, filterStatus, filterTeacher, onFilterStatus, onFilterTeacher }) {
+  const noTeacher = classes.filter(c => !c.class_teacher_id && !c.teacher_id).length;
+  const overCap   = classes.filter(c => (c.density_pct || 0) >= 100).length;
+  const atRisk    = classes.filter(c => c.is_at_risk).length;
+  const noSubj    = classes.filter(c =>
+    Array.isArray(c.subjects) ? c.subjects.length === 0 : (c.subjects_count || 0) === 0
+  ).length;
+  const totalEnrolled = classes.reduce((s, c) => s + (c.enrolled || c.student_count || 0), 0);
+  const totalCap      = classes.reduce((s, c) => s + (c.capacity || 0), 0);
+  const fillRate      = totalCap > 0 ? Math.round((totalEnrolled / totalCap) * 100) : 0;
+
+  const chips = [
+    { key: 'fill',     label: `Avg fill ${fillRate}%`,
+      color: fillRate >= 80 ? '#ffb786' : 'var(--ska-green)',
+      bg:    fillRate >= 80 ? 'rgba(255,183,134,0.12)' : 'rgba(34,211,163,0.12)',
+      icon:  'speed' },
+    { key: 'no-teacher', label: `${noTeacher} unassigned teacher`,
+      color: noTeacher > 0 ? 'var(--ska-error)' : 'var(--ska-text-3)',
+      bg:    noTeacher > 0 ? 'var(--ska-error-dim)' : 'var(--ska-surface-high)',
+      icon:  'person_off',
+      onClick: noTeacher > 0 ? () => onFilterTeacher('unassigned') : null,
+      active: filterTeacher === 'unassigned' },
+    { key: 'no-subj', label: `${noSubj} no subjects`,
+      color: noSubj > 0 ? 'var(--ska-error)' : 'var(--ska-text-3)',
+      bg:    noSubj > 0 ? 'var(--ska-error-dim)' : 'var(--ska-surface-high)',
+      icon:  'menu_book' },
+    { key: 'over',   label: `${overCap} over capacity`,
+      color: overCap > 0 ? 'var(--ska-error)' : 'var(--ska-text-3)',
+      bg:    overCap > 0 ? 'var(--ska-error-dim)' : 'var(--ska-surface-high)',
+      icon:  'warning' },
+    { key: 'risk',   label: `${atRisk} at risk`,
+      color: atRisk > 0 ? '#ffb786' : 'var(--ska-text-3)',
+      bg:    atRisk > 0 ? 'rgba(255,183,134,0.12)' : 'var(--ska-surface-high)',
+      icon:  'health_and_safety' },
+  ];
+
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+      {chips.map(c => {
+        const isClickable = !!c.onClick;
+        return (
+          <button
+            key={c.key}
+            onClick={c.onClick || undefined}
+            disabled={!isClickable}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '6px 12px', borderRadius: 999, fontSize: '0.75rem', fontWeight: 700,
+              background: c.active ? c.color : c.bg,
+              color: c.active ? '#fff' : c.color,
+              border: c.active ? `1px solid ${c.color}` : '1px solid transparent',
+              cursor: isClickable ? 'pointer' : 'default',
+              transition: 'all 0.15s',
+            }}
+            title={isClickable ? 'Click to filter' : ''}
+          >
+            <Ic name={c.icon} size="sm" />
+            {c.label}
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 /* ============================================================
@@ -137,6 +206,7 @@ function FiltersBar({ search, onSearch, filterForm, onFilterForm, filterStatus, 
 
       <select className="ska-chart-select cls-select" value={filterTeacher} onChange={e => onFilterTeacher(e.target.value)}>
         <option value="">All Teachers</option>
+        <option value="unassigned">— Unassigned —</option>
         {teachers.map(t => (
           <option key={t.id} value={t.id}>{t.full_name || t.username}</option>
         ))}
@@ -155,22 +225,45 @@ function FiltersBar({ search, onSearch, filterForm, onFilterForm, filterStatus, 
    CLASS ROW
    ============================================================ */
 function ClassRow({ cls, onView, onEdit, onDelete, onAssignStudents, onAssignTeacher, onManageSubjects, onViewTimetable }) {
-  const count   = cls.student_count || 0;
-  const cap     = cls.capacity     || 1;
-  const pct     = Math.min(100, Math.round((count / cap) * 100));
-  const status  = capStatus(count, cap);
-  const color   = capColor(status);
+  const count    = cls.enrolled ?? cls.student_count ?? 0;
+  const cap      = cls.capacity ?? 1;
+  const pct      = cls.density_pct != null
+                    ? Math.min(100, Math.round(cls.density_pct))
+                    : Math.min(100, Math.round((count / Math.max(cap, 1)) * 100));
+  const status   = capStatus(count, cap);
+  const color    = capColor(status);
   const isActive = cls.is_active !== false;
+  const tag      = cls.colour_tag || '#3B82F6';
+  // New-shape (class_teacher object) with legacy fallback (teacher_name)
+  const teacherName = cls.class_teacher?.name || cls.teacher_name;
+  const subjectsCount = Array.isArray(cls.subjects)
+                        ? cls.subjects.length
+                        : (cls.subjects_count || 0);
+  const atRisk = cls.is_at_risk;
 
   return (
-    <tr>
-      {/* Class name */}
+    <tr style={atRisk ? { background: 'rgba(220, 38, 38, 0.04)' } : undefined}>
+      {/* Class name with colour-tag accent */}
       <td>
-        <div className="cls-name-cell">
-          <div className="cls-avatar">{(cls.name || 'C').charAt(0).toUpperCase()}</div>
+        <div className="cls-name-cell" style={{ borderLeft: `3px solid ${tag}`, paddingLeft: 10 }}>
+          <div className="cls-avatar" style={{ background: tag }}>
+            {(cls.name || 'C').charAt(0).toUpperCase()}
+          </div>
           <div>
-            <div className="cls-name-text">{cls.name}</div>
+            <div className="cls-name-text">
+              {cls.name}
+              {cls.stream && (
+                <span style={{ color: 'var(--ska-text-3)', fontWeight: 600, marginLeft: 6 }}>
+                  · {cls.stream}
+                </span>
+              )}
+            </div>
             {cls.room && <div className="cls-name-meta">Room {cls.room}</div>}
+            {atRisk && (
+              <div style={{ fontSize: '0.7rem', color: 'var(--ska-error)', fontWeight: 700, marginTop: 2 }}>
+                ⚠ Needs attention
+              </div>
+            )}
           </div>
         </div>
       </td>
@@ -184,7 +277,7 @@ function ClassRow({ cls, onView, onEdit, onDelete, onAssignStudents, onAssignTea
       {/* Capacity */}
       <td>{cls.capacity}</td>
 
-      {/* Students + progress */}
+      {/* Students + density bar */}
       <td style={{ minWidth: 160 }}>
         <div className="cls-cap-cell">
           <div className="cls-cap-row">
@@ -199,24 +292,31 @@ function ClassRow({ cls, onView, onEdit, onDelete, onAssignStudents, onAssignTea
         </div>
       </td>
 
-      {/* Teacher */}
+      {/* Class teacher */}
       <td>
-        {cls.teacher_name ? (
+        {teacherName ? (
           <div className="cls-teacher-cell">
             <div className="cls-avatar cls-avatar--sm cls-avatar--teal">
-              {cls.teacher_name.charAt(0)}
+              {teacherName.charAt(0)}
             </div>
-            <span className="cls-teacher-name">{cls.teacher_name}</span>
+            <span className="cls-teacher-name">{teacherName}</span>
+            {Array.isArray(cls.assistant_teachers) && cls.assistant_teachers.length > 0 && (
+              <span className="ska-badge ska-badge--grey" style={{ marginLeft: 6, fontSize: '0.625rem' }}>
+                +{cls.assistant_teachers.length}
+              </span>
+            )}
           </div>
         ) : (
-          <span className="cls-unassigned">Unassigned</span>
+          <span className="cls-unassigned" style={{ color: 'var(--ska-error)' }}>
+            Unassigned
+          </span>
         )}
       </td>
 
       {/* Subjects count */}
       <td>
-        <span className="ska-badge ska-badge--primary">
-          {cls.subjects_count || 0} subj.
+        <span className={`ska-badge ${subjectsCount > 0 ? 'ska-badge--primary' : 'ska-badge--inactive'}`}>
+          {subjectsCount} subj.
         </span>
       </td>
 
@@ -565,19 +665,28 @@ function ClassDetails({ cls, students, teachers, subjects, onBack, onAssignStude
 /* ============================================================
    ADD / EDIT CLASS MODAL
    ============================================================ */
-function AddClassModal({ mode, initialForm, existingCodes, teachers, subjects, academicYears, onSave, onClose }) {
+function AddClassModal({ mode, initialForm, existingCodes, existingClasses = [], teachers, subjects, academicYears, onSave, onBulkSave, onClose }) {
   const [form, setForm]           = useState(initialForm);
   const [saving, setSaving]       = useState(false);
   const [error, setError]         = useState('');
   const [codeManual, setCodeManual] = useState(false);
+  const [streamManual, setStreamManual] = useState(false);
+  const [formManual,   setFormManual]   = useState(false);
+  const [bulkMode,     setBulkMode]     = useState(false);
+  const [bulkStreams,  setBulkStreams]  = useState('A, B, C');
+  const [bulkResult,   setBulkResult]   = useState(null);
 
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }));
 
   const handleNameChange = e => {
     const name = e.target.value;
     set('name', name);
-    if (!codeManual && mode === 'add') {
-      set('code', suggestCode(name));
+    if (mode === 'add') {
+      // Auto-fill code, form_number, stream from "Grade 10A"-style names
+      if (!codeManual) set('code', suggestCode(name));
+      const parsed = parseClassName(name);
+      if (!formManual && parsed.form_number) set('form_number', parsed.form_number);
+      if (!streamManual && parsed.stream)    set('stream', parsed.stream);
     }
   };
 
@@ -594,6 +703,10 @@ function AddClassModal({ mode, initialForm, existingCodes, teachers, subjects, a
       setError(`Code "${codeUp}" already exists. Please use a unique code.`);
       return;
     }
+    // Sanity on times
+    if (form.start_time && form.end_time && form.end_time <= form.start_time) {
+      setError('End time must be after start time.'); return;
+    }
     setSaving(true); setError('');
     try {
       await onSave({ ...form, code: codeUp });
@@ -603,18 +716,137 @@ function AddClassModal({ mode, initialForm, existingCodes, teachers, subjects, a
     }
   };
 
+  const saveBulk = async () => {
+    const streams = bulkStreams.split(/[,\s]+/).map(s => s.trim()).filter(Boolean);
+    if (streams.length < 2) {
+      setError('Enter at least 2 streams (e.g. A, B, C).'); return;
+    }
+    if (streams.length > 20) {
+      setError('Maximum 20 variants per bulk-create.'); return;
+    }
+    if (!form.name?.trim()) {
+      setError('Base class name is required (e.g. "Grade 10").'); return;
+    }
+    setSaving(true); setError(''); setBulkResult(null);
+    try {
+      const res = await onBulkSave({
+        name_template:    form.name.trim(),
+        code_template:    form.code?.trim() || '',
+        form_number:      form.form_number,
+        capacity:         form.capacity,
+        education_level:  form.education_level,
+        track:            form.track,
+        colour_tag:       form.colour_tag,
+        start_time:       form.start_time || null,
+        end_time:         form.end_time || null,
+        room:             form.room || '',
+        notes:            form.notes || '',
+        class_teacher_id: form.teacher_id || null,
+        streams,
+      });
+      setBulkResult(res);
+    } catch (e) {
+      setError(e.message || 'Bulk-create failed.');
+    }
+    setSaving(false);
+  };
+
   const capWarn = (form.capacity || 0) > 60;
+
+  // Sister-class hint (other classes already in this form_number)
+  const sisterClasses = mode === 'add' && form.form_number
+    ? (existingClasses || []).filter(c => Number(c.form_number) === Number(form.form_number))
+    : [];
 
   return (
     <Modal title={mode === 'add' ? 'Add New Class' : 'Edit Class'} onClose={onClose} wide>
       {error && <p className="ska-form-error">{error}</p>}
 
+      {/* Mode toggle (Add only) */}
+      {mode === 'add' && (
+        <div style={{
+          display: 'flex', gap: 6, padding: 4, marginBottom: 16,
+          background: 'var(--ska-surface-high)', borderRadius: 10, width: 'fit-content',
+        }}>
+          {[
+            { k: false, l: 'Single class',     i: 'add_box' },
+            { k: true,  l: 'Bulk variants',    i: 'library_add' },
+          ].map(opt => (
+            <button
+              key={String(opt.k)} type="button"
+              onClick={() => { setBulkMode(opt.k); setError(''); setBulkResult(null); }}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '6px 14px', borderRadius: 8, border: 'none',
+                background: bulkMode === opt.k ? 'var(--ska-primary)' : 'transparent',
+                color:      bulkMode === opt.k ? '#fff' : 'var(--ska-text-2)',
+                fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer',
+                transition: 'all 0.15s',
+              }}
+            >
+              <Ic name={opt.i} size="sm" /> {opt.l}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {bulkResult ? (
+        /* ── Bulk-create result screen ── */
+        <div style={{ padding: '12px 0' }}>
+          <div style={{
+            padding: 16, borderRadius: 10, background: 'var(--ska-green-dim)',
+            color: 'var(--ska-green)', fontWeight: 700, marginBottom: 16,
+          }}>
+            <Ic name="check_circle" /> {bulkResult.message}
+          </div>
+          {bulkResult.created?.length > 0 && (
+            <div style={{ marginBottom: 12 }}>
+              <strong style={{ fontSize: '0.85rem' }}>Created:</strong>
+              <ul style={{ marginTop: 6 }}>
+                {bulkResult.created.map(c => (
+                  <li key={c.id} style={{ fontSize: '0.85rem' }}>
+                    {c.name} <span className="ska-badge ska-badge--cyan">{c.code}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {bulkResult.skipped?.length > 0 && (
+            <div>
+              <strong style={{ fontSize: '0.85rem', color: 'var(--ska-error)' }}>Skipped:</strong>
+              <ul style={{ marginTop: 6 }}>
+                {bulkResult.skipped.map((s, i) => (
+                  <li key={i} style={{ fontSize: '0.85rem', color: 'var(--ska-text-2)' }}>
+                    {s.code} — {s.reason}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <div style={{ marginTop: 18, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <button className="ska-btn ska-btn--primary" onClick={onClose}>Done</button>
+          </div>
+        </div>
+      ) : (
+      <>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 280px)',
+        gap: 20,
+      }} className="cls-form-and-preview">
       <div className="ska-form-grid">
         {/* Name */}
         <label className="ska-form-group">
-          <span>Class Name *</span>
-          <input className="ska-input" placeholder="e.g. Grade 10A" value={form.name}
+          <span>{bulkMode ? 'Base Class Name *' : 'Class Name *'}</span>
+          <input className="ska-input"
+            placeholder={bulkMode ? 'e.g. Grade 10' : 'e.g. Grade 10A'}
+            value={form.name}
             onChange={handleNameChange} />
+          {bulkMode && (
+            <span className="cls-hint">
+              Streams will be appended (e.g. "Grade 10" + "A" = "Grade 10A")
+            </span>
+          )}
         </label>
 
         {/* Code */}
@@ -636,7 +868,23 @@ function AddClassModal({ mode, initialForm, existingCodes, teachers, subjects, a
         <label className="ska-form-group">
           <span>Form / Grade</span>
           <input className="ska-input" type="number" min="1" max="6" value={form.form_number}
-            onChange={e => set('form_number', parseInt(e.target.value) || 1)} />
+            onChange={e => { setFormManual(true); set('form_number', parseInt(e.target.value) || 1); }} />
+          {sisterClasses.length > 0 && (
+            <span className="cls-hint">
+              You already have {sisterClasses.length} class{sisterClasses.length !== 1 ? 'es' : ''}
+              {' '}in Form {form.form_number}
+              {' ('}{sisterClasses.slice(0, 3).map(c => c.code).join(', ')}
+              {sisterClasses.length > 3 ? `, +${sisterClasses.length - 3}` : ''}{')'}
+            </span>
+          )}
+        </label>
+
+        {/* Stream / Section */}
+        <label className="ska-form-group">
+          <span>Stream / Section <span className="cls-hint">(optional)</span></span>
+          <input className="ska-input" placeholder="A, B, Sciences…" maxLength={10}
+            value={form.stream || ''}
+            onChange={e => { setStreamManual(true); set('stream', e.target.value); }} />
         </label>
 
         {/* Capacity */}
@@ -693,10 +941,164 @@ function AddClassModal({ mode, initialForm, existingCodes, teachers, subjects, a
             <option value="archived">Archived</option>
           </select>
         </label>
+
+        {/* Colour tag */}
+        <label className="ska-form-group" style={{ gridColumn: '1 / -1' }}>
+          <span>Colour Tag <span className="cls-hint">(shown across the table, timetable, and grade screens)</span></span>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginTop: 4 }}>
+            {[
+              '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
+              '#EC4899', '#06B6D4', '#84CC16', '#F97316', '#64748B',
+            ].map(c => {
+              const sel = (form.colour_tag || '#3B82F6') === c;
+              return (
+                <button key={c} type="button"
+                  onClick={() => set('colour_tag', c)}
+                  aria-label={`Use colour ${c}`}
+                  style={{
+                    width: 32, height: 32, borderRadius: 8,
+                    background: c,
+                    border: sel ? '3px solid var(--ska-text)' : '2px solid var(--ska-border)',
+                    cursor: 'pointer', flexShrink: 0,
+                    transition: 'transform 0.15s',
+                    transform: sel ? 'scale(1.08)' : 'scale(1)',
+                  }} />
+              );
+            })}
+            <input type="color"
+                   value={form.colour_tag || '#3B82F6'}
+                   onChange={e => set('colour_tag', e.target.value)}
+                   style={{ width: 36, height: 36, border: 'none', background: 'transparent', cursor: 'pointer', padding: 0 }}
+                   aria-label="Pick custom colour" />
+          </div>
+        </label>
+
+        {/* Education level */}
+        <label className="ska-form-group">
+          <span>Education Level <span className="cls-hint">(optional)</span></span>
+          <select className="ska-input" value={form.education_level || ''}
+            onChange={e => set('education_level', e.target.value)}>
+            {EDUCATION_LEVEL_OPTIONS.map(o => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </label>
+
+        {/* Track */}
+        <label className="ska-form-group">
+          <span>Track / Specialisation</span>
+          <select className="ska-input" value={form.track || ''}
+            onChange={e => set('track', e.target.value)}>
+            {TRACK_OPTIONS.map(o => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </label>
+
+        {/* Start time */}
+        <label className="ska-form-group">
+          <span>Default start time <span className="cls-hint">(optional)</span></span>
+          <input className="ska-input" type="time"
+            value={form.start_time || ''}
+            onChange={e => set('start_time', e.target.value)} />
+        </label>
+
+        {/* End time */}
+        <label className="ska-form-group">
+          <span>Default end time <span className="cls-hint">(optional)</span></span>
+          <input className="ska-input" type="time"
+            value={form.end_time || ''}
+            onChange={e => set('end_time', e.target.value)} />
+        </label>
+
+        {/* Auto-promotion target */}
+        {!bulkMode && existingClasses.length > 0 && (
+          <label className="ska-form-group" style={{ gridColumn: '1 / -1' }}>
+            <span>Auto-promotion target <span className="cls-hint">(class students promote into at year-end)</span></span>
+            <select className="ska-input"
+              value={form.auto_promotion_target_id || ''}
+              onChange={e => set('auto_promotion_target_id',
+                                e.target.value ? parseInt(e.target.value) : null)}>
+              <option value="">— None —</option>
+              {existingClasses
+                .filter(c => c.id !== form.id)  // can't promote into self
+                .map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} {c.stream ? `· ${c.stream}` : ''} (Form {c.form_number})
+                  </option>
+                ))}
+            </select>
+          </label>
+        )}
+
+        {/* Notes */}
+        <label className="ska-form-group" style={{ gridColumn: '1 / -1' }}>
+          <span>Internal notes <span className="cls-hint">(admin-only memo)</span></span>
+          <textarea className="ska-input" rows={2}
+            placeholder="e.g. Split next term, moved to Block C…"
+            maxLength={5000}
+            value={form.notes || ''}
+            onChange={e => set('notes', e.target.value)} />
+        </label>
+
+        {/* Bulk streams (only when bulk-mode is on) */}
+        {bulkMode && (
+          <label className="ska-form-group" style={{ gridColumn: '1 / -1' }}>
+            <span>Streams to create *</span>
+            <input className="ska-input"
+              placeholder="A, B, C, D"
+              value={bulkStreams}
+              onChange={e => setBulkStreams(e.target.value)} />
+            <span className="cls-hint">
+              Comma- or space-separated. Up to 20 variants. Codes auto-derive from "{form.code || 'CODE'}" + stream.
+            </span>
+          </label>
+        )}
       </div>
 
+      {/* ── Live preview pane (right column) ── */}
+      <ClassPreviewPane form={form} bulkMode={bulkMode} bulkStreams={bulkStreams}
+                        teachers={teachers} subjects={subjects} />
+      </div>
+
+      {/* Assistant Teachers + Subjects only when single-class mode (bulk uses shared) */}
+      {!bulkMode && teachers.length > 0 && (
+        <div className="cls-subjects-section">
+          <div className="cls-subjects-label">
+            <Ic name="group" size="sm" style={{ color: 'var(--ska-tertiary)' }} />
+            Assistant Teachers <span className="cls-hint">(optional co-teachers)</span>
+            {(form.assistant_teacher_ids || []).length > 0 && (
+              <span className="cls-section-count">{form.assistant_teacher_ids.length} selected</span>
+            )}
+          </div>
+          <div className="cls-chips-grid">
+            {teachers.filter(t => t.id !== form.teacher_id).map(t => {
+              const ids = form.assistant_teacher_ids || [];
+              const sel = ids.includes(t.id);
+              const toggle = () => set(
+                'assistant_teacher_ids',
+                sel ? ids.filter(x => x !== t.id) : [...ids, t.id]
+              );
+              return (
+                <button key={t.id} type="button"
+                  className={`cls-chip${sel ? ' cls-chip--selected' : ''}`}
+                  onClick={toggle}>
+                  {sel && <Ic name="check" size="sm" />}
+                  {t.full_name || t.username}
+                </button>
+              );
+            })}
+            {teachers.filter(t => t.id !== form.teacher_id).length === 0 && (
+              <span className="cls-hint" style={{ padding: '6px 0' }}>
+                No additional teachers available — assign a class teacher first.
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Subjects multi-select */}
-      {subjects.length > 0 && (
+      {!bulkMode && subjects.length > 0 && (
         <div className="cls-subjects-section">
           <div className="cls-subjects-label">
             <Ic name="menu_book" size="sm" style={{ color: 'var(--ska-tertiary)' }} />
@@ -724,11 +1126,174 @@ function AddClassModal({ mode, initialForm, existingCodes, teachers, subjects, a
 
       <div className="ska-modal-actions">
         <button className="ska-btn ska-btn--ghost" onClick={onClose}>Cancel</button>
-        <button className="ska-btn ska-btn--primary" onClick={save} disabled={saving}>
-          {saving ? 'Saving…' : mode === 'add' ? 'Add Class' : 'Save Changes'}
+        <button className="ska-btn ska-btn--primary"
+                onClick={bulkMode ? saveBulk : save}
+                disabled={saving}>
+          {saving ? 'Saving…'
+            : bulkMode ? `Create ${(bulkStreams.split(/[,\s]+/).filter(Boolean).length || 0)} classes`
+            : mode === 'add' ? 'Add Class'
+            : 'Save Changes'}
         </button>
       </div>
+      </>
+      )}
     </Modal>
+  );
+}
+
+/* ============================================================
+   CLASS PREVIEW PANE — live preview of the class card
+   ============================================================ */
+function ClassPreviewPane({ form, bulkMode, bulkStreams, teachers, subjects }) {
+  const tag = form.colour_tag || '#3B82F6';
+  const teacher = teachers.find(t => t.id === form.teacher_id);
+  const assistantNames = (form.assistant_teacher_ids || [])
+    .map(id => teachers.find(t => t.id === id))
+    .filter(Boolean)
+    .map(t => t.full_name || t.username);
+  const subjectsSelected = (form.subject_ids || [])
+    .map(id => subjects.find(s => s.id === id))
+    .filter(Boolean);
+  const variantsCount = bulkMode
+    ? bulkStreams.split(/[,\s]+/).filter(Boolean).length
+    : 1;
+
+  const previewName = bulkMode
+    ? `${form.name || 'Base name'} A · B · C…`
+    : (form.name || 'Class name');
+
+  return (
+    <aside className="cls-preview" aria-label="Live preview">
+      <div style={{
+        position: 'sticky', top: 0,
+        fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase',
+        letterSpacing: '0.08em', color: 'var(--ska-text-3)',
+        marginBottom: 10,
+      }}>
+        Live preview {bulkMode && `· ${variantsCount} variant${variantsCount !== 1 ? 's' : ''}`}
+      </div>
+
+      <div style={{
+        background: 'var(--ska-surface)',
+        border: '1px solid var(--ska-border)',
+        borderLeft: `4px solid ${tag}`,
+        borderRadius: 14,
+        padding: 16,
+        boxShadow: '0 1px 2px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.04)',
+      }}>
+        {/* Avatar + name */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+          <div style={{
+            width: 40, height: 40, borderRadius: 10, background: tag,
+            color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontWeight: 800, fontSize: '1rem', flexShrink: 0,
+          }}>{(form.name || 'C').charAt(0).toUpperCase()}</div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--ska-text)', lineHeight: 1.15 }}>
+              {previewName}
+              {!bulkMode && form.stream && (
+                <span style={{ marginLeft: 6, color: 'var(--ska-text-3)', fontWeight: 600 }}>· {form.stream}</span>
+              )}
+            </div>
+            {form.code && (
+              <div style={{ fontSize: '0.7rem', color: 'var(--ska-text-3)', marginTop: 2,
+                            letterSpacing: '0.04em', textTransform: 'uppercase', fontWeight: 700 }}>
+                {bulkMode && form.code ? `${form.code}A · ${form.code}B · …` : form.code}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Capacity bar */}
+        <div style={{ marginBottom: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem',
+                        color: 'var(--ska-text-3)', marginBottom: 4 }}>
+            <span>Capacity</span><span style={{ fontWeight: 700, color: 'var(--ska-text-2)' }}>{form.capacity || 0}</span>
+          </div>
+          <div style={{ height: 6, background: 'var(--ska-surface-high)', borderRadius: 999, overflow: 'hidden' }}>
+            <div style={{ width: '0%', height: '100%', background: tag }} />
+          </div>
+        </div>
+
+        {/* Mini-meta chips */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 8 }}>
+          <span className="ska-badge ska-badge--grey" style={{ fontSize: '0.65rem' }}>
+            Form {form.form_number || '?'}
+          </span>
+          {form.education_level && (
+            <span className="ska-badge ska-badge--primary" style={{ fontSize: '0.65rem' }}>
+              {EDUCATION_LEVEL_OPTIONS.find(o => o.value === form.education_level)?.label || form.education_level}
+            </span>
+          )}
+          {form.track && (
+            <span className="ska-badge ska-badge--cyan" style={{ fontSize: '0.65rem' }}>
+              {TRACK_OPTIONS.find(o => o.value === form.track)?.label || form.track}
+            </span>
+          )}
+          {form.room && (
+            <span className="ska-badge ska-badge--inactive" style={{ fontSize: '0.65rem' }}>
+              📍 {form.room}
+            </span>
+          )}
+        </div>
+
+        {/* Schedule preview */}
+        {(form.start_time || form.end_time) && (
+          <div style={{ marginTop: 12, padding: '8px 10px', borderRadius: 8,
+                        background: 'var(--ska-surface-high)', fontSize: '0.75rem',
+                        color: 'var(--ska-text-2)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Ic name="schedule" size="sm" />
+            {form.start_time || '—'} – {form.end_time || '—'}
+          </div>
+        )}
+
+        {/* Teaching team */}
+        {!bulkMode && (teacher || assistantNames.length > 0) && (
+          <div style={{ marginTop: 12, padding: '10px 12px', borderRadius: 8,
+                        background: 'var(--ska-surface-high)' }}>
+            <div style={{ fontSize: '0.625rem', fontWeight: 800, textTransform: 'uppercase',
+                          letterSpacing: '0.06em', color: 'var(--ska-text-3)', marginBottom: 6 }}>
+              Teaching team
+            </div>
+            {teacher && (
+              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--ska-text)' }}>
+                {teacher.full_name || teacher.username}
+              </div>
+            )}
+            {assistantNames.length > 0 && (
+              <div style={{ fontSize: '0.7rem', color: 'var(--ska-text-2)', marginTop: 2 }}>
+                +{assistantNames.length} assistant{assistantNames.length !== 1 ? 's' : ''}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Subjects */}
+        {!bulkMode && subjectsSelected.length > 0 && (
+          <div style={{ marginTop: 10 }}>
+            <div style={{ fontSize: '0.625rem', fontWeight: 800, textTransform: 'uppercase',
+                          letterSpacing: '0.06em', color: 'var(--ska-text-3)', marginBottom: 4 }}>
+              {subjectsSelected.length} subject{subjectsSelected.length !== 1 ? 's' : ''}
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+              {subjectsSelected.slice(0, 6).map(s => (
+                <span key={s.id} className="ska-badge ska-badge--inactive"
+                      style={{ fontSize: '0.625rem' }}>{s.name}</span>
+              ))}
+              {subjectsSelected.length > 6 && (
+                <span className="ska-badge ska-badge--inactive" style={{ fontSize: '0.625rem' }}>
+                  +{subjectsSelected.length - 6}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <p style={{ margin: '12px 4px 0', fontSize: '0.7rem', color: 'var(--ska-text-3)', lineHeight: 1.5 }}>
+        Updates as you type. Capacity bar shows 0% — fills once students are enrolled.
+      </p>
+    </aside>
   );
 }
 
@@ -925,7 +1490,44 @@ const EMPTY_FORM = {
   name: '', code: '', form_number: 1, capacity: 50,
   teacher_id: null, subject_ids: [], academic_year_id: null,
   room: '', is_active: true,
+  // Extended (round 1)
+  stream: '', colour_tag: '#3B82F6', notes: '',
+  assistant_teacher_ids: [],
+  // Curriculum & schedule (round 2)
+  education_level: '', track: '',
+  start_time: '', end_time: '',
+  auto_promotion_target_id: null,
 };
+
+const EDUCATION_LEVEL_OPTIONS = [
+  { value: '',        label: '— Select level —' },
+  { value: 'pre_k',   label: 'Pre-Kindergarten' },
+  { value: 'primary', label: 'Primary' },
+  { value: 'jss',     label: 'Junior Secondary (JSS)' },
+  { value: 'sss',     label: 'Senior Secondary (SSS)' },
+  { value: 'college', label: 'College / Tertiary' },
+];
+
+const TRACK_OPTIONS = [
+  { value: '',           label: '— None —' },
+  { value: 'sciences',   label: 'Sciences' },
+  { value: 'arts',       label: 'Arts / Humanities' },
+  { value: 'commerce',   label: 'Commerce / Business' },
+  { value: 'vocational', label: 'Vocational / Technical' },
+  { value: 'mixed',      label: 'Mixed / General' },
+];
+
+/* Parse "Grade 10A" / "Form 5 B" / "JSS 1A" → { form_number, stream } */
+function parseClassName(name) {
+  if (!name) return { form_number: null, stream: null };
+  // Capture digits + optional space + letters (1-3) at the end
+  const m = name.match(/(\d+)\s*([A-Za-z]{1,3})?\s*$/);
+  if (!m) return { form_number: null, stream: null };
+  return {
+    form_number: parseInt(m[1], 10) || null,
+    stream: m[2] ? m[2].toUpperCase() : null,
+  };
+}
 
 export function ClassesPage({ school }) {
   /* ── Data state ── */
@@ -939,6 +1541,7 @@ export function ClassesPage({ school }) {
   /* ── View state ── */
   const [view,        setView]        = useState('list'); // 'list' | 'detail'
   const [detailClass, setDetailClass] = useState(null);
+  const [drawerClass, setDrawerClass] = useState(null);
 
   /* ── Modal state ── */
   const [modal,       setModal]       = useState(null); // null | 'add' | 'edit' | 'assign_students' | 'assign_teacher' | 'manage_subjects'
@@ -999,7 +1602,12 @@ export function ClassesPage({ school }) {
       const q = search.toLowerCase();
       if (q && !c.name.toLowerCase().includes(q) && !c.code.toLowerCase().includes(q)) return false;
       if (filterForm   && String(c.form_number) !== String(filterForm)) return false;
-      if (filterTeacher && String(c.teacher_id)  !== String(filterTeacher)) return false;
+      if (filterTeacher === 'unassigned') {
+        if (c.class_teacher_id || c.teacher_id) return false;
+      } else if (filterTeacher) {
+        const tid = c.class_teacher_id || c.teacher_id;
+        if (String(tid) !== String(filterTeacher)) return false;
+      }
       if (filterStatus === 'active'   && c.is_active === false) return false;
       if (filterStatus === 'archived' && c.is_active !== false) return false;
       return true;
@@ -1009,7 +1617,8 @@ export function ClassesPage({ school }) {
   const existingCodes = classes.map(c => (c.code || '').toUpperCase());
 
   /* ── Handlers: navigation ── */
-  const openDetail = cls => { setDetailClass(cls); setView('detail'); };
+  // View click now opens the drawer overlay (faster, keeps list context)
+  const openDetail = cls => setDrawerClass(cls);
   const backToList = ()  => setView('list');
 
   /* ── Handlers: modals ── */
@@ -1019,11 +1628,30 @@ export function ClassesPage({ school }) {
     setModal('add');
   };
   const openEdit = cls => {
+    const teacherId = cls.class_teacher_id || cls.class_teacher?.id || cls.teacher_id || null;
     setEditForm({
       name: cls.name, code: cls.code, form_number: cls.form_number,
-      capacity: cls.capacity, teacher_id: cls.teacher_id || null,
-      subject_ids: cls.subject_ids || [], academic_year_id: cls.academic_year_id || null,
-      room: cls.room || '', is_active: cls.is_active !== false,
+      capacity: cls.capacity,
+      teacher_id: teacherId,
+      subject_ids: Array.isArray(cls.subjects)
+        ? cls.subjects.map(s => s.id)
+        : (cls.subject_ids || []),
+      academic_year_id: cls.academic_year_id || null,
+      room: cls.room || '',
+      is_active: cls.is_active !== false,
+      // Extended fields
+      stream:      cls.stream || '',
+      colour_tag:  cls.colour_tag || '#3B82F6',
+      notes:       cls.notes || '',
+      assistant_teacher_ids: Array.isArray(cls.assistant_teachers)
+        ? cls.assistant_teachers.map(t => t.id)
+        : [],
+      // Curriculum & schedule
+      education_level: cls.education_level || '',
+      track:           cls.track || '',
+      start_time:      cls.start_time || '',
+      end_time:        cls.end_time || '',
+      auto_promotion_target_id: cls.auto_promotion_target_id || null,
     });
     setActiveClass(cls);
     setModal('edit');
@@ -1045,6 +1673,12 @@ export function ClassesPage({ school }) {
     }
     closeModal();
     load();
+  };
+
+  const handleBulkSave = async payload => {
+    const res = await ApiClient.post('/api/school/classes/bulk-create/', payload);
+    load();
+    return res; // caller (modal) shows the created/skipped summary
   };
 
   const handleDelete = async id => {
@@ -1102,10 +1736,12 @@ export function ClassesPage({ school }) {
             mode={modal}
             initialForm={editForm}
             existingCodes={modal === 'edit' ? existingCodes.filter(c => c !== activeClass?.code?.toUpperCase()) : existingCodes}
+            existingClasses={classes}
             teachers={teachers}
             subjects={subjects}
             academicYears={academicYears}
             onSave={handleSave}
+            onBulkSave={handleBulkSave}
             onClose={closeModal}
           />
         )}
@@ -1140,6 +1776,15 @@ export function ClassesPage({ school }) {
 
       {/* Stats row */}
       <StatsCards classes={classes} />
+
+      {/* Quick-stats strip — clickable filter chips */}
+      <QuickStatsStrip
+        classes={classes}
+        filterStatus={filterStatus}
+        filterTeacher={filterTeacher}
+        onFilterStatus={setFilterStatus}
+        onFilterTeacher={setFilterTeacher}
+      />
 
       {/* Filters */}
       <FiltersBar
@@ -1184,6 +1829,17 @@ export function ClassesPage({ school }) {
       )}
       {modal === 'manage_subjects' && activeClass && (
         <ManageSubjectsModal cls={activeClass} subjects={subjects} onClose={closeModal} onSave={handleManageSubjects} />
+      )}
+
+      {/* Class profile drawer (slide-up overlay) */}
+      {drawerClass && (
+        <ClassProfileDrawer
+          cls={drawerClass}
+          onClose={() => setDrawerClass(null)}
+          onEdit={(cls) => { setDrawerClass(null); openEdit(cls); }}
+          onAssignStudents={(cls) => { setDrawerClass(null); openAssignStudents(cls); }}
+          onAssignTeacher={(cls) => { setDrawerClass(null); openAssignTeacher(cls); }}
+        />
       )}
     </div>
   );

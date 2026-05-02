@@ -243,6 +243,23 @@ def _get_authed_user(request):
     return _validate_token(token)
 
 
+def _parse_hhmm(value):
+    """Parse 'HH:MM' (or 'HH:MM:SS') into a datetime.time. Returns None on
+    blank / invalid input."""
+    if not value:
+        return None
+    try:
+        parts = str(value).split(':')
+        h = int(parts[0]); m = int(parts[1]) if len(parts) > 1 else 0
+        s = int(parts[2]) if len(parts) > 2 else 0
+        if not (0 <= h < 24 and 0 <= m < 60 and 0 <= s < 60):
+            return None
+        from datetime import time as _time
+        return _time(h, m, s)
+    except (ValueError, IndexError, TypeError):
+        return None
+
+
 def _parse_bool(value):
     if isinstance(value, bool):
         return value
@@ -923,8 +940,17 @@ def api_register(request):
             # Handle badge upload (frontend sends 'schoolBadge')
             badge_file = request.FILES.get('schoolBadge') or request.FILES.get('badge')
             if badge_file:
-                school.badge = badge_file
-                school.save()
+                try:
+                    school.badge = badge_file
+                    school.save()
+                except Exception as exc:
+                    # Don't fail the whole registration on a badge upload error —
+                    # log it so we can find storage/permission issues in production.
+                    import logging
+                    logging.getLogger('django').error(
+                        f'School badge upload failed during registration of '
+                        f'school={school.code}: {exc}'
+                    )
 
             # Create Admin User — inactive until superadmin approves the school
             user = User.objects.create_user(
@@ -2849,12 +2875,28 @@ def api_school_profile_full(request):
     fees_collected  = float(FeeRecord.objects.filter(school=school, status__in=['paid','partial']).aggregate(s=Sum('amount_paid'))['s'] or 0)
     fees_outstanding = float(FeeRecord.objects.filter(school=school, status__in=['pending','partial','overdue']).aggregate(s=Sum('amount') - Sum('amount_paid'))['s'] or 0)
 
+    # Verify the badge file actually exists on disk before exposing a URL.
+    # On ephemeral storage (Render free tier, etc.) uploaded files can vanish
+    # across restarts; we don't want the dashboard to render a 404 image.
     badge_url = ''
+    badge_missing = False
     if school.badge:
         try:
-            badge_url = request.build_absolute_uri(school.badge.url)
+            try:
+                exists = school.badge.storage.exists(school.badge.name)
+            except Exception:
+                exists = True  # fall back to optimistic
+            if exists:
+                badge_url = request.build_absolute_uri(school.badge.url)
+            else:
+                badge_missing = True
+                import logging
+                logging.getLogger('django').warning(
+                    f'School badge file missing on disk for school={school.code} '
+                    f'(name={school.badge.name}); returning empty URL.'
+                )
         except Exception:
-            badge_url = str(school.badge)
+            badge_url = ''
 
     return JsonResponse({
         'success': True,
@@ -2867,6 +2909,7 @@ def api_school_profile_full(request):
         'city': school.city or '',
         'country': school.country or '',
         'badge': badge_url,
+        'badge_missing': badge_missing,
         'is_approved': school.is_approved,
         'total_students': student_count,
         'total_teachers': teacher_count,
@@ -3952,12 +3995,47 @@ def api_classes(request):
         return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
 
     if request.method == 'GET':
-        qs = ClassRoom.objects.filter(school=school, is_active=True)
-        data = [{
-            'id': c.id, 'name': c.name, 'code': c.code,
-            'form_number': c.form_number, 'capacity': c.capacity,
-            'student_count': c.students.filter(is_active=True).count(),
-        } for c in qs]
+        qs = ClassRoom.objects.filter(school=school, is_active=True)\
+            .select_related('class_teacher__user')\
+            .prefetch_related('assistant_teachers__user', 'subjects')
+        data = []
+        for c in qs:
+            enrolled = c.students.filter(is_active=True).count()
+            density_pct = round((enrolled / c.capacity) * 100, 1) if c.capacity else 0
+            ct = None
+            if c.class_teacher_id:
+                ct = {
+                    'id': c.class_teacher_id,
+                    'name': c.class_teacher.user.get_full_name() or c.class_teacher.user.username,
+                }
+            data.append({
+                'id': c.id, 'name': c.name, 'code': c.code,
+                'form_number': c.form_number, 'capacity': c.capacity,
+                'stream': c.stream, 'colour_tag': c.colour_tag, 'room': c.room,
+                'notes': c.notes,
+                'class_teacher': ct,
+                'class_teacher_id': c.class_teacher_id,
+                'assistant_teachers': [{
+                    'id': t.id,
+                    'name': t.user.get_full_name() or t.user.username,
+                } for t in c.assistant_teachers.all()],
+                'subjects': [{'id': s.id, 'name': s.name, 'code': s.code}
+                             for s in c.subjects.all()],
+                'student_count': enrolled,
+                'enrolled': enrolled,
+                'density_pct': density_pct,
+                'is_full':   density_pct >= 100,
+                'is_at_risk': (density_pct >= 95 or c.class_teacher_id is None
+                               or not c.subjects.exists()),
+                # Curriculum & schedule
+                'education_level': c.education_level,
+                'education_level_display': c.get_education_level_display() if c.education_level else '',
+                'track': c.track,
+                'track_display': c.get_track_display() if c.track else '',
+                'start_time': c.start_time.strftime('%H:%M') if c.start_time else None,
+                'end_time':   c.end_time.strftime('%H:%M')   if c.end_time   else None,
+                'auto_promotion_target_id': c.auto_promotion_target_id,
+            })
         return JsonResponse({'success': True, 'classes': data, 'count': len(data)})
 
     if request.method == 'POST':
@@ -3976,6 +4054,47 @@ def api_classes(request):
         cls = ClassRoom.objects.create(
             school=school, name=name, code=code,
             form_number=form_number, capacity=capacity,
+            stream=(body.get('stream') or '')[:10],
+            colour_tag=(body.get('colour_tag') or '#3B82F6')[:7],
+            room=(body.get('room') or '')[:100],
+            notes=(body.get('notes') or '')[:5000],
+            education_level=(body.get('education_level') or '')[:10],
+            track=(body.get('track') or '')[:12],
+            start_time=_parse_hhmm(body.get('start_time')),
+            end_time=_parse_hhmm(body.get('end_time')),
+        )
+        # auto promotion target (must reference an existing class in same school)
+        apt_id = body.get('auto_promotion_target_id')
+        if apt_id:
+            try:
+                cls.auto_promotion_target = ClassRoom.objects.get(id=apt_id, school=school)
+                cls.save(update_fields=['auto_promotion_target'])
+            except ClassRoom.DoesNotExist:
+                pass
+        # class teacher
+        ct_id = body.get('class_teacher_id') or body.get('teacher_id')
+        if ct_id:
+            try:
+                cls.class_teacher = Teacher.objects.get(id=ct_id, school=school)
+                cls.save(update_fields=['class_teacher'])
+            except Teacher.DoesNotExist:
+                pass
+        # assistants
+        ast_ids = body.get('assistant_teacher_ids') or []
+        if isinstance(ast_ids, list) and ast_ids:
+            cls.assistant_teachers.set(
+                Teacher.objects.filter(id__in=ast_ids, school=school))
+        # subjects
+        subj_ids = body.get('subject_ids') or []
+        if isinstance(subj_ids, list) and subj_ids:
+            cls.subjects.set(
+                Subject.objects.filter(id__in=subj_ids, school=school))
+        _log_security_event(
+            'class_created',
+            f'{actor.username} created class {cls.code} ({cls.name})',
+            severity='info', actor=actor,
+            ip=request.META.get('REMOTE_ADDR'),
+            metadata={'class_id': cls.id},
         )
         return JsonResponse({'success': True, 'message': 'Class created.', 'id': cls.id}, status=201)
 
@@ -3996,19 +4115,94 @@ def api_class_detail(request, class_id):
         return JsonResponse({'success': False, 'message': 'Class not found.'}, status=404)
 
     if request.method == 'GET':
-        return JsonResponse({'success': True, 'id': cls.id, 'name': cls.name, 'code': cls.code,
+        enrolled = cls.students.filter(is_active=True).count()
+        density_pct = round((enrolled / cls.capacity) * 100, 1) if cls.capacity else 0
+        ct = None
+        if cls.class_teacher_id:
+            ct = {
+                'id': cls.class_teacher_id,
+                'name': cls.class_teacher.user.get_full_name() or cls.class_teacher.user.username,
+                'email': cls.class_teacher.user.email,
+            }
+        return JsonResponse({
+            'success': True,
+            'id': cls.id, 'name': cls.name, 'code': cls.code,
             'form_number': cls.form_number, 'capacity': cls.capacity,
-            'student_count': cls.students.filter(is_active=True).count()})
+            'stream': cls.stream, 'colour_tag': cls.colour_tag,
+            'room': cls.room, 'notes': cls.notes,
+            'class_teacher': ct, 'class_teacher_id': cls.class_teacher_id,
+            'assistant_teachers': [{
+                'id': t.id,
+                'name': t.user.get_full_name() or t.user.username,
+            } for t in cls.assistant_teachers.all()],
+            'subjects': [{'id': s.id, 'name': s.name, 'code': s.code}
+                         for s in cls.subjects.all()],
+            'student_count': enrolled,
+            'enrolled': enrolled,
+            'density_pct': density_pct,
+            'education_level': cls.education_level,
+            'education_level_display': cls.get_education_level_display() if cls.education_level else '',
+            'track': cls.track,
+            'track_display': cls.get_track_display() if cls.track else '',
+            'start_time': cls.start_time.strftime('%H:%M') if cls.start_time else None,
+            'end_time':   cls.end_time.strftime('%H:%M')   if cls.end_time   else None,
+            'auto_promotion_target_id': cls.auto_promotion_target_id,
+            'auto_promotion_target_name': (cls.auto_promotion_target.name
+                                           if cls.auto_promotion_target_id else None),
+        })
 
     if request.method == 'PUT':
         try:
             body = json.loads(request.body)
         except json.JSONDecodeError:
             return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
-        cls.name        = body.get('name', cls.name)
-        cls.form_number = body.get('form_number', cls.form_number)
-        cls.capacity    = body.get('capacity', cls.capacity)
+        for field in ('name', 'form_number', 'capacity'):
+            if field in body:
+                setattr(cls, field, body[field])
+        if 'stream' in body:
+            cls.stream = (body.get('stream') or '')[:10]
+        if 'colour_tag' in body:
+            cls.colour_tag = (body.get('colour_tag') or '#3B82F6')[:7]
+        if 'room' in body:
+            cls.room = (body.get('room') or '')[:100]
+        if 'notes' in body:
+            cls.notes = (body.get('notes') or '')[:5000]
+        # Curriculum & schedule
+        if 'education_level' in body:
+            cls.education_level = (body.get('education_level') or '')[:10]
+        if 'track' in body:
+            cls.track = (body.get('track') or '')[:12]
+        if 'start_time' in body:
+            cls.start_time = _parse_hhmm(body.get('start_time'))
+        if 'end_time' in body:
+            cls.end_time = _parse_hhmm(body.get('end_time'))
+        if 'auto_promotion_target_id' in body:
+            apt_id = body.get('auto_promotion_target_id')
+            if apt_id and apt_id != cls.id:
+                try:
+                    cls.auto_promotion_target = ClassRoom.objects.get(id=apt_id, school=school)
+                except ClassRoom.DoesNotExist:
+                    pass
+            else:
+                cls.auto_promotion_target = None
+        # class teacher
+        if 'class_teacher_id' in body or 'teacher_id' in body:
+            ct_id = body.get('class_teacher_id') or body.get('teacher_id')
+            if ct_id:
+                try:
+                    cls.class_teacher = Teacher.objects.get(id=ct_id, school=school)
+                except Teacher.DoesNotExist:
+                    pass
+            else:
+                cls.class_teacher = None
         cls.save()
+        # assistants + subjects via M2M .set
+        if 'assistant_teacher_ids' in body and isinstance(body['assistant_teacher_ids'], list):
+            cls.assistant_teachers.set(
+                Teacher.objects.filter(id__in=body['assistant_teacher_ids'], school=school))
+        if 'subject_ids' in body and isinstance(body['subject_ids'], list):
+            cls.subjects.set(
+                Subject.objects.filter(id__in=body['subject_ids'], school=school))
         return JsonResponse({'success': True, 'message': 'Class updated.'})
 
     if request.method == 'DELETE':
@@ -4017,6 +4211,93 @@ def api_class_detail(request, class_id):
         return JsonResponse({'success': True, 'message': 'Class removed.'})
 
     return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+
+@csrf_exempt
+@require_http_methods(['POST'])
+def api_classes_bulk_create(request):
+    """Create N variants of a class in one request.
+
+    Body:
+      { name_template: "Grade 10",  -> creates "Grade 10A", "Grade 10B", ...
+        code_template: "G10",        -> creates "G10A", "G10B", ...
+        form_number, capacity, education_level, track, colour_tag,
+        start_time, end_time,
+        streams: ["A","B","C"]       -> required, the section letters/labels
+        ...other shared fields like room template, notes, class_teacher_id }
+
+    Returns: { success, created: [{id, name, code}, ...], skipped: [...] }
+    """
+    actor, sa, school = _get_school_for_admin(request)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+    try:
+        body = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON'}, status=400)
+
+    name_template = (body.get('name_template') or '').strip()
+    code_template = (body.get('code_template') or '').strip().upper()
+    streams       = body.get('streams') or []
+    if not name_template or not isinstance(streams, list) or not streams:
+        return JsonResponse({'success': False,
+                             'message': 'name_template and streams[] required.'}, status=400)
+    streams = [str(s).strip()[:10] for s in streams if str(s).strip()][:20]
+    if not streams:
+        return JsonResponse({'success': False, 'message': 'No valid streams.'}, status=400)
+
+    form_number = int(body.get('form_number') or 1)
+    capacity    = int(body.get('capacity') or 50)
+    colour_tag  = (body.get('colour_tag') or '#3B82F6')[:7]
+    edu         = (body.get('education_level') or '')[:10]
+    track       = (body.get('track') or '')[:12]
+    start_time  = _parse_hhmm(body.get('start_time'))
+    end_time    = _parse_hhmm(body.get('end_time'))
+    room        = (body.get('room') or '')[:100]
+    notes       = (body.get('notes') or '')[:5000]
+    teacher_id  = body.get('class_teacher_id') or body.get('teacher_id')
+
+    created, skipped = [], []
+    for stream in streams:
+        # Class name e.g. "Grade 10" + "A" → "Grade 10A"  (no space if stream is short letter)
+        suffix = stream if len(stream) <= 2 else f' {stream}'
+        cls_name = f'{name_template}{suffix}'.strip()
+        cls_code = (code_template + stream.upper()) if code_template else \
+                   (cls_name.replace(' ', '').upper()[:20])
+        if ClassRoom.objects.filter(school=school, code=cls_code).exists():
+            skipped.append({'code': cls_code, 'reason': 'code already exists'})
+            continue
+        cls = ClassRoom.objects.create(
+            school=school,
+            name=cls_name, code=cls_code,
+            form_number=form_number, capacity=capacity,
+            stream=stream, colour_tag=colour_tag,
+            education_level=edu, track=track,
+            start_time=start_time, end_time=end_time,
+            room=room, notes=notes,
+        )
+        if teacher_id:
+            try:
+                cls.class_teacher = Teacher.objects.get(id=teacher_id, school=school)
+                cls.save(update_fields=['class_teacher'])
+            except Teacher.DoesNotExist:
+                pass
+        created.append({'id': cls.id, 'name': cls.name, 'code': cls.code, 'stream': stream})
+
+    _log_security_event(
+        'class_bulk_created',
+        f'{actor.username} bulk-created {len(created)} class(es) from "{name_template}"',
+        severity='info', actor=actor,
+        ip=request.META.get('REMOTE_ADDR'),
+        metadata={'created_ids': [c['id'] for c in created]},
+    )
+    return JsonResponse({
+        'success': True,
+        'created': created,
+        'skipped': skipped,
+        'message': f'Created {len(created)} class(es)' +
+                   (f', skipped {len(skipped)}' if skipped else ''),
+    })
 
 
 # ── Subjects ─────────────────────────────────────────────────────

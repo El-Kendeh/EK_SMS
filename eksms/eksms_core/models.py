@@ -175,6 +175,53 @@ class ClassRoom(models.Model):
     code = models.CharField(max_length=20, help_text="Unique code within school")
     form_number = models.IntegerField(validators=[MinValueValidator(1)], help_text="Form/Grade number (e.g., 10)")
     capacity = models.IntegerField(default=50)
+    # Extended fields for richer class management UX
+    stream = models.CharField(max_length=10, blank=True, default='',
+                              help_text="Section letter or label (e.g. A, B, Sciences)")
+    class_teacher = models.ForeignKey('Teacher', on_delete=models.SET_NULL, null=True, blank=True,
+                                      related_name='homeroom_of',
+                                      help_text="Homeroom / form teacher")
+    assistant_teachers = models.ManyToManyField('Teacher', blank=True,
+                                                related_name='assisted_classes',
+                                                help_text="Co-teachers / assistants")
+    subjects = models.ManyToManyField('Subject', blank=True,
+                                      related_name='taught_in_classes',
+                                      help_text="Subjects in this class's curriculum")
+    colour_tag = models.CharField(max_length=7, default='#3B82F6',
+                                  help_text="Hex colour for visual tagging across UI")
+    room = models.CharField(max_length=100, blank=True, default='',
+                            help_text="Physical room (e.g. Block A, Room 12)")
+    notes = models.TextField(blank=True, default='',
+                             help_text="Admin-only memo about this class")
+    # ─── Curriculum & schedule (added in 0035) ──────────────────
+    EDUCATION_LEVEL_CHOICES = [
+        ('pre_k',   'Pre-Kindergarten'),
+        ('primary', 'Primary'),
+        ('jss',     'Junior Secondary (JSS)'),
+        ('sss',     'Senior Secondary (SSS)'),
+        ('college', 'College / Tertiary'),
+    ]
+    TRACK_CHOICES = [
+        ('sciences',   'Sciences'),
+        ('arts',       'Arts / Humanities'),
+        ('commerce',   'Commerce / Business'),
+        ('vocational', 'Vocational / Technical'),
+        ('mixed',      'Mixed / General'),
+    ]
+    education_level = models.CharField(max_length=10, choices=EDUCATION_LEVEL_CHOICES,
+                                       blank=True, default='',
+                                       help_text="Coarse education bucket for filtering / reporting")
+    track = models.CharField(max_length=12, choices=TRACK_CHOICES, blank=True, default='',
+                             help_text="Specialisation track at SSS / college level")
+    start_time = models.TimeField(null=True, blank=True,
+                                  help_text="Default daily start time (pre-fills timetable)")
+    end_time   = models.TimeField(null=True, blank=True,
+                                  help_text="Default daily end time")
+    auto_promotion_target = models.ForeignKey(
+        'self', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='promoted_from',
+        help_text="Class this group promotes into at end of academic year",
+    )
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

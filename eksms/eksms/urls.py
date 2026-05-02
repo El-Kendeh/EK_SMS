@@ -25,7 +25,7 @@ from .views import (
     api_students, api_student_detail, api_student_next_admission, api_student_check_duplicate,
     api_teachers, api_teacher_detail, api_teacher_assignments,
     api_parent_students,
-    api_classes,  api_class_detail,
+    api_classes,  api_class_detail, api_classes_bulk_create,
     api_subjects, api_subject_detail,
     api_academic_years,
     # New school-admin modules
@@ -156,6 +156,7 @@ urlpatterns = [
     path('api/school/teachers/<int:teacher_id>/', api_teacher_detail, name='api_teacher_detail'),
     path('api/school/teachers/<int:teacher_id>/assignments/', api_teacher_assignments, name='api_teacher_assignments'),
     path('api/school/classes/',                 api_classes,          name='api_classes'),
+    path('api/school/classes/bulk-create/',     api_classes_bulk_create, name='api_classes_bulk_create'),
     path('api/school/classes/<int:class_id>/',  api_class_detail,     name='api_class_detail'),
     path('api/school/subjects/',                api_subjects,         name='api_subjects'),
     path('api/school/subjects/<int:subject_id>/', api_subject_detail, name='api_subject_detail'),
