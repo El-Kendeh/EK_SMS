@@ -3003,68 +3003,107 @@ def api_students(request):
         actor, sa, school = _get_school_for_admin(request)
     except SchoolAdmin.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'No school admin profile.'}, status=404)
+    except SchoolAdmin.MultipleObjectsReturned:
+        return JsonResponse({'success': False,
+                             'message': 'Account error: this user is linked to multiple schools. Contact support.'},
+                            status=409)
+    except Exception as exc:
+        import logging, traceback
+        logging.getLogger('django').error(
+            f'api_students resolver failed: {exc}\n{traceback.format_exc()}'
+        )
+        return JsonResponse({'success': False,
+                             'message': f'Account lookup failed: {type(exc).__name__}: {exc}'},
+                            status=500)
     if not actor:
         return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+    if not school:
+        return JsonResponse({'success': False,
+                             'message': 'Your account has no school assigned. Contact support.'},
+                            status=403)
 
     if request.method == 'GET':
-        from django.db.models import Q as _Q
-        qs = Student.objects.filter(school=school, is_active=True)\
-            .select_related('user', 'classroom')\
-            .prefetch_related('attendance', 'grades', 'parent_links')
-        q            = request.GET.get('q', '').strip()
-        at_risk      = request.GET.get('at_risk', '')
-        classroom_id = request.GET.get('classroom_id', '')
-        if q:
-            qs = qs.filter(
-                _Q(user__first_name__icontains=q) |
-                _Q(user__last_name__icontains=q) |
-                _Q(admission_number__icontains=q)
-            )
-        if classroom_id:
-            try:
-                qs = qs.filter(classroom_id=int(classroom_id))
-            except (ValueError, TypeError):
-                pass
-        
-        data = []
-        for s in qs:
-            att_all   = list(s.attendance.all())
-            total_att = len(att_all)
-            present_c = sum(1 for a in att_all if a.status in ('present', 'late', 'excused'))
-            att_rate  = round((present_c / total_att) * 100, 1) if total_att > 0 else None
-            scores    = [float(g.total_score) for g in s.grades.all()]
-            avg_grade = round(sum(scores) / len(scores), 1) if scores else None
-            is_flagged = (att_rate is not None and att_rate < 70) or (avg_grade is not None and avg_grade < 50)
-            stu_pic = request.build_absolute_uri(s.passport_picture.url) if s.passport_picture else ''
-            
-            data.append({
-                'id':               s.id,
-                'user_id':          s.user_id,
-                'username':         s.user.username,
-                'admission_number': s.admission_number,
-                'first_name':       s.user.first_name,
-                'last_name':        s.user.last_name,
-                'full_name':        s.user.get_full_name(),
-                'passport_picture': stu_pic,
-                'gender':           s.gender,
-                'email':            s.user.email,
-                'classroom':        s.classroom.name if s.classroom else None,
-                'classroom_id':     s.classroom_id,
-                'date_of_birth':    str(s.date_of_birth) if s.date_of_birth else None,
-                'phone_number':     s.phone_number,
-                'admission_date':   str(s.admission_date),
-                'attendance_rate':  att_rate,
-                'avg_grade':        avg_grade,
-                'parent_count':     s.parent_links.count(),
-                'is_flagged':       is_flagged,
-                'disciplinary_history': s.disciplinary_history,
-                'disciplinary_notes': s.disciplinary_notes,
-            })
-            
-        if at_risk:
-            data = [d for d in data if d['is_flagged']]
+        # Wrap the entire GET path so any exception (DB / serializer /
+        # missing migration) returns a real error message instead of a
+        # generic 500. Also logs the traceback to the django logger so
+        # we can find it in Render's logs.
+        try:
+            from django.db.models import Q as _Q
+            qs = Student.objects.filter(school=school, is_active=True)\
+                .select_related('user', 'classroom')\
+                .prefetch_related('attendance', 'grades', 'parent_links')
+            q            = request.GET.get('q', '').strip()
+            at_risk      = request.GET.get('at_risk', '')
+            classroom_id = request.GET.get('classroom_id', '')
+            if q:
+                qs = qs.filter(
+                    _Q(user__first_name__icontains=q) |
+                    _Q(user__last_name__icontains=q) |
+                    _Q(admission_number__icontains=q)
+                )
+            if classroom_id:
+                try:
+                    qs = qs.filter(classroom_id=int(classroom_id))
+                except (ValueError, TypeError):
+                    pass
 
-        return JsonResponse({'success': True, 'students': data, 'count': len(data)})
+            data = []
+            for s in qs:
+                # Per-row defensive: a single broken Student record (e.g. NULL
+                # user FK from bad data) shouldn't kill the whole list.
+                try:
+                    att_all   = list(s.attendance.all())
+                    total_att = len(att_all)
+                    present_c = sum(1 for a in att_all if a.status in ('present', 'late', 'excused'))
+                    att_rate  = round((present_c / total_att) * 100, 1) if total_att > 0 else None
+                    scores    = [float(g.total_score) for g in s.grades.all()]
+                    avg_grade = round(sum(scores) / len(scores), 1) if scores else None
+                    is_flagged = (att_rate is not None and att_rate < 70) or (avg_grade is not None and avg_grade < 50)
+                    stu_pic = request.build_absolute_uri(s.passport_picture.url) if s.passport_picture else ''
+
+                    data.append({
+                        'id':               s.id,
+                        'user_id':          s.user_id,
+                        'username':         s.user.username if s.user_id else '',
+                        'admission_number': s.admission_number,
+                        'first_name':       s.user.first_name if s.user_id else '',
+                        'last_name':        s.user.last_name if s.user_id else '',
+                        'full_name':        s.user.get_full_name() if s.user_id else '',
+                        'passport_picture': stu_pic,
+                        'gender':           s.gender,
+                        'email':            s.user.email if s.user_id else '',
+                        'classroom':        s.classroom.name if s.classroom_id else None,
+                        'classroom_id':     s.classroom_id,
+                        'date_of_birth':    str(s.date_of_birth) if s.date_of_birth else None,
+                        'phone_number':     s.phone_number,
+                        'admission_date':   str(s.admission_date) if s.admission_date else None,
+                        'attendance_rate':  att_rate,
+                        'avg_grade':        avg_grade,
+                        'parent_count':     s.parent_links.count(),
+                        'is_flagged':       is_flagged,
+                        'disciplinary_history': s.disciplinary_history,
+                        'disciplinary_notes': s.disciplinary_notes,
+                    })
+                except Exception as row_exc:
+                    import logging
+                    logging.getLogger('django').error(
+                        f'Skipping broken Student row id={s.id}: {row_exc}'
+                    )
+                    continue
+
+            if at_risk:
+                data = [d for d in data if d['is_flagged']]
+
+            return JsonResponse({'success': True, 'students': data, 'count': len(data)})
+        except Exception as exc:
+            import logging, traceback
+            logging.getLogger('django').error(
+                f'api_students GET failed for school={school.id}: {exc}\n{traceback.format_exc()}'
+            )
+            return JsonResponse({
+                'success': False,
+                'message': f'Failed to load students: {type(exc).__name__}: {exc}',
+            }, status=500)
 
     if request.method == 'POST':
         body = _get_request_data(request)
