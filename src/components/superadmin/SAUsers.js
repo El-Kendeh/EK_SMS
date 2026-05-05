@@ -96,7 +96,7 @@ const ACTIVITY_ICONS = { grade: <IcGrade />, login: <IcLogin />, admin: <IcAdmin
    ============================================================ */
 const ROLES_LIST = ['Super Admin', 'School Admin', 'Teacher', 'Exam Officer', 'Finance Officer'];
 
-function CreateUserModal({ onClose }) {
+function CreateUserModal({ onClose, onCreated }) {
   const [form, setForm] = useState({ name: '', email: '', role: 'Teacher', school: '' });
   const [submitted, setSubmitted] = useState(false);
   const [sending,   setSending]   = useState(false);
@@ -118,6 +118,7 @@ function CreateUserModal({ onClose }) {
     const errs = validate();
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setSending(true);
+    setErrors({});
     try {
       const res = await ApiClient.post('/api/users/', {
         name:   form.name,
@@ -125,13 +126,22 @@ function CreateUserModal({ onClose }) {
         role:   form.role,
         school: form.school,
       });
-      if (!res.success) {
-        setErrors({ email: res.message || 'Failed to create user' });
+      if (!res?.success) {
+        setErrors({ email: res?.message || 'Failed to create user' });
         return;
       }
       setSubmitted(true);
+      // Refresh parent list so newly-created user appears immediately. The
+      // testing-team report flagged "duplicate email on retry" — that happened
+      // because the modal didn't surface success state on first attempt.
+      if (onCreated) onCreated(res.user);
     } catch (err) {
-      setErrors({ email: err.message || 'Failed to create user. Please try again.' });
+      // ApiError already carries .data with the parsed body; surface server's
+      // message verbatim instead of the generic "Connection error" the
+      // outer page used to show.
+      const status = err?.status ? ` (HTTP ${err.status})` : '';
+      const serverMsg = err?.data?.message || err?.message || 'Failed to create user. Please try again.';
+      setErrors({ email: `${serverMsg}${status}` });
     } finally {
       setSending(false);
     }
@@ -520,7 +530,12 @@ export default function SAUsers({ onNavigate }) {
         showToast(data.message || 'Failed to fetch users', 'error');
       }
     } catch (err) {
-      showToast('Connection error occurred', 'error');
+      // Surface the actual server message instead of the generic "Connection
+      // error occurred" the testing team flagged. Connection vs. permission
+      // vs. server-side errors all need different responses from the operator.
+      const status = err?.status ? ` (HTTP ${err.status})` : '';
+      const msg = err?.data?.message || err?.message || 'Failed to load users';
+      showToast(`${msg}${status}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -552,7 +567,12 @@ export default function SAUsers({ onNavigate }) {
   return (
     <div style={{ position: 'relative' }}>
       {toast && <div className={`sa-toast sa-toast--${toast.type || 'success'}`}>{toast.msg}</div>}
-      {showCreate && <CreateUserModal onClose={() => setShowCreate(false)} />}
+      {showCreate && (
+        <CreateUserModal
+          onClose={() => setShowCreate(false)}
+          onCreated={() => { fetchUsers(); showToast('Invitation sent — user will receive credentials by email.'); }}
+        />
+      )}
 
       <div className="sa-page-head">
         <div>

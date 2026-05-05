@@ -324,6 +324,107 @@ function AlertCard({ alert, onAcknowledge, onResolve }) {
   );
 }
 
+/* ── Channel Preferences ─────────────────────────────────── */
+const CHANNEL_DEFS = [
+  { key: 'in_app', icon: <IcInApp />, label: 'In-App',  desc: 'Show alerts inside this dashboard' },
+  { key: 'email',  icon: <IcEmail />, label: 'Email',   desc: 'Send when an alert fires' },
+  { key: 'sms',    icon: <IcSms />,   label: 'SMS',     desc: 'Send for critical alerts' },
+  { key: 'push',   icon: <IcPush />,  label: 'Push',    desc: 'Mobile push notifications' },
+];
+
+function ChannelPrefs() {
+  const [prefs, setPrefs] = useState({ in_app: true, email: true, sms: true, push: false });
+  const [saving, setSaving] = useState(false);
+  const [savedFlash, setSavedFlash] = useState(false);
+
+  useEffect(() => {
+    ApiClient.get('/api/admin-settings/').then(d => {
+      if (d?.success && d.settings?.alert_channel_prefs) {
+        setPrefs(prev => ({ ...prev, ...d.settings.alert_channel_prefs }));
+      }
+    }).catch(() => {});
+  }, []);
+
+  const toggle = async (key) => {
+    const next = { ...prefs, [key]: !prefs[key] };
+    setPrefs(next);
+    setSaving(true);
+    try {
+      await ApiClient.patch('/api/admin-settings/', { settings: { alert_channel_prefs: next } });
+      setSavedFlash(true);
+      setTimeout(() => setSavedFlash(false), 1500);
+    } catch (err) {
+      // revert on failure
+      setPrefs(prefs);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const refresh = async () => {
+    setSaving(true);
+    try {
+      const d = await ApiClient.get('/api/admin-settings/');
+      if (d?.success && d.settings?.alert_channel_prefs) {
+        setPrefs(prev => ({ ...prev, ...d.settings.alert_channel_prefs }));
+      }
+      setSavedFlash(true);
+      setTimeout(() => setSavedFlash(false), 1500);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="sa-card" style={{ padding: '14px 18px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+        <p style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--sa-text-3)', margin: 0 }}>
+          Notification Channels {savedFlash && <span style={{ color: 'var(--sa-green)', marginLeft: 6 }}>· Saved ✓</span>}
+        </p>
+        <button
+          onClick={refresh}
+          disabled={saving}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 6, background: 'var(--sa-card-bg2)', border: '1px solid var(--sa-border)', color: 'var(--sa-text-2)', fontSize: '0.6875rem', fontWeight: 600, cursor: 'pointer', opacity: saving ? 0.5 : 1 }}
+          title="Reload channel preferences"
+        >
+          <IcRefresh /> Refresh
+        </button>
+      </div>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        {CHANNEL_DEFS.map(ch => {
+          const on = !!prefs[ch.key];
+          return (
+            <button
+              key={ch.key}
+              onClick={() => toggle(ch.key)}
+              disabled={saving}
+              title={ch.desc}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '6px 12px', borderRadius: 8,
+                background: on ? 'rgba(16,185,129,0.12)' : 'var(--sa-card-bg2)',
+                border: `1px solid ${on ? 'rgba(16,185,129,0.35)' : 'var(--sa-border)'}`,
+                color: on ? 'var(--sa-green)' : 'var(--sa-text-2)',
+                fontSize: '0.75rem', fontWeight: 600, cursor: saving ? 'wait' : 'pointer',
+                transition: 'all 0.15s',
+              }}
+              aria-pressed={on}
+            >
+              <span style={{ display: 'flex' }}>{ch.icon}</span>
+              {ch.label}
+              <span style={{ marginLeft: 4, fontSize: '0.625rem', fontWeight: 700, opacity: 0.85 }}>{on ? 'ON' : 'OFF'}</span>
+            </button>
+          );
+        })}
+      </div>
+      <p style={{ fontSize: '0.6875rem', color: 'var(--sa-text-3)', marginTop: 8 }}>
+        Click a channel to toggle; preferences are saved per superadmin.
+      </p>
+    </div>
+  );
+}
+
+
 /* ── Main component ──────────────────────────────────────── */
 export default function SAChangeAlerts() {
   const [alerts,       setAlerts]       = useState([]);
@@ -445,33 +546,9 @@ export default function SAChangeAlerts() {
         ))}
       </div>
 
-      {/* Notification channel legend */}
-      <div className="sa-card" style={{ padding: '14px 18px' }}>
-        <p style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--sa-text-3)', margin: '0 0 10px' }}>
-          Notification Channels
-        </p>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-          {[
-            { icon: <IcInApp />, label: 'In-App (primary)', desc: 'Always active — alerts appear here in real time' },
-            { icon: <IcEmail />, label: 'Email',            desc: 'Sent when email notification is enabled per alert' },
-            { icon: <IcSms />,   label: 'SMS (critical)',   desc: 'Sent only for critical severity alerts' },
-            { icon: <IcPush />,  label: 'Push',             desc: 'Mobile push when enabled' },
-          ].map(ch => (
-            <div key={ch.label} title={ch.desc} style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              padding: '5px 10px', borderRadius: 8,
-              background: 'var(--sa-card-bg2)', border: '1px solid var(--sa-border)',
-              fontSize: '0.75rem', color: 'var(--sa-text-2)', fontWeight: 500, cursor: 'default',
-            }}>
-              <span style={{ color: 'var(--sa-text-3)', display: 'flex' }}>{ch.icon}</span>
-              {ch.label}
-            </div>
-          ))}
-          <span style={{ fontSize: '0.6875rem', color: 'var(--sa-text-3)', marginLeft: 4 }}>
-            Hover channel badges on alerts to see sent timestamps.
-          </span>
-        </div>
-      </div>
+      {/* Notification channel preferences — real toggles persisted to AdminSetting */}
+      <ChannelPrefs />
+
 
       {/* Filter tabs */}
       <div className="sa-filter-tabs" style={{ flexWrap: 'wrap', gap: 6 }}>

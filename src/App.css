@@ -1,5 +1,18 @@
 .App {
   text-align: center;
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+/* Also ensure html/body fill the viewport so the Landing page doesn't
+   look like a shrunken card on laptops. */
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100%;
 }
 
 .loading-container {

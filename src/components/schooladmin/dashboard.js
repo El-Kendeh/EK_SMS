@@ -440,12 +440,13 @@ function OverviewPage({ stats, school, onNav, onAddStudent }) {
 
   /* Quick actions (nav only — no data) */
   const QUICK = [
-    { icon: 'person_add',  label: 'Add Student',      variant: '',         action: () => onAddStudent?.() },
-    { icon: 'group_add',   label: 'Add Teacher',      variant: '--cyan',   action: () => onNav?.('teachers') },
-    { icon: 'add_box',     label: 'Create Class',     variant: '--orange', action: () => onNav?.('classes') },
-    { icon: 'book',        label: 'Assign Subject',   variant: '',         action: () => onNav?.('subjects') },
-    { icon: 'analytics',   label: 'Generate Report',  variant: '',         action: () => onNav?.('reports') },
-    { icon: 'campaign',    label: 'Announcement',     variant: '--cyan',   action: () => onNav?.('notifications') },
+    { icon: 'person_add',      label: 'Add Student',       variant: '',         action: () => onAddStudent?.() },
+    { icon: 'event_available', label: 'Record Attendance', variant: '--cyan',   action: () => onNav?.('attendance') },
+    { icon: 'group_add',       label: 'Add Teacher',       variant: '--cyan',   action: () => onNav?.('teachers') },
+    { icon: 'add_box',         label: 'Create Class',      variant: '--orange', action: () => onNav?.('classes') },
+    { icon: 'book',            label: 'Assign Subject',    variant: '',         action: () => onNav?.('subjects') },
+    { icon: 'analytics',       label: 'Generate Report',   variant: '',         action: () => onNav?.('reports') },
+    { icon: 'campaign',        label: 'Announcement',      variant: '--cyan',   action: () => onNav?.('notifications') },
   ];
 
   return (

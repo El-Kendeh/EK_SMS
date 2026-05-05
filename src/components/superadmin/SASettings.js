@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ApiClient from '../../api/client';
+import SECURITY_CONFIG from '../../config/security';
 
 /* ================================================================
    Constants
@@ -41,6 +42,89 @@ const IcShieldLock = ({size=36}) => <svg viewBox="0 0 24 24" width={size} height
 const IcArrow     = () => <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>;
 const IcPhone     = ({size=18}) => <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18" strokeWidth="2.5"/></svg>;
 const IcSuccess   = () => <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>;
+
+/* ================================================================
+   BrandingUploadBox — real file upload with preview
+   ================================================================ */
+function BrandingUploadBox({ kind, label, hint, accept, icon, currentUrl, onUploaded, onError }) {
+  const inputRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState(currentUrl || null);
+
+  useEffect(() => { setPreviewUrl(currentUrl || null); }, [currentUrl]);
+
+  const pickFile = () => inputRef.current?.click();
+
+  const handleFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      onError?.('File too large (max 2MB).');
+      e.target.value = '';
+      return;
+    }
+    // Optimistic local preview
+    const localUrl = URL.createObjectURL(file);
+    setPreviewUrl(localUrl);
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('kind', kind);
+      fd.append('file', file);
+      const res = await ApiClient.post('/api/sa/branding/', fd);
+      if (res?.success && res.url) {
+        setPreviewUrl(res.url);
+        onUploaded?.(res.url);
+      } else {
+        throw new Error(res?.message || 'Upload failed');
+      }
+    } catch (err) {
+      onError?.(err?.message || 'Upload failed.');
+      setPreviewUrl(currentUrl || null);
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  return (
+    <div
+      className="sa-upload-box"
+      role="button"
+      tabIndex={0}
+      aria-label={`Upload ${label}`}
+      onClick={pickFile}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pickFile(); } }}
+      style={{ cursor: uploading ? 'wait' : 'pointer', position: 'relative', overflow: 'hidden' }}
+    >
+      <input
+        ref={inputRef}
+        type="file"
+        accept={accept}
+        onChange={handleFile}
+        style={{ display: 'none' }}
+        aria-hidden="true"
+      />
+      {previewUrl ? (
+        <img
+          src={previewUrl}
+          alt={`${label} preview`}
+          style={{ maxWidth: 64, maxHeight: 64, objectFit: 'contain', marginBottom: 8, borderRadius: 6 }}
+        />
+      ) : (
+        <div className="sa-upload-box-icon">{icon}</div>
+      )}
+      <p className="sa-upload-box-label">{label}</p>
+      <p className="sa-upload-box-hint">{uploading ? 'Uploading…' : hint}</p>
+      {previewUrl && !uploading && (
+        <p style={{ fontSize: '0.6875rem', color: 'var(--sa-accent)', marginTop: 4 }}>
+          Click to replace
+        </p>
+      )}
+    </div>
+  );
+}
+
 
 /* ================================================================
    Toggle switch (accessible button with role="switch")
@@ -407,11 +491,24 @@ export default function SASettings() {
   const [recoveryCodes, setRecoveryCodes] = useState(DEFAULT_RECOVERY_CODES);
   const [totpKey,       setTotpKey]       = useState(DEFAULT_TOTP_KEY);
   const [lastBackupAt,  setLastBackupAt]  = useState(null);
+  const [lastBackupMeta, setLastBackupMeta] = useState(null);
+
+  /* Branding (logo + favicon URLs persisted via AdminSetting) */
+  const [brandingLogoUrl,    setBrandingLogoUrl]    = useState(null);
+  const [brandingFaviconUrl, setBrandingFaviconUrl] = useState(null);
+
+  /* Backup state */
+  const [backingUp, setBackingUp] = useState(false);
+
+  /* Lockdown server-state echo (kept so we can hydrate from server on reload).
+     The setter is called from load + activate/deactivate handlers below. */
+  // eslint-disable-next-line no-unused-vars
+  const [lockdownState, setLockdownState] = useState(null);
 
   const [toast, setToast] = useState(null);
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
-    setTimeout(() => setToast(null), 3000);
+    setTimeout(() => setToast(null), 4000);
   };
 
   /* Load admin settings on mount */
@@ -427,16 +524,35 @@ export default function SASettings() {
           setRecoveryCodes(s.recovery_codes);
         if (s.totp_key)       setTotpKey(s.totp_key);
         if (s.last_backup_at) setLastBackupAt(s.last_backup_at);
+        if (s.last_backup_meta) setLastBackupMeta(s.last_backup_meta);
+        if (s.branding_logo?.url)    setBrandingLogoUrl(s.branding_logo.url);
+        if (s.branding_favicon?.url) setBrandingFaviconUrl(s.branding_favicon.url);
+      }
+    }).catch(() => {});
+    ApiClient.get('/api/sa/lockdown/').then(d => {
+      if (d?.success && d.state?.active) {
+        setLockdownState(d.state);
+        setIsLockdown(true);
+        setLockdownTime(Date.parse(d.state.activated_at) || Date.now());
+        if (d.state.protocol) setProtocol(d.state.protocol);
       }
     }).catch(() => {});
   }, []);
 
   const saveSecuritySettings = async () => {
     try {
-      await ApiClient.patch('/api/admin-settings/', { settings: { twoFA, autoLock, sessionTimeout, auditRetention } });
-      showToast('Security settings saved');
+      const res = await ApiClient.patch('/api/admin-settings/', {
+        settings: { twoFA, autoLock, sessionTimeout, auditRetention },
+      });
+      if (res?.success === false) {
+        showToast(res.message || 'Failed to save settings', 'error');
+      } else {
+        showToast('Security settings saved');
+      }
     } catch (err) {
-      showToast('Failed to save settings', 'error');
+      const msg = err?.message || 'Failed to save settings';
+      const status = err?.status ? ` (HTTP ${err.status})` : '';
+      showToast(`${msg}${status}`, 'error');
     }
   };
 
@@ -550,7 +666,20 @@ export default function SASettings() {
             <div className="sa-settings-section">
               <h2 className="sa-settings-section-title">Emergency Lockdown</h2>
               {isLockdown
-                ? <LockdownActive lockdownTime={lockdownTime} onDeactivate={() => { setIsLockdown(false); showToast('Lockdown deactivated', 'info'); }} />
+                ? <LockdownActive lockdownTime={lockdownTime} onDeactivate={async () => {
+                    try {
+                      const res = await ApiClient.post('/api/sa/lockdown/', { action: 'deactivate' });
+                      if (res?.success) {
+                        setIsLockdown(false);
+                        setLockdownState(res.state);
+                        showToast('Lockdown deactivated', 'info');
+                      } else {
+                        showToast(res?.message || 'Failed to deactivate lockdown', 'error');
+                      }
+                    } catch (err) {
+                      showToast(err?.message || 'Failed to deactivate lockdown', 'error');
+                    }
+                  }} />
                 : (
                   <div>
                     {/* System status card */}
@@ -735,18 +864,26 @@ export default function SASettings() {
           <div className="sa-settings-section">
             <h2 className="sa-settings-section-title">Branding</h2>
             <div className="sa-upload-grid">
-              <div className="sa-upload-box" role="button" tabIndex={0} aria-label="Upload system logo"
-                onKeyDown={e => e.key === 'Enter' && e.currentTarget.click()}>
-                <div className="sa-upload-box-icon"><IcImage /></div>
-                <p className="sa-upload-box-label">System Logo</p>
-                <p className="sa-upload-box-hint">PNG, SVG (Max 2MB)</p>
-              </div>
-              <div className="sa-upload-box" role="button" tabIndex={0} aria-label="Upload favicon"
-                onKeyDown={e => e.key === 'Enter' && e.currentTarget.click()}>
-                <div className="sa-upload-box-icon"><IcGlobe /></div>
-                <p className="sa-upload-box-label">Favicon</p>
-                <p className="sa-upload-box-hint">ICO, PNG (32×32)</p>
-              </div>
+              <BrandingUploadBox
+                kind="logo"
+                label="System Logo"
+                hint="PNG, SVG, JPG, WEBP (Max 2MB)"
+                accept=".png,.svg,.jpg,.jpeg,.webp,image/*"
+                icon={<IcImage />}
+                currentUrl={brandingLogoUrl}
+                onUploaded={(url) => { setBrandingLogoUrl(url); showToast('Logo uploaded successfully'); }}
+                onError={(msg) => showToast(msg, 'error')}
+              />
+              <BrandingUploadBox
+                kind="favicon"
+                label="Favicon"
+                hint="ICO, PNG (32×32 recommended)"
+                accept=".ico,.png,.svg,.jpg,.jpeg,image/*"
+                icon={<IcGlobe />}
+                currentUrl={brandingFaviconUrl}
+                onUploaded={(url) => { setBrandingFaviconUrl(url); showToast('Favicon uploaded successfully'); }}
+                onError={(msg) => showToast(msg, 'error')}
+              />
             </div>
           </div>
         )}
@@ -758,20 +895,51 @@ export default function SASettings() {
             <div className="sa-backup-card">
               <div className="sa-backup-card-header">
                 <div>
-                  <p className="sa-backup-card-label">Last Auto-Backup</p>
+                  <p className="sa-backup-card-label">Last Backup</p>
                   <div className="sa-backup-card-status">
-                    <IcSuccess /> Successful
+                    {lastBackupAt ? <><IcSuccess /> Successful</> : 'Never'}
                   </div>
                   <p className="sa-backup-card-time">
                     {lastBackupAt
                       ? new Date(lastBackupAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' UTC'
                       : 'No backups recorded'}
                   </p>
+                  {lastBackupMeta?.filename && (
+                    <p style={{ fontSize: '0.6875rem', color: 'var(--sa-text-3)', marginTop: 4, fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                      {lastBackupMeta.filename}
+                      {lastBackupMeta.size_bytes ? ` · ${(lastBackupMeta.size_bytes / 1024).toFixed(0)} KB` : ''}
+                    </p>
+                  )}
                 </div>
                 <div className="sa-backup-card-icon"><IcCloud /></div>
               </div>
-              <button className="sa-backup-btn" onClick={() => showToast('Manual backup initiated')}>
-                <IcCloud /> Initiate Manual Backup
+              <button
+                className="sa-backup-btn"
+                disabled={backingUp}
+                onClick={async () => {
+                  setBackingUp(true);
+                  try {
+                    const res = await ApiClient.post('/api/sa/backup/manual/', {});
+                    if (res?.success) {
+                      const iso = res.created_at || new Date().toISOString();
+                      setLastBackupAt(iso);
+                      setLastBackupMeta({
+                        filename:   res.filename,
+                        size_bytes: res.size_bytes,
+                        created_at: iso,
+                      });
+                      showToast(`Backup created: ${res.filename}`);
+                    } else {
+                      showToast(res?.message || 'Backup failed', 'error');
+                    }
+                  } catch (err) {
+                    showToast(err?.message || 'Backup failed', 'error');
+                  } finally {
+                    setBackingUp(false);
+                  }
+                }}
+              >
+                <IcCloud /> {backingUp ? 'Creating backup…' : 'Initiate Manual Backup'}
               </button>
             </div>
           </div>
@@ -787,10 +955,10 @@ export default function SASettings() {
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '8px 0', textAlign: 'center' }}>
                 <div className="sa-stat-icon sa-stat-icon--green" style={{ width: 52, height: 52 }}><IcCheck size={22} /></div>
                 <p style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--sa-text)', margin: 0 }}>Export Complete</p>
-                <p style={{ fontSize: '0.8125rem', color: 'var(--sa-text-2)', margin: 0 }}>Your {exportFormat} file is ready for download.</p>
+                <p style={{ fontSize: '0.8125rem', color: 'var(--sa-text-2)', margin: 0 }}>Your {exportFormat} file has been downloaded.</p>
                 <button className="sa-btn sa-btn--primary sa-btn--full" style={{ justifyContent: 'center', marginTop: 4 }}
-                  onClick={() => { setShowExportModal(false); setExported(false); showToast('Export downloaded'); }}>
-                  <IcDownload size={16} /> Download File
+                  onClick={() => { setShowExportModal(false); setExported(false); }}>
+                  <IcCheck size={16} /> Done
                 </button>
               </div>
             ) : (
@@ -826,7 +994,47 @@ export default function SASettings() {
                   <button
                     style={{ flex: 1, padding: '12px', background: exporting ? 'var(--sa-card-bg2)' : 'var(--sa-accent)', color: exporting ? 'var(--sa-text-3)' : '#fff', border: 'none', borderRadius: 'var(--sa-radius-sm)', fontSize: '0.875rem', fontWeight: 700, cursor: exporting ? 'not-allowed' : 'pointer' }}
                     disabled={exporting}
-                    onClick={() => { setExporting(true); setTimeout(() => { setExporting(false); setExported(true); }, 1200); }}
+                    onClick={async () => {
+                      setExporting(true);
+                      try {
+                        const datasets = Object.entries(exportSets)
+                          .filter(([, v]) => v).map(([k]) => k).join(',');
+                        const fmt = exportFormat.toLowerCase();
+                        const token = localStorage.getItem('token') || '';
+                        const url = `${SECURITY_CONFIG.API_URL}/api/sa/export/?datasets=${encodeURIComponent(datasets)}&format=${fmt}`;
+                        const resp = await fetch(url, {
+                          credentials: 'include',
+                          headers: token ? { Authorization: `Bearer ${token}` } : {},
+                        });
+                        if (!resp.ok) {
+                          let msg = `Export failed (HTTP ${resp.status})`;
+                          try {
+                            const j = await resp.clone().json();
+                            if (j?.message) msg = j.message;
+                          } catch { /* non-JSON response */ }
+                          throw new Error(msg);
+                        }
+                        // Browser-driven download from the response Blob
+                        const blob = await resp.blob();
+                        const cd = resp.headers.get('Content-Disposition') || '';
+                        const m = cd.match(/filename="?([^";]+)"?/i);
+                        const filename = m ? m[1] : `eksms_export.${fmt === 'csv' && datasets.split(',').length > 1 ? 'zip' : fmt}`;
+                        const blobUrl = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = blobUrl;
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        URL.revokeObjectURL(blobUrl);
+                        setExported(true);
+                        showToast(`Downloaded ${filename}`);
+                      } catch (err) {
+                        showToast(err?.message || 'Export failed', 'error');
+                      } finally {
+                        setExporting(false);
+                      }
+                    }}
                   >
                     {exporting ? 'Generating…' : 'Confirm Export'}
                   </button>
@@ -857,7 +1065,29 @@ export default function SASettings() {
               <button className="sa-gov-cancel-btn" style={{ flex: 1 }} onClick={() => setShowConfirm(false)}>Cancel</button>
               <button
                 style={{ flex: 1, padding: '12px', background: 'var(--sa-red)', color: '#fff', border: 'none', borderRadius: 'var(--sa-radius-sm)', fontSize: '0.875rem', fontWeight: 700, cursor: 'pointer' }}
-                onClick={() => { setIsLockdown(true); setLockdownTime(Date.now()); setShowConfirm(false); showToast('Emergency lockdown activated', 'error'); }}
+                onClick={async () => {
+                  try {
+                    const res = await ApiClient.post('/api/sa/lockdown/', {
+                      action: 'activate', protocol, reason: lockdownReason,
+                    });
+                    if (res?.success) {
+                      setIsLockdown(true);
+                      setLockdownTime(Date.now());
+                      setLockdownState(res.state);
+                      setShowConfirm(false);
+                      const aff = res.affected || {};
+                      const detail = [
+                        aff.grades_locked      ? `${aff.grades_locked} grades locked` : null,
+                        aff.sessions_terminated ? `${aff.sessions_terminated} sessions terminated` : null,
+                      ].filter(Boolean).join(' · ');
+                      showToast(`Lockdown active — ${protocol}${detail ? ` (${detail})` : ''}`, 'error');
+                    } else {
+                      showToast(res?.message || 'Failed to activate lockdown', 'error');
+                    }
+                  } catch (err) {
+                    showToast(err?.message || 'Failed to activate lockdown', 'error');
+                  }
+                }}
               >
                 Confirm Lockdown
               </button>

@@ -90,6 +90,9 @@ from .views import (
     # Student ↔ Parent linking
     api_student_parents,
     api_student_parent_detail,
+    # SuperAdmin operational endpoints (testing-team round)
+    api_branding_upload, api_manual_backup, api_bulk_export,
+    api_lockdown, api_rbac_custom_roles,
 )
 from .views_syllabus import api_syllabus_upload, api_syllabus_list
 from .views_extras import (
@@ -283,6 +286,13 @@ urlpatterns = [
     path('api/school/bulk-import/',                                     api_bulk_import,                   name='api_bulk_import'),
     path('api/school/students/promote-batch/',                          api_promote_students_batch,        name='api_promote_students_batch'),
     path('api/school/academic-years/<int:year_id>/archive/',            api_archive_academic_year,         name='api_archive_academic_year'),
+    # SuperAdmin operational endpoints (testing-team round)
+    path('api/sa/branding/',          api_branding_upload,    name='api_branding_upload'),
+    path('api/sa/backup/manual/',     api_manual_backup,      name='api_manual_backup'),
+    path('api/sa/export/',            api_bulk_export,        name='api_bulk_export'),
+    path('api/sa/lockdown/',          api_lockdown,           name='api_lockdown'),
+    path('api/sa/custom-roles/',      api_rbac_custom_roles,  name='api_rbac_custom_roles'),
+
     # Public document verification
     path('verify/<str:token>/',                              verify_grade_document,        name='verify_grade_document'),
 

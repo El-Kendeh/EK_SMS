@@ -2246,6 +2246,7 @@ def api_forensic_events(request):
 # ---------------------------------------------------------------------------
 # 5. Alert Broadcasts
 # ---------------------------------------------------------------------------
+@csrf_exempt
 def api_broadcast_alerts(request):
     """
     GET  — list broadcasts (most recent 100)
@@ -2266,16 +2267,67 @@ def api_broadcast_alerts(request):
             if not title or not message:
                 return JsonResponse({'success': False, 'message': 'title and message are required'}, status=400)
 
+            # Audience may be a model code or a free-form label coming from
+            # the SuperAdmin compose UI. Normalize so model.choices accept it.
+            raw_audience = (data.get('audience') or 'all')
+            audience_norm = str(raw_audience).strip().lower()
+            audience_map = {
+                'all schools': 'all', 'all': 'all',
+                'school admins': 'school_admins', 'school_admins': 'school_admins',
+                'super admins': 'superadmins',  'superadmins': 'superadmins',
+            }
+            audience = audience_map.get(audience_norm, 'all')
+            severity = (data.get('severity') or 'info').lower()
+            if severity == 'medium': severity = 'warning'
+            if severity == 'low':    severity = 'info'
+            if severity not in ('info', 'warning', 'critical'):
+                severity = 'info'
+
             broadcast = AlertBroadcast.objects.create(
                 title=title,
                 message=message,
-                severity=data.get('severity', 'info'),
-                audience=data.get('audience', 'all'),
+                severity=severity,
+                audience=audience,
                 target_school=target_school,
                 sent_by=actor,
                 status='sent',
                 sent_at=timezone.now(),
             )
+
+            # Fan-out: turn the broadcast into in-app Notifications so the
+            # message is actually visible in school admin dashboards. This is
+            # the "actually broadcast" behaviour the testing team flagged.
+            notif_type = 'alert' if severity == 'critical' else ('warning' if severity == 'warning' else 'info')
+            try:
+                if audience == 'all':
+                    target_admins = SchoolAdmin.objects.filter(is_active=True).select_related('user', 'school')
+                elif audience == 'school_admins':
+                    target_admins = SchoolAdmin.objects.filter(is_active=True).select_related('user', 'school')
+                elif audience == 'superadmins':
+                    target_admins = []
+                    for su in User.objects.filter(is_superuser=True, is_active=True):
+                        Notification.objects.create(
+                            school=None, title=title, body=message,
+                            notif_type=notif_type, recipient_role='all',
+                            recipient_user=su, sender=actor,
+                        )
+                else:
+                    target_admins = []
+                    if target_school:
+                        target_admins = SchoolAdmin.objects.filter(
+                            school=target_school, is_active=True
+                        ).select_related('user', 'school')
+                for sa_obj in target_admins:
+                    Notification.objects.create(
+                        school=sa_obj.school, title=title, body=message,
+                        notif_type=notif_type, recipient_role='all',
+                        recipient_user=sa_obj.user, sender=actor,
+                    )
+            except Exception as fan_exc:
+                logging.getLogger('django').warning(
+                    f'Broadcast fan-out partial failure: {fan_exc}'
+                )
+
             _log_security_event(
                 'broadcast_sent',
                 description=f"Broadcast sent: '{title}' to {broadcast.audience}",
@@ -2284,7 +2336,10 @@ def api_broadcast_alerts(request):
                 ip=request.META.get('REMOTE_ADDR'),
                 metadata={'broadcast_id': broadcast.id},
             )
-            return JsonResponse({'success': True, 'broadcast_id': broadcast.id}, status=201)
+            return JsonResponse({
+                'success': True, 'broadcast_id': broadcast.id,
+                'audience': audience, 'severity': severity,
+            }, status=201)
         except Exception as e:
             return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
@@ -3059,7 +3114,14 @@ def api_students(request):
                     scores    = [float(g.total_score) for g in s.grades.all()]
                     avg_grade = round(sum(scores) / len(scores), 1) if scores else None
                     is_flagged = (att_rate is not None and att_rate < 70) or (avg_grade is not None and avg_grade < 50)
-                    stu_pic = request.build_absolute_uri(s.passport_picture.url) if s.passport_picture else ''
+                    # passport_picture URL building can fail when storage backend
+                    # returns a value but the underlying file is missing (broken
+                    # symlink, S3 bucket unreachable, etc.). Don't 500 the whole
+                    # list because of a missing image.
+                    try:
+                        stu_pic = request.build_absolute_uri(s.passport_picture.url) if s.passport_picture else ''
+                    except (ValueError, OSError, Exception):
+                        stu_pic = ''
 
                     data.append({
                         'id':               s.id,
@@ -10289,3 +10351,467 @@ def api_archive_academic_year(request, year_id):
         'grades_locked': grades_locked,
     })
 
+
+# =================================================================
+# SUPERADMIN — Branding upload, manual backup, bulk export, lockdown
+# =================================================================
+
+@csrf_exempt
+def api_branding_upload(request):
+    """
+    POST multipart/form-data with `kind` ('logo'|'favicon') and `file`.
+    Stores the file under MEDIA_ROOT/branding/ and persists the URL into
+    AdminSetting so the frontend can read it on next load.
+    """
+    actor = _get_authed_user(request)
+    if not actor or not actor.is_superuser:
+        return JsonResponse({'success': False, 'message': 'Superadmin access required.'}, status=403)
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+    kind = (request.POST.get('kind') or '').strip().lower()
+    if kind not in ('logo', 'favicon'):
+        return JsonResponse({'success': False, 'message': "kind must be 'logo' or 'favicon'."}, status=400)
+
+    f = request.FILES.get('file')
+    if not f:
+        return JsonResponse({'success': False, 'message': 'No file provided.'}, status=400)
+
+    # Size & type guards
+    max_bytes = 2 * 1024 * 1024
+    if f.size > max_bytes:
+        return JsonResponse({'success': False, 'message': 'File too large (max 2MB).'}, status=400)
+    name_low = f.name.lower()
+    allowed_logo    = ('.png', '.svg', '.jpg', '.jpeg', '.webp')
+    allowed_favicon = ('.ico', '.png', '.svg', '.jpg', '.jpeg')
+    allowed = allowed_logo if kind == 'logo' else allowed_favicon
+    if not name_low.endswith(allowed):
+        return JsonResponse({
+            'success': False,
+            'message': f'Unsupported file type. Allowed: {", ".join(allowed)}'
+        }, status=400)
+
+    from django.conf import settings as dj_settings
+    from django.core.files.storage import default_storage
+    from django.core.files.base import ContentFile
+    safe_name = f"branding/{kind}_{int(timezone.now().timestamp())}{Path(f.name).suffix.lower()}"
+    saved_path = default_storage.save(safe_name, ContentFile(f.read()))
+    file_url = default_storage.url(saved_path)
+    abs_url  = request.build_absolute_uri(file_url)
+
+    AdminSetting.objects.update_or_create(
+        user=actor, key=f'branding_{kind}',
+        defaults={'value': {'url': abs_url, 'path': saved_path, 'uploaded_at': timezone.now().isoformat()}},
+    )
+    _log_security_event(
+        'profile_updated',
+        description=f'Superadmin uploaded {kind} ({f.name})',
+        severity='info', actor=actor, ip=request.META.get('REMOTE_ADDR'),
+    )
+    return JsonResponse({'success': True, 'kind': kind, 'url': abs_url, 'path': saved_path}, status=201)
+
+
+@csrf_exempt
+def api_manual_backup(request):
+    """
+    POST — Snapshot the SQLite DB and (optionally) the media directory into
+    BACKUPS_DIR. Returns the resulting filename and size. Records the result
+    into AdminSetting so the UI's 'Last Backup' timestamp is always in sync.
+    """
+    actor = _get_authed_user(request)
+    if not actor or not actor.is_superuser:
+        return JsonResponse({'success': False, 'message': 'Superadmin access required.'}, status=403)
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+    from django.conf import settings as dj_settings
+    backups_dir = Path(dj_settings.BASE_DIR) / 'backups'
+    backups_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
+        ts = timezone.now().strftime('%Y%m%d_%H%M%S')
+        # Use Django's default DB connection — safest for sqlite + most prod backends
+        db_path = dj_settings.DATABASES['default'].get('NAME')
+        out_path = backups_dir / f'eksms_backup_{ts}.sqlite3'
+
+        # SQLite live backup using sqlite3 .backup API (atomic, no lockout)
+        if db_path and str(db_path).endswith(('.sqlite3', '.db')) and Path(db_path).exists():
+            import sqlite3
+            src = sqlite3.connect(str(db_path))
+            dst = sqlite3.connect(str(out_path))
+            with dst:
+                src.backup(dst)
+            src.close(); dst.close()
+        else:
+            # Non-sqlite engines: use management command
+            from django.core.management import call_command
+            out_path = backups_dir / f'eksms_backup_{ts}.json'
+            with open(out_path, 'w', encoding='utf-8') as fp:
+                call_command('dumpdata', '--natural-foreign', '--natural-primary',
+                             '--exclude=contenttypes', '--exclude=auth.permission',
+                             '--exclude=sessions.session', stdout=fp)
+
+        size_bytes = out_path.stat().st_size
+        AdminSetting.objects.update_or_create(
+            user=actor, key='last_backup_at',
+            defaults={'value': timezone.now().isoformat()},
+        )
+        AdminSetting.objects.update_or_create(
+            user=actor, key='last_backup_meta',
+            defaults={'value': {
+                'filename':   out_path.name,
+                'size_bytes': size_bytes,
+                'created_at': timezone.now().isoformat(),
+                'path':       str(out_path),
+            }},
+        )
+        _log_security_event(
+            'profile_updated',
+            description=f'Manual backup created: {out_path.name} ({size_bytes} bytes)',
+            severity='info', actor=actor, ip=request.META.get('REMOTE_ADDR'),
+        )
+        return JsonResponse({
+            'success': True,
+            'filename': out_path.name,
+            'size_bytes': size_bytes,
+            'created_at': timezone.now().isoformat(),
+        }, status=201)
+    except Exception as exc:
+        import traceback
+        logging.getLogger('django').error(
+            f'Manual backup failed: {exc}\n{traceback.format_exc()}'
+        )
+        return JsonResponse({
+            'success': False,
+            'message': f'Backup failed: {type(exc).__name__}: {exc}'
+        }, status=500)
+
+
+@csrf_exempt
+def api_bulk_export(request):
+    """
+    GET ?datasets=schools,grades,audit,users&format=csv|json|pdf
+        — streams a real downloadable file. CSV/JSON only by default; PDF
+          falls back to a structured plain-text PDF if reportlab is present,
+          else returns a 415 with a useful message so the frontend can switch
+          format gracefully.
+    """
+    actor = _get_authed_user(request)
+    if not actor or not actor.is_superuser:
+        return JsonResponse({'success': False, 'message': 'Superadmin access required.'}, status=403)
+    if request.method != 'GET':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+    datasets_raw = (request.GET.get('datasets') or '').strip()
+    fmt = (request.GET.get('format') or 'csv').strip().lower()
+    if fmt not in ('csv', 'json', 'pdf'):
+        return JsonResponse({'success': False, 'message': 'format must be csv, json, or pdf.'}, status=400)
+    requested = [d.strip() for d in datasets_raw.split(',') if d.strip()]
+    if not requested:
+        return JsonResponse({'success': False, 'message': 'No datasets selected.'}, status=400)
+
+    valid = {'schools', 'grades', 'audit', 'users'}
+    bad = [d for d in requested if d not in valid]
+    if bad:
+        return JsonResponse({'success': False, 'message': f'Unknown dataset(s): {", ".join(bad)}'}, status=400)
+
+    def _schools_rows():
+        rows = []
+        for s in School.objects.all().order_by('id'):
+            rows.append({
+                'id': s.id, 'name': s.name, 'code': getattr(s, 'code', '') or '',
+                'email': getattr(s, 'email', '') or '',
+                'is_active': bool(getattr(s, 'is_active', False)),
+                'is_approved': bool(getattr(s, 'is_approved', False)),
+                'region': getattr(s, 'region', '') or '',
+                'created_at': s.registration_date.isoformat() if getattr(s, 'registration_date', None) else '',
+            })
+        return rows
+
+    def _users_rows():
+        rows = []
+        for u in User.objects.all().order_by('id'):
+            role = 'User'
+            if u.is_superuser: role = 'Super Admin'
+            elif hasattr(u, 'school_admin_profile'): role = 'School Admin'
+            elif hasattr(u, 'teacher_profile'): role = 'Teacher'
+            elif hasattr(u, 'student_profile'): role = 'Student'
+            elif hasattr(u, 'parent_profile'): role = 'Parent'
+            rows.append({
+                'id': u.id, 'username': u.username, 'email': u.email or '',
+                'first_name': u.first_name or '', 'last_name': u.last_name or '',
+                'role': role, 'is_active': bool(u.is_active),
+                'date_joined': u.date_joined.isoformat() if u.date_joined else '',
+                'last_login':  u.last_login.isoformat()  if u.last_login  else '',
+            })
+        return rows
+
+    def _grades_rows():
+        rows = []
+        for g in Grade.objects.select_related('student__user', 'subject', 'term', 'student__school').iterator():
+            rows.append({
+                'id': g.id,
+                'student_id': g.student_id,
+                'student_name': g.student.user.get_full_name() if g.student and g.student.user_id else '',
+                'school': g.student.school.name if g.student and g.student.school_id else '',
+                'subject': g.subject.name if g.subject_id else '',
+                'term': g.term.name if g.term_id else '',
+                'continuous_assessment': float(g.continuous_assessment),
+                'mid_term_exam': float(g.mid_term_exam),
+                'final_exam': float(g.final_exam),
+                'total_score': float(g.total_score),
+                'grade_letter': g.grade_letter,
+                'is_locked': bool(g.is_locked),
+            })
+        return rows
+
+    def _audit_rows():
+        rows = []
+        qs = SecurityLogEntry.objects.select_related('actor').order_by('-created_at')[:5000]
+        for e in qs:
+            rows.append({
+                'id': e.id, 'event_type': e.event_type,
+                'severity': e.severity, 'description': e.description,
+                'actor': e.actor.username if e.actor_id else (e.actor_label or ''),
+                'ip_address': e.ip_address or '',
+                'created_at': e.created_at.isoformat(),
+            })
+        return rows
+
+    builders = {
+        'schools': _schools_rows, 'grades': _grades_rows,
+        'audit':   _audit_rows,   'users':  _users_rows,
+    }
+    bundle = {ds: builders[ds]() for ds in requested}
+    timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
+    base_name = f'eksms_export_{timestamp}'
+
+    from django.http import HttpResponse, StreamingHttpResponse
+    if fmt == 'json':
+        resp = HttpResponse(
+            json.dumps(bundle, indent=2, default=str),
+            content_type='application/json; charset=utf-8',
+        )
+        resp['Content-Disposition'] = f'attachment; filename="{base_name}.json"'
+        return resp
+
+    if fmt == 'csv':
+        # If only one dataset, plain CSV. Otherwise produce a ZIP of CSVs.
+        import csv, io
+        if len(requested) == 1:
+            ds = requested[0]; rows = bundle[ds]
+            buf = io.StringIO()
+            if rows:
+                writer = csv.DictWriter(buf, fieldnames=list(rows[0].keys()))
+                writer.writeheader(); writer.writerows(rows)
+            else:
+                buf.write('# No rows for dataset: %s\n' % ds)
+            resp = HttpResponse(buf.getvalue(), content_type='text/csv; charset=utf-8')
+            resp['Content-Disposition'] = f'attachment; filename="{base_name}_{ds}.csv"'
+            return resp
+
+        import zipfile
+        zbuf = io.BytesIO()
+        with zipfile.ZipFile(zbuf, 'w', zipfile.ZIP_DEFLATED) as z:
+            for ds, rows in bundle.items():
+                cbuf = io.StringIO()
+                if rows:
+                    w = csv.DictWriter(cbuf, fieldnames=list(rows[0].keys()))
+                    w.writeheader(); w.writerows(rows)
+                else:
+                    cbuf.write('# No rows\n')
+                z.writestr(f'{ds}.csv', cbuf.getvalue())
+        zbuf.seek(0)
+        resp = HttpResponse(zbuf.getvalue(), content_type='application/zip')
+        resp['Content-Disposition'] = f'attachment; filename="{base_name}.zip"'
+        return resp
+
+    # PDF — use reportlab if installed, else fall back to JSON-with-pdf-name
+    try:
+        from reportlab.pdfgen import canvas
+        from reportlab.lib.pagesizes import letter
+        from reportlab.lib.units import inch
+        import io as _io
+        pdf_buf = _io.BytesIO()
+        pdf = canvas.Canvas(pdf_buf, pagesize=letter)
+        width, height = letter
+        y = height - 0.75 * inch
+        pdf.setFont('Helvetica-Bold', 16)
+        pdf.drawString(0.75 * inch, y, 'EK-SMS Compliance Export')
+        y -= 0.3 * inch
+        pdf.setFont('Helvetica', 10)
+        pdf.drawString(0.75 * inch, y, f'Generated: {timezone.now().isoformat()}')
+        y -= 0.4 * inch
+
+        for ds, rows in bundle.items():
+            if y < 1 * inch:
+                pdf.showPage(); y = height - 0.75 * inch
+            pdf.setFont('Helvetica-Bold', 12)
+            pdf.drawString(0.75 * inch, y, f'{ds.upper()} ({len(rows)} rows)')
+            y -= 0.25 * inch
+            pdf.setFont('Helvetica', 9)
+            for r in rows[:200]:  # cap per-page so we don't blow up the PDF
+                line = ', '.join(f'{k}={v}' for k, v in r.items())
+                if len(line) > 130:
+                    line = line[:127] + '…'
+                pdf.drawString(0.75 * inch, y, line)
+                y -= 0.18 * inch
+                if y < 0.75 * inch:
+                    pdf.showPage(); y = height - 0.75 * inch
+                    pdf.setFont('Helvetica', 9)
+            y -= 0.2 * inch
+        pdf.save()
+        pdf_buf.seek(0)
+        resp = HttpResponse(pdf_buf.getvalue(), content_type='application/pdf')
+        resp['Content-Disposition'] = f'attachment; filename="{base_name}.pdf"'
+        return resp
+    except ImportError:
+        # Graceful fallback — frontend should retry with json/csv
+        return JsonResponse({
+            'success': False,
+            'message': 'PDF export requires reportlab on the server. Use CSV or JSON.',
+        }, status=415)
+
+
+@csrf_exempt
+def api_lockdown(request):
+    """
+    GET  — return current lockdown state (read from AdminSetting).
+    POST — activate/deactivate lockdown.
+        body: { protocol: 'grade-lock'|'login-suspend'|'full-blackout',
+                action:   'activate'|'deactivate',
+                reason:   'optional text' }
+    Side-effects:
+      - Writes platform-wide lockdown state to AdminSetting (key='platform_lockdown')
+      - On 'grade-lock' activation: locks every unlocked Grade
+      - On 'login-suspend' / 'full-blackout' activation: deletes all UserToken
+        rows EXCEPT the calling superadmin's, terminating active sessions
+    """
+    actor = _get_authed_user(request)
+    if not actor or not actor.is_superuser:
+        return JsonResponse({'success': False, 'message': 'Superadmin access required.'}, status=403)
+
+    if request.method == 'GET':
+        try:
+            row = AdminSetting.objects.filter(key='platform_lockdown').order_by('-updated_at').first()
+            return JsonResponse({'success': True, 'state': row.value if row else None})
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+    try:
+        body = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+
+    protocol = (body.get('protocol') or '').strip()
+    action   = (body.get('action')   or 'activate').strip().lower()
+    reason   = (body.get('reason')   or '').strip()
+    valid    = ('grade-lock', 'login-suspend', 'full-blackout')
+
+    if action not in ('activate', 'deactivate'):
+        return JsonResponse({'success': False, 'message': "action must be 'activate' or 'deactivate'."}, status=400)
+
+    if action == 'activate' and protocol not in valid:
+        return JsonResponse({'success': False, 'message': f'protocol must be one of: {", ".join(valid)}'}, status=400)
+
+    affected = {'grades_locked': 0, 'sessions_terminated': 0}
+
+    if action == 'activate':
+        if protocol == 'grade-lock':
+            unlocked = Grade.objects.filter(is_locked=False)
+            affected['grades_locked'] = unlocked.count()
+            unlocked.update(is_locked=True, locked_at=timezone.now(), locked_by=actor)
+        if protocol in ('login-suspend', 'full-blackout'):
+            # Keep the activating superadmin authenticated so they can deactivate later
+            qs = UserToken.objects.exclude(user=actor)
+            affected['sessions_terminated'] = qs.count()
+            qs.delete()
+
+        state = {
+            'active': True, 'protocol': protocol, 'reason': reason,
+            'activated_at': timezone.now().isoformat(),
+            'activated_by': actor.username,
+        }
+    else:
+        state = {
+            'active': False, 'deactivated_at': timezone.now().isoformat(),
+            'deactivated_by': actor.username,
+        }
+
+    AdminSetting.objects.update_or_create(
+        user=actor, key='platform_lockdown',
+        defaults={'value': state},
+    )
+    _log_security_event(
+        'permission_changed' if action == 'activate' else 'profile_updated',
+        description=f'Lockdown {action} (protocol={protocol or "n/a"}, reason="{reason}")',
+        severity='high' if action == 'activate' else 'medium',
+        actor=actor, ip=request.META.get('REMOTE_ADDR'),
+        metadata={**state, 'affected': affected},
+    )
+    return JsonResponse({'success': True, 'state': state, 'affected': affected})
+
+
+@csrf_exempt
+def api_rbac_custom_roles(request):
+    """
+    GET  — list custom roles defined by the calling superadmin.
+    POST — create a new custom role.
+        body: { id, name, description, permissions: { ... } }
+    DELETE ?id=<id> — remove a custom role.
+    Custom roles live as a single AdminSetting row keyed 'rbac_custom_roles'
+    so we don't need a new model just for this UI feature.
+    """
+    actor = _get_authed_user(request)
+    if not actor or not actor.is_superuser:
+        return JsonResponse({'success': False, 'message': 'Superadmin access required.'}, status=403)
+
+    setting, _ = AdminSetting.objects.get_or_create(
+        user=actor, key='rbac_custom_roles',
+        defaults={'value': []},
+    )
+    roles = setting.value if isinstance(setting.value, list) else []
+
+    if request.method == 'GET':
+        return JsonResponse({'success': True, 'roles': roles})
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON.'}, status=400)
+        name = (body.get('name') or '').strip()
+        if not name:
+            return JsonResponse({'success': False, 'message': 'name is required.'}, status=400)
+        new_id = (body.get('id') or '').strip() or f"custom_{int(timezone.now().timestamp())}"
+        if any(r.get('id') == new_id for r in roles):
+            return JsonResponse({'success': False, 'message': 'A role with this id already exists.'}, status=409)
+        new_role = {
+            'id': new_id, 'name': name,
+            'description': (body.get('description') or '').strip(),
+            'permissions': body.get('permissions') or {},
+            'isCustom': True, 'isProtected': False,
+            'created_at': timezone.now().isoformat(),
+            'created_by': actor.username,
+        }
+        roles.append(new_role)
+        setting.value = roles
+        setting.save(update_fields=['value', 'updated_at'])
+        return JsonResponse({'success': True, 'role': new_role}, status=201)
+
+    if request.method == 'DELETE':
+        rid = request.GET.get('id') or ''
+        if not rid:
+            return JsonResponse({'success': False, 'message': 'id query parameter required.'}, status=400)
+        before = len(roles)
+        roles = [r for r in roles if r.get('id') != rid]
+        if len(roles) == before:
+            return JsonResponse({'success': False, 'message': 'Role not found.'}, status=404)
+        setting.value = roles
+        setting.save(update_fields=['value', 'updated_at'])
+        return JsonResponse({'success': True, 'remaining': len(roles)})
+
+    return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)

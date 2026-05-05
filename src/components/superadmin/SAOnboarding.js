@@ -210,7 +210,31 @@ export default function SAOnboarding({ schools: schoolsProp = [] }) {
       <div className="san-card">
         <div className="san-card-hdr">
           <div><h3 className="san-card-title">Registration Volume</h3><p className="san-card-sub">Submissions vs approvals over time</p></div>
-          <button className="san-card-action">View Report</button>
+          <button
+            className="san-card-action"
+            onClick={() => {
+              if (!regVolData) return;
+              const rows = regVolData.labels.map((m, i) => ({
+                month: m,
+                submissions: regVolData.submissions[i] ?? 0,
+                approvals:   regVolData.approvals[i] ?? 0,
+              }));
+              const headers = Object.keys(rows[0] || { month:'', submissions:0, approvals:0 });
+              const csv = [
+                headers.join(','),
+                ...rows.map(r => headers.map(h => `"${String(r[h] ?? '').replace(/"/g, '""')}"`).join(',')),
+              ].join('\n');
+              const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+              const url  = URL.createObjectURL(blob);
+              const a    = document.createElement('a');
+              a.href = url;
+              a.download = `ek-sms-registration-volume-${new Date().toISOString().slice(0,10)}.csv`;
+              document.body.appendChild(a); a.click(); a.remove();
+              URL.revokeObjectURL(url);
+            }}
+          >
+            View Report
+          </button>
         </div>
         <div className="san-card-body">
           {regVolData ? (

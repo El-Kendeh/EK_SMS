@@ -203,6 +203,97 @@ function PermissionEditor({ role, perms, onPermsChange, onBack, onSave }) {
 }
 
 /* ================================================================
+   CreateRoleModal — adds a new custom role via /api/sa/custom-roles/
+   ================================================================ */
+function CreateRoleModal({ existing, onClose, onCreated }) {
+  const [name, setName]               = useState('');
+  const [description, setDescription] = useState('');
+  const [submitting, setSubmitting]   = useState(false);
+  const [error, setError]             = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!name.trim()) { setError('Role name is required'); return; }
+    if (existing.some(r => r.name.toLowerCase() === name.trim().toLowerCase())) {
+      setError('A role with this name already exists');
+      return;
+    }
+    setSubmitting(true); setError('');
+    try {
+      const res = await ApiClient.post('/api/sa/custom-roles/', {
+        name: name.trim(),
+        description: description.trim(),
+        permissions: {},
+      });
+      if (res?.success && res.role) {
+        onCreated(res.role);
+      } else {
+        setError(res?.message || 'Failed to create role');
+      }
+    } catch (err) {
+      setError(err?.message || 'Failed to create role');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <form
+        onSubmit={handleSubmit}
+        className="sa-card"
+        style={{ width: '100%', maxWidth: 460, padding: 28 }}
+      >
+        <h2 style={{ margin: 0, marginBottom: 6, fontSize: '1.0625rem', fontWeight: 800 }}>Create Custom Role</h2>
+        <p style={{ margin: 0, marginBottom: 20, fontSize: '0.78125rem', color: 'var(--sa-text-2)' }}>
+          Add a new role you can later assign permissions to.
+        </p>
+
+        <label style={{ display: 'block', fontSize: '0.78125rem', fontWeight: 600, color: 'var(--sa-text-2)', marginBottom: 6 }}>
+          Role Name <span style={{ color: 'var(--sa-red)' }}>*</span>
+        </label>
+        <input
+          autoFocus
+          type="text"
+          value={name}
+          onChange={e => { setName(e.target.value); setError(''); }}
+          placeholder="e.g. Subject Coordinator"
+          maxLength={60}
+          style={{ width: '100%', boxSizing: 'border-box', padding: '9px 12px', borderRadius: 8, fontSize: '0.875rem', background: 'var(--sa-card-bg2)', border: '1px solid var(--sa-border)', color: 'var(--sa-text)', outline: 'none', marginBottom: 14 }}
+        />
+
+        <label style={{ display: 'block', fontSize: '0.78125rem', fontWeight: 600, color: 'var(--sa-text-2)', marginBottom: 6 }}>
+          Description
+        </label>
+        <textarea
+          value={description}
+          onChange={e => setDescription(e.target.value)}
+          placeholder="What can this role do?"
+          rows={3}
+          maxLength={300}
+          style={{ width: '100%', boxSizing: 'border-box', padding: '9px 12px', borderRadius: 8, fontSize: '0.875rem', background: 'var(--sa-card-bg2)', border: '1px solid var(--sa-border)', color: 'var(--sa-text)', outline: 'none', marginBottom: 14, fontFamily: 'inherit', resize: 'vertical' }}
+        />
+
+        {error && (
+          <p style={{ margin: '0 0 14px', color: 'var(--sa-red)', fontSize: '0.8125rem' }}>{error}</p>
+        )}
+
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button type="button" className="sa-gov-cancel-btn" style={{ flex: 1 }} onClick={onClose} disabled={submitting}>Cancel</button>
+          <button type="submit" className="sa-gov-save-btn" style={{ flex: 1 }} disabled={submitting}>
+            {submitting ? 'Creating…' : 'Create Role'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+
+/* ================================================================
    SAGovernance — Role list
    ================================================================ */
 export default function SAGovernance() {
@@ -212,8 +303,16 @@ export default function SAGovernance() {
   const [perms,        setPerms]        = useState(DEFAULT_PERMS);
   const [savedToast,   setSavedToast]   = useState(false);
   const [roleCounts,   setRoleCounts]   = useState({});
+  const [customRoles,  setCustomRoles]  = useState([]);
+  const [showCreate,   setShowCreate]   = useState(false);
+  const [toast,        setToast]        = useState(null);
 
-  /* Load saved permissions + real user counts on mount */
+  const flashToast = (msg, type = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  /* Load saved permissions + real user counts + custom roles on mount */
   useEffect(() => {
     ApiClient.get('/api/admin-settings/').then(data => {
       if (data.success && data.settings?.rbac_role_permissions) {
@@ -221,7 +320,7 @@ export default function SAGovernance() {
       }
     }).catch(() => {});
 
-    ApiClient.get('/api/get-users/').then(data => {
+    ApiClient.get('/api/users/').then(data => {
       if (data.success && Array.isArray(data.users)) {
         const counts = {};
         data.users.forEach(u => {
@@ -230,13 +329,28 @@ export default function SAGovernance() {
         setRoleCounts(counts);
       }
     }).catch(() => {});
+
+    ApiClient.get('/api/sa/custom-roles/').then(d => {
+      if (d?.success && Array.isArray(d.roles)) setCustomRoles(d.roles);
+    }).catch(() => {});
   }, []);
 
-  /* Build roles with live user counts */
-  const ROLES = useMemo(
-    () => ROLE_DEFS.map(r => ({ ...r, users: roleCounts[r.apiRole] || 0 })),
-    [roleCounts],
-  );
+  /* Build roles with live user counts; merge in custom roles */
+  const ROLES = useMemo(() => {
+    const baseRoles = ROLE_DEFS.map(r => ({
+      ...r, users: roleCounts[r.apiRole] || 0,
+    }));
+    const extras = customRoles.map(r => ({
+      id: r.id,
+      name: r.name,
+      desc: r.description || 'Custom role.',
+      isProtected: false,
+      isCustom: true,
+      apiRole: r.name,
+      users: roleCounts[r.name] || 0,
+    }));
+    return [...baseRoles, ...extras];
+  }, [roleCounts, customRoles]);
 
   const filteredRoles = useMemo(
     () => ROLES.filter(r => r.name.toLowerCase().includes(search.toLowerCase())),
@@ -290,6 +404,18 @@ export default function SAGovernance() {
   return (
     <div style={{ position: 'relative' }}>
       {savedToast && <div className="sa-toast sa-toast--success">Permissions saved successfully</div>}
+      {toast && <div className={`sa-toast sa-toast--${toast.type}`}>{toast.msg}</div>}
+      {showCreate && (
+        <CreateRoleModal
+          existing={ROLES}
+          onClose={() => setShowCreate(false)}
+          onCreated={(role) => {
+            setCustomRoles(prev => [...prev, role]);
+            setShowCreate(false);
+            flashToast(`Role "${role.name}" created`);
+          }}
+        />
+      )}
 
       {/* Page head */}
       <div className="sa-page-head">
@@ -297,7 +423,14 @@ export default function SAGovernance() {
           <h1 className="sa-page-title">Role-Based Access</h1>
           <p className="sa-page-sub">Manage roles, permissions, and access controls</p>
         </div>
-        <button className="sa-gov-fab" aria-label="Create new role"><IcAdd /></button>
+        <button
+          className="sa-gov-fab"
+          aria-label="Create new role"
+          title="Create new role"
+          onClick={() => setShowCreate(true)}
+        >
+          <IcAdd />
+        </button>
       </div>
 
       {/* Stats */}

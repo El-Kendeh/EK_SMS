@@ -56,6 +56,25 @@
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 1.5rem;
+  width: 100%;
+}
+
+/* Make sure the landing page actually fills the viewport width on
+   laptops/desktops. Previously the page was constrained to 1200px which
+   on 1366px+ screens read as a "shrunk" floating column with empty bands
+   on either side. Open up at common laptop breakpoints. */
+.lp {
+  width: 100%;
+  min-height: 100vh;
+}
+@media (min-width: 1280px) {
+  .lp-container { max-width: 1280px; padding: 0 2rem; }
+}
+@media (min-width: 1440px) {
+  .lp-container { max-width: 1360px; padding: 0 2.5rem; }
+}
+@media (min-width: 1680px) {
+  .lp-container { max-width: 1500px; padding: 0 3rem; }
 }
 
 /* ---- Gradient text ---- */
