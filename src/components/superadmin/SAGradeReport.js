@@ -48,21 +48,179 @@ function statusStyle(s) {
   return                                            { color: 'var(--sa-amber)',  bg: 'var(--sa-amber-dim)'  };
 }
 
-/* ---- CSV export helper ---- */
-function exportCSV(rows, filename) {
-  if (!rows.length) return;
-  const headers = Object.keys(rows[0]);
-  const csv = [
-    headers.join(','),
-    ...rows.map(r => headers.map(h => `"${String(r[h] ?? '').replace(/"/g, '""')}"`).join(',')),
+/* ---- Export helpers ---- */
+function escapePdfText(text) {
+  return String(text || '')
+    .replace(/\\/g, '\\\\')
+    .replace(/\(/g, '\\(')
+    .replace(/\)/g, '\\)')
+    .replace(/\r\n|\r|\n/g, ' ');
+}
+
+function buildPdfDocument(rows) {
+  const date = new Date().toLocaleDateString('en-GB');
+  const title = 'Pruh SMS Grade Audit Export';
+  const subtitle = `Generated ${date}`;
+  const headers = ['Request ID', 'Date', 'Time', 'School', 'Subject', 'Old Grade', 'New Grade', 'Actor', 'Status', 'Flagged'];
+  const displayRows = rows.slice(0, 38);
+  const lines = [
+    '0 0.18 0.55 rg',
+    '40 744 18 18 re',
+    'f',
+    'BT',
+    '/F1 22 Tf',
+    '64 760 Td',
+    `(${escapePdfText('Pruh SMS')}) Tj`,
+    '0 -28 Td',
+    '/F1 12 Tf',
+    `(${escapePdfText('Grade Audit Export')}) Tj`,
+    '0 -20 Td',
+    `(${escapePdfText(subtitle)}) Tj`,
+    '0 -24 Td',
+    `(${escapePdfText('────────────────────────────────────────────────────────────────────────────────────────')}) Tj`,
+    '0 -20 Td',
+    `(${escapePdfText(headers.join(' | '))}) Tj`,
+  ];
+
+  displayRows.forEach(r => {
+    const lineText = [
+      r.id,
+      r.date,
+      r.time,
+      r.school,
+      r.subject,
+      r.oldGrade,
+      r.newGrade,
+      r.actor,
+      r.status,
+      r.isFlag ? 'Yes' : 'No',
+    ].map(escapePdfText).join(' | ');
+    lines.push('0 -18 Td');
+    lines.push(`(${lineText}) Tj`);
+  });
+
+  if (rows.length > displayRows.length) {
+    lines.push('0 -20 Td');
+    lines.push(`(${escapePdfText(`Note: ${rows.length - displayRows.length} additional rows not included`)}) Tj`);
+  }
+
+  lines.push('ET');
+
+  const stream = lines.join('\n');
+  const pdfParts = [];
+  pdfParts.push('%PDF-1.3');
+  pdfParts.push('1 0 obj');
+  pdfParts.push('<< /Type /Catalog /Pages 2 0 R >>');
+  pdfParts.push('endobj');
+  pdfParts.push('2 0 obj');
+  pdfParts.push('<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
+  pdfParts.push('endobj');
+  pdfParts.push('3 0 obj');
+  pdfParts.push('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>');
+  pdfParts.push('endobj');
+  pdfParts.push('4 0 obj');
+  pdfParts.push(`<< /Length ${stream.length} >>`);
+  pdfParts.push('stream');
+  pdfParts.push(stream);
+  pdfParts.push('endstream');
+  pdfParts.push('endobj');
+  pdfParts.push('5 0 obj');
+  pdfParts.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
+  pdfParts.push('endobj');
+  pdfParts.push('xref');
+
+  let offset = 0;
+  const positions = [];
+  const body = pdfParts.map(part => {
+    positions.push(offset);
+    const text = `${part}\n`;
+    offset += new TextEncoder().encode(text).length;
+    return text;
+  }).join('');
+
+  const xrefBase = offset;
+  const xrefLines = ['0 6', '0000000000 65535 f '];
+  positions.forEach(pos => {
+    xrefLines.push(String(pos).padStart(10, '0') + ' 00000 n ');
+  });
+
+  const trailer = [
+    'trailer',
+    '<< /Size 6 /Root 1 0 R >>',
+    'startxref',
+    String(xrefBase),
+    '%%EOF',
   ].join('\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href     = url;
+
+  return body + xrefLines.join('\n') + '\n' + trailer;
+}
+
+function exportExcelXml(rows, filename) {
+  const date = new Date().toLocaleDateString('en-GB');
+  const headers = ['Request ID', 'Date', 'Time', 'School', 'Subject', 'Old Grade', 'New Grade', 'Actor', 'Status', 'Flagged'];
+  const rowXml = rows.map(r => {
+    return `      <Row>${headers.map(h => {
+      const value = r[h] ?? '';
+      return `<Cell><Data ss:Type="String">${String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')}</Data></Cell>`;
+    }).join('')}</Row>`;
+  }).join('\n');
+
+  const xml = [`<?xml version="1.0" encoding="UTF-8"?>`,
+    '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">',
+    '  <Worksheet ss:Name="Audit">',
+    '    <Table>',
+    '      <Row><Cell><Data ss:Type="String">Pruh SMS Grade Audit Export</Data></Cell></Row>',
+    `      <Row><Cell><Data ss:Type="String">Generated</Data></Cell><Cell><Data ss:Type="String">${date}</Data></Cell></Row>`,
+    '      <Row/>',
+    '      <Row>' + headers.map(h => `<Cell><Data ss:Type="String">${h}</Data></Cell>`).join('') + '</Row>',
+    rowXml,
+    '    </Table>',
+    '  </Worksheet>',
+    '</Workbook>',
+  ].join('\n');
+
+  const blob = new Blob([xml], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
   a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+function exportAuditFiles(rows) {
+  if (!rows.length) {
+    window.alert('No audit records available for export.');
+    return;
+  }
+
+  const auditRows = rows.map(r => ({
+    id:       r.id,
+    date:     r.date,
+    time:     r.time,
+    school:   r.school,
+    subject:  r.subject,
+    oldGrade: r.oldGrade,
+    newGrade: r.newGrade,
+    actor:    r.actor,
+    status:   r.status,
+    isFlag:   r.isFlag ? 'Yes' : 'No',
+  }));
+
+  const today = new Date().toISOString().slice(0, 10);
+  exportExcelXml(auditRows, `pruh-sms-grade-audit-${today}.xls`);
+
+  const pdfContent = buildPdfDocument(auditRows);
+  const pdfBlob = new Blob([pdfContent], { type: 'application/pdf' });
+  const pdfUrl = URL.createObjectURL(pdfBlob);
+  const pdfLink = document.createElement('a');
+  pdfLink.href = pdfUrl;
+  pdfLink.download = `pruh-sms-grade-audit-${today}.pdf`;
+  pdfLink.click();
+  URL.revokeObjectURL(pdfUrl);
 }
 
 /* ============================================================
@@ -164,21 +322,7 @@ export default function SAGradeReport({ onViewRequests, onViewDetail }) {
           className="sa-btn sa-btn--primary"
           style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}
           aria-label="Export audit report"
-          onClick={() => exportCSV(
-            recentLogs.map(r => ({
-              'Request ID': r.id,
-              'Date':       r.date,
-              'Time':       r.time,
-              'School':     r.school,
-              'Subject':    r.subject,
-              'Old Grade':  r.oldGrade,
-              'New Grade':  r.newGrade,
-              'Actor':      r.actor,
-              'Status':     r.status,
-              'Flagged':    r.isFlag ? 'Yes' : 'No',
-            })),
-            `ek-sms-grade-audit-${new Date().toISOString().slice(0,10)}.csv`
-          )}
+          onClick={() => exportAuditFiles(recentLogs)}
         >
           <span style={{ width: 16, height: 16, display: 'flex' }}><IcExport /></span>
           <span>Export Audit</span>
