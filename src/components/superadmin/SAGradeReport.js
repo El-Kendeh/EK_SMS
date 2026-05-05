@@ -59,7 +59,6 @@ function escapePdfText(text) {
 
 function buildPdfDocument(rows) {
   const date = new Date().toLocaleDateString('en-GB');
-  const title = 'Pruh SMS Grade Audit Export';
   const subtitle = `Generated ${date}`;
   const headers = ['Request ID', 'Date', 'Time', 'School', 'Subject', 'Old Grade', 'New Grade', 'Actor', 'Status', 'Flagged'];
   const displayRows = rows.slice(0, 38);
