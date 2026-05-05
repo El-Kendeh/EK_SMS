@@ -2272,9 +2272,11 @@ def api_broadcast_alerts(request):
             raw_audience = (data.get('audience') or 'all')
             audience_norm = str(raw_audience).strip().lower()
             audience_map = {
-                'all schools': 'all', 'all': 'all',
+                'all schools': 'all', 'all': 'all', 'all schools': 'all',
                 'school admins': 'school_admins', 'school_admins': 'school_admins',
-                'super admins': 'superadmins',  'superadmins': 'superadmins',
+                'super admins': 'superadmins', 'superadmins': 'superadmins',
+                'admin staff': 'superadmins', 'admin_staff': 'superadmins',
+                'region: western': 'all', 'region: eastern': 'all', 'region: northern': 'all',  # For now, treat regions as all
             }
             audience = audience_map.get(audience_norm, 'all')
             severity = (data.get('severity') or 'info').lower()
@@ -2327,6 +2329,110 @@ def api_broadcast_alerts(request):
                 logging.getLogger('django').warning(
                     f'Broadcast fan-out partial failure: {fan_exc}'
                 )
+
+            # Send emails to target recipients using Resend API
+            try:
+                import resend
+                from django.conf import settings
+
+                resend_api_key = getattr(settings, 'RESEND_API_KEY', '')
+                default_from = getattr(settings, 'DEFAULT_FROM_EMAIL', 'EK-SMS <noreply@elkendeh.com>')
+
+                if resend_api_key:
+                    resend.api_key = resend_api_key
+                    logger = logging.getLogger('django')
+
+                    # Collect email addresses based on audience
+                    recipient_emails = []
+                    if audience == 'all':
+                        # Get all school admin emails
+                        for sa_obj in SchoolAdmin.objects.filter(is_active=True).select_related('user'):
+                            if sa_obj.user.email:
+                                recipient_emails.append(sa_obj.user.email)
+                        # Get all superadmin emails
+                        for su in User.objects.filter(is_superuser=True, is_active=True):
+                            if su.email and su.email not in recipient_emails:
+                                recipient_emails.append(su.email)
+                    elif audience == 'school_admins':
+                        for sa_obj in SchoolAdmin.objects.filter(is_active=True).select_related('user'):
+                            if sa_obj.user.email:
+                                recipient_emails.append(sa_obj.user.email)
+                    elif audience == 'superadmins':
+                        for su in User.objects.filter(is_superuser=True, is_active=True):
+                            if su.email:
+                                recipient_emails.append(su.email)
+                    else:  # specific_school
+                        if target_school:
+                            for sa_obj in SchoolAdmin.objects.filter(
+                                school=target_school, is_active=True
+                            ).select_related('user'):
+                                if sa_obj.user.email:
+                                    recipient_emails.append(sa_obj.user.email)
+
+                    # Remove duplicates
+                    recipient_emails = list(set(recipient_emails))
+
+                    if recipient_emails:
+                        # Create HTML email content
+                        severity_colors = {
+                            'info': '#3b82f6',
+                            'warning': '#f59e0b',
+                            'critical': '#ef4444'
+                        }
+                        severity_color = severity_colors.get(severity, '#6b7280')
+
+                        html_content = f"""
+                        <div style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border: 1px solid #f0f0f0;">
+                          <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 40px 30px; text-align: center;">
+                            <h1 style="color: #6366f1; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.01em;">PRUH-SMS</h1>
+                            <p style="color: #94a3b8; margin: 8px 0 0; font-size: 14px; font-weight: 500;">Elkendeh School Management System</p>
+                          </div>
+                          <div style="padding: 40px 35px;">
+                            <div style="text-align: center; margin-bottom: 30px;">
+                              <span style="background-color: {severity_color}; color: white; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+                                {severity.title()}
+                              </span>
+                            </div>
+                            <h2 style="color: #1e293b; font-size: 22px; font-weight: 700; margin: 0 0 20px; text-align: center;">{title}</h2>
+                            <div style="color: #374151; font-size: 16px; line-height: 1.6; margin-bottom: 30px;">
+                              {message.replace(chr(10), '<br>')}
+                            </div>
+                            <div style="background-color: #f8fafc; border-left: 4px solid {severity_color}; padding: 20px; margin-bottom: 30px;">
+                              <p style="color: #64748b; font-size: 14px; margin: 0; font-style: italic;">
+                                This is an official broadcast message from the PRUH-SMS system administration.
+                              </p>
+                            </div>
+                          </div>
+                          <div style="background-color: #f8fafc; padding: 24px 30px; text-align: center; border-top: 1px solid #f1f5f9;">
+                            <p style="color: #64748b; font-size: 12px; margin: 0; font-weight: 500;">
+                              &copy; 2026 PRUH-SMS · Elkendeh School Management System
+                            </p>
+                          </div>
+                        </div>
+                        """
+
+                        # Send email to all recipients
+                        resend_response = resend.Emails.send({
+                            "from": default_from,
+                            "to": recipient_emails,
+                            "subject": f"PRUH-SMS Broadcast: {title}",
+                            "html": html_content,
+                            "headers": {
+                                "X-Entity-Ref-ID": str(uuid.uuid4()),
+                                "X-Broadcast-ID": str(broadcast.id)
+                            }
+                        })
+
+                        logger.info(f"Broadcast email sent successfully to {len(recipient_emails)} recipients. Response: {resend_response}")
+                    else:
+                        logger.warning(f"No email addresses found for broadcast audience: {audience}")
+                else:
+                    logger.warning("RESEND_API_KEY not configured - broadcast emails not sent")
+
+            except Exception as email_exc:
+                logger.error(f'Failed to send broadcast emails: {str(email_exc)}', exc_info=True)
+                # Don't fail the entire request if email sending fails
+                # The broadcast was still created and notifications sent
 
             _log_security_event(
                 'broadcast_sent',
