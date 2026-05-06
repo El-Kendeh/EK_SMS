@@ -21,11 +21,11 @@ class Migration(migrations.Migration):
         migrations.RunSQL(
             sql="""
                 ALTER TABLE eksms_core_student
-                ADD COLUMN IF NOT EXISTS place_of_birth VARCHAR(200) NULL;
+                ADD COLUMN place_of_birth VARCHAR(200) NULL;
             """,
             reverse_sql="""
                 ALTER TABLE eksms_core_student
-                DROP COLUMN IF EXISTS place_of_birth;
+                DROP COLUMN place_of_birth;
             """,
         ),
     ]
