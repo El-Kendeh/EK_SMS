@@ -35,15 +35,16 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
         
         # Content Security Policy Header
         # Note: This complements the meta tag in the HTML (meta tags have limitations)
+        # FIXED: Added blob: for dynamic script generation and 'unsafe-eval' for bundled code
         csp_header = (
             "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline' https://embed.tawk.to https://*.tawk.to https://vercel.live chrome-extension:; "
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.tawk.to; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://embed.tawk.to https://*.tawk.to https://vercel.live https://*.vercel.live chrome-extension:; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.tawk.to https://vercel.live; "
             "img-src 'self' data: https: blob: http://localhost:8000 http://127.0.0.1:8000; "
             "font-src 'self' https://fonts.gstatic.com https://*.tawk.to https://*.vercel.live https://vercel.live; "
             "media-src 'self' data:; "
-            "connect-src 'self' http://localhost:8000 http://web:8000 https://ek-sms-backend.onrender.com https://backend.pruhsms.africa https://pruhsms.africa https://*.tawk.to wss://*.tawk.to https://vercel.live https://*.vercel.app wss://*.pusher.com wss://ws-us3.pusher.com https://*.pusher.com; "
-            "frame-src https://tawk.to https://*.tawk.to https://vercel.live; "
+            "connect-src 'self' http://localhost:8000 http://web:8000 https://ek-sms-backend.onrender.com https://backend.pruhsms.africa https://pruhsms.africa https://*.tawk.to wss://*.tawk.to https://vercel.live https://*.vercel.live https://*.vercel.app wss://*.pusher.com wss://ws-us3.pusher.com https://*.pusher.com; "
+            "frame-src https://tawk.to https://*.tawk.to https://vercel.live https://*.vercel.live; "
             "frame-ancestors 'none'; "
             "base-uri 'self'; "
             "form-action 'self'"

@@ -150,6 +150,57 @@ CSRF_TRUSTED_ORIGINS = [
     "https://ek-sms-one.vercel.app",
 ]
 
+# ── Content Security Policy (CSP) ────────────────────────────────────────────
+# This allows blob scripts and Vercel Live for development tools
+# Adjust these values based on your production needs
+CSP_DEFAULT_SRC = ("'self'",)
+CSP_SCRIPT_SRC = (
+    "'self'",
+    "'unsafe-inline'",      # Needed for inline React scripts
+    "'unsafe-eval'",        # Needed for bundled code
+    "blob:",                # Allow dynamic script generation
+    "https://embed.tawk.to",
+    "https://*.tawk.to",
+    "https://vercel.live",
+    "https://*.vercel.live",
+    "chrome-extension:",    # Allow Chrome extensions (for development)
+)
+CSP_STYLE_SRC = (
+    "'self'",
+    "'unsafe-inline'",      # Needed for inline styles
+    "https://fonts.googleapis.com",
+    "https://*.tawk.to",
+    "https://vercel.live",
+)
+CSP_FONT_SRC = (
+    "'self'",
+    "https://fonts.gstatic.com",
+    "https://*.tawk.to",
+    "https://vercel.live",
+    "https://*.vercel.live",
+)
+CSP_IMG_SRC = (
+    "'self'",
+    "data:",                # Allow data URIs for images
+    "https:",               # Allow all https images
+    "blob:",
+)
+CSP_CONNECT_SRC = (
+    "'self'",
+    "https://vercel.live",
+    "https://*.vercel.live",
+    "https://backend.pruhsms.africa",
+    "https://ek-sms-one.vercel.app",
+    "https://*.tawk.to",
+)
+CSP_FRAME_SRC = (
+    "'self'",
+    "https://*.tawk.to",
+    "https://vercel.live",
+)
+CSP_OBJECT_SRC = ("'none'",)
+CSP_BASE_URI = ("'self'",)
+
 # ── Email Configuration (read from .env) ──────────────────────────────────────
 EMAIL_BACKEND     = config('EMAIL_BACKEND',      default='django.core.mail.backends.smtp.EmailBackend')
 EMAIL_HOST        = config('EMAIL_HOST',         default='smtp.gmail.com')
