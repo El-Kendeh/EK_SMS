@@ -3327,6 +3327,7 @@ def api_students(request):
         transport_route     = body.get('transport_route', '').strip()
         sen_notes           = body.get('sen_notes', '').strip()
         sen_iep             = _parse_bool(body.get('sen_iep', 'false'))
+        sen_tier            = body.get('sen_tier', '').strip()
         place_of_birth       = body.get('place_of_birth', '').strip()
         nationality          = body.get('nationality', '').strip()
         religion             = body.get('religion', '').strip()
@@ -3341,6 +3342,13 @@ def api_students(request):
         emergency_address      = body.get('emergency_address', '').strip()
         doctor_name          = body.get('doctor_name', '').strip()
         doctor_phone         = body.get('doctor_phone', '').strip()
+        is_critical_medical  = _parse_bool(body.get('is_critical_medical', 'false'))
+        vaccinations         = body.get('vaccinations', {}) or {}
+        if isinstance(vaccinations, str):
+            try:
+                vaccinations = json.loads(vaccinations)
+            except:
+                vaccinations = {}
         documents_birth_certificate      = _parse_bool(body.get('documents_birth_certificate', False))
         documents_passport_photo         = _parse_bool(body.get('documents_passport_photo', False))
         documents_previous_school_report = _parse_bool(body.get('documents_previous_school_report', False))
@@ -3423,11 +3431,12 @@ def api_students(request):
             disciplinary_history=disciplinary_history,
             disciplinary_notes=disciplinary_notes if disciplinary_history else '',
             blood_type=blood_type, allergies=allergies, medical_notes=medical_notes,
+            is_critical_medical=is_critical_medical, vaccinations=vaccinations,
             status=status,
             student_type=student_type, fee_category=fee_category, home_language=home_language,
             intake_term=intake_term, is_repeater=is_repeater,
             middle_name=middle_name, hostel_house=hostel_house,
-            transport_route=transport_route, sen_notes=sen_notes, sen_iep=sen_iep,
+            transport_route=transport_route, sen_notes=sen_notes, sen_iep=sen_iep, sen_tier=sen_tier,
             place_of_birth=place_of_birth, nationality=nationality, religion=religion,
             home_address=home_address, city=city,
             previous_school=previous_school, last_class_completed=last_class_completed,
@@ -3443,6 +3452,34 @@ def api_students(request):
             documents_other=documents_other,
             **(dict(admission_date=enrollment_date_str) if enrollment_date_str else {}),
         )
+
+        # Handle documents from FormData
+        document_mappings = {
+            'birth_certificate': 'documents_birth_certificate',
+            'passport_photo': 'documents_passport_photo',
+            'previous_report': 'documents_previous_school_report',
+            'transfer_letter': 'documents_transfer_letter',
+            'medical_report': 'documents_medical_report',
+            'national_id': 'documents_other',  # map to other
+            'photo_consent': 'documents_other',
+            'sibling_relationship': 'documents_other',
+            'other': 'documents_other',
+        }
+        for doc_key, field_name in document_mappings.items():
+            file_key = f'doc_{doc_key}'
+            verified_key = f'doc_{doc_key}_verified'
+            file = request.FILES.get(file_key)
+            verified = _parse_bool(body.get(verified_key, 'false'))
+            if file or verified:
+                setattr(student, field_name, True)
+                if file:
+                    StudentDocument.objects.create(
+                        student=student,
+                        document_type=doc_key,
+                        file=file,
+                    )
+
+        student.save()
 
         if document_file:
             if not document_type:

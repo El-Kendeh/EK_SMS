@@ -330,6 +330,7 @@ class Student(models.Model):
     # Special Educational Needs
     sen_notes            = models.TextField(blank=True)
     sen_iep              = models.BooleanField(default=False)
+    sen_tier             = models.CharField(max_length=20, blank=True, help_text="SEN support tier")
     # Personal / biographical
     place_of_birth       = models.CharField(max_length=200, blank=True)
     nationality          = models.CharField(max_length=100, blank=True)
@@ -349,6 +350,8 @@ class Student(models.Model):
     blood_type           = models.CharField(max_length=5, blank=True, help_text="e.g., A+, O-")
     allergies            = models.TextField(blank=True, help_text="Known allergies")
     medical_notes        = models.TextField(blank=True, help_text="General medical notes / conditions")
+    is_critical_medical  = models.BooleanField(default=False, help_text="Requires critical medical attention")
+    vaccinations         = models.JSONField(default=dict, blank=True, help_text="Vaccination records {vaccine: date}")
     doctor_name          = models.CharField(max_length=200, blank=True)
     doctor_phone         = models.CharField(max_length=20, blank=True)
     # Admission documents checklist
