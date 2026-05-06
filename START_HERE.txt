@@ -1,0 +1,294 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                                                                            ║
+║                         🚨 EK-SMS CRITICAL FIX 🚨                           ║
+║                                                                            ║
+║               Your backend is returning 500 errors. Fix time: ~10 min      ║
+║                                                                            ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+WHAT'S WRONG?
+═════════════════════════════════════════════════════════════════════════════
+
+Your users are seeing these errors:
+
+  ❌ API Error: 500 Internal Server Error
+     "Unknown column 'eksms_core_student.place_of_birth' in 'field list'"
+     
+  ❌ Browser Console Errors: CSP Violations
+     "Refused to load the script 'blob:...' because it violates the CSP directive"
+     "Refused to load the font from 'https://vercel.live/...' because it violates CSP"
+
+Affected endpoints:
+  • https://backend.pruhsms.africa/api/grade-alerts/
+  • https://backend.pruhsms.africa/api/users/
+  • https://backend.pruhsms.africa/api/school/students/
+
+WHAT'S THE FIX?
+═════════════════════════════════════════════════════════════════════════════
+
+Two simple fixes, total ~10 minutes:
+
+1️⃣  Apply a missing database migration (5 min)
+2️⃣  Add CSP middleware to Django (5 min)
+
+IMMEDIATE ACTION (DO THIS NOW)
+═════════════════════════════════════════════════════════════════════════════
+
+👉 READ THIS FIRST: CRITICAL_FIX_PLAN.md
+
+Then follow ONE of these:
+
+┌─ OPTION A: Automated Fix (Easiest) ────────────────────────────────────────┐
+│                                                                             │
+│  SSH to your Ubuntu server and run:                                        │
+│                                                                             │
+│    cd /path/to/ek-sms                                                      │
+│    bash UBUNTU_FIX_MIGRATIONS.sh                                           │
+│                                                                             │
+│  The script will:                                                          │
+│    ✓ Backup your database                                                  │
+│    ✓ Apply the migration                                                   │
+│    ✓ Verify the fix worked                                                 │
+│    ✓ Restart Django                                                        │
+│                                                                             │
+│  This is the safest approach. The script asks for confirmation before      │
+│  applying anything.                                                        │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─ OPTION B: Manual Fix (Copy-Paste) ───────────────────────────────────────┐
+│                                                                             │
+│  Follow step-by-step instructions:                                         │
+│                                                                             │
+│    👉 READ: QUICK_FIX_STEPS.sh                                            │
+│                                                                             │
+│  Copy each command and paste it into your terminal.                       │
+│                                                                             │
+│  Takes ~5 minutes, gives you more control.                                │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+STEP-BY-STEP GUIDE
+═════════════════════════════════════════════════════════════════════════════
+
+FIX 1: Database Migration
+─────────────────────────────────────────────────────────────────────────────
+
+If using automated script:
+
+  $ bash UBUNTU_FIX_MIGRATIONS.sh
+  
+  Follow the prompts. It will handle everything.
+
+If using manual steps:
+
+  1. SSH to Ubuntu server
+     $ ssh user@your-server-ip
+
+  2. Navigate to project
+     $ cd /path/to/ek-sms
+     $ source venv/bin/activate
+
+  3. Apply migration
+     $ cd eksms
+     $ python manage.py migrate eksms_core
+
+  4. Verify column exists
+     $ python manage.py dbshell
+     mysql> USE eksms_db;
+     mysql> SHOW COLUMNS FROM eksms_core_student WHERE Field='place_of_birth';
+     
+     Should see: Field | place_of_birth | Type | varchar(200) | ...
+
+  5. Restart Django
+     $ sudo systemctl restart gunicorn
+     $ sleep 5
+     $ sudo systemctl status gunicorn
+
+FIX 2: Add CSP Middleware
+─────────────────────────────────────────────────────────────────────────────
+
+File to edit: eksms/eksms/settings.py
+
+Find this section (around line 40-60):
+
+  MIDDLEWARE = [
+      'django.middleware.security.SecurityMiddleware',
+      ...
+      'django.middleware.clickjacking.XFrameOptionsMiddleware',
+  ]
+
+Add this line at the END of the list:
+
+  'eksms.csp_middleware.CSPMiddleware',
+
+Full result should look like:
+
+  MIDDLEWARE = [
+      'django.middleware.security.SecurityMiddleware',
+      'django.contrib.sessions.middleware.SessionMiddleware',
+      'django.middleware.common.CommonMiddleware',
+      'django.middleware.csrf.CsrfViewMiddleware',
+      'django.contrib.auth.middleware.AuthenticationMiddleware',
+      'django.contrib.messages.middleware.MessageMiddleware',
+      'django.middleware.clickjacking.XFrameOptionsMiddleware',
+      'eksms.csp_middleware.CSPMiddleware',  # ← ADD THIS
+  ]
+
+Then restart Django:
+
+  $ sudo systemctl restart gunicorn
+  $ sleep 5
+  $ sudo systemctl status gunicorn
+
+VERIFY THE FIX
+═════════════════════════════════════════════════════════════════════════════
+
+Test 1: Database fix
+─────────────────────
+
+  $ python manage.py shell
+  >>> from eksms_core.models import Student
+  >>> Student.objects.values('place_of_birth').first()
+  # Should return data or None (not an error)
+
+Test 2: API endpoints
+─────────────────────
+
+  $ curl -H "Authorization: Bearer YOUR_TOKEN" \
+         https://backend.pruhsms.africa/api/grade-alerts/
+  
+  Should return: HTTP 200 (not 500)
+
+Test 3: Browser check
+─────────────────────
+
+  1. Open https://ek-sms-one.vercel.app
+  2. Open DevTools (F12)
+  3. Go to Console tab
+  4. Refresh (Ctrl+R)
+  
+  Should NOT see red errors about:
+    ❌ "Refused to load the script 'blob:...'"
+    ❌ "Refused to load the font from 'https://vercel.live/...'"
+
+Test 4: Run verification script
+────────────────────────────────
+
+  $ cd eksms
+  $ python ../verify_fix.py
+  
+  Should show: ✓ All tests passing
+
+TROUBLESHOOTING
+═════════════════════════════════════════════════════════════════════════════
+
+❌ Still getting 500 errors?
+
+  1. Check migration was applied:
+     $ python manage.py showmigrations eksms_core | grep 0029
+     Should show: [X] 0029_add_student_extended_fields
+
+  2. Check logs:
+     $ sudo journalctl -u gunicorn -n 50 --no-pager
+
+  3. Verify database column:
+     $ python manage.py dbshell
+     mysql> SHOW COLUMNS FROM eksms_core_student LIKE 'place_of_birth';
+     Should return the column definition
+
+  4. Restart everything:
+     $ sudo systemctl restart gunicorn
+     $ sudo systemctl restart nginx  (if using nginx)
+     $ sleep 10
+     $ curl -H "Authorization: Bearer TOKEN" https://backend.pruhsms.africa/api/grade-alerts/
+
+❌ CSP errors still in browser console?
+
+  1. Verify middleware was added to settings.py
+  2. Make sure you saved the file
+  3. Restart Django:
+     $ sudo systemctl restart gunicorn
+  4. Wait 10 seconds and refresh browser (F5)
+  5. Check response headers:
+     $ curl -I https://backend.pruhsms.africa/api/users/ -H "Authorization: Bearer TOKEN" | grep -i content-security-policy
+
+❌ Database backup/restore needed?
+
+  If something goes wrong and you need to rollback:
+  
+  $ mysql -u user -p -h host eksms_db < /tmp/eksms_backup_YYYYMMDD_HHMMSS.sql
+  $ sudo systemctl restart gunicorn
+
+REFERENCE FILES
+═════════════════════════════════════════════════════════════════════════════
+
+Main Documents:
+  📄 CRITICAL_FIX_PLAN.md          ← Start here for overview
+  📄 QUICK_FIX_STEPS.sh            ← Manual copy-paste steps
+  📄 CSP_SETTINGS_UPDATE.md        ← Detailed CSP middleware guide
+
+Automation:
+  🔧 UBUNTU_FIX_MIGRATIONS.sh      ← Automated fix script
+  🐍 verify_fix.py                 ← Verification script
+
+Implementation:
+  ⚙️  eksms/eksms/csp_middleware.py ← CSP middleware code
+  ✓  eksms/eksms/settings.py       ← Update this file
+
+Testing:
+  📋 TESTING_CHECKLIST.md          ← Full testing guide
+
+QUICK REFERENCE
+═════════════════════════════════════════════════════════════════════════════
+
+The problem:
+  │ Database migration 0029 exists but wasn't applied
+  │ Django model has the field, but database doesn't have the column
+
+The solution:
+  │ 1. Apply migration: python manage.py migrate eksms_core
+  │ 2. Add CSP middleware to settings.py
+  │ 3. Restart Django: sudo systemctl restart gunicorn
+
+Testing:
+  │ curl -H "Authorization: Bearer TOKEN" https://backend.pruhsms.africa/api/grade-alerts/
+  │ Browser DevTools → Console → Should see no red errors
+
+SUPPORT
+═════════════════════════════════════════════════════════════════════════════
+
+If you get stuck:
+
+1. Check the logs:
+   $ sudo journalctl -u gunicorn -n 50 --no-pager
+
+2. Run the verification script:
+   $ python verify_fix.py
+
+3. Check the database directly:
+   $ python manage.py dbshell
+   $ SHOW COLUMNS FROM eksms_core_student LIKE 'place_of_birth';
+
+4. Look for specific errors in CRITICAL_FIX_PLAN.md troubleshooting section
+
+═════════════════════════════════════════════════════════════════════════════
+
+NEXT STEPS
+═════════════════════════════════════════════════════════════════════════════
+
+✅ DO THIS NOW:
+
+  1. Read: CRITICAL_FIX_PLAN.md
+  2. Choose: Automated (UBUNTU_FIX_MIGRATIONS.sh) or Manual (QUICK_FIX_STEPS.sh)
+  3. Execute: Follow the steps
+  4. Verify: Run verify_fix.py and check browser console
+
+Expected result: 10 minutes from now, all errors fixed! 🎉
+
+═════════════════════════════════════════════════════════════════════════════
+
+Generated: 2026-05-06
+Status: Production Critical
+Priority: Execute immediately
+Time to fix: ~10 minutes

@@ -845,7 +845,7 @@ class GradeVerification(models.Model):
     grade = models.OneToOneField(Grade, on_delete=models.CASCADE, related_name='verification')
     
     # Verification codes
-    verification_token = models.CharField(max_length=256, unique=True, db_index=True,
+    verification_token = models.CharField(max_length=255, unique=True, db_index=True,
                                          help_text="Unique token for verification")
     qr_code_data = models.TextField(help_text="Encoded data in QR code")
     
