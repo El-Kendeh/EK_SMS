@@ -11,15 +11,15 @@ def ensure_student_columns(apps, schema_editor):
         ('place_of_birth', "VARCHAR(200) NOT NULL DEFAULT ''"),
         ('nationality', "VARCHAR(100) NOT NULL DEFAULT ''"),
         ('religion', "VARCHAR(100) NOT NULL DEFAULT ''"),
-        ('home_address', "TEXT NOT NULL DEFAULT ''"),
+        ('home_address', "TEXT"),
         ('city', "VARCHAR(100) NOT NULL DEFAULT ''"),
         ('previous_school', "VARCHAR(200) NOT NULL DEFAULT ''"),
         ('last_class_completed', "VARCHAR(100) NOT NULL DEFAULT ''"),
-        ('leaving_reason', "TEXT NOT NULL DEFAULT ''"),
+        ('leaving_reason', "TEXT"),
         ('emergency_name', "VARCHAR(200) NOT NULL DEFAULT ''"),
         ('emergency_relationship', "VARCHAR(100) NOT NULL DEFAULT ''"),
         ('emergency_phone', "VARCHAR(20) NOT NULL DEFAULT ''"),
-        ('emergency_address', "TEXT NOT NULL DEFAULT ''"),
+        ('emergency_address', "TEXT"),
         ('doctor_name', "VARCHAR(200) NOT NULL DEFAULT ''"),
         ('doctor_phone', "VARCHAR(20) NOT NULL DEFAULT ''"),
         ('documents_birth_certificate', "TINYINT(1) NOT NULL DEFAULT 0"),
@@ -30,7 +30,7 @@ def ensure_student_columns(apps, schema_editor):
         ('documents_other', "TINYINT(1) NOT NULL DEFAULT 0"),
         ('sen_tier', "VARCHAR(20) NOT NULL DEFAULT ''"),
         ('is_critical_medical', "TINYINT(1) NOT NULL DEFAULT 0"),
-        ('vaccinations', "JSON NOT NULL DEFAULT '{}'"),
+        ('vaccinations', "JSON"),
     ]
 
     existing_columns = set()
@@ -49,12 +49,21 @@ def ensure_student_columns(apps, schema_editor):
     for name, definition in desired_columns:
         if name not in existing_columns:
             if vendor == 'mysql':
-                cursor.execute(f"ALTER TABLE `{table}` ADD COLUMN `{name}` {definition}")
+                if name in {'home_address', 'leaving_reason', 'emergency_address'}:
+                    cursor.execute(f"ALTER TABLE `{table}` ADD COLUMN `{name}` TEXT NULL")
+                    cursor.execute(f"UPDATE `{table}` SET `{name}` = '' WHERE `{name}` IS NULL")
+                    cursor.execute(f"ALTER TABLE `{table}` MODIFY COLUMN `{name}` TEXT NOT NULL")
+                elif name == 'vaccinations':
+                    cursor.execute(f"ALTER TABLE `{table}` ADD COLUMN `{name}` JSON NULL")
+                    cursor.execute(f"UPDATE `{table}` SET `{name}` = '{{}}' WHERE `{name}` IS NULL")
+                    cursor.execute(f"ALTER TABLE `{table}` MODIFY COLUMN `{name}` JSON NOT NULL")
+                else:
+                    cursor.execute(f"ALTER TABLE `{table}` ADD COLUMN `{name}` {definition}")
             elif vendor == 'sqlite':
                 # SQLite does not support JSON type or NOT NULL without default in some cases.
                 if name == 'vaccinations':
                     cursor.execute(f"ALTER TABLE \"{table}\" ADD COLUMN \"{name}\" TEXT DEFAULT '{{}}'")
-                elif definition.startswith('TEXT'):
+                elif definition == 'TEXT':
                     cursor.execute(f"ALTER TABLE \"{table}\" ADD COLUMN \"{name}\" TEXT DEFAULT ''")
                 else:
                     cursor.execute(f"ALTER TABLE \"{table}\" ADD COLUMN \"{name}\" {definition}")
