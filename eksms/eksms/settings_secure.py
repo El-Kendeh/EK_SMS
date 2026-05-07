@@ -166,7 +166,8 @@ CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=False, cast=bool)
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_SECURITY_POLICY = {
     'default-src': ("'self'",),
-    'script-src': ("'self'", "'unsafe-inline'", "https://embed.tawk.to", "https://*.tawk.to", "https://vercel.live", "https://js.pusher.com", "chrome-extension:"),
+    'script-src': ("'self'", "'unsafe-inline'", "'unsafe-eval'", "blob:", "https://embed.tawk.to", "https://*.tawk.to", "https://vercel.live", "https://js.pusher.com", "chrome-extension:"),
+    'script-src-elem': ("'self'", "'unsafe-inline'", "'unsafe-eval'", "blob:", "https://embed.tawk.to", "https://*.tawk.to", "https://vercel.live", "https://js.pusher.com", "chrome-extension:"),
     'style-src': ("'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://*.tawk.to"),
     'img-src': ("'self'", 'data:', 'https:'),
     'font-src': ("'self'", "https://fonts.gstatic.com", "https://*.tawk.to"),

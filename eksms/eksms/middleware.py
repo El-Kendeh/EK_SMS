@@ -39,6 +39,7 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
         csp_header = (
             "default-src 'self'; "
             "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://embed.tawk.to https://*.tawk.to https://vercel.live https://*.vercel.live chrome-extension:; "
+            "script-src-elem 'self' 'unsafe-inline' 'unsafe-eval' blob: https://embed.tawk.to https://*.tawk.to https://vercel.live https://*.vercel.live chrome-extension:; "
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.tawk.to https://vercel.live; "
             "img-src 'self' data: https: blob: http://localhost:8000 http://127.0.0.1:8000; "
             "font-src 'self' https://fonts.gstatic.com https://*.tawk.to https://*.vercel.live https://vercel.live; "
