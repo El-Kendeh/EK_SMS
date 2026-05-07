@@ -2,9 +2,28 @@
  * Security configuration constants
  */
 
+const DEFAULT_API_URL = 'https://backend.pruhsms.africa';
+const getApiUrl = () => {
+  const rawUrl = process.env.REACT_APP_API_URL || DEFAULT_API_URL;
+  try {
+    return new URL(rawUrl, typeof window !== 'undefined' ? window.location.origin : DEFAULT_API_URL).toString().replace(/\/$/, '');
+  } catch (error) {
+    return DEFAULT_API_URL;
+  }
+};
+
+const API_URL = getApiUrl();
+const API_ORIGIN = (() => {
+  try {
+    return new URL(API_URL).origin;
+  } catch (error) {
+    return DEFAULT_API_URL;
+  }
+})();
+
 export const SECURITY_CONFIG = {
   // API Configuration
-  API_URL: process.env.REACT_APP_API_URL || 'https://backend.pruhsms.africa',
+  API_URL,
 
   // Security Headers
   SECURE_HEADERS: {
@@ -62,7 +81,7 @@ export const SECURITY_CONFIG = {
     'style-src': ["'self'", "'unsafe-inline'"],
     'img-src': ["'self'", 'data:', 'blob:', 'https:'],
     'font-src': ["'self'", "https://fonts.gstatic.com", "https://*.tawk.to", "https://vercel.live"],
-    'connect-src': ["'self'", 'https://backend.pruhsms.africa', 'https://pruhsms.africa', 'https://*.vercel.app', 'http://localhost:8000', 'wss://*.pusher.com', 'wss://ws-us3.pusher.com', 'https://*.pusher.com', 'blob:'],
+    'connect-src': ["'self'", API_ORIGIN, 'https://backend.pruhsms.africa', 'https://pruhsms.africa', 'https://*.vercel.app', 'http://localhost:8000', 'wss://*.pusher.com', 'wss://ws-us3.pusher.com', 'https://*.pusher.com', 'blob:'],
     'frame-ancestors': ["'none'"],
     'base-uri': ["'self'"],
     'form-action': ["'self'"],
@@ -80,7 +99,7 @@ export const SECURITY_CONFIG = {
   // Security Headers for Production
   PRODUCTION_HEADERS: {
     'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
-    'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' https://fonts.gstatic.com https://*.tawk.to https://vercel.live; connect-src 'self' https://backend.pruhsms.africa https://pruhsms.africa https://*.vercel.app blob: wss://*.pusher.com wss://ws-us3.pusher.com https://*.pusher.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+    'Content-Security-Policy': `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' https://fonts.gstatic.com https://*.tawk.to https://vercel.live; connect-src 'self' ${API_ORIGIN} https://backend.pruhsms.africa https://pruhsms.africa https://*.vercel.app blob: wss://*.pusher.com wss://ws-us3.pusher.com https://*.pusher.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'`,
     'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
   },
 };
