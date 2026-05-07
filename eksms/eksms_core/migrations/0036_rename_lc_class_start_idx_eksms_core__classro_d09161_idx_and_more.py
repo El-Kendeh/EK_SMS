@@ -10,19 +10,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RenameIndex(
-            model_name='liveclass',
-            new_name='eksms_core__classro_d09161_idx',
-            old_name='lc_class_start_idx',
-        ),
-        migrations.RenameIndex(
-            model_name='liveclass',
-            new_name='eksms_core__teacher_498028_idx',
-            old_name='lc_teach_start_idx',
-        ),
-        migrations.RenameIndex(
-            model_name='liveclass',
-            new_name='eksms_core__school__db445d_idx',
-            old_name='lc_school_status_idx',
-        ),
+        # This migration is now a no-op because the same LiveClass index rename
+        # has already been performed by 0037_rename_lc_class_start_idx_eksms_core__classro_d09161_idx_and_more.
     ]
