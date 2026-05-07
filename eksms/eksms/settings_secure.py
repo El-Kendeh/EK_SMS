@@ -310,9 +310,11 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 # Resend is used for transactional OTP emails.
 # Set RESEND_API_KEY on your hosting platform (Render, etc.) for production.
 # In dev (no RESEND_API_KEY set), OTPs print to the Django terminal instead of being sent.
-EMAIL_BACKEND      = config('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
-RESEND_API_KEY     = config('RESEND_API_KEY', default='')
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='PRUH-SMS <noreply@elkendeh.com>')
+EMAIL_BACKEND           = config('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
+RESEND_API_KEY          = config('RESEND_API_KEY', default='')
+DEFAULT_FROM_EMAIL      = config('DEFAULT_FROM_EMAIL', default='PRUH-SMS <noreply@elkendeh.com>')
+SUPERADMIN_ALERT_EMAILS = config('SUPERADMIN_ALERT_EMAILS', default='', cast=str)
+SUPERADMIN_ALERT_EMAILS = [email.strip() for email in SUPERADMIN_ALERT_EMAILS.split(',') if email.strip()]
 
 # OTP settings
 OTP_EXPIRY_MINUTES = config('OTP_EXPIRY_MINUTES', default=10, cast=int)

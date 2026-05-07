@@ -7,11 +7,14 @@ from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from django.utils import timezone
 from django.core.mail import send_mail
+from django.contrib.auth import get_user_model
 from django.conf import settings
 import json
 import hashlib
 
-from .models import Grade, GradeAuditLog, GradeChangeAlert, GradeVerification
+from .models import Grade, GradeAuditLog, GradeChangeAlert, GradeVerification, SystemWideAlert
+
+User = get_user_model()
 
 
 # Store original values before save
@@ -212,3 +215,48 @@ Please verify this change in the admin dashboard.
         alert.save()
     except Exception as e:
         print(f'Failed to send alert email: {str(e)}')
+
+
+@receiver(post_save, sender=SystemWideAlert)
+def send_system_wide_alert_email(sender, instance, created, **kwargs):
+    if not created:
+        return
+
+    recipients = []
+    if getattr(settings, 'SUPERADMIN_ALERT_EMAILS', None):
+        recipients = [email for email in settings.SUPERADMIN_ALERT_EMAILS if email]
+
+    if not recipients:
+        recipients = [email for email in User.objects.filter(is_superuser=True, is_active=True).values_list('email', flat=True) if email]
+
+    if not recipients:
+        return
+
+    subject = f"[ALERT] {instance.title}"
+    body = (
+        f"System-wide alert triggered:\n\n"
+        f"Title: {instance.title}\n"
+        f"Description: {instance.description}\n"
+        f"Trigger: {instance.get_trigger_type_display()}\n"
+        f"Severity: {instance.get_severity_display()}\n"
+        f"Status: {instance.get_status_display()}\n"
+        f"School: {instance.school.name if instance.school else 'N/A'}\n"
+        f"Triggered by: {(instance.triggered_by.get_full_name() or instance.triggered_by.username) if instance.triggered_by else 'System'}\n"
+        f"At: {instance.triggered_at}\n\n"
+        f"Please review this alert in the Super Admin dashboard."
+    )
+
+    try:
+        send_mail(
+            subject,
+            body,
+            settings.DEFAULT_FROM_EMAIL,
+            recipients,
+            fail_silently=True,
+        )
+
+        instance.notif_email = True
+        instance.notif_email_sent_at = timezone.now()
+        instance.save(update_fields=['notif_email', 'notif_email_sent_at'])
+    except Exception as e:
+        print(f'Failed to send system alert email: {str(e)}')
