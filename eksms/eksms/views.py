@@ -214,33 +214,44 @@ def _validate_token(token_string):
     """Returns User if token_string is in UserToken table, else None.
     Falls back to legacy token_{id}_{username} format for backward compat."""
     if not token_string or not token_string.startswith('token_'):
+        print(f"[DEBUG] Invalid token format: {token_string[:20]}...")
         return None
     try:
         ut = UserToken.objects.select_related('user').get(token=token_string)
+        print(f"[DEBUG] Found UserToken: {ut}, User: {ut.user}")
         return ut.user
     except UserToken.DoesNotExist:
+        print(f"[DEBUG] UserToken not found for: {token_string[:20]}...")
         pass
     # Legacy fallback (tokens issued before UserToken was introduced)
     parts = token_string.split('_', 2)
     if len(parts) < 2:
+        print(f"[DEBUG] Legacy token format invalid: {token_string[:20]}...")
         return None
     try:
         uid = int(parts[1])
-        return User.objects.get(id=uid, is_active=True)
+        user = User.objects.get(id=uid, is_active=True)
+        print(f"[DEBUG] Legacy token validated user: {user}")
+        return user
     except (ValueError, User.DoesNotExist, User.MultipleObjectsReturned):
+        print(f"[DEBUG] Legacy token validation failed for: {token_string[:20]}...")
         return None
 
 
 def _get_authed_user(request):
     """Extract authenticated User from Authorization header. Uses UserToken table with legacy fallback."""
     auth = request.META.get('HTTP_AUTHORIZATION', '')
+    print(f"[DEBUG] Authorization header: {auth[:50]}...")
     if auth.startswith('Bearer '):
         token = auth[7:]
     elif auth.startswith('Token '):
         token = auth[6:]
     else:
         token = auth.strip()
-    return _validate_token(token)
+    print(f"[DEBUG] Extracted token: {token[:20]}...")
+    user = _validate_token(token)
+    print(f"[DEBUG] Validated user: {user}")
+    return user
 
 
 def _parse_hhmm(value):
@@ -826,28 +837,36 @@ def verify_grade_document(request, token):
                          'message': 'Document not found or token invalid.'}, status=404)
 
 
-@require_http_methods(["POST"])
+@require_http_methods(["GET"])
 @csrf_exempt
-def api_receive_logs(request):
-    """
-    API endpoint to receive logs from the frontend.
-    """
-    try:
-        data = json.loads(request.body)
-        # Log to Django logs
-        import logging
-        logger = logging.getLogger('django.security')
-        logger.warning(f"Frontend Log: {json.dumps(data)}")
-        
-        return JsonResponse({
-            'success': True,
-            'message': 'Log received successfully.'
-        }, status=200)
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'message': str(e)
-        }, status=400)
+def api_test_connection(request):
+    """Simple test endpoint to verify connectivity and authentication."""
+    actor = _get_authed_user(request)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized', 'authenticated': False}, status=401)
+    
+    role = 'user'
+    if actor.is_superuser:
+        role = 'superadmin'
+    elif hasattr(actor, 'school_admin_profile'):
+        role = 'school_admin'
+    elif hasattr(actor, 'teacher_profile'):
+        role = 'teacher'
+    elif hasattr(actor, 'student_profile'):
+        role = 'student'
+    elif hasattr(actor, 'parent_profile'):
+        role = 'parent'
+    
+    return JsonResponse({
+        'success': True,
+        'message': 'Connection successful',
+        'authenticated': True,
+        'user_id': actor.id,
+        'username': actor.username,
+        'email': actor.email,
+        'role': role,
+        'timestamp': timezone.now().isoformat()
+    }, status=200)
 
 
 @require_http_methods(["POST"])
@@ -1844,19 +1863,26 @@ def api_get_security_logs(request):
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
 def api_system_health(request):
-    """Real-time system health stats (superadmin only)."""
+    """Real-time system health stats (superadmin and school admin access)."""
     actor = _get_authed_user(request)
-    if not actor or not actor.is_superuser:
-        return JsonResponse({'success': False, 'message': 'Forbidden'}, status=403)
+    if not actor:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+
+    # Allow both superadmins and school admins
+    is_super = actor.is_superuser
+    is_school_admin = hasattr(actor, 'school_admin_profile')
+    if not (is_super or is_school_admin):
+        return JsonResponse({'success': False, 'message': 'Access denied'}, status=403)
+
     try:
         cpu_usage = psutil.cpu_percent()
         memory = psutil.virtual_memory()
         disk = shutil.disk_usage('/')
-        
+
         # Calculate mock uptime for demo/visualization
         # In a real app, this would be computed from boot time
         import time
-        boot_time = getattr(request.resolver_match, '_boot_time', time.time() - 3600*24*4) 
+        boot_time = getattr(request.resolver_match, '_boot_time', time.time() - 3600*24*4)
         uptime_seconds = int(time.time() - boot_time)
 
         resources = [
@@ -1873,8 +1899,7 @@ def api_system_health(request):
             {'id': 4, 'label': 'Storage Engine', 'status': 'Operational', 'uptime': 1.0},
             {'id': 5, 'label': 'SMS Gateway', 'status': 'Operational', 'uptime': 0.985},
         ]
-        
-        return JsonResponse({
+
             'success': True,
             'status': 'healthy',
             'uptime': uptime_seconds,
@@ -2973,11 +2998,15 @@ def api_school_profile_full(request):
         return JsonResponse({'message': f'Method {request.method} not allowed'}, status=405)
     try:
         actor, sa, school = _get_school_for_admin(request)
+        print(f"[DEBUG] Authenticated user: {actor}, SchoolAdmin: {sa}, School: {school}")
     except SchoolAdmin.DoesNotExist:
+        print(f"[DEBUG] SchoolAdmin.DoesNotExist for user: {_get_authed_user(request)}")
         return JsonResponse({'success': False, 'message': 'Account Error: No school admin profile found for this user.'}, status=404)
     except Exception as e:
+        print(f"[DEBUG] Exception in _get_school_for_admin: {str(e)}")
         return JsonResponse({'success': False, 'message': f'Server Error: {str(e)}'}, status=500)
     if not actor:
+        print(f"[DEBUG] No authenticated user")
         return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
 
     if request.method in ['POST', 'PATCH']:
