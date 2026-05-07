@@ -3,6 +3,79 @@
 from django.db import migrations, models
 
 
+def rename_liveclass_indexes(apps, schema_editor):
+    connection = schema_editor.connection
+    vendor = connection.vendor
+    model = apps.get_model('eksms_core', 'LiveClass')
+    table = model._meta.db_table
+    index_map = {
+        'lc_class_start_idx': 'eksms_core__classro_d09161_idx',
+        'lc_teach_start_idx': 'eksms_core__teacher_498028_idx',
+        'lc_school_status_idx': 'eksms_core__school__db445d_idx',
+    }
+    cursor = connection.cursor()
+
+    def create_index(index_name, definition):
+        try:
+            cursor.execute(definition)
+        except Exception:
+            pass
+
+    if vendor == 'mysql':
+        for old_name, new_name in index_map.items():
+            try:
+                cursor.execute(f"ALTER TABLE `{table}` RENAME INDEX `{old_name}` TO `{new_name}`")
+            except Exception:
+                if old_name == 'lc_class_start_idx':
+                    create_index(new_name, f"CREATE INDEX `{new_name}` ON `{table}` (`classroom`, `scheduled_start` DESC)")
+                elif old_name == 'lc_teach_start_idx':
+                    create_index(new_name, f"CREATE INDEX `{new_name}` ON `{table}` (`teacher`, `scheduled_start` DESC)")
+                elif old_name == 'lc_school_status_idx':
+                    create_index(new_name, f"CREATE INDEX `{new_name}` ON `{table}` (`school`, `status`, `scheduled_start` DESC)")
+    elif vendor == 'postgresql':
+        for old_name, new_name in index_map.items():
+            try:
+                cursor.execute(f'ALTER INDEX "{old_name}" RENAME TO "{new_name}"')
+            except Exception:
+                if old_name == 'lc_class_start_idx':
+                    create_index(new_name, f'CREATE INDEX "{new_name}" ON "{table}" ("classroom", "scheduled_start" DESC)')
+                elif old_name == 'lc_teach_start_idx':
+                    create_index(new_name, f'CREATE INDEX "{new_name}" ON "{table}" ("teacher", "scheduled_start" DESC)')
+                elif old_name == 'lc_school_status_idx':
+                    create_index(new_name, f'CREATE INDEX "{new_name}" ON "{table}" ("school", "status", "scheduled_start" DESC)')
+    elif vendor == 'sqlite':
+        for old_name, new_name in index_map.items():
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='index' AND name=?", [old_name])
+            if cursor.fetchone():
+                if old_name == 'lc_class_start_idx':
+                    create_index(new_name, f'CREATE INDEX "{new_name}" ON "{table}" ("classroom", "scheduled_start" DESC)')
+                elif old_name == 'lc_teach_start_idx':
+                    create_index(new_name, f'CREATE INDEX "{new_name}" ON "{table}" ("teacher", "scheduled_start" DESC)')
+                elif old_name == 'lc_school_status_idx':
+                    create_index(new_name, f'CREATE INDEX "{new_name}" ON "{table}" ("school", "status", "scheduled_start" DESC)')
+                cursor.execute(f'DROP INDEX "{old_name}"')
+            else:
+                cursor.execute("SELECT name FROM sqlite_master WHERE type='index' AND name=?", [new_name])
+                if not cursor.fetchone():
+                    if old_name == 'lc_class_start_idx':
+                        create_index(new_name, f'CREATE INDEX "{new_name}" ON "{table}" ("classroom", "scheduled_start" DESC)')
+                    elif old_name == 'lc_teach_start_idx':
+                        create_index(new_name, f'CREATE INDEX "{new_name}" ON "{table}" ("teacher", "scheduled_start" DESC)')
+                    elif old_name == 'lc_school_status_idx':
+                        create_index(new_name, f'CREATE INDEX "{new_name}" ON "{table}" ("school", "status", "scheduled_start" DESC)')
+    else:
+        for old_name, new_name in index_map.items():
+            try:
+                cursor.execute(f'ALTER INDEX {old_name} RENAME TO {new_name}')
+            except Exception:
+                if old_name == 'lc_class_start_idx':
+                    create_index(new_name, f'CREATE INDEX {new_name} ON {table} (classroom, scheduled_start DESC)')
+                elif old_name == 'lc_teach_start_idx':
+                    create_index(new_name, f'CREATE INDEX {new_name} ON {table} (teacher, scheduled_start DESC)')
+                elif old_name == 'lc_school_status_idx':
+                    create_index(new_name, f'CREATE INDEX {new_name} ON {table} (school, status, scheduled_start DESC)')
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -10,20 +83,27 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RenameIndex(
-            model_name='liveclass',
-            new_name='eksms_core__classro_d09161_idx',
-            old_name='lc_class_start_idx',
-        ),
-        migrations.RenameIndex(
-            model_name='liveclass',
-            new_name='eksms_core__teacher_498028_idx',
-            old_name='lc_teach_start_idx',
-        ),
-        migrations.RenameIndex(
-            model_name='liveclass',
-            new_name='eksms_core__school__db445d_idx',
-            old_name='lc_school_status_idx',
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunPython(rename_liveclass_indexes, migrations.RunPython.noop),
+            ],
+            state_operations=[
+                migrations.RenameIndex(
+                    model_name='liveclass',
+                    new_name='eksms_core__classro_d09161_idx',
+                    old_name='lc_class_start_idx',
+                ),
+                migrations.RenameIndex(
+                    model_name='liveclass',
+                    new_name='eksms_core__teacher_498028_idx',
+                    old_name='lc_teach_start_idx',
+                ),
+                migrations.RenameIndex(
+                    model_name='liveclass',
+                    new_name='eksms_core__school__db445d_idx',
+                    old_name='lc_school_status_idx',
+                ),
+            ],
         ),
         migrations.AddField(
             model_name='student',
