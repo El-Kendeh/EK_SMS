@@ -1900,6 +1900,7 @@ def api_system_health(request):
             {'id': 5, 'label': 'SMS Gateway', 'status': 'Operational', 'uptime': 0.985},
         ]
 
+        return JsonResponse({
             'success': True,
             'status': 'healthy',
             'uptime': uptime_seconds,
