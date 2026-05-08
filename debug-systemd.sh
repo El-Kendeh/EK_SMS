@@ -102,6 +102,7 @@ After=network.target
 [Service]
 User=www-data
 Group=www-data
+PermissionsStartOnly=true
 WorkingDirectory=$DJANGO_DIR
 Environment="PATH=$VENV_DIR/bin"
 ExecStartPre=/bin/mkdir -p /var/www/ek-sms
