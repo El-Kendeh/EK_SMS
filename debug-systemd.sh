@@ -54,7 +54,14 @@ chmod 775 /var/www/ek-sms
 ls -ld /var/www/ek-sms
 
 echo ""
-echo "4. Checking gunicorn executable..."
+echo "5. Ensuring Django logs directory exists and is writable..."
+mkdir -p "$DJANGO_DIR/logs"
+chown www-data:www-data "$DJANGO_DIR/logs"
+chmod 775 "$DJANGO_DIR/logs"
+ls -ld "$DJANGO_DIR/logs"
+
+echo ""
+echo "6. Checking gunicorn executable..."
 GUNICORN_PATH="$VENV_DIR/bin/gunicorn"
 PYTHON_PATH="$VENV_DIR/bin/python"
 if [ -x "$GUNICORN_PATH" ]; then
@@ -120,6 +127,9 @@ Environment="PATH=$VENV_DIR/bin"
 Environment="DJANGO_SETTINGS_MODULE=eksms.settings_secure"
 StandardOutput=journal
 StandardError=journal
+ExecStartPre=/bin/mkdir -p /var/www/ek-sms/EK_SMS/eksms/logs
+ExecStartPre=/bin/chown www-data:www-data /var/www/ek-sms/EK_SMS/eksms/logs
+ExecStartPre=/bin/chmod 775 /var/www/ek-sms/EK_SMS/eksms/logs
 ExecStartPre=/bin/rm -f /var/www/ek-sms/ek-sms.sock
 ExecStart=$VENV_DIR/bin/gunicorn --workers 3 --chdir $DJANGO_DIR --bind unix:/var/www/ek-sms/ek-sms.sock --umask 007 eksms.wsgi:application
 Restart=always
