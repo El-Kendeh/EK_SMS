@@ -44,12 +44,13 @@ fi
 echo ""
 echo "4. Checking gunicorn executable..."
 GUNICORN_PATH="$VENV_DIR/bin/gunicorn"
+PYTHON_PATH="$VENV_DIR/bin/python"
 if [ -x "$GUNICORN_PATH" ]; then
     echo "✓ Gunicorn found at: $GUNICORN_PATH"
     $GUNICORN_PATH --version
     echo ""
     echo "5. Validating MySQL Python driver imports..."
-    python -c "import importlib; importlib.invalidate_caches(); import pymysql; print('PyMySQL OK', pymysql.__version__); pymysql.install_as_MySQLdb(); import MySQLdb; print('MySQLdb shim OK')" 2>/tmp/db-check.err && echo "✓ MySQL driver imports OK" || { echo "❌ MySQL driver import failed"; cat /tmp/db-check.err; }
+    "$PYTHON_PATH" -c "import importlib; importlib.invalidate_caches(); import pymysql; print('PyMySQL OK', pymysql.__version__); pymysql.install_as_MySQLdb(); import MySQLdb; print('MySQLdb shim OK')" 2>/tmp/db-check.err && echo "✓ MySQL driver imports OK" || { echo "❌ MySQL driver import failed"; cat /tmp/db-check.err; }
 else
     echo "❌ Gunicorn not found at: $GUNICORN_PATH"
     find $VENV_DIR -name "gunicorn" -type f 2>/dev/null
@@ -103,6 +104,9 @@ User=www-data
 Group=www-data
 WorkingDirectory=$DJANGO_DIR
 Environment="PATH=$VENV_DIR/bin"
+ExecStartPre=/bin/mkdir -p /var/www/ek-sms
+ExecStartPre=/bin/chown root:www-data /var/www/ek-sms
+ExecStartPre=/bin/chmod 775 /var/www/ek-sms
 ExecStartPre=/bin/rm -f /var/www/ek-sms/ek-sms.sock
 ExecStart=$VENV_DIR/bin/gunicorn --workers 3 --bind unix:/var/www/ek-sms/ek-sms.sock --umask 007 eksms.wsgi:application
 ExecStartPost=/bin/chown www-data:www-data /var/www/ek-sms/ek-sms.sock
