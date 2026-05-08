@@ -158,8 +158,10 @@ else
     echo "❌ FAILED: Django service still not running"
     sudo systemctl status ek-sms --no-pager -l
     echo ""
+    echo "Recent journal entries for ek-sms:"
+    sudo journalctl -u ek-sms -n 50 --no-pager
+    echo ""
     echo "Debugging tips:"
-    echo "- Check journal: sudo journalctl -u ek-sms -n 20"
     echo "- Test manually: cd $DJANGO_DIR && source $VENV_DIR/bin/activate && $GUNICORN_PATH --bind 127.0.0.1:8000 eksms.wsgi:application"
 fi
 
