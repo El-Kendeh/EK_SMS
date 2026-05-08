@@ -12,7 +12,7 @@ from .views import (
     favicon_view, api_login, api_logout, api_register, api_get_schools,
     api_approve_school, api_waitlist, api_send_otp, api_resend_otp,
     api_verify_otp, api_check_school_name, api_get_users, api_get_security_logs,
-    api_system_health, api_get_grade_alerts, api_receive_logs, api_csp_report,
+    api_system_health, api_get_grade_alerts, api_csp_report,
     api_test_connection,
     # New endpoints
     api_school_events, api_grade_stats, api_school_stats,
@@ -129,7 +129,6 @@ urlpatterns = [
     path('api/resend-otp/',      api_resend_otp,      name='api_resend_otp'),
     path('api/verify-otp/',      api_verify_otp,      name='api_verify_otp'),
     path('api/check-school-name/', api_check_school_name, name='api_check_school_name'),
-    path('api/logs/',            api_receive_logs,      name='api_receive_logs'),
     path('api/csp-report/',      api_csp_report,        name='api_csp_report'),
     path('api/test-connection/', api_test_connection,   name='api_test_connection'),
     path('api/csrf-token/',      csrf_token_view,       name='csrf_token_view'),
