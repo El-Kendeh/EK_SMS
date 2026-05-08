@@ -42,6 +42,18 @@ else
 fi
 
 echo ""
+if [ "$EUID" -ne 0 ]; then
+    echo "❌ This script must be run as root to fix systemd permissions."
+    exit 1
+fi
+
+echo "4. Fixing /var/www/ek-sms directory ownership and permissions..."
+mkdir -p /var/www/ek-sms
+chown root:www-data /var/www/ek-sms
+chmod 775 /var/www/ek-sms
+ls -ld /var/www/ek-sms
+
+echo ""
 echo "4. Checking gunicorn executable..."
 GUNICORN_PATH="$VENV_DIR/bin/gunicorn"
 PYTHON_PATH="$VENV_DIR/bin/python"
