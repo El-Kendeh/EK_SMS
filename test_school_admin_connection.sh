@@ -9,20 +9,25 @@ BACKEND_URL="https://backend.pruhsms.africa"
 FRONTEND_URL="https://ek-sms-one.vercel.app"
 
 echo "1. Testing backend health endpoint..."
-curl -s -w "Status: %{http_code}\n" "$BACKEND_URL/api/system/health/" || echo "❌ Backend health check failed"
+curl -s -w "Status: %{http_code}\n" "$BACKEND_URL/api/system-health/" || echo "❌ Backend health check failed"
 
 echo ""
-echo "2. Testing CORS preflight for school admin endpoints..."
+echo "2. Testing new test connection endpoint..."
+curl -s -w "Status: %{http_code}\n" "$BACKEND_URL/api/test-connection/" || echo "❌ Test connection failed"
+
+echo ""
+echo "3. Testing CORS preflight for school admin endpoints..."
 curl -s -X OPTIONS \
   -H "Origin: $FRONTEND_URL" \
   -H "Access-Control-Request-Method: GET" \
   -H "Access-Control-Request-Headers: Authorization" \
   -w "Status: %{http_code}\n" \
-  "$BACKEND_URL/api/school/dashboard/" || echo "❌ CORS preflight failed"
+  "$BACKEND_URL/api/school/info/" || echo "❌ CORS preflight failed"
 
 echo ""
-echo "3. Testing school admin API endpoints..."
+echo "4. Testing school admin API endpoints..."
 endpoints=(
+  "/api/school/info/"
   "/api/school/dashboard/"
   "/api/school/students/"
   "/api/school/teachers/"
@@ -36,14 +41,20 @@ for endpoint in "${endpoints[@]}"; do
   echo ""
 done
 
-echo "4. Testing database connection (if backend is accessible)..."
-# This would require authentication, so we'll just check if the endpoint exists
-curl -s -w "Database endpoint status: %{http_code}\n" "$BACKEND_URL/api/system/db-status/" || echo "❌ Database status check failed"
+echo "5. Testing database connection..."
+echo "MySQL should be running with database: eksms_db, user: eksms_user"
+mysql -u eksms_user -pelkinson -e "SELECT COUNT(*) as schools FROM eksms_core_school;" eksms_db 2>/dev/null || echo "❌ MySQL connection failed"
 
 echo ""
-echo "5. Testing frontend build configuration..."
-echo "Frontend should be calling: $BACKEND_URL"
-echo "Check browser network tab to verify API calls go to backend.pruhsms.africa"
+echo "6. Testing authentication (you need a valid token)..."
+echo "To test with authentication:"
+echo "curl -H 'Authorization: Bearer YOUR_TOKEN_HERE' $BACKEND_URL/api/test-connection/"
+echo "curl -H 'Authorization: Bearer YOUR_TOKEN_HERE' $BACKEND_URL/api/school/info/"
+
+echo ""
+echo "7. Check Django logs for debugging:"
+echo "sudo tail -f /var/log/django.log"
+echo "Look for [DEBUG] messages showing authentication flow"
 
 echo ""
 echo "✅ Connection test completed!"
