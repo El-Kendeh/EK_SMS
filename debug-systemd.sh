@@ -117,12 +117,8 @@ Group=www-data
 PermissionsStartOnly=true
 WorkingDirectory=$DJANGO_DIR
 Environment="PATH=$VENV_DIR/bin"
-ExecStartPre=/bin/mkdir -p /var/www/ek-sms
-ExecStartPre=/bin/chown root:www-data /var/www/ek-sms
-ExecStartPre=/bin/chmod 775 /var/www/ek-sms
 ExecStartPre=/bin/rm -f /var/www/ek-sms/ek-sms.sock
 ExecStart=$VENV_DIR/bin/gunicorn --workers 3 --bind unix:/var/www/ek-sms/ek-sms.sock --umask 007 eksms.wsgi:application
-ExecStartPost=/bin/chown www-data:www-data /var/www/ek-sms/ek-sms.sock
 Restart=always
 RestartSec=5
 
