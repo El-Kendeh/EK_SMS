@@ -47,6 +47,9 @@ GUNICORN_PATH="$VENV_DIR/bin/gunicorn"
 if [ -x "$GUNICORN_PATH" ]; then
     echo "✓ Gunicorn found at: $GUNICORN_PATH"
     $GUNICORN_PATH --version
+    echo ""
+    echo "5. Validating MySQL Python driver imports..."
+    python -c "import importlib; importlib.invalidate_caches(); import pymysql; print('PyMySQL OK', pymysql.__version__); pymysql.install_as_MySQLdb(); import MySQLdb; print('MySQLdb shim OK')" 2>/tmp/db-check.err && echo "✓ MySQL driver imports OK" || { echo "❌ MySQL driver import failed"; cat /tmp/db-check.err; }
 else
     echo "❌ Gunicorn not found at: $GUNICORN_PATH"
     find $VENV_DIR -name "gunicorn" -type f 2>/dev/null
