@@ -256,6 +256,18 @@ RATELIMIT_USE_CACHE = True
 RATELIMIT_VIEW = '100/h'
 
 # Logging Configuration
+LOGS_DIR = BASE_DIR / 'logs'
+FILE_LOG_PATH = LOGS_DIR / 'django.log'
+FILE_LOGGING_ENABLED = True
+try:
+    LOGS_DIR.mkdir(exist_ok=True)
+    if not FILE_LOG_PATH.exists():
+        FILE_LOG_PATH.touch(mode=0o664)
+    else:
+        FILE_LOG_PATH.chmod(0o664)
+except OSError:
+    FILE_LOGGING_ENABLED = False
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -266,12 +278,6 @@ LOGGING = {
         },
     },
     'handlers': {
-        'file': {
-            'level': 'WARNING',
-            'class': 'logging.FileHandler',
-            'filename': str(BASE_DIR / 'logs' / 'django.log'),
-            'formatter': 'verbose',
-        },
         'console': {
             'level': 'INFO',
             'class': 'logging.StreamHandler',
@@ -279,26 +285,33 @@ LOGGING = {
         },
     },
     'root': {
-        'handlers': ['console', 'file'],
+        'handlers': ['console'],
         'level': 'WARNING',
     },
     'loggers': {
         'django': {
-            'handlers': ['console', 'file'],
+            'handlers': ['console'],
             'level': 'INFO',
             'propagate': False,
         },
         'django.security': {
-            'handlers': ['console', 'file'],
+            'handlers': ['console'],
             'level': 'WARNING',
             'propagate': False,
         },
     },
 }
 
-# Create logs directory if it doesn't exist
-LOGS_DIR = BASE_DIR / 'logs'
-LOGS_DIR.mkdir(exist_ok=True)
+if FILE_LOGGING_ENABLED:
+    LOGGING['handlers']['file'] = {
+        'level': 'WARNING',
+        'class': 'logging.FileHandler',
+        'filename': str(FILE_LOG_PATH),
+        'formatter': 'verbose',
+    }
+    LOGGING['root']['handlers'].append('file')
+    LOGGING['loggers']['django']['handlers'].append('file')
+    LOGGING['loggers']['django.security']['handlers'].append('file')
 
 # Security Headers Middleware
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
