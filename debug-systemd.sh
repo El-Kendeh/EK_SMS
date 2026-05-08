@@ -117,8 +117,11 @@ Group=www-data
 PermissionsStartOnly=true
 WorkingDirectory=$DJANGO_DIR
 Environment="PATH=$VENV_DIR/bin"
+Environment="DJANGO_SETTINGS_MODULE=eksms.settings_secure"
+StandardOutput=journal
+StandardError=journal
 ExecStartPre=/bin/rm -f /var/www/ek-sms/ek-sms.sock
-ExecStart=$VENV_DIR/bin/gunicorn --workers 3 --bind unix:/var/www/ek-sms/ek-sms.sock --umask 007 eksms.wsgi:application
+ExecStart=$VENV_DIR/bin/gunicorn --workers 3 --chdir $DJANGO_DIR --bind unix:/var/www/ek-sms/ek-sms.sock --umask 007 eksms.wsgi:application
 Restart=always
 RestartSec=5
 
