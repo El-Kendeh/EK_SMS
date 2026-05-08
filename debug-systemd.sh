@@ -103,7 +103,9 @@ User=www-data
 Group=www-data
 WorkingDirectory=$DJANGO_DIR
 Environment="PATH=$VENV_DIR/bin"
-ExecStart=$VENV_DIR/bin/gunicorn --workers 3 --bind unix:/var/www/ek-sms/ek-sms.sock eksms.wsgi:application
+ExecStartPre=/bin/rm -f /var/www/ek-sms/ek-sms.sock
+ExecStart=$VENV_DIR/bin/gunicorn --workers 3 --bind unix:/var/www/ek-sms/ek-sms.sock --umask 007 eksms.wsgi:application
+ExecStartPost=/bin/chown www-data:www-data /var/www/ek-sms/ek-sms.sock
 Restart=always
 RestartSec=5
 
