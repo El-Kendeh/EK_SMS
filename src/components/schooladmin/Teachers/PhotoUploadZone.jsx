@@ -22,6 +22,9 @@ export default function PhotoUploadZone({ file, preview, onFile, cropConfig, onC
   /* ── File picker ───────────────────────────────────────────── */
   const accept = (f) => {
     if (!f) return;
+    if (inputRef.current) {
+      inputRef.current.value = '';
+    }
     if (f.size > 5 * 1024 * 1024) { alert('Photo must be under 5 MB.'); return; }
     if (!/^image\//.test(f.type))  { alert('Choose an image file.'); return; }
     onFile(f);

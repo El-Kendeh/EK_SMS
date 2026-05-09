@@ -98,7 +98,11 @@ export default function AddStudentWizard({
   const [form,        setForm]        = useState(initForm);
   const [documents,   setDocuments]   = useState(draftToRestore?.documents || []);
   const [photoFile,   setPhotoFile]   = useState(null);
-  const [photoPreview,setPhotoPreview]= useState(null);
+  const [photoPreview, setPhotoPreview] = useState(() => {
+    if (draftToRestore?.photoPreview) return draftToRestore.photoPreview;
+    if (mode === 'edit' && student?.passport_picture) return student.passport_picture;
+    return null;
+  });
   const [cropConfig,  setCropConfig]  = useState({ zoom: 1, offsetX: 0, offsetY: 0 });
   const [step,        setStep]        = useState(draftToRestore?.step ?? 0);
   const [errors,      setErrors]      = useState({});
@@ -351,13 +355,17 @@ export default function AddStudentWizard({
                 photoFile={photoFile} photoPreview={photoPreview}
                 onPhotoChange={(file) => {
                   setPhotoFile(file);
-                  if (file) {
-                    const url = URL.createObjectURL(file);
-                    setPhotoPreview(url);
-                    setCropConfig({ zoom: 1, offsetX: 0, offsetY: 0 });
-                  } else {
+                  if (!file) {
                     setPhotoPreview(null);
+                    setCropConfig({ zoom: 1, offsetX: 0, offsetY: 0 });
+                    return;
                   }
+
+                  const reader = new FileReader();
+                  reader.onload = (e) => setPhotoPreview(e.target.result);
+                  reader.onerror = () => setPhotoPreview(null);
+                  reader.readAsDataURL(file);
+                  setCropConfig({ zoom: 1, offsetX: 0, offsetY: 0 });
                 }}
                 cropConfig={cropConfig} onCropChange={setCropConfig}
                 allStudents={allStudents}
