@@ -23,14 +23,14 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 # SECURITY: Specify allowed hosts
 ALLOWED_HOSTS = config(
     'ALLOWED_HOSTS',
-    default='localhost,127.0.0.1,backend.pruhsms.africa,ek-sms-one.vercel.app',
+    default='localhost,127.0.0.1,backend.pruhsms.africa,www.backend.pruhsms.africa,ek-sms-one.vercel.app',
     cast=Csv()
 )
 
 # CORS Configuration for frontend communication
 CORS_ALLOWED_ORIGINS = config(
     'CORS_ALLOWED_ORIGINS',
-    default='http://localhost:3000,https://ek-sms-one.vercel.app,https://pruhsms.africa,https://www.pruhsms.africa,https://backend.pruhsms.africa',
+    default='http://localhost:3000,https://ek-sms-one.vercel.app,https://pruhsms.africa,https://www.pruhsms.africa,https://backend.pruhsms.africa,https://www.backend.pruhsms.africa',
     cast=Csv()
 )
 CORS_ALLOW_ALL_ORIGINS = config('CORS_ALLOW_ALL_ORIGINS', default=False, cast=bool)
