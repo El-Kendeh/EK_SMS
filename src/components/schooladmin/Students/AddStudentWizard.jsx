@@ -32,6 +32,28 @@ const VALIDATORS = [
 ];
 
 /* ── Build API payload ────────────────────────────────────────── */
+function dataURLToBlob(dataURL) {
+  const match = dataURL.match(/^data:(.*?)(;base64)?,(.*)$/);
+  if (!match) return null;
+  const [, mime, isBase64, data] = match;
+  const byteString = isBase64 ? atob(data) : decodeURIComponent(data);
+  const arrayBuffer = new ArrayBuffer(byteString.length);
+  const uint8Array = new Uint8Array(arrayBuffer);
+  for (let i = 0; i < byteString.length; i += 1) {
+    uint8Array[i] = byteString.charCodeAt(i);
+  }
+  return new Blob([arrayBuffer], { type: mime || 'application/octet-stream' });
+}
+
+function normalizeUploadValue(value) {
+  if (!value) return null;
+  if (value instanceof File || value instanceof Blob) return value;
+  if (typeof value === 'string' && value.startsWith('data:')) {
+    return dataURLToBlob(value);
+  }
+  return null;
+}
+
 function buildPayload(form, photoBlob, documents) {
   const clean = { ...form };
 
@@ -57,9 +79,12 @@ function buildPayload(form, photoBlob, documents) {
       else if (typeof v === 'object') fd.append(k, JSON.stringify(v));
       else fd.append(k, String(v));
     });
-    if (photoBlob) fd.append('profile_photo', photoBlob, 'photo.jpg');
+    const photoUpload = normalizeUploadValue(photoBlob);
+    if (photoUpload) fd.append('profile_photo', photoUpload, 'photo.jpg');
     documents.forEach(d => {
-      if (d.file) fd.append(`doc_${d.type}`, d.file, d.file.name);
+      if (d.file instanceof File || d.file instanceof Blob) {
+        fd.append(`doc_${d.type}`, d.file, d.file.name);
+      }
       if (d.verified) fd.append(`doc_${d.type}_verified`, 'true');
       if (d.verified_date) fd.append(`doc_${d.type}_verified_date`, d.verified_date);
     });
