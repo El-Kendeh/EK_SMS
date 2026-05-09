@@ -3727,7 +3727,22 @@ def api_student_detail(request, student_id):
             'is_primary':   link.is_primary_contact,
         } for link in student.parent_links.select_related('parent__user').order_by('-is_primary_contact')]
         is_flagged = (att_rate is not None and att_rate < 70) or (avg_grade is not None and avg_grade < 50)
-        stu_pic_url = request.build_absolute_uri(student.passport_picture.url) if student.passport_picture else ''
+        try:
+            stu_pic_url = request.build_absolute_uri(student.passport_picture.url) if student.passport_picture else ''
+        except (ValueError, OSError, Exception):
+            stu_pic_url = ''
+        documents = []
+        for doc in student.documents.all():
+            try:
+                file_url = request.build_absolute_uri(doc.file.url) if doc.file else None
+            except (ValueError, OSError, Exception):
+                file_url = None
+            documents.append({
+                'id': doc.id,
+                'document_type': doc.document_type,
+                'file_url': file_url,
+                'uploaded_at': str(doc.uploaded_at),
+            })
         return JsonResponse({
             'success':          True,
             'id':               student.id,
@@ -3784,14 +3799,7 @@ def api_student_detail(request, student_id):
             'documents_other':                  student.documents_other,
             'grades':           grades_data,
             'parents':          parents_data,
-            'documents': [
-                {
-                    'id': doc.id,
-                    'document_type': doc.document_type,
-                    'file_url': request.build_absolute_uri(doc.file.url) if doc.file else None,
-                    'uploaded_at': str(doc.uploaded_at),
-                } for doc in student.documents.all()
-            ],
+            'documents': documents,
         })
 
     if request.method == 'PUT':
