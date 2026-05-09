@@ -44,7 +44,8 @@ DEBUG=False
 SECRET_KEY=your-secure-secret-key-here
 ALLOWED_HOSTS=backend.pruhsms.africa,localhost,127.0.0.1
 CORS_ALLOWED_ORIGINS=https://ek-sms-one.vercel.app,https://pruhsms.africa,https://www.pruhsms.africa
-DATABASE_TYPE=sqlite3
+DATABASE_TYPE=mysql
+MEDIA_ROOT=/var/www/ek-sms/media
 SECURE_SSL_REDIRECT=True
 ```
 
@@ -95,7 +96,9 @@ server {
     }
 
     location /media/ {
-        root /var/www/ek-sms/eksms;
+        alias /var/www/ek-sms/media/;
+        expires 30d;
+        add_header Cache-Control "public";
     }
 
     location / {

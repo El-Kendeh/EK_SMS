@@ -146,7 +146,8 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Media files (User uploads like student passports)
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+# Use environment variable for production path, fallback to local for development
+MEDIA_ROOT = config('MEDIA_ROOT', default=str(BASE_DIR / 'media'))
 
 # WhiteNoise compression
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
