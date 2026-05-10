@@ -1043,6 +1043,88 @@ class GradeAlert(models.Model):
         return f"{self.student} - {self.alert_type} - {self.created_at}"
 
 
+class GradeFeedbackMessage(models.Model):
+    """Represents feedback messages for grades"""
+    grade = models.ForeignKey(Grade, on_delete=models.CASCADE, related_name='feedback_messages')
+    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='grade_feedback')
+    message = models.TextField(help_text="Feedback message content")
+    is_positive = models.BooleanField(default=True, help_text="Is this positive feedback?")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Grade Feedback Message"
+        verbose_name_plural = "Grade Feedback Messages"
+    
+    def __str__(self):
+        return f"Feedback for {self.grade} by {self.teacher}"
+
+
+class AssignmentSubmission(models.Model):
+    """Represents student assignment submissions"""
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='assignment_submissions')
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='assignment_submissions')
+    title = models.CharField(max_length=255, help_text="Assignment title")
+    description = models.TextField(blank=True, help_text="Assignment description")
+    submission_file = models.FileField(upload_to='assignments/', help_text="Submitted file")
+    submitted_at = models.DateTimeField(auto_now_add=True)
+    grade = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, help_text="Assignment grade")
+    
+    class Meta:
+        ordering = ['-submitted_at']
+        verbose_name = "Assignment Submission"
+        verbose_name_plural = "Assignment Submissions"
+    
+    def __str__(self):
+        return f"{self.student} - {self.title}"
+
+
+class StudentTeacherMessage(models.Model):
+    """Represents messages between students and teachers"""
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='teacher_messages')
+    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='student_messages')
+    subject = models.CharField(max_length=255, help_text="Message subject")
+    message = models.TextField(help_text="Message content")
+    is_from_student = models.BooleanField(default=True, help_text="Is this message from student to teacher?")
+    is_read = models.BooleanField(default=False, help_text="Has this message been read?")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Student-Teacher Message"
+        verbose_name_plural = "Student-Teacher Messages"
+    
+    def __str__(self):
+        return f"Message from {self.student if self.is_from_student else self.teacher} to {self.teacher if self.is_from_student else self.student}"
+
+
+class RemedialRequest(models.Model):
+    """Represents requests for remedial classes or help"""
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='remedial_requests')
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='remedial_requests')
+    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='remedial_requests')
+    reason = models.TextField(help_text="Reason for remedial request")
+    status = models.CharField(max_length=20, default='pending', choices=[
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('completed', 'Completed'),
+    ], help_text="Request status")
+    
+    requested_at = models.DateTimeField(auto_now_add=True)
+    responded_at = models.DateTimeField(null=True, blank=True, help_text="When the request was responded to")
+    
+    class Meta:
+        ordering = ['-requested_at']
+        verbose_name = "Remedial Request"
+        verbose_name_plural = "Remedial Requests"
+    
+    def __str__(self):
+        return f"Remedial request by {self.student} for {self.subject}"
+
+
 # ---------------------------------------------------------------------------
 # Waitlist — landing page email capture
 # ---------------------------------------------------------------------------
