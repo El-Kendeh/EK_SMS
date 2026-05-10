@@ -21,22 +21,52 @@ SECRET_KEY = config(
 DEBUG = config('DEBUG', default=False, cast=bool)
 
 # SECURITY: Specify allowed hosts
+DEFAULT_ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    'backend.pruhsms.africa',
+    'www.backend.pruhsms.africa',
+    'ek-sms-one.vercel.app',
+]
 ALLOWED_HOSTS = config(
     'ALLOWED_HOSTS',
-    default='localhost,127.0.0.1,backend.pruhsms.africa,www.backend.pruhsms.africa,ek-sms-one.vercel.app',
+    default=','.join(DEFAULT_ALLOWED_HOSTS),
     cast=Csv()
 )
 
 # CORS Configuration for frontend communication
+DEFAULT_CORS_ALLOWED_ORIGINS = [
+    'http://localhost:3000',
+    'https://ek-sms-one.vercel.app',
+    'https://pruhsms.africa',
+    'https://www.pruhsms.africa',
+    'https://backend.pruhsms.africa',
+    'https://www.backend.pruhsms.africa',
+]
 CORS_ALLOWED_ORIGINS = config(
     'CORS_ALLOWED_ORIGINS',
-    default='http://localhost:3000,https://ek-sms-one.vercel.app,https://pruhsms.africa,https://www.pruhsms.africa,https://backend.pruhsms.africa,https://www.backend.pruhsms.africa',
+    default=','.join(DEFAULT_CORS_ALLOWED_ORIGINS),
     cast=Csv()
 )
+if not any(origin.strip() for origin in CORS_ALLOWED_ORIGINS):
+    CORS_ALLOWED_ORIGINS = DEFAULT_CORS_ALLOWED_ORIGINS
+for origin in DEFAULT_CORS_ALLOWED_ORIGINS:
+    if origin not in CORS_ALLOWED_ORIGINS:
+        CORS_ALLOWED_ORIGINS.append(origin)
+
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r'^https://(?:www\.)?pruhsms\.africa$',
+    r'^https://(?:www\.)?backend\.pruhsms\.africa$',
+    r'^https://(?:www\.)?ek-sms-one\.vercel\.app$',
+]
+
 CORS_ALLOW_ALL_ORIGINS = config('CORS_ALLOW_ALL_ORIGINS', default=False, cast=bool)
 
 # SECURITY: Ensure no trailing commas in ALLOWED_HOSTS
-ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS]
+ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS if host.strip()]
+for host in ('backend.pruhsms.africa', 'www.backend.pruhsms.africa'):
+    if host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(host)
 
 # Application definition
 INSTALLED_APPS = [
