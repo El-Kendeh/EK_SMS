@@ -887,6 +887,22 @@ def api_csp_report(request):
 
 @require_http_methods(["POST"])
 @csrf_exempt
+def api_logs(request):
+    """
+    API endpoint to receive security logs from frontend.
+    """
+    try:
+        data = json.loads(request.body)
+        import logging
+        logger = logging.getLogger('django.security')
+        logger.info(f"Frontend Log: {json.dumps(data)}")
+        return JsonResponse({'status': 'ok'}, status=200)
+    except:
+        return JsonResponse({'status': 'error'}, status=400)
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
 def api_register(request):
     """
     Handles institution registration from the wizard.
