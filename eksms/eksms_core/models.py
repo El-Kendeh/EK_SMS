@@ -899,6 +899,150 @@ class StaffAccountAuditLog(models.Model):
         return f"{self.staff_account} - {self.get_action_display()} - {self.created_at}"
 
 
+class UserToken(models.Model):
+    """Represents authentication tokens for users"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tokens')
+    token = models.CharField(max_length=255, unique=True, help_text="Authentication token")
+    token_type = models.CharField(max_length=50, default='access', help_text="Type of token (access, refresh, etc.)")
+    expires_at = models.DateTimeField(help_text="When the token expires")
+    is_active = models.BooleanField(default=True, help_text="Is this token still active?")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "User Token"
+        verbose_name_plural = "User Tokens"
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.token_type} - {self.expires_at}"
+
+
+class Syllabus(models.Model):
+    """Represents a syllabus for a subject"""
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='syllabi')
+    title = models.CharField(max_length=255, help_text="Syllabus title")
+    description = models.TextField(blank=True, help_text="Syllabus description")
+    academic_year = models.ForeignKey(AcademicYear, on_delete=models.CASCADE, related_name='syllabi')
+    term = models.ForeignKey(Term, on_delete=models.CASCADE, related_name='syllabi')
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Syllabus"
+        verbose_name_plural = "Syllabi"
+    
+    def __str__(self):
+        return f"{self.subject.name} - {self.title}"
+
+
+class LessonPlan(models.Model):
+    """Represents a lesson plan for a syllabus"""
+    syllabus = models.ForeignKey(Syllabus, on_delete=models.CASCADE, related_name='lesson_plans')
+    title = models.CharField(max_length=255, help_text="Lesson plan title")
+    objectives = models.TextField(blank=True, help_text="Learning objectives")
+    content = models.TextField(blank=True, help_text="Lesson content")
+    duration_hours = models.IntegerField(default=1, help_text="Duration in hours")
+    week_number = models.IntegerField(help_text="Week number in the term")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['week_number']
+        verbose_name = "Lesson Plan"
+        verbose_name_plural = "Lesson Plans"
+    
+    def __str__(self):
+        return f"{self.syllabus.title} - Week {self.week_number}: {self.title}"
+
+
+class OTPRecord(models.Model):
+    """Represents OTP (One-Time Password) records for authentication"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='otp_records')
+    otp_code = models.CharField(max_length=10, help_text="OTP code")
+    purpose = models.CharField(max_length=50, default='login', help_text="Purpose of OTP (login, password_reset, etc.)")
+    expires_at = models.DateTimeField(help_text="When the OTP expires")
+    is_used = models.BooleanField(default=False, help_text="Has this OTP been used?")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "OTP Record"
+        verbose_name_plural = "OTP Records"
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.purpose} - {self.otp_code}"
+
+
+class AIDocumentCapture(models.Model):
+    """Represents AI-powered document capture for student records"""
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='document_captures')
+    document_type = models.CharField(max_length=100, help_text="Type of document captured")
+    captured_data = models.JSONField(help_text="AI-extracted data from the document")
+    confidence_score = models.FloatField(default=0.0, help_text="AI confidence score (0-1)")
+    original_image = models.ImageField(upload_to='ai_captures/', help_text="Original captured image")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    processed_at = models.DateTimeField(null=True, blank=True, help_text="When AI processing completed")
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "AI Document Capture"
+        verbose_name_plural = "AI Document Captures"
+    
+    def __str__(self):
+        return f"{self.student} - {self.document_type} - {self.confidence_score}"
+
+
+class LiveClass(models.Model):
+    """Represents live online classes"""
+    title = models.CharField(max_length=255, help_text="Class title")
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='live_classes')
+    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='live_classes')
+    classroom = models.ForeignKey(ClassRoom, on_delete=models.CASCADE, related_name='live_classes')
+    scheduled_at = models.DateTimeField(help_text="When the class is scheduled")
+    duration_minutes = models.IntegerField(default=60, help_text="Duration in minutes")
+    meeting_link = models.URLField(help_text="Video conference meeting link")
+    description = models.TextField(blank=True, help_text="Class description")
+    
+    is_active = models.BooleanField(default=True, help_text="Is this class active?")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['scheduled_at']
+        verbose_name = "Live Class"
+        verbose_name_plural = "Live Classes"
+    
+    def __str__(self):
+        return f"{self.title} - {self.subject.name} - {self.scheduled_at}"
+
+
+class GradeAlert(models.Model):
+    """Represents alerts for grade changes or issues"""
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='grade_alerts')
+    grade = models.ForeignKey(Grade, on_delete=models.CASCADE, related_name='alerts')
+    alert_type = models.CharField(max_length=50, help_text="Type of alert (missing_grade, grade_change, etc.)")
+    message = models.TextField(help_text="Alert message")
+    is_resolved = models.BooleanField(default=False, help_text="Has this alert been resolved?")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    resolved_at = models.DateTimeField(null=True, blank=True, help_text="When the alert was resolved")
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Grade Alert"
+        verbose_name_plural = "Grade Alerts"
+    
+    def __str__(self):
+        return f"{self.student} - {self.alert_type} - {self.created_at}"
+
+
 # ---------------------------------------------------------------------------
 # Waitlist — landing page email capture
 # ---------------------------------------------------------------------------
@@ -1122,3 +1266,252 @@ class SecurityLogEntry(models.Model):
     def __str__(self):
         label = self.actor_label or (self.actor.username if self.actor else 'anonymous')
         return f"{self.get_event_type_display()} by {label} at {self.created_at}"
+
+
+# Stub models for compatibility — these need to be fully implemented
+class Attendance(models.Model):
+    """Student attendance record"""
+    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='attendance_records', null=True, blank=True)
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='attendance')
+    classroom = models.ForeignKey(ClassRoom, on_delete=models.CASCADE, null=True, blank=True)
+    date = models.DateField(db_index=True)
+    status = models.CharField(max_length=20, choices=[('present', 'Present'), ('absent', 'Absent'), ('late', 'Late'), ('excused', 'Excused')], default='absent')
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('student', 'date')
+        indexes = [models.Index(fields=['school', 'date']), models.Index(fields=['classroom', 'date'])]
+
+    def __str__(self):
+        return f"{self.student} - {self.date}: {self.status}"
+
+
+class Exam(models.Model):
+    """Exam configuration"""
+    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='exams', null=True, blank=True)
+    name = models.CharField(max_length=200)
+    classroom = models.ForeignKey(ClassRoom, on_delete=models.CASCADE, null=True, blank=True)
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, null=True, blank=True)
+    term = models.ForeignKey(Term, on_delete=models.CASCADE, null=True, blank=True)
+    date = models.DateField(null=True, blank=True)
+    total_marks = models.IntegerField(default=100)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-date']
+
+    def __str__(self):
+        return self.name
+
+
+class ExamResult(models.Model):
+    """Exam result for a student"""
+    exam = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name='results')
+    student = models.ForeignKey(Student, on_delete=models.CASCADE)
+    marks = models.IntegerField(null=True, blank=True)
+    grade = models.CharField(max_length=2, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('exam', 'student')
+
+    def __str__(self):
+        return f"{self.student} - {self.exam}: {self.marks or 'N/A'}"
+
+
+class Notification(models.Model):
+    """System notification"""
+    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='notifications', null=True, blank=True)
+    title = models.CharField(max_length=200)
+    body = models.TextField()
+    notif_type = models.CharField(max_length=50, default='info')
+    recipient_role = models.CharField(max_length=50, default='all')
+    recipient_user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    sender = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='sent_notifications')
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.title
+
+
+class NotificationRead(models.Model):
+    """Track which notifications have been read"""
+    notification = models.ForeignKey(Notification, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    read_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('notification', 'user')
+
+    def __str__(self):
+        return f"{self.user} read {self.notification}"
+
+
+class TimetableSlot(models.Model):
+    """Timetable slot for class"""
+    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='timetable_slots', null=True, blank=True)
+    classroom = models.ForeignKey(ClassRoom, on_delete=models.CASCADE)
+    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, null=True, blank=True)
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, null=True, blank=True)
+    day_of_week = models.CharField(max_length=10, choices=[('MON', 'Monday'), ('TUE', 'Tuesday'), ('WED', 'Wednesday'), ('THU', 'Thursday'), ('FRI', 'Friday'), ('SAT', 'Saturday'), ('SUN', 'Sunday')])
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    room = models.ForeignKey('Room', on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['day_of_week', 'start_time']
+
+    def __str__(self):
+        return f"{self.classroom} - {self.subject} ({self.day_of_week})"
+
+
+class FeeRecord(models.Model):
+    """Fee payment record"""
+    school = models.ForeignKey(School, on_delete=models.CASCADE, null=True, blank=True)
+    student = models.ForeignKey(Student, on_delete=models.CASCADE)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    paid_date = models.DateField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.student} - {self.amount}"
+
+
+class Expense(models.Model):
+    """School expense record"""
+    school = models.ForeignKey(School, on_delete=models.CASCADE, null=True, blank=True)
+    description = models.CharField(max_length=255)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    date = models.DateField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.school} - {self.description}: {self.amount}"
+
+
+class Message(models.Model):
+    """Message between users"""
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_messages')
+    recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_messages')
+    content = models.TextField()
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.sender} → {self.recipient}"
+
+
+class Room(models.Model):
+    """School room/class room"""
+    school = models.ForeignKey(School, on_delete=models.CASCADE, null=True, blank=True)
+    name = models.CharField(max_length=100)
+    capacity = models.IntegerField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+
+class GradingScheme(models.Model):
+    """School's grading scheme"""
+    school = models.OneToOneField(School, on_delete=models.CASCADE, null=True, blank=True)
+    scheme_data = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.school} - Grading Scheme"
+
+
+class ParentNotificationPreference(models.Model):
+    """Parent notification preferences"""
+    parent = models.OneToOneField(Parent, on_delete=models.CASCADE, null=True, blank=True)
+    email_notifications = models.BooleanField(default=True)
+    sms_notifications = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.parent} - Notification Preferences"
+
+
+class GradeFeedbackMessage(models.Model):
+    """Feedback on student grades"""
+    grade = models.ForeignKey(Grade, on_delete=models.CASCADE, null=True, blank=True)
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    message = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Feedback on {self.grade}"
+
+
+class AssignmentSubmission(models.Model):
+    """Assignment submission"""
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, null=True, blank=True)
+    title = models.CharField(max_length=200)
+    submission_date = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.title
+
+
+class StudentTeacherMessage(models.Model):
+    """Message between student and teacher"""
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, null=True, blank=True)
+    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, null=True, blank=True)
+    message = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.student} ↔ {self.teacher}"
+
+
+class RemedialRequest(models.Model):
+    """Request for remedial classes"""
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, null=True, blank=True)
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, null=True, blank=True)
+    reason = models.TextField()
+    status = models.CharField(max_length=20, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.student} - {self.subject}"
+
+
+class ClassSubject(models.Model):
+    """Subject offered in a class"""
+    classroom = models.ForeignKey(ClassRoom, on_delete=models.CASCADE, related_name='class_subjects', null=True, blank=True)
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, null=True, blank=True)
+    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('classroom', 'subject')
+
+    def __str__(self):
+        return f"{self.classroom} - {self.subject}"
+
+
+class GradeModificationRequest(models.Model):
+    """Request to modify a grade"""
+    grade = models.ForeignKey(Grade, on_delete=models.CASCADE, null=True, blank=True)
+    requester = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    reason = models.TextField()
+    status = models.CharField(max_length=20, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Modification request for {self.grade}"
