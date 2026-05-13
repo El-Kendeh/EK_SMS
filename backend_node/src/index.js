@@ -12,7 +12,30 @@ const studentRouter = require('./routes/student');
 const superadminRouter = require('./routes/superadmin');
 
 const app = express();
-app.use(cors());
+
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://pruhsms.africa',
+  'https://www.pruhsms.africa',
+  'https://backend.pruhsms.africa',
+  'https://ek-sms-one.vercel.app'
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
