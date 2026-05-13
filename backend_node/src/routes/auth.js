@@ -1,8 +1,23 @@
-// src/routes/auth.js
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
+const path = require('path');
 
-const { login, logout, register } = require('../controllers/authController');
+const { login, logout, register, sendOtp, verifyOtp } = require('../controllers/authController');
+
+// Multer config for school badge uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/badges/');
+  },
+  filename: (req, file, cb) => {
+    cb(null, `${Date.now()}-${file.originalname}`);
+  }
+});
+const upload = multer({ 
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+});
 
 // POST /api/login/
 router.post('/login/', login);
@@ -11,6 +26,13 @@ router.post('/login/', login);
 router.post('/logout/', logout);
 
 // POST /api/register/
-router.post('/register/', register);
+// Matches 'schoolBadge' field in Register.js
+router.post('/register/', upload.single('schoolBadge'), register);
+
+// POST /api/send-otp/
+router.post('/send-otp/', sendOtp);
+
+// POST /api/verify-otp/
+router.post('/verify-otp/', verifyOtp);
 
 module.exports = router;
