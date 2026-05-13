@@ -25,7 +25,12 @@ const allowedOrigins = [
 
 console.log('🔍 Checking environment variables...');
 console.log('   - DB_NAME:', process.env.DB_NAME);
-console.log('   - RESEND_API_KEY:', process.env.RESEND_API_KEY ? '✅ Loaded' : '❌ NOT LOADED');
+if (process.env.RESEND_API_KEY) {
+  const maskedKey = process.env.RESEND_API_KEY.substring(0, 5) + '...';
+  console.log('   - RESEND_API_KEY: ✅ Loaded (' + maskedKey + ')');
+} else {
+  console.log('   - RESEND_API_KEY: ❌ NOT LOADED');
+}
 
 const isAllowedOrigin = (origin) => {
   if (!origin) return true;
