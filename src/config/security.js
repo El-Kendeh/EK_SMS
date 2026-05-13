@@ -27,10 +27,9 @@ export const SECURITY_CONFIG = {
 
   // Security Headers (request headers only - response headers are set by server)
   SECURE_HEADERS: {
-    'X-Content-Type-Options': 'nosniff',
-    'X-XSS-Protection': '1; mode=block',
-    // Note: X-Frame-Options and Referrer-Policy are response headers, not request headers
-    // They should be set by the server, not sent by the client
+    // All security headers should be set by the server in responses, NOT sent by client in requests
+    // Removing X-Content-Type-Options, X-XSS-Protection, X-Frame-Options, Referrer-Policy
+    // Only include headers that are legitimate for requests
   },
 
   // CORS Configuration

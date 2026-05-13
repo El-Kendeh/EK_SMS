@@ -50,7 +50,8 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRFToken', 'X-Requested-With', 'Accept', 'Referrer-Policy']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRFToken', 'X-Requested-With'],
+  optionsSuccessStatus: 200
 }));
 
 app.use(bodyParser.json());
