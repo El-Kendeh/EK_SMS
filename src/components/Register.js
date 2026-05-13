@@ -1246,11 +1246,36 @@ function Register({ onNavigate }) {
         payload.append('brandColor', form.brandColors.join(', '));
         payload.append('schoolBadge', badgeFile);
       } else {
+        // Only fields the Node register handler reads (avoid sending arrays on TEXT-bound keys via spread).
         payload = {
-          ...form,
-          phone:      form.phoneCode + form.phoneNumber,
+          institutionName: form.institutionName,
+          institutionType: form.institutionType,
+          established: form.established,
+          motto: form.motto,
+          registrationNumber: form.registrationNumber,
+          estimatedTeachers: form.estimatedTeachers,
+          brandColors: form.brandColors,
+          address: form.address,
+          city: form.city,
+          region: form.region,
+          country: form.country,
+          phone: form.phoneCode + form.phoneNumber,
+          email: form.email,
+          website: form.website,
+          firstName: form.firstName,
+          lastName: form.lastName,
+          adminUsername: form.adminUsername,
+          adminEmail: form.adminEmail,
           adminPhone: form.adminPhoneCode + form.adminPhoneNumber,
-          brandColor: form.brandColors.join(', '),
+          password: form.password,
+          capacity: form.capacity,
+          enable2FA: form.enable2FA,
+          academicSystem: form.academicSystem,
+          gradingSystem: form.gradingSystem,
+          language: form.language,
+          agreementAccuracy: form.agreementAccuracy,
+          agreementDataProtection: form.agreementDataProtection,
+          agreementAuthorized: form.agreementAuthorized,
         };
       }
       const data = await ApiClient.post('/api/register/', payload);

@@ -62,6 +62,22 @@ async function logout(req, res) {
   return res.json(successResponse({}, "Logout successful"));
 }
 
+/** Store brand_colors as TEXT: Sequelize rejects arrays/objects on STRING/TEXT fields. */
+function normalizeBrandColorsForDb(raw) {
+  if (raw == null || raw === '') return null;
+  if (Array.isArray(raw)) return JSON.stringify(raw);
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return JSON.stringify(parsed);
+    } catch (_) {
+      /* plain string e.g. comma-separated hex list */
+    }
+    return raw;
+  }
+  return String(raw);
+}
+
 // POST /api/register/
 async function register(req, res) {
   const transaction = await sequelize.transaction();
@@ -72,6 +88,8 @@ async function register(req, res) {
     } = req.body;
 
     const schoolBadge = req.file ? req.file.path : null;
+    const brandColorsText = normalizeBrandColorsForDb(brandColors);
+    const capacityInt = capacity === '' || capacity == null ? null : parseInt(capacity, 10);
 
     // 1. Create User (Admin)
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -93,8 +111,8 @@ async function register(req, res) {
       country,
       phone,
       email,
-      capacity,
-      brand_colors: brandColors,
+      capacity: Number.isFinite(capacityInt) ? capacityInt : null,
+      brand_colors: brandColorsText,
       badge_path: schoolBadge,
       is_approved: false,
     }, { transaction });
@@ -109,8 +127,18 @@ async function register(req, res) {
     return res.json(successResponse({}, "Registration successful! Your application is under review."));
   } catch (err) {
     await transaction.rollback();
-    console.error(err);
-    return res.status(400).json(errorResponse(err.message || "Registration failed"));
+    console.error("Registration error:", err);
+    let errorMessage = "Registration failed";
+    
+    if (err.name === 'SequelizeValidationError' || err.name === 'SequelizeUniqueConstraintError') {
+      errorMessage = Array.isArray(err.errors) && err.errors.length
+        ? err.errors.map((e) => e.message).join(', ')
+        : (err.message || errorMessage);
+    } else if (err.message) {
+      errorMessage = err.message;
+    }
+    
+    return res.status(400).json(errorResponse(errorMessage));
   }
 }
 
