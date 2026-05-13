@@ -10,6 +10,7 @@ const schoolRouter = require('./routes/school');
 const teacherRouter = require('./routes/teacher');
 const studentRouter = require('./routes/student');
 const superadminRouter = require('./routes/superadmin');
+const { logFrontendEvent } = require('./controllers/loggingController');
 
 const app = express();
 
@@ -21,26 +22,34 @@ const allowedOrigins = [
   'https://ek-sms-one.vercel.app'
 ];
 
+const isAllowedOrigin = (origin) => {
+  if (!origin) return true;
+  if (allowedOrigins.includes(origin)) return true;
+  // Allow any subdomain of pruhsms.africa
+  if (origin.endsWith('.pruhsms.africa') || origin === 'https://pruhsms.africa') return true;
+  return false;
+};
+
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-      return callback(new Error(msg), false);
+    if (isAllowedOrigin(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
     }
-    return callback(null, true);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'referrer-policy', 'x-client-id']
 }));
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Health check endpoint
+// Public endpoints
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
+app.post('/api/logs', logFrontendEvent);
+app.post('/api/logs/', logFrontendEvent); // Support both with and without trailing slash
 
 // Mount routers
 app.use('/api', authRouter);
