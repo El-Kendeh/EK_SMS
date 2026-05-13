@@ -64,7 +64,7 @@ export default function SASystemHealth() {
   }, []);
 
   const services = useMemo(() => {
-    if (!metrics) return [];
+    if (!metrics?.services) return [];
     return metrics.services.map(s => ({
       ...s,
       bars: genUptimeBars(s.uptime)
