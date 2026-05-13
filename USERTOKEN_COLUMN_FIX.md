@@ -1,16 +1,36 @@
 # UserToken Column Fix Guide
 
-## Issue
-Your backend was throwing a 500 error:
-```
-Server error (500). Account lookup failed: OperationalError: (1054, "Unknown column 'eksms_core_usertoken.token_type' in 'field list'")
-```
+## Issues Fixed
+1. **Missing UserToken token_type column** - Server error (500) with MySQL 1054 error
+2. **MySQL warning about verification_token** - Unique CharField > 255 characters not allowed
 
 ## Root Cause
-The `UserToken` model in your Django application has a `token_type` field defined, but this column doesn't exist in your MySQL database. This happens when:
-1. A model change is made (adding the `token_type` field)
-2. A migration is created
-3. But the migration was never run on production/development database
+1. **UserToken Issue**: Model has `token_type` field but database table doesn't. Migration was never applied.
+2. **GradeVerification Issue**: `verification_token` field uses CharField(max_length=256, unique=True), but MySQL doesn't allow unique CharFields longer than 255 characters.
+
+## Solution Applied
+
+### Fix 1: Added Missing UserToken token_type Column
+Created migration file: `eksms/eksms_core/migrations/0041_usertoken_token_type.py`
+
+This migration adds the missing `token_type` VARCHAR(50) column to the `eksms_core_usertoken` table with:
+- **Field name**: `token_type`
+- **Type**: VARCHAR(50)
+- **Default value**: 'access'
+- **Nullable**: NO
+
+### Fix 2: Changed verification_token to TextField
+Created migration file: `eksms/eksms_core/migrations/0042_alter_gradeverification_verification_token.py`
+
+This migration changes the `verification_token` field from CharField to TextField:
+- **Before**: `CharField(max_length=256, unique=True)`
+- **After**: `TextField(unique=True)`
+- **Reason**: MySQL doesn't support unique CharFields > 255 characters
+
+### Model Updates
+Updated `eksms_core/models.py`:
+- UserToken: Added `token_type` field
+- GradeVerification: Changed `verification_token` from CharField to TextField
 
 ## Solution
 
@@ -126,22 +146,32 @@ The new migration file follows Django's standard migration format:
 - Field: `token_type` CharField with default value 'access'
 
 ### Database Changes
-This is a safe, non-destructive migration because:
-- ✓ The column has a default value ('access')
-- ✓ Existing rows won't be affected
-- ✓ It doesn't modify existing data
-- ✓ It's fully reversible if needed
+**UserToken Fix**:
+- Added VARCHAR(50) column with default value 'access'
+- Existing rows won't be affected
+- Fully reversible if needed
+
+**GradeVerification Fix**:
+- Changed from VARCHAR(256) to TEXT
+- Maintains uniqueness and indexing
+- Compatible with longer verification tokens
 
 ### Model Definition (in eksms_core/models.py)
 ```python
 class UserToken(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tokens')
     token = models.CharField(max_length=255, unique=True)
-    token_type = models.CharField(max_length=50, default='access')  # ← This field
+    token_type = models.CharField(max_length=50, default='access')  # ← Added this field
     expires_at = models.DateTimeField()
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+class GradeVerification(models.Model):
+    grade = models.OneToOneField(Grade, on_delete=models.CASCADE, related_name='verification')
+    verification_token = models.TextField(unique=True, db_index=True,  # ← Changed to TextField
+                                         help_text="Unique token for verification")
+    # ... other fields
 ```
 
 ## Troubleshooting
@@ -152,7 +182,7 @@ If you get an error saying the migration already exists:
 python eksms/manage.py showmigrations eksms_core
 ```
 
-Look for `[X] 0041_usertoken_token_type` - if marked with [X], it's applied.
+Look for `[X] 0041_usertoken_token_type` and `[X] 0042_alter_gradeverification_verification_token` - if marked with [X], they're applied.
 
 ### Permission Denied on Linux?
 ```bash
@@ -175,6 +205,17 @@ DB_USER=your_user
 DB_PASSWORD=your_password
 ```
 
+### Still Getting MySQL Warnings?
+After applying the migration, run:
+```bash
+python eksms/manage.py check --deploy
+```
+
+This will show any remaining database warnings. The verification_token warning should be gone.
+
+### Verification Token Issues?
+If you have existing verification tokens longer than 255 characters, they will be preserved. The TextField change is backward compatible.
+
 ## Need Help?
 
 If the error persists after migration:
@@ -187,3 +228,4 @@ If the error persists after migration:
 
 **Last Updated**: 2026-05-13
 **Status**: ✓ Ready for deployment
+**Issues Fixed**: UserToken token_type column + GradeVerification MySQL warning
