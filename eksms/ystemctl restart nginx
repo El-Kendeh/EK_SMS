@@ -1,0 +1,12 @@
+[0;1;32m●[0m gunicorn.service - gunicorn daemon
+     Loaded: loaded (]8;;file://ubuntu/etc/systemd/system/gunicorn.service/etc/systemd/system/gunicorn.service]8;;; [0;1;38;5;185mdisabled[0m; preset: [0;1;32menabled[0m)
+     Active: [0;1;32mactive (running)[0m since Mon 2026-05-11 23:06:37 UTC; 20ms ago
+TriggeredBy: [0;1;32m●[0m gunicorn.socket
+   Main PID: 52597 (gunicorn)
+      Tasks: 1 (limit: 2153)
+     Memory: 1.6M (peak: 1.7M)
+        CPU: 6ms
+     CGroup: /system.slice/gunicorn.service
+             └─[0;38;5;245m52597 /var/www/ek-sms/EK_SMS/.venv/bin/python3.14 /var/www/ek-sms/EK_SMS/.venv/bin/gunicorn --access-logfile - --workers 3 --bind unix:/run/gunicorn.sock eksms.wsgi:application[0m
+
+May 11 23:06:37 ubuntu systemd[1]: Started gunicorn.service - gunicorn daemon.
