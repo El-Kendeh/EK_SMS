@@ -1,6 +1,5 @@
-# Fix MySQL warning: Change verification_token from CharField to TextField
-# MySQL doesn't allow unique CharFields with max_length > 255
-# Also remove db_index since MySQL doesn't support TEXT indexes without key length
+# Fix MySQL warning by making verification_token a MySQL-compatible CharField
+# SHA-256 tokens are 64 characters long, so TextField is not needed.
 
 from django.db import migrations, models
 
@@ -15,6 +14,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='gradeverification',
             name='verification_token',
-            field=models.TextField(unique=True, help_text='Unique token for verification'),
+            field=models.CharField(max_length=64, unique=True, help_text='Unique token for verification'),
         ),
     ]

@@ -19,14 +19,14 @@ This migration adds the missing `token_type` VARCHAR(50) column to the `eksms_co
 - **Default value**: 'access'
 - **Nullable**: NO
 
-### Fix 2: Changed verification_token to TextField (Updated)
+### Fix 2: Reverted verification_token to CharField
 Created migration file: `eksms/eksms_core/migrations/0042_alter_gradeverification_verification_token.py`
 
-This migration changes the `verification_token` field from CharField to TextField:
+This migration changes the `verification_token` field to a MySQL-compatible CharField:
 - **Before**: `CharField(max_length=256, unique=True, db_index=True)`
-- **After**: `TextField(unique=True)` (removed db_index)
-- **Reason**: MySQL doesn't support TEXT columns in indexes without key length specification
-- **Impact**: Field can now store longer tokens, uniqueness is maintained, but no database index
+- **After**: `CharField(max_length=64, unique=True)`
+- **Reason**: MySQL only supports unique CharField indexes with length ≤ 255
+- **Impact**: Keeps SHA-256 tokens intact and preserves uniqueness with a valid index
 
 ### Model Updates
 Updated `eksms_core/models.py`:
@@ -170,7 +170,7 @@ class UserToken(models.Model):
 
 class GradeVerification(models.Model):
     grade = models.OneToOneField(Grade, on_delete=models.CASCADE, related_name='verification')
-    verification_token = models.TextField(unique=True, help_text="Unique token for verification")  # ← Changed to TextField, removed db_index
+    verification_token = models.CharField(max_length=64, unique=True, help_text="Unique token for verification")  # ← SHA-256 hash fits in 64 chars
     # ... other fields
 ```
 
