@@ -19,13 +19,14 @@ This migration adds the missing `token_type` VARCHAR(50) column to the `eksms_co
 - **Default value**: 'access'
 - **Nullable**: NO
 
-### Fix 2: Changed verification_token to TextField
+### Fix 2: Changed verification_token to TextField (Updated)
 Created migration file: `eksms/eksms_core/migrations/0042_alter_gradeverification_verification_token.py`
 
 This migration changes the `verification_token` field from CharField to TextField:
-- **Before**: `CharField(max_length=256, unique=True)`
-- **After**: `TextField(unique=True)`
-- **Reason**: MySQL doesn't support unique CharFields > 255 characters
+- **Before**: `CharField(max_length=256, unique=True, db_index=True)`
+- **After**: `TextField(unique=True)` (removed db_index)
+- **Reason**: MySQL doesn't support TEXT columns in indexes without key length specification
+- **Impact**: Field can now store longer tokens, uniqueness is maintained, but no database index
 
 ### Model Updates
 Updated `eksms_core/models.py`:
@@ -169,8 +170,7 @@ class UserToken(models.Model):
 
 class GradeVerification(models.Model):
     grade = models.OneToOneField(Grade, on_delete=models.CASCADE, related_name='verification')
-    verification_token = models.TextField(unique=True, db_index=True,  # ← Changed to TextField
-                                         help_text="Unique token for verification")
+    verification_token = models.TextField(unique=True, help_text="Unique token for verification")  # ← Changed to TextField, removed db_index
     # ... other fields
 ```
 
@@ -216,6 +216,12 @@ This will show any remaining database warnings. The verification_token warning s
 ### Verification Token Issues?
 If you have existing verification tokens longer than 255 characters, they will be preserved. The TextField change is backward compatible.
 
+### MySQL TEXT Index Error?
+If you get the error "BLOB/TEXT column 'verification_token' used in key specification without a key length":
+- The migration has been updated to remove the db_index
+- Run the migration again: `python eksms/manage.py migrate eksms_core`
+- This fixes MySQL's limitation with TEXT columns in indexes
+
 ## Need Help?
 
 If the error persists after migration:
@@ -228,4 +234,4 @@ If the error persists after migration:
 
 **Last Updated**: 2026-05-13
 **Status**: ✓ Ready for deployment
-**Issues Fixed**: UserToken token_type column + GradeVerification MySQL warning
+**Issues Fixed**: UserToken token_type column + GradeVerification MySQL TEXT index issue
