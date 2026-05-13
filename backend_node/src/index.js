@@ -59,6 +59,10 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 // Public endpoints
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
+// Frontend calls this on 403 to refresh CSRF; Node stack does not use Django CSRF — return 200 to avoid noisy 401s.
+app.get(['/api/csrf-token', '/api/csrf-token/'], (req, res) => {
+  res.json({ success: true, csrfToken: '' });
+});
 app.post('/api/logs', logFrontendEvent);
 app.post('/api/logs/', logFrontendEvent); // Support both with and without trailing slash
 app.post('/api/test-email', testEmail);

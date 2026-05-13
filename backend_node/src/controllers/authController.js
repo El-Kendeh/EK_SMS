@@ -40,7 +40,9 @@ async function login(req, res) {
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(401).json(errorResponse("Invalid credentials", 401));
 
-    if (!user.is_active) {
+    // School admins (and other non-superusers) stay gated until superadmin approval.
+    // Superadmin accounts must always be able to sign in even if is_active is false in DB (e.g. legacy import).
+    if (!user.is_active && !user.is_superuser) {
       return res.status(403).json(errorResponse("Your account is pending approval by the Superadmin.", 403));
     }
 
