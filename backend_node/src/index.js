@@ -11,6 +11,7 @@ const teacherRouter = require('./routes/teacher');
 const studentRouter = require('./routes/student');
 const superadminRouter = require('./routes/superadmin');
 const { logFrontendEvent } = require('./controllers/loggingController');
+const { testEmail } = require('./controllers/testController');
 
 const app = express();
 
@@ -50,6 +51,8 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 app.post('/api/logs', logFrontendEvent);
 app.post('/api/logs/', logFrontendEvent); // Support both with and without trailing slash
+app.post('/api/test-email', testEmail);
+app.post('/api/test-email/', testEmail);
 
 // Mount routers
 app.use('/api', authRouter);
