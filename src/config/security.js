@@ -25,12 +25,12 @@ export const SECURITY_CONFIG = {
   // API Configuration
   API_URL,
 
-  // Security Headers
+  // Security Headers (request headers only - response headers are set by server)
   SECURE_HEADERS: {
     'X-Content-Type-Options': 'nosniff',
-    'X-Frame-Options': 'DENY',
     'X-XSS-Protection': '1; mode=block',
-    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    // Note: X-Frame-Options and Referrer-Policy are response headers, not request headers
+    // They should be set by the server, not sent by the client
   },
 
   // CORS Configuration
