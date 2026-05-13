@@ -8,10 +8,14 @@ const { Resend } = require('resend');
 const { generateToken } = require('../utils/jwt');
 
 let resend;
-if (process.env.RESEND_API_KEY) {
-  resend = new Resend(process.env.RESEND_API_KEY);
+if (process.env.RESEND_API_KEY && process.env.RESEND_API_KEY.trim() !== '') {
+  try {
+    resend = new Resend(process.env.RESEND_API_KEY.trim());
+  } catch (err) {
+    console.error('❌ Resend initialization failed:', err.message);
+  }
 } else {
-  console.warn('⚠️ RESEND_API_KEY is missing. Email features will be disabled.');
+  console.warn('⚠️ RESEND_API_KEY is empty or missing. Email features will be disabled.');
 }
 
 // Example response helpers
