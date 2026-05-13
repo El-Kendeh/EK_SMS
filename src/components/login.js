@@ -98,6 +98,7 @@ function Login({ onNavigate }) {
   const [goingHome, setGoingHome] = useState(false);
   const [searchOpen,       setSearchOpen]       = useState(false);
   const [showUnderReview, setShowUnderReview] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
 
   // Auto-redirect if already logged in
   useEffect(() => {
