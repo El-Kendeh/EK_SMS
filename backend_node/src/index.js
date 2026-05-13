@@ -23,11 +23,15 @@ const allowedOrigins = [
   'https://ek-sms-one.vercel.app'
 ];
 
+console.log('🔍 Checking environment variables...');
+console.log('   - DB_NAME:', process.env.DB_NAME);
+console.log('   - RESEND_API_KEY:', process.env.RESEND_API_KEY ? '✅ Loaded' : '❌ NOT LOADED');
+
 const isAllowedOrigin = (origin) => {
   if (!origin) return true;
   if (allowedOrigins.includes(origin)) return true;
-  // Allow any subdomain of pruhsms.africa
-  if (origin.endsWith('.pruhsms.africa') || origin === 'https://pruhsms.africa') return true;
+  // Even more permissive check for pruhsms.africa subdomains
+  if (origin.includes('pruhsms.africa')) return true;
   return false;
 };
 
