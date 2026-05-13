@@ -1,1 +1,0 @@
-# eksms_core app package
