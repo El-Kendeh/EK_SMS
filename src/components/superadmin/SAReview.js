@@ -278,6 +278,13 @@ export default function SAReview({ school, onBack, onApprove, onReject, onReques
               <Field label="Capacity"        value={school.capacity ? `${school.capacity.toLocaleString()} students` : null} />
               <Field label="Website"         value={school.website} />
               <Field label="Registered"      value={fmtDate(school.registration_date)} />
+              <Field label="Code"            value={school.code} />
+              {school.brand_colors && (
+                <Field label="Brand Colors"    value={school.brand_colors} />
+              )}
+              {school.motto && (
+                <Field label="Motto"          value={school.motto} />
+              )}
             </Section>
 
             {/* Location */}
@@ -314,8 +321,9 @@ export default function SAReview({ school, onBack, onApprove, onReject, onReques
               </div>
               <Field label="Email"    value={adminEmail} />
               <Field label="Username" value={school.admin_username} />
+              <Field label="Phone"    value={school.admin_phone} />
               <Field
-                label="Email"
+                label="Email Status"
                 value={adminEmail && adminEmail !== '—' ? 'Verified ✓' : 'Not provided'}
                 chip={adminEmail && adminEmail !== '—' ? 'approved' : 'pending'}
               />
@@ -325,18 +333,78 @@ export default function SAReview({ school, onBack, onApprove, onReject, onReques
             <Section icon={<IcSettings />} title="Configuration">
               <Field label="Capacity"        value={school.capacity ? `${school.capacity} students` : null} />
               <Field label="Academic System" value={school.academic_system} />
+              <Field label="Institution Type" value={school.institution_type} />
+              {school.region && (
+                <Field label="Region"         value={school.region} />
+              )}
+              {school.website && (
+                <Field label="Website"        value={school.website} />
+              )}
             </Section>
 
-            {/* Security */}
-            <Section icon={<IcShield />} title="Security">
+            {/* Security & Status */}
+            <Section icon={<IcShield />} title="Security & Status">
               <Field label="Registered"
                 value={fmtDate(school.registration_date)}
               />
+              {school.approval_date && (
+                <Field label="Approved"
+                  value={fmtDate(school.approval_date)}
+                />
+              )}
               <Field
                 label="Status"
                 value={school.is_approved ? 'Approved' : school.changes_requested ? 'Changes Requested' : 'Pending Review'}
                 chip={school.is_approved ? 'approved' : school.changes_requested ? 'changes' : 'pending'}
               />
+              <Field
+                label="Active"
+                value={school.is_active ? 'Yes' : 'No'}
+                chip={school.is_active ? 'approved' : 'rejected'}
+              />
+              {school.rejection_reason && (
+                <Field label="Rejection Reason" value={school.rejection_reason} />
+              )}
+            </Section>
+
+            {/* School Badge & Branding */}
+            <Section icon={<IcShield />} title="School Badge & Branding">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
+                <div style={{ width: 80, height: 80, borderRadius: 12, background: school.badge ? 'transparent' : color, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--sa-border)', overflow: 'hidden' }}>
+                  <SchoolBadge badge={school.badge} name={school.name} size={80} />
+                </div>
+                <div>
+                  <p style={{ margin: '0 0 4px', fontSize: '0.875rem', fontWeight: 600, color: 'var(--sa-text)' }}>School Badge</p>
+                  <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--sa-text-2)' }}>
+                    {school.badge ? 'Badge uploaded and available' : 'No badge uploaded - showing initials'}
+                  </p>
+                </div>
+              </div>
+              {school.brand_colors && (
+                <div style={{ marginTop: 12 }}>
+                  <p style={{ margin: '0 0 8px', fontSize: '0.875rem', fontWeight: 600, color: 'var(--sa-text)' }}>Brand Colors</p>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {(() => {
+                      try {
+                        const colors = JSON.parse(school.brand_colors);
+                        return colors.map((color, i) => (
+                          <div key={i} style={{
+                            width: 32, height: 32, borderRadius: 6,
+                            background: color, border: '1px solid var(--sa-border)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                          }}>
+                            <span style={{ fontSize: '0.625rem', fontWeight: 700, color: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
+                              {i + 1}
+                            </span>
+                          </div>
+                        ));
+                      } catch {
+                        return <span style={{ fontSize: '0.75rem', color: 'var(--sa-text-2)' }}>{school.brand_colors}</span>;
+                      }
+                    })()}
+                  </div>
+                </div>
+              )}
             </Section>
 
             {/* Risk — mobile only (shown below grid on small screens) */}
