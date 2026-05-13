@@ -1,12 +1,20 @@
 /**
  * One-time / ops: create or update the platform superadmin in auth_user.
- * Password MUST be supplied via environment variable (never commit secrets).
+ * Password MUST be supplied via environment or backend_node/.env (never commit secrets).
  *
- * Defaults match your requested account identifiers; set password when running:
- *   set SUPERADMIN_SEED_PASSWORD=YourSecurePasswordHere
- *   node scripts/seedSuperAdmin.js
+ * From the backend_node directory (where package.json lives):
  *
- * (PowerShell: $env:SUPERADMIN_SEED_PASSWORD="..." ; node scripts/seedSuperAdmin.js)
+ * Linux / macOS (bash):
+ *   export SUPERADMIN_SEED_PASSWORD='your-password-here'
+ *   npm run seed:superadmin
+ *
+ * Or one line:
+ *   SUPERADMIN_SEED_PASSWORD='your-password-here' npm run seed:superadmin
+ *
+ * Windows PowerShell:
+ *   $env:SUPERADMIN_SEED_PASSWORD = 'your-password-here'; npm run seed:superadmin
+ *
+ * Or add SUPERADMIN_SEED_PASSWORD=... to backend_node/.env and run: npm run seed:superadmin
  */
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const bcrypt = require('bcryptjs');
@@ -19,7 +27,15 @@ const PASSWORD = process.env.SUPERADMIN_SEED_PASSWORD;
 
 async function main() {
   if (!PASSWORD || !String(PASSWORD).trim()) {
-    console.error('Set SUPERADMIN_SEED_PASSWORD in the environment before running this script.');
+    console.error(
+      'SUPERADMIN_SEED_PASSWORD is not set.\n\n' +
+        'Linux/macOS (bash), from this folder:\n' +
+        "  export SUPERADMIN_SEED_PASSWORD='your-password'\n" +
+        '  npm run seed:superadmin\n\n' +
+        'One line:\n' +
+        "  SUPERADMIN_SEED_PASSWORD='your-password' npm run seed:superadmin\n\n" +
+        'Or put SUPERADMIN_SEED_PASSWORD=... in backend_node/.env\n'
+    );
     process.exit(1);
   }
 
