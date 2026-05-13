@@ -5,8 +5,14 @@ const SchoolAdmin = require('../models/SchoolAdmin');
 const OTP = require('../models/OTP');
 const sequelize = require('../config/db');
 const { Resend } = require('resend');
+const { generateToken } = require('../utils/jwt');
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let resend;
+if (process.env.RESEND_API_KEY) {
+  resend = new Resend(process.env.RESEND_API_KEY);
+} else {
+  console.warn('⚠️ RESEND_API_KEY is missing. Email features will be disabled.');
+}
 
 // Example response helpers
 const successResponse = (data = {}, message = "Success") => ({ success: true, message, ...data });
@@ -24,8 +30,23 @@ async function login(req, res) {
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(401).json(errorResponse("Invalid credentials", 401));
 
-    // Issue token (TODO: sign a real JWT)
-    return res.json(successResponse({ token: "TODO_REAL_JWT_TOKEN", user: { username: user.username, email: user.email } }));
+    // Approval Check
+    if (!user.is_active) {
+      return res.status(403).json(errorResponse("Your account is pending approval by the Superadmin.", 403));
+    }
+
+    // Issue real token
+    const token = generateToken(user);
+    return res.json(successResponse({ 
+      token, 
+      user: { 
+        id: user.id,
+        username: user.username, 
+        email: user.email,
+        is_staff: user.is_staff,
+        is_superuser: user.is_superuser
+      } 
+    }));
   } catch (err) {
     console.error(err);
     return res.status(500).json(errorResponse("Internal server error", 500));
@@ -102,23 +123,27 @@ async function sendOtp(req, res) {
     await OTP.create({ email, code, expires_at: expiresAt });
 
     // 2. Send via Resend
-    const { data, error } = await resend.emails.send({
-      from: process.env.DEFAULT_FROM_EMAIL || 'EK-SMS <noreply@elkendeh.com>',
-      to: [email],
-      subject: 'Your Verification Code - EK-SMS',
-      html: `
-        <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-          <h2 style="color: #4f46e5;">Verification Code</h2>
-          <p>Your verification code for EK-SMS registration is:</p>
-          <div style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #111827; padding: 10px 0;">${code}</div>
-          <p style="color: #6b7280; font-size: 14px;">This code will expire in 10 minutes.</p>
-        </div>
-      `,
-    });
+    if (resend) {
+      const { data, error } = await resend.emails.send({
+        from: process.env.DEFAULT_FROM_EMAIL || 'EK-SMS <noreply@elkendeh.com>',
+        to: [email],
+        subject: 'Your Verification Code - EK-SMS',
+        html: `
+          <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+            <h2 style="color: #4f46e5;">Verification Code</h2>
+            <p>Your verification code for EK-SMS registration is:</p>
+            <div style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #111827; padding: 10px 0;">${code}</div>
+            <p style="color: #6b7280; font-size: 14px;">This code will expire in 10 minutes.</p>
+          </div>
+        `,
+      });
 
-    if (error) {
-      console.error('Resend Error:', error);
-      return res.status(500).json(errorResponse("Failed to send email"));
+      if (error) {
+        console.error('Resend Error:', error);
+        return res.status(500).json(errorResponse("Failed to send email"));
+      }
+    } else {
+      console.log(`[DEV MODE] OTP for ${email}: ${code}`);
     }
 
     return res.json(successResponse({}, "OTP sent successfully"));

@@ -9,6 +9,7 @@ const authRouter = require('./routes/auth');
 const schoolRouter = require('./routes/school');
 const teacherRouter = require('./routes/teacher');
 const studentRouter = require('./routes/student');
+const superadminRouter = require('./routes/superadmin');
 
 const app = express();
 app.use(cors());
@@ -21,6 +22,7 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 // Mount routers
 app.use('/api', authRouter);
 app.use('/api', schoolRouter);
+app.use('/api', superadminRouter); // Now at /api/schools, /api/impersonate, etc.
 app.use('/api/teacher', teacherRouter);
 app.use('/api/student', studentRouter);
 

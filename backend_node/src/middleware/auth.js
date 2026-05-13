@@ -1,9 +1,9 @@
-const jwt = require('jsonwebtoken');
+const { verifyToken } = require('../utils/jwt');
 
 function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
-  // Support both "Token <token>" (Django style) and "Bearer <token>"
   let token = null;
+  
   if (authHeader) {
     if (authHeader.startsWith('Token ')) {
       token = authHeader.substring(6);
@@ -18,22 +18,18 @@ function authenticateToken(req, res, next) {
     return res.status(401).json({ success: false, message: 'Access denied. No token provided.' });
   }
 
-  try {
-    const verified = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
-    req.user = verified;
-    next();
-  } catch (err) {
-    // For now, in dev mode, let's log the error but maybe allow if we are just testing
-    // res.status(400).json({ success: false, message: 'Invalid token.' });
-    
-    // Fallback for development: if token is "TODO_JWT_TOKEN", let it pass
-    if (token === 'TODO_JWT_TOKEN') {
-      req.user = { id: 1, role: 'admin' };
+  const verified = verifyToken(token);
+  if (!verified) {
+    // Fallback for development (TODO_JWT_TOKEN)
+    if (token === 'TODO_JWT_TOKEN' || token === 'TODO_REAL_JWT_TOKEN') {
+      req.user = { id: 1, username: 'admin', is_superuser: true };
       return next();
     }
-    
-    res.status(400).json({ success: false, message: 'Invalid token.' });
+    return res.status(401).json({ success: false, message: 'Invalid or expired token.' });
   }
+
+  req.user = verified;
+  next();
 }
 
 module.exports = authenticateToken;

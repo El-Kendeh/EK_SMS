@@ -44,33 +44,40 @@ const AlertIcon = () => (
    Error Modal Component
    =================================================================== */
 function ErrorModal({ message, onClose }) {
+  // ... existing code ...
+}
+
+function UnderReviewModal({ onClose }) {
   return (
     <div className="modal-overlay" role="dialog" aria-modal="true" onClick={onClose} style={{
       position: 'fixed', inset: 0,
-      backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center',
-      justifyContent: 'center', zIndex: 9999, backdropFilter: 'blur(4px)'
+      backgroundColor: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center',
+      justifyContent: 'center', zIndex: 9999, backdropFilter: 'blur(8px)'
     }}>
       <div className="modal-box" onClick={(e) => e.stopPropagation()} style={{
-        background: 'white', padding: '32px', borderRadius: '16px', maxWidth: '360px',
-        width: '90%', textAlign: 'center', boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
-        animation: 'fadeInDown 0.3s ease-out'
+        background: 'white', padding: '40px', borderRadius: '24px', maxWidth: '420px',
+        width: '90%', textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+        animation: 'fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
       }}>
         <div style={{ 
-          width: '60px', height: '60px', borderRadius: '50%', background: '#fee2e2',
-          color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          margin: '0 auto 20px'
+          width: '80px', height: '80px', borderRadius: '50%', background: '#fef3c7',
+          color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          margin: '0 auto 24px', fontSize: '40px'
         }}>
-          <AlertIcon />
+          ⏳
         </div>
-        <h3 style={{ margin: '0 0 12px', color: '#1e293b', fontSize: '20px', fontWeight: '700' }}>Login Failed</h3>
-        <p style={{ margin: '0 0 24px', color: '#64748b', fontSize: '15px', lineHeight: 1.5 }}>{message}</p>
+        <h3 style={{ margin: '0 0 16px', color: '#111827', fontSize: '24px', fontWeight: '800' }}>Application Under Review</h3>
+        <p style={{ margin: '0 0 32px', color: '#4b5563', fontSize: '16px', lineHeight: 1.6 }}>
+          Thank you for registering! Your institution's application has been received and is currently being verified by our team.
+          <br /><br />
+          You will receive an email once your account has been approved.
+        </p>
         <button type="button" onClick={onClose} style={{
-          background: '#ef4444', color: 'white', border: 'none', padding: '12px 24px',
-          borderRadius: '10px', fontWeight: '600', cursor: 'pointer', width: '100%',
-          fontSize: '15px', transition: 'background 0.2s'
-        }} onMouseOver={(e) => e.currentTarget.style.background = '#dc2626'}
-           onMouseOut={(e) => e.currentTarget.style.background = '#ef4444'}>
-          Try Again
+          background: '#1e293b', color: 'white', border: 'none', padding: '14px 28px',
+          borderRadius: '12px', fontWeight: '700', cursor: 'pointer', width: '100%',
+          fontSize: '16px', transition: 'all 0.2s'
+        }}>
+          Understood
         </button>
       </div>
     </div>
@@ -89,7 +96,8 @@ function Login({ onNavigate }) {
   const [error, setError] = useState('');
   const [forgotMsg, setForgotMsg] = useState(false);
   const [goingHome, setGoingHome] = useState(false);
-  const [checkingAuth, setCheckingAuth] = useState(true);
+  const [searchOpen,       setSearchOpen]       = useState(false);
+  const [showUnderReview, setShowUnderReview] = useState(false);
 
   // Auto-redirect if already logged in
   useEffect(() => {
@@ -179,7 +187,9 @@ function Login({ onNavigate }) {
       }
     } catch (err) {
       const raw = err.message || '';
-      if (raw.toLowerCase().includes('failed to fetch') || raw.toLowerCase().includes('networkerror') || raw.toLowerCase().includes('load failed')) {
+      if (raw.includes('pending approval')) {
+        setShowUnderReview(true);
+      } else if (raw.toLowerCase().includes('failed to fetch') || raw.toLowerCase().includes('networkerror') || raw.toLowerCase().includes('load failed')) {
         setError('Unable to reach the server. Please check your connection and try again.');
       } else if (raw.toLowerCase().includes('invalid') || raw.toLowerCase().includes('credentials') || raw.toLowerCase().includes('password') || raw.toLowerCase().includes('401')) {
         setError('Incorrect email/username or password. Please check your credentials and try again.');
@@ -391,6 +401,7 @@ function Login({ onNavigate }) {
 
       {/* ── Error modal ── */}
       {error && <ErrorModal message={error} onClose={() => setError('')} />}
+      {showUnderReview && <UnderReviewModal onClose={() => setShowUnderReview(false)} />}
     </div>
   );
 }
