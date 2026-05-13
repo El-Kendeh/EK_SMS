@@ -96,7 +96,6 @@ function Login({ onNavigate }) {
   const [error, setError] = useState('');
   const [forgotMsg, setForgotMsg] = useState(false);
   const [goingHome, setGoingHome] = useState(false);
-  const [searchOpen,       setSearchOpen]       = useState(false);
   const [showUnderReview, setShowUnderReview] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
 
