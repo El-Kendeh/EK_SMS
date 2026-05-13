@@ -1,4 +1,5 @@
 const bcrypt = require('bcryptjs');
+const { Op } = require('sequelize');
 const User = require('../models/User');
 const School = require('../models/School');
 const SchoolAdmin = require('../models/SchoolAdmin');
@@ -26,30 +27,56 @@ const errorResponse = (message = "Error", status = 400) => ({ success: false, me
 async function login(req, res) {
   const { username, password } = req.body;
   try {
-    const user = await User.findOne({ where: { username } });
+    const identifier = (username || '').trim();
+    if (!identifier || !password) {
+      return res.status(400).json(errorResponse("Username or email and password are required."));
+    }
+
+    const user = await User.findOne({
+      where: { [Op.or]: [{ username: identifier }, { email: identifier }] },
+    });
     if (!user) return res.status(401).json(errorResponse("Invalid credentials", 401));
 
-    // NOTE: Django uses PBKDF2 by default. For now, we check bcrypt for new users.
-    // In a real migration, we would use a pbkdf2-sha256 library to check Django hashes.
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(401).json(errorResponse("Invalid credentials", 401));
 
-    // Approval Check
     if (!user.is_active) {
       return res.status(403).json(errorResponse("Your account is pending approval by the Superadmin.", 403));
     }
 
-    // Issue real token
-    const token = generateToken(user);
-    return res.json(successResponse({ 
-      token, 
-      user: { 
+    const schoolAdminLink = await SchoolAdmin.findOne({ where: { user_id: user.id } });
+    let role = 'user';
+    if (user.is_superuser) {
+      role = 'superadmin';
+    } else if (schoolAdminLink) {
+      role = 'school_admin';
+    } else if (user.is_staff) {
+      role = 'staff';
+    }
+
+    const must_change_password = !!(schoolAdminLink && schoolAdminLink.must_change_password);
+
+    const token = generateToken({
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      is_staff: user.is_staff,
+      is_superuser: user.is_superuser,
+      role,
+    });
+
+    return res.json(successResponse({
+      token,
+      must_change_password,
+      user: {
         id: user.id,
-        username: user.username, 
+        username: user.username,
         email: user.email,
         is_staff: user.is_staff,
-        is_superuser: user.is_superuser
-      } 
+        is_superuser: user.is_superuser,
+        role,
+        must_change_password,
+      },
     }));
   } catch (err) {
     console.error(err);

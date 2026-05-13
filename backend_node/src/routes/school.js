@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const authenticateToken = require('../middleware/auth');
 
 const {
   getSchoolInfo,
@@ -11,11 +12,11 @@ const {
 // GET /api/check-school-name/
 router.get('/check-school-name/', checkSchoolName);
 
-// Protected routes (TODO: Add auth middleware)
+// Protected routes
 // GET /api/school/info/
-router.get('/school/info/', getSchoolInfo);
+router.get('/school/info/', authenticateToken, getSchoolInfo);
 
 // POST /api/school/update/
-router.post('/school/update/', updateSchoolInfo);
+router.post('/school/update/', authenticateToken, updateSchoolInfo);
 
 module.exports = router;

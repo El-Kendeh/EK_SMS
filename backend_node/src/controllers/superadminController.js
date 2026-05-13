@@ -3,6 +3,7 @@ const User = require('../models/User');
 const SchoolAdmin = require('../models/SchoolAdmin');
 const sequelize = require('../config/db');
 const { generateToken } = require('../utils/jwt');
+const { sendSchoolApprovedEmail } = require('../services/mailer');
 
 const successResponse = (data = {}, message = "Success") => ({ success: true, message, ...data });
 const errorResponse = (message = "Error", status = 400) => ({ success: false, message, status });
@@ -38,18 +39,37 @@ async function handleSchoolAction(req, res) {
     }
 
     if (action === 'approve') {
+      const alreadyApproved = !!school.is_approved;
       school.is_approved = true;
       await school.save({ transaction });
 
-      // Activate School Admin Users
+      const emailQueue = [];
       for (const adminLink of school.SchoolAdmins) {
-        const user = await User.findByPk(adminLink.user_id);
+        const user = await User.findByPk(adminLink.user_id, { transaction });
         if (user) {
           user.is_active = true;
           await user.save({ transaction });
+          if (user.email && String(user.email).trim()) {
+            emailQueue.push({ email: String(user.email).trim(), username: user.username });
+          }
         }
       }
       await transaction.commit();
+
+      if (!alreadyApproved && emailQueue.length) {
+        for (const row of emailQueue) {
+          try {
+            await sendSchoolApprovedEmail({
+              toEmail: row.email,
+              schoolName: school.name,
+              adminUsername: row.username,
+            });
+          } catch (err) {
+            console.error('Approval email failed:', err.message || err);
+          }
+        }
+      }
+
       return res.json(successResponse({}, "School approved successfully."));
     } else if (action === 'reject') {
       // Logic for rejection (e.g. mark as inactive, save note)

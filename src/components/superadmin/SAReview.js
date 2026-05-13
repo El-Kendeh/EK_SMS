@@ -148,7 +148,7 @@ function ApproveModal({ school, onConfirm, onCancel, isLoading }) {
           </div>
         </div>
         <p style={{ margin: '0 0 20px', color: 'var(--sa-text-2)', fontSize: '0.875rem', lineHeight: 1.6 }}>
-          Approving <strong style={{ color: 'var(--sa-text)' }}>{school.name}</strong> will activate their account and send login credentials to the school administrator.
+          Approving <strong style={{ color: 'var(--sa-text)' }}>{school.name}</strong> activates the school administrator account, unlocks the School Administrator dashboard, and sends them an email at their registered address with the PruhSMS sign-in link, role (School Administrator), username, and a reminder to use the password they chose at registration.
         </p>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
           <button className="sa-btn sa-btn--ghost" onClick={onCancel} disabled={isLoading}>Cancel</button>
