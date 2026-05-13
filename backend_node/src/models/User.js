@@ -11,6 +11,7 @@ const User = sequelize.define('User', {
   is_staff: { type: DataTypes.BOOLEAN, defaultValue: false },
   is_superuser: { type: DataTypes.BOOLEAN, defaultValue: false },
   date_joined: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  last_login: { type: DataTypes.DATE, allowNull: true },
 }, {
   tableName: 'auth_user',
   timestamps: false,

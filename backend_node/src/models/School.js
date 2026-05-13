@@ -14,6 +14,8 @@ const School = sequelize.define('School', {
   badge_path: { type: DataTypes.STRING },
   is_approved: { type: DataTypes.BOOLEAN, defaultValue: false },
   is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
+  rejection_reason: { type: DataTypes.TEXT, allowNull: true },
+  changes_requested: { type: DataTypes.BOOLEAN, defaultValue: false },
   created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
 }, {
   tableName: 'eksms_core_school', // Assuming Django app name 'eksms_core'

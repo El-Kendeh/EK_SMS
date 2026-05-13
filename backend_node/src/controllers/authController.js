@@ -7,6 +7,7 @@ const OTP = require('../models/OTP');
 const sequelize = require('../config/db');
 const { Resend } = require('resend');
 const { generateToken } = require('../utils/jwt');
+const { appendSecurityAuditLog } = require('../utils/auditLog');
 
 let resend;
 if (process.env.RESEND_API_KEY && process.env.RESEND_API_KEY.trim() !== '') {
@@ -23,6 +24,12 @@ if (process.env.RESEND_API_KEY && process.env.RESEND_API_KEY.trim() !== '') {
 const successResponse = (data = {}, message = "Success") => ({ success: true, message, ...data });
 const errorResponse = (message = "Error", status = 400) => ({ success: false, message, status });
 
+function clientIp(req) {
+  const xf = req.headers['x-forwarded-for'];
+  if (xf && typeof xf === 'string') return xf.split(',')[0].trim().slice(0, 64);
+  return (req.socket?.remoteAddress || '—').slice(0, 64);
+}
+
 // POST /api/login/
 async function login(req, res) {
   const { username, password } = req.body;
@@ -35,10 +42,28 @@ async function login(req, res) {
     const user = await User.findOne({
       where: { [Op.or]: [{ username: identifier }, { email: identifier }] },
     });
-    if (!user) return res.status(401).json(errorResponse("Invalid credentials", 401));
+    if (!user) {
+      await appendSecurityAuditLog({
+        type: 'login_failure',
+        severity: 'medium',
+        actor: identifier,
+        ip: clientIp(req),
+        action: 'Login failed: unknown user',
+      });
+      return res.status(401).json(errorResponse("Invalid credentials", 401));
+    }
 
     const valid = await bcrypt.compare(password, user.password);
-    if (!valid) return res.status(401).json(errorResponse("Invalid credentials", 401));
+    if (!valid) {
+      await appendSecurityAuditLog({
+        type: 'login_failure',
+        severity: 'medium',
+        actor: user.username,
+        ip: clientIp(req),
+        action: 'Login failed: bad password',
+      });
+      return res.status(401).json(errorResponse("Invalid credentials", 401));
+    }
 
     // School admins (and other non-superusers) stay gated until superadmin approval.
     // Superadmin accounts must always be able to sign in even if is_active is false in DB (e.g. legacy import).
@@ -57,6 +82,21 @@ async function login(req, res) {
     }
 
     const must_change_password = !!(schoolAdminLink && schoolAdminLink.must_change_password);
+
+    try {
+      user.last_login = new Date();
+      await user.save();
+    } catch {
+      /* ignore if column missing */
+    }
+
+    await appendSecurityAuditLog({
+      type: 'login_success',
+      severity: 'info',
+      actor: user.username,
+      ip: clientIp(req),
+      action: `Login success (${role})`,
+    });
 
     const token = generateToken({
       id: user.id,

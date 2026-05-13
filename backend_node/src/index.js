@@ -1,9 +1,12 @@
 // src/index.js
 require('dotenv').config();
 const express = require('express');
+const path = require('path');
+const fs = require('fs');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const db = require('./config/db');
+require('./models');
 
 const authRouter = require('./routes/auth');
 const schoolRouter = require('./routes/school');
@@ -56,6 +59,15 @@ app.use(cors({
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+
+const uploadsRoot = path.join(__dirname, '../uploads');
+try {
+  fs.mkdirSync(path.join(uploadsRoot, 'branding'), { recursive: true });
+  fs.mkdirSync(path.join(uploadsRoot, 'badges'), { recursive: true });
+} catch {
+  /* ignore */
+}
+app.use('/uploads', express.static(uploadsRoot));
 
 // Public endpoints
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
