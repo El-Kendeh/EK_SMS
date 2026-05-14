@@ -1,25 +1,5 @@
 /**
- * Side-effect imports so `sequelize.sync({ alter: true })` creates/updates all tables.
+ * Side-effect imports so `sequelize.sync({ alter: true })` creates only the minimal schema.
  */
 require('./Role');
 require('./User');
-require('./School');
-require('./SchoolAdmin');
-require('./OTP');
-require('./SecurityAuditLog');
-require('./SuperadminSettings');
-require('./BroadcastAlert');
-require('./SystemOpsAlert');
-require('./ForensicEvent');
-require('./Class');
-require('./Subject');
-require('./Student');
-require('./Teacher');
-require('./AcademicYear');
-require('./Term');
-require('./Grade');
-require('./Attendance');
-require('./GradingScheme');
-require('./Room');
-require('./Exam');
-require('./Notification');
