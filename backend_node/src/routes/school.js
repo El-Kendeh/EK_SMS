@@ -79,10 +79,7 @@ const upload = multer({
 });
 
 function teacherUpload(req, res, next) {
-  const handler = upload.fields([
-    { name: 'photo', maxCount: 1 },
-    { name: 'profile_picture', maxCount: 1 }
-  ]);
+  const handler = upload.any();
 
   handler(req, res, (err) => {
     if (err) {
@@ -93,8 +90,10 @@ function teacherUpload(req, res, next) {
       return res.status(400).json({ success: false, message });
     }
 
-    if (req.files) {
-      req.file = (req.files.photo && req.files.photo[0]) || (req.files.profile_picture && req.files.profile_picture[0]);
+    if (Array.isArray(req.files) && req.files.length > 0) {
+      req.file = req.files.find((file) => file.fieldname === 'photo')
+        || req.files.find((file) => file.fieldname === 'profile_picture')
+        || req.files[0];
     }
     next();
   });
