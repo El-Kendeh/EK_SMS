@@ -6,12 +6,49 @@ const fs = require('fs');
 const authenticateToken = require('../middleware/auth');
 
 const {
-  getSchoolInfo,
-  updateSchoolInfo,
-  checkSchoolName,
+  // School info
+  getSchoolInfo, updateSchoolInfo, checkSchoolName,
+  // Students
+  getStudents, createStudent, getNextAdmissionNumber, getStudentStats,
+  // Teachers
+  getTeachers, createTeacher, getTeacherStats,
+  // Classes
+  getClasses, createClass, bulkCreateClasses,
+  // Subjects
+  getSubjects, createSubject,
+  // Academic
+  getAcademicYears, createAcademicYear, getTerms, createTerm,
+  // Grades
+  getGrades, saveGrades,
+  // Attendance
+  recordAttendance,
+  // Grading scheme
+  getGradingScheme, setGradingScheme,
+  // Rooms
+  getRooms, createRoom,
+  // Exams
+  getExams, createExam,
+  // Notifications
+  getNotifications, createNotification,
+  // Analytics
+  getAnalytics,
+  // Finance
+  getFinanceStats, getFinanceFees, recordExpense, getExpenses,
+  // Teacher assignments
+  getTeacherAssignments, createTeacherAssignment,
+  // Exam officers
+  getExamOfficers, assignExamOfficer,
+  // Messages
+  getMessages, sendMessage,
+  // Parent
+  createParent,
+  // Timetable
+  generateTimetable, deleteTimetable,
+  // Modification requests
+  reviewModificationRequest,
 } = require('../controllers/schoolController');
 
-// Multer config for school badge uploads
+// Multer config for badge/file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const dir = path.join(__dirname, '../../../uploads/badges/');
@@ -39,17 +76,93 @@ const upload = multer({
 });
 
 // Public routes
-// GET /api/check-school-name/
 router.get('/check-school-name/', checkSchoolName);
 
-// Protected routes
-// GET /api/school/info/
-router.get('/school/info/', authenticateToken, getSchoolInfo);
+// Protected routes - all require authentication
+const applyAuth = authenticateToken;
 
-// POST /api/school/info/ — Update school info and badge
-router.post('/school/info/', authenticateToken, upload.single('badge'), updateSchoolInfo);
+// ==================== SCHOOL INFO ====================
+router.get('/school/info/', applyAuth, getSchoolInfo);
+router.post('/school/info/', applyAuth, upload.single('badge'), updateSchoolInfo);
 
-// POST /api/school/update/ (legacy)
-router.post('/school/update/', authenticateToken, updateSchoolInfo);
+// ==================== STUDENTS ====================
+router.get('/school/students/', applyAuth, getStudents);
+router.post('/school/students/', applyAuth, upload.single('photo'), createStudent);
+router.get('/school/students/next-admission-number/', applyAuth, getNextAdmissionNumber);
+router.get('/school/student-stats/', applyAuth, getStudentStats);
+
+// ==================== TEACHERS ====================
+router.get('/school/teachers/', applyAuth, getTeachers);
+router.post('/school/teachers/', applyAuth, createTeacher);
+router.get('/school/teacher-stats/', applyAuth, getTeacherStats);
+
+// ==================== CLASSES ====================
+router.get('/school/classes/', applyAuth, getClasses);
+router.post('/school/classes/', applyAuth, createClass);
+router.post('/school/classes/bulk-create/', applyAuth, bulkCreateClasses);
+
+// ==================== SUBJECTS ====================
+router.get('/school/subjects/', applyAuth, getSubjects);
+router.post('/school/subjects/', applyAuth, createSubject);
+
+// ==================== ACADEMIC YEARS & TERMS ====================
+router.get('/school/academic-years/', applyAuth, getAcademicYears);
+router.post('/school/academic-years/', applyAuth, createAcademicYear);
+router.get('/school/terms/', applyAuth, getTerms);
+router.post('/school/terms/', applyAuth, createTerm);
+
+// ==================== GRADES ====================
+router.get('/school/grades/', applyAuth, getGrades);
+router.post('/school/grades/', applyAuth, saveGrades);
+
+// ==================== ATTENDANCE ====================
+router.post('/school/attendance/', applyAuth, recordAttendance);
+
+// ==================== GRADING SCHEME ====================
+router.get('/school/grading-scheme/', applyAuth, getGradingScheme);
+router.post('/school/grading-scheme/', applyAuth, setGradingScheme);
+
+// ==================== ROOMS ====================
+router.get('/school/rooms/', applyAuth, getRooms);
+router.post('/school/rooms/', applyAuth, createRoom);
+
+// ==================== EXAMS ====================
+router.get('/school/exams/', applyAuth, getExams);
+router.post('/school/exams/', applyAuth, createExam);
+
+// ==================== NOTIFICATIONS ====================
+router.get('/school/notifications/', applyAuth, getNotifications);
+router.post('/school/notifications/', applyAuth, createNotification);
+
+// ==================== ANALYTICS ====================
+router.get('/school/analytics/', applyAuth, getAnalytics);
+
+// ==================== FINANCE ====================
+router.get('/school/finance/stats/', applyAuth, getFinanceStats);
+router.get('/school/finance/fees/', applyAuth, getFinanceFees);
+router.post('/school/finance/expenses/', applyAuth, recordExpense);
+router.get('/school/finance/expenses/', applyAuth, getExpenses);
+
+// ==================== TEACHER ASSIGNMENTS ====================
+router.get('/school/teacher-assignments/', applyAuth, getTeacherAssignments);
+router.post('/school/teacher-assignments/', applyAuth, createTeacherAssignment);
+
+// ==================== EXAM OFFICERS ====================
+router.get('/school/exam-officers/', applyAuth, getExamOfficers);
+router.post('/school/exam-officers/', applyAuth, assignExamOfficer);
+
+// ==================== MESSAGES ====================
+router.get('/school/messages/', applyAuth, getMessages);
+router.post('/school/messages/', applyAuth, sendMessage);
+
+// ==================== PARENTS ====================
+router.post('/school/parents/', applyAuth, createParent);
+
+// ==================== TIMETABLE ====================
+router.post('/school/timetable/generate/', applyAuth, generateTimetable);
+router.delete('/school/timetable/', applyAuth, deleteTimetable);
+
+// ==================== MODIFICATION REQUESTS ====================
+router.post('/school/modification-requests/review/', applyAuth, reviewModificationRequest);
 
 module.exports = router;

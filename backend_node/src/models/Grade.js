@@ -1,0 +1,23 @@
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/db');
+
+const Grade = sequelize.define('Grade', {
+  id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+  school_id: { type: DataTypes.INTEGER, allowNull: false },
+  student_id: { type: DataTypes.INTEGER, allowNull: false },
+  subject_id: { type: DataTypes.INTEGER, allowNull: false },
+  term_id: { type: DataTypes.INTEGER, allowNull: false },
+  classroom_id: { type: DataTypes.INTEGER },
+  ca: { type: DataTypes.FLOAT }, // Continuous Assessment
+  midterm: { type: DataTypes.FLOAT },
+  final: { type: DataTypes.FLOAT },
+  total: { type: DataTypes.FLOAT },
+  grade_letter: { type: DataTypes.STRING }, // A, B, C, etc.
+  remarks: { type: DataTypes.TEXT },
+  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+}, {
+  tableName: 'eksms_core_grade',
+  timestamps: false,
+});
+
+module.exports = Grade;
