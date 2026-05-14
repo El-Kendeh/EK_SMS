@@ -1,45 +1,53 @@
 /**
- * One-time / ops: create or update the platform superadmin in auth_user.
- * Password MUST be supplied via environment or backend_node/.env (never commit secrets).
+ * Creates / updates the platform superadmin in `auth_user` (login + JWT + dashboard)
+ * and mirrors the same account in `users` + `roles` (PortalUser / superadmin).
  *
- * From the backend_node directory (where package.json lives):
+ * Defaults match platform owner (override with env):
+ *   SUPERADMIN_SEED_USERNAME   (default Elkendeh@1)
+ *   SUPERADMIN_SEED_EMAIL      (default admin@elkendeh.com)
+ *   SUPERADMIN_SEED_FIRST_NAME (default Elkendeh)
+ *   SUPERADMIN_SEED_LAST_NAME  (default Pruh)
  *
- * Linux / macOS (bash):
- *   export SUPERADMIN_SEED_PASSWORD='your-password-here'
- *   npm run seed:superadmin
- *
- * Or one line:
- *   SUPERADMIN_SEED_PASSWORD='your-password-here' npm run seed:superadmin
- *
- * Windows PowerShell:
- *   $env:SUPERADMIN_SEED_PASSWORD = 'your-password-here'; npm run seed:superadmin
- *
- * Or add SUPERADMIN_SEED_PASSWORD=... to backend_node/.env and run: npm run seed:superadmin
+ * Password is NEVER stored in this file. Provide one of:
+ *   - SUPERADMIN_SEED_PASSWORD in backend_node/.env
+ *   - Or pass as first argument after -- :
+ *       npm run seed:superadmin -- 'your-password'
+ *   Linux one-liner:
+ *       SUPERADMIN_SEED_PASSWORD='your-password' npm run seed:superadmin
  */
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const bcrypt = require('bcryptjs');
 const sequelize = require('../src/config/db');
 const User = require('../src/models/User');
+const Role = require('../src/models/Role');
+const PortalUser = require('../src/models/PortalUser');
 
 const USERNAME = process.env.SUPERADMIN_SEED_USERNAME || 'Elkendeh@1';
 const EMAIL = process.env.SUPERADMIN_SEED_EMAIL || 'admin@elkendeh.com';
-const PASSWORD = process.env.SUPERADMIN_SEED_PASSWORD;
+const FIRST_NAME = process.env.SUPERADMIN_SEED_FIRST_NAME || 'Elkendeh';
+const LAST_NAME = process.env.SUPERADMIN_SEED_LAST_NAME || 'Pruh';
+const PASSWORD =
+  process.env.SUPERADMIN_SEED_PASSWORD ||
+  (process.argv[2] && String(process.argv[2]).trim() ? String(process.argv[2]).trim() : null);
 
 async function main() {
-  if (!PASSWORD || !String(PASSWORD).trim()) {
+  if (!PASSWORD) {
     console.error(
-      'SUPERADMIN_SEED_PASSWORD is not set.\n\n' +
-        'Linux/macOS (bash), from this folder:\n' +
-        "  export SUPERADMIN_SEED_PASSWORD='your-password'\n" +
-        '  npm run seed:superadmin\n\n' +
-        'One line:\n' +
-        "  SUPERADMIN_SEED_PASSWORD='your-password' npm run seed:superadmin\n\n" +
-        'Or put SUPERADMIN_SEED_PASSWORD=... in backend_node/.env\n'
+      'Set SUPERADMIN_SEED_PASSWORD in backend_node/.env, or run:\n' +
+        "  npm run seed:superadmin -- 'your-password'\n"
     );
     process.exit(1);
   }
 
   await sequelize.authenticate();
+  await Role.sync();
+  await PortalUser.sync();
+
+  const [superRole] = await Role.findOrCreate({
+    where: { code: 'superadmin' },
+    defaults: { name: 'Superadmin' },
+  });
+
   const hash = await bcrypt.hash(String(PASSWORD), 10);
 
   const [row, created] = await User.findOrCreate({
@@ -47,8 +55,8 @@ async function main() {
     defaults: {
       password: hash,
       email: EMAIL,
-      first_name: 'Super',
-      last_name: 'Admin',
+      first_name: FIRST_NAME,
+      last_name: LAST_NAME,
       is_active: true,
       is_staff: true,
       is_superuser: true,
@@ -58,17 +66,46 @@ async function main() {
   if (!created) {
     row.password = hash;
     row.email = EMAIL;
+    row.first_name = FIRST_NAME;
+    row.last_name = LAST_NAME;
     row.is_active = true;
     row.is_staff = true;
     row.is_superuser = true;
     await row.save();
-    console.log('Updated existing superadmin user:', USERNAME);
+    console.log('Updated auth_user superadmin:', USERNAME);
   } else {
-    console.log('Created superadmin user:', USERNAME);
+    console.log('Created auth_user superadmin:', USERNAME);
+  }
+
+  const [portal, portalCreated] = await PortalUser.findOrCreate({
+    where: { username: USERNAME },
+    defaults: {
+      password_hash: hash,
+      email: EMAIL,
+      first_name: FIRST_NAME,
+      last_name: LAST_NAME,
+      is_active: true,
+      role_id: superRole.id,
+    },
+  });
+
+  if (!portalCreated) {
+    await portal.update({
+      password_hash: hash,
+      email: EMAIL,
+      first_name: FIRST_NAME,
+      last_name: LAST_NAME,
+      is_active: true,
+      role_id: superRole.id,
+    });
+    console.log('Updated PortalUser (users table):', USERNAME);
+  } else {
+    console.log('Created PortalUser (users table):', USERNAME);
   }
 
   console.log('Email:', EMAIL);
-  console.log('Sign in at your FRONTEND_APP_URL /login (e.g. https://pruhsms.africa/login) then open the Superadmin dashboard.');
+  console.log('Role: superadmin (JWT uses auth_user.is_superuser for dashboard access).');
+  console.log('Sign in at your app /login with username or email, then open the Superadmin dashboard.');
   await sequelize.close();
   process.exit(0);
 }
