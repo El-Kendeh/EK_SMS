@@ -12,6 +12,7 @@ const GradingScheme = require('../models/GradingScheme');
 const Room = require('../models/Room');
 const Exam = require('../models/Exam');
 const Notification = require('../models/Notification');
+const User = require('../models/User');
 const { Op } = require('sequelize');
 
 const successResponse = (data = {}, message = "Success") => ({ success: true, message, ...data });
@@ -117,11 +118,21 @@ async function getStudents(req, res) {
     const school = await getSchoolFromUser(req);
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
-    const students = await Student.findAll({ where: { school_id: school.id } });
-    const formatted = students.map(s => ({
-      ...s.toJSON(),
-      passport_picture: normalizePath(s.passport_picture)
-    }));
+    const students = await Student.findAll({
+      where: { school_id: school.id },
+      include: [{ model: User, attributes: ['first_name', 'last_name', 'email'] }]
+    });
+    const formatted = students.map(s => {
+      const userData = s.User || {};
+      return {
+        ...s.toJSON(),
+        first_name: userData.first_name,
+        last_name: userData.last_name,
+        email: userData.email || s.email,
+        full_name: `${userData.first_name} ${userData.last_name}`,
+        passport_picture: normalizePath(s.passport_picture)
+      };
+    });
     return res.json(successResponse({ students: formatted }));
   } catch (err) {
     console.error('getStudents Error:', err);
@@ -203,8 +214,21 @@ async function getTeachers(req, res) {
     const school = await getSchoolFromUser(req);
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
-    const teachers = await Teacher.findAll({ where: { school_id: school.id } });
-    return res.json(successResponse({ teachers }));
+    const teachers = await Teacher.findAll({
+      where: { school_id: school.id },
+      include: [{ model: User, attributes: ['first_name', 'last_name', 'email'] }]
+    });
+    const formatted = teachers.map(t => {
+      const userData = t.User || {};
+      return {
+        ...t.toJSON(),
+        first_name: userData.first_name,
+        last_name: userData.last_name,
+        email: userData.email || t.email,
+        full_name: `${userData.first_name} ${userData.last_name}`,
+      };
+    });
+    return res.json(successResponse({ teachers: formatted }));
   } catch (err) {
     console.error('getTeachers Error:', err);
     return res.status(500).json(errorResponse(`Failed to fetch teachers: ${err.message}`));

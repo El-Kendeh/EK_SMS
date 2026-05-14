@@ -60,7 +60,7 @@ app.use(cors({
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-const uploadsRoot = path.join(__dirname, '../uploads');
+const uploadsRoot = path.join(__dirname, '../../../uploads');
 try {
   fs.mkdirSync(path.join(uploadsRoot, 'branding'), { recursive: true });
   fs.mkdirSync(path.join(uploadsRoot, 'badges'), { recursive: true });

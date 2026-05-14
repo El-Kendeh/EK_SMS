@@ -5,9 +5,7 @@ const Student = sequelize.define('Student', {
   id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
   school_id: { type: DataTypes.INTEGER, allowNull: false },
   admission_number: { type: DataTypes.STRING, unique: true },
-  first_name: { type: DataTypes.STRING, allowNull: false },
-  middle_name: { type: DataTypes.STRING },
-  last_name: { type: DataTypes.STRING, allowNull: false },
+  user_id: { type: DataTypes.INTEGER, allowNull: false, unique: true },
   date_of_birth: { type: DataTypes.DATEONLY },
   gender: { type: DataTypes.STRING(10) },
   
@@ -51,5 +49,8 @@ const Student = sequelize.define('Student', {
   tableName: 'eksms_core_student',
   timestamps: false,
 });
+
+const User = require('./User');
+Student.belongsTo(User, { foreignKey: 'user_id' });
 
 module.exports = Student;
