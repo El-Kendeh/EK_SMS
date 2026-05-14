@@ -186,29 +186,29 @@ async function createStudent(req, res) {
       religion: data.religion,
       home_language: data.home_language,
 
-      home_address: data.home_address,
+      home_address: data.home_address || 'Not Provided',
       city: data.city,
       phone_number: data.phone_number,
 
-      blood_type: data.blood_group,
-      allergies: data.allergies,
-      medical_notes: data.medical_conditions,
-      doctor_name: data.doctor_name,
-      doctor_phone: data.doctor_phone,
+      blood_type: data.blood_group || 'N/A',
+      allergies: data.allergies || 'None',
+      medical_notes: data.medical_notes || 'None',
+      doctor_name: data.doctor_name || '',
+      doctor_phone: data.doctor_phone || '',
       is_critical_medical: data.is_critical_medical === 'true' || data.is_critical_medical === true,
-      sen_tier: data.sen_tier,
-      sen_notes: data.sen_notes,
+      sen_tier: data.sen_tier || 'None',
+      sen_notes: data.sen_notes || '',
       sen_iep: data.sen_iep === 'true' || data.sen_iep === true,
 
       disciplinary_history: data.disciplinary_history === 'true' || data.disciplinary_history === true,
-      disciplinary_notes: data.disciplinary_notes,
+      disciplinary_notes: data.disciplinary_notes || '',
 
       passport_picture: req.file ? `/uploads/students/${req.file.filename}` : null,
 
       emergency_name: data.emergency_name,
       emergency_relationship: data.emergency_relationship,
       emergency_phone: data.emergency_phone,
-      emergency_address: data.emergency_address,
+      emergency_address: data.emergency_address || 'Not Provided',
 
       // Document flags
       documents_birth_certificate: data.documents_birth_certificate === 'true' || data.documents_birth_certificate === true,
@@ -403,6 +403,8 @@ async function createTeacher(req, res) {
       qualification: qualification || 'Not Specified',
       hire_date: hire_date || new Date(),
       is_active: true,
+      bio: '',
+      linkedin_url: '',
       profile_picture: req.file ? `/uploads/badges/${req.file.filename}` : null, 
     }, { transaction });
 
