@@ -315,9 +315,10 @@ async function updateStudent(req, res) {
     return res.json(successResponse({ student }, 'Student updated successfully'));
   } catch (err) {
     await transaction.rollback();
-    console.error('updateStudent Error:', err);
     return res.status(400).json(errorResponse(`Failed to update student: ${err.message}`));
   }
+}
+
 async function getStudentStats(req, res) {
   try {
     const school = await getSchoolFromUser(req);
@@ -848,6 +849,88 @@ async function getExpenses(req, res) {
     return res.json(successResponse({ expenses: [] }));
   } catch (err) {
     return res.status(500).json(errorResponse('Failed to fetch expenses'));
+  }
+}
+
+/* ================= PLACEHOLDER ENDPOINTS ================= */
+async function getTeacherAssignments(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+    return res.json(successResponse({ assignments: [] }));
+  } catch (err) {
+    return res.status(500).json(errorResponse('Failed to fetch assignments'));
+  }
+}
+
+async function createTeacherAssignment(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+    return res.json(successResponse({ assignment: {} }, 'Assignment created'));
+  } catch (err) {
+    return res.status(500).json(errorResponse('Failed to create assignment'));
+  }
+}
+
+async function getExamOfficers(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+
+    const officers = await Teacher.findAll({
+      where: { school_id: school.id, is_examination_officer: true }
+    });
+    return res.json(successResponse({ exam_officers: officers }));
+  } catch (err) {
+    return res.status(500).json(errorResponse('Failed to fetch exam officers'));
+  }
+}
+
+async function assignExamOfficer(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+
+    const { teacher_id, assign } = req.body;
+    await Teacher.update(
+      { is_examination_officer: assign },
+      { where: { id: teacher_id, school_id: school.id } }
+    );
+
+    return res.json(successResponse({}, 'Exam officer updated'));
+  } catch (err) {
+    return res.status(500).json(errorResponse('Failed to update exam officer'));
+  }
+}
+
+async function getMessages(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+    return res.json(successResponse({ messages: [] }));
+  } catch (err) {
+    return res.status(500).json(errorResponse('Failed to fetch messages'));
+  }
+}
+
+async function sendMessage(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+    return res.json(successResponse({ message: {} }, 'Message sent'));
+  } catch (err) {
+    return res.status(500).json(errorResponse('Failed to send message'));
+  }
+}
+
+async function createParent(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+    return res.json(successResponse({ parent: {} }, 'Parent created'));
+  } catch (err) {
+    return res.status(500).json(errorResponse('Failed to create parent'));
   }
 }
 
