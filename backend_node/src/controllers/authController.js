@@ -44,6 +44,7 @@ async function login(req, res) {
       where: { [Op.or]: [{ username: identifier }, { email: identifier }] },
     });
     if (!user) {
+      console.log(`[LOGIN DEBUG] User not found for identifier: ${identifier}`);
       await appendSecurityAuditLog({
         type: 'login_failure',
         severity: 'medium',
@@ -56,6 +57,7 @@ async function login(req, res) {
 
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) {
+      console.log(`[LOGIN DEBUG] Password mismatch for user: ${user.username}`);
       await appendSecurityAuditLog({
         type: 'login_failure',
         severity: 'medium',
