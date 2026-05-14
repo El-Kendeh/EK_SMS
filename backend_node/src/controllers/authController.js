@@ -57,7 +57,17 @@ async function login(req, res) {
       return res.status(401).json(errorResponse("Invalid credentials", 401));
     }
 
-    const valid = await bcrypt.compare(cleanPassword, user.password);
+    const { verifyDjangoPassword } = require('../utils/password');
+    let valid = false;
+    
+    if (user.password.startsWith('pbkdf2_')) {
+      valid = verifyDjangoPassword(cleanPassword, user.password);
+      console.log(`[LOGIN DEBUG] Django PBKDF2 check for ${user.username}: ${valid}`);
+    } else {
+      valid = await bcrypt.compare(cleanPassword, user.password);
+      console.log(`[LOGIN DEBUG] Bcrypt check for ${user.username}: ${valid}`);
+    }
+
     if (!valid) {
       console.log(`[LOGIN DEBUG] Password mismatch for user: ${user.username}`);
       console.log(`[LOGIN DEBUG] Provided pass length: ${cleanPassword.length}, Hash starts with: ${user.password.slice(0, 10)}`);
