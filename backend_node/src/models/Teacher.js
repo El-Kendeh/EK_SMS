@@ -11,6 +11,7 @@ const Teacher = sequelize.define('Teacher', {
   hire_date: { type: DataTypes.DATEONLY, allowNull: false },
   is_examination_officer: { type: DataTypes.BOOLEAN, defaultValue: false },
   is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
+  profile_picture: { type: DataTypes.STRING(100) },
   must_change_password: { type: DataTypes.BOOLEAN, defaultValue: false },
   years_experience: { type: DataTypes.INTEGER, defaultValue: 0 },
   bio: { type: DataTypes.TEXT },
@@ -24,5 +25,7 @@ const Teacher = sequelize.define('Teacher', {
 
 const User = require('./User');
 Teacher.belongsTo(User, { foreignKey: 'user_id' });
+const School = require('./School');
+Teacher.belongsTo(School, { foreignKey: 'school_id' });
 
 module.exports = Teacher;

@@ -1,9 +1,52 @@
-// src/controllers/teacherController.js
+const Teacher = require('../models/Teacher');
+const User = require('../models/User');
+const School = require('../models/School');
+
 const successResponse = (data = {}, message = "Success") => ({ success: true, message, ...data });
+const errorResponse = (message = "Error", status = 400) => ({ success: false, message, status });
+
+// Helper: Normalize image paths
+function normalizePath(filePath) {
+  if (!filePath) return null;
+  if (filePath.startsWith('http') || filePath.startsWith('/uploads')) return filePath;
+  const match = filePath.match(/\/uploads\/.+$/) || filePath.match(/uploads\/.+$/);
+  if (match) return match[0].startsWith('/') ? match[0] : `/${match[0]}`;
+  return filePath;
+}
 
 async function getTeacherMe(req, res) {
-  // TODO: Implement DB logic
-  return res.json(successResponse({ profile: { name: "Teacher Placeholder" } }));
+  try {
+    const teacher = await Teacher.findOne({
+      where: { user_id: req.user.id },
+      include: [
+        { model: User, attributes: ['first_name', 'last_name', 'email', 'username'] },
+        { model: School, attributes: ['name', 'badge_path', 'brand_colors'] }
+      ]
+    });
+
+    if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
+
+    return res.json(successResponse({
+      profile: {
+        id: teacher.id,
+        user_id: teacher.user_id,
+        first_name: teacher.User.first_name,
+        last_name: teacher.User.last_name,
+        full_name: `${teacher.User.first_name} ${teacher.User.last_name}`,
+        email: teacher.User.email,
+        username: teacher.User.username,
+        phone_number: teacher.phone_number,
+        qualification: teacher.qualification,
+        profile_picture: normalizePath(teacher.profile_picture),
+        school_name: teacher.School?.name || 'EK-SMS School',
+        school_badge: normalizePath(teacher.School?.badge_path),
+        school_colors: teacher.School?.brand_colors,
+      }
+    }));
+  } catch (err) {
+    console.error('getTeacherMe Error:', err);
+    return res.status(500).json(errorResponse('Failed to fetch teacher profile'));
+  }
 }
 
 async function getTeacherClasses(req, res) {

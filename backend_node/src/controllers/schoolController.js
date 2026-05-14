@@ -16,6 +16,7 @@ const User = require('../models/User');
 const { Op } = require('sequelize');
 const bcrypt = require('bcryptjs');
 const sequelize = require('../config/db');
+const { sendTeacherWelcomeEmail } = require('../utils/email');
 
 const successResponse = (data = {}, message = "Success") => ({ success: true, message, ...data });
 const errorResponse = (message = "Error", status = 400) => ({ success: false, message, status });
@@ -362,6 +363,7 @@ async function getTeachers(req, res) {
         last_name: userData.last_name,
         email: userData.email || t.email,
         full_name: `${userData.first_name} ${userData.last_name}`,
+        profile_picture: normalizePath(t.profile_picture),
       };
     });
     return res.json(successResponse({ teachers: formatted }));
@@ -400,10 +402,17 @@ async function createTeacher(req, res) {
       qualification,
       hire_date: hire_date || new Date(),
       is_active: true,
+      profile_picture: req.file ? `/uploads/badges/${req.file.filename}` : null, // Reusing badge folder for now or specific folder
     }, { transaction });
 
     await transaction.commit();
-    return res.json(successResponse({ teacher }, 'Teacher registered successfully'));
+
+    // 3. Send welcome email (asynchronously, don't block response)
+    const teacherName = `${first_name} ${last_name}`;
+    const rawPassword = password || 'Teacher@123';
+    sendTeacherWelcomeEmail(email, teacherName, user.username, rawPassword, school.name);
+
+    return res.json(successResponse({ teacher }, 'Teacher registered successfully. Welcome email sent.'));
   } catch (err) {
     if (transaction) await transaction.rollback();
     console.error('createTeacher Error:', err);
