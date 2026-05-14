@@ -4,7 +4,7 @@ const sequelize = require('../config/db');
 const Teacher = sequelize.define('Teacher', {
   id: { type: DataTypes.BIGINT, primaryKey: true, autoIncrement: true },
   school_id: { type: DataTypes.BIGINT, allowNull: true },
-  user_id: { type: DataTypes.INTEGER, allowNull: false, unique: true },
+  user_id: { type: DataTypes.BIGINT, allowNull: false, unique: true },
   employee_id: { type: DataTypes.STRING(50), allowNull: false },
   phone_number: { type: DataTypes.STRING(20), allowNull: false },
   qualification: { type: DataTypes.STRING(255), allowNull: false },
