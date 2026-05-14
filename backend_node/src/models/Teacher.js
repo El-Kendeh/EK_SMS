@@ -16,6 +16,8 @@ const Teacher = sequelize.define('Teacher', {
   years_experience: { type: DataTypes.INTEGER, defaultValue: 0, allowNull: false },
   bio: { type: DataTypes.TEXT, defaultValue: '', allowNull: false },
   linkedin_url: { type: DataTypes.STRING(200), defaultValue: '', allowNull: false },
+  degrees: { type: DataTypes.JSON, defaultValue: [] },
+  certifications: { type: DataTypes.JSON, defaultValue: [] },
   created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, allowNull: false },
   updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, allowNull: false },
 }, {

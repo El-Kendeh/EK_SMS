@@ -2,8 +2,8 @@ const { DataTypes } = require('sequelize');
 const sequelize = require('../config/db');
 
 const Student = sequelize.define('Student', {
-  id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-  school_id: { type: DataTypes.INTEGER, allowNull: false },
+  id: { type: DataTypes.BIGINT, primaryKey: true, autoIncrement: true },
+  school_id: { type: DataTypes.BIGINT, allowNull: false },
   admission_number: { type: DataTypes.STRING, unique: true },
   user_id: { type: DataTypes.INTEGER, allowNull: false, unique: true },
   date_of_birth: { type: DataTypes.DATEONLY },

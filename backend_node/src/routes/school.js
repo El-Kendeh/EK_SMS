@@ -94,7 +94,7 @@ router.get('/school/student-stats/', applyAuth, getStudentStats);
 
 // ==================== TEACHERS ====================
 router.get('/school/teachers/', applyAuth, getTeachers);
-router.post('/school/teachers/', applyAuth, upload.single('photo'), createTeacher);
+router.post('/school/teachers/', applyAuth, upload.single('profile_picture'), createTeacher);
 router.put('/school/teachers/:id/', applyAuth, updateTeacher);
 router.get('/school/teacher-stats/', applyAuth, getTeacherStats);
 
