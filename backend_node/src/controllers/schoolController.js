@@ -377,7 +377,7 @@ async function createTeacher(req, res) {
     const school = await getSchoolFromUser(req);
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
-    const { first_name, last_name, email, phone, employment_type, qualification, password, username } = req.body;
+    const { first_name, last_name, email, phone, employee_id, qualification, password, username, hire_date } = req.body;
 
     // 1. Create User
     const hashedPassword = await bcrypt.hash(password || 'Teacher@123', 10);
@@ -395,9 +395,10 @@ async function createTeacher(req, res) {
     const teacher = await Teacher.create({
       school_id: school.id,
       user_id: user.id,
+      employee_id: employee_id || `EMP${Date.now()}`,
       phone_number: phone,
-      employment_type,
       qualification,
+      hire_date: hire_date || new Date(),
       is_active: true,
     }, { transaction });
 
@@ -1053,7 +1054,7 @@ async function updateTeacher(req, res) {
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
     const { id } = req.params;
-    const { first_name, last_name, email, phone, employment_type, qualification } = req.body;
+    const { first_name, last_name, email, phone, employee_id, qualification, hire_date } = req.body;
 
     const teacher = await Teacher.findOne({ where: { id, school_id: school.id } });
     if (!teacher) return res.status(404).json(errorResponse('Teacher not found'));
@@ -1070,8 +1071,9 @@ async function updateTeacher(req, res) {
     // 2. Update Teacher
     await teacher.update({
       phone_number: phone || teacher.phone_number,
-      employment_type: employment_type || teacher.employment_type,
+      employee_id: employee_id || teacher.employee_id,
       qualification: qualification || teacher.qualification,
+      hire_date: hire_date || teacher.hire_date,
     }, { transaction });
 
     await transaction.commit();
