@@ -147,11 +147,11 @@ async function createStudent(req, res) {
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
     const data = req.body;
-    
+
     // 1. Create User account for student
     const username = data.student_username || data.admission_number || `stu_${Date.now()}`;
     const hashedPassword = await bcrypt.hash(data.student_password || 'Student@123', 10);
-    
+
     const user = await User.create({
       username,
       password: hashedPassword,
@@ -170,23 +170,23 @@ async function createStudent(req, res) {
       admission_date: data.enrollment_date || new Date(),
       date_of_birth: data.date_of_birth,
       gender: data.gender === 'Male' ? 'M' : data.gender === 'Female' ? 'F' : 'O',
-      
+
       classroom_id: data.classroom_id,
       academic_year_id: data.academic_year_id,
       student_type: data.student_type?.toLowerCase(),
       fee_category: data.fee_category,
       status: data.status || 'active',
       is_active: true,
-      
+
       place_of_birth: data.place_of_birth,
       nationality: data.nationality,
       religion: data.religion,
       home_language: data.home_language,
-      
+
       home_address: data.home_address,
       city: data.city,
       phone_number: data.phone_number,
-      
+
       blood_type: data.blood_group,
       allergies: data.allergies,
       medical_notes: data.medical_conditions,
@@ -196,17 +196,17 @@ async function createStudent(req, res) {
       sen_tier: data.sen_tier,
       sen_notes: data.sen_notes,
       sen_iep: data.sen_iep === 'true' || data.sen_iep === true,
-      
+
       disciplinary_history: data.disciplinary_history === 'true' || data.disciplinary_history === true,
       disciplinary_notes: data.disciplinary_notes,
-      
+
       passport_picture: req.file ? `/uploads/students/${req.file.filename}` : null,
-      
+
       emergency_name: data.emergency_name,
       emergency_relationship: data.emergency_relationship,
       emergency_phone: data.emergency_phone,
       emergency_address: data.emergency_address,
-      
+
       // Document flags
       documents_birth_certificate: data.documents_birth_certificate === 'true' || data.documents_birth_certificate === true,
       documents_passport_photo: data.documents_passport_photo === 'true' || data.documents_passport_photo === true,
@@ -214,7 +214,7 @@ async function createStudent(req, res) {
       documents_transfer_letter: data.documents_transfer_letter === 'true' || data.documents_transfer_letter === true,
       documents_medical_report: data.documents_medical_report === 'true' || data.documents_medical_report === true,
       documents_other: data.documents_other === 'true' || data.documents_other === true,
-      
+
       vaccinations: data.vaccinations || {},
     }, { transaction });
 
@@ -316,100 +316,100 @@ async function updateStudent(req, res) {
     console.error('updateStudent Error:', err);
     return res.status(400).json(errorResponse(`Failed to update student: ${err.message}`));
   }
-}
-  try {
-    const school = await getSchoolFromUser(req);
-    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+  async function getStudentStats(req, res) {
+    try {
+      const school = await getSchoolFromUser(req);
+      if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
-    const total = await Student.count({ where: { school_id: school.id } });
-    const active = await Student.count({ where: { school_id: school.id, is_active: true } });
-    const byGender = await Student.findAll({
-      attributes: [
-        ['gender', 'gender'],
-        [require('sequelize').fn('COUNT', require('sequelize').col('id')), 'count']
-      ],
-      where: { school_id: school.id },
-      group: ['gender'],
-    });
+      const total = await Student.count({ where: { school_id: school.id } });
+      const active = await Student.count({ where: { school_id: school.id, is_active: true } });
+      const byGender = await Student.findAll({
+        attributes: [
+          ['gender', 'gender'],
+          [require('sequelize').fn('COUNT', require('sequelize').col('id')), 'count']
+        ],
+        where: { school_id: school.id },
+        group: ['gender'],
+      });
 
-    return res.json(successResponse({
-      total, active, by_gender: byGender,
-    }));
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json(errorResponse('Failed to get student stats'));
+      return res.json(successResponse({
+        total, active, by_gender: byGender,
+      }));
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json(errorResponse('Failed to get student stats'));
+    }
   }
-}
 
-/* ================= TEACHERS ================= */
-async function getTeachers(req, res) {
-  try {
-    const school = await getSchoolFromUser(req);
-    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+  /* ================= TEACHERS ================= */
+  async function getTeachers(req, res) {
+    try {
+      const school = await getSchoolFromUser(req);
+      if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
-    const teachers = await Teacher.findAll({
-      where: { school_id: school.id },
-      include: [{ model: User, attributes: ['first_name', 'last_name', 'email'] }]
-    });
-    const formatted = teachers.map(t => {
-      const userData = t.User || {};
-      return {
-        ...t.toJSON(),
-        first_name: userData.first_name,
-        last_name: userData.last_name,
-        email: userData.email || t.email,
-        full_name: `${userData.first_name} ${userData.last_name}`,
-      };
-    });
-    return res.json(successResponse({ teachers: formatted }));
-  } catch (err) {
-    console.error('getTeachers Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch teachers: ${err.message}`));
+      const teachers = await Teacher.findAll({
+        where: { school_id: school.id },
+        include: [{ model: User, attributes: ['first_name', 'last_name', 'email'] }]
+      });
+      const formatted = teachers.map(t => {
+        const userData = t.User || {};
+        return {
+          ...t.toJSON(),
+          first_name: userData.first_name,
+          last_name: userData.last_name,
+          email: userData.email || t.email,
+          full_name: `${userData.first_name} ${userData.last_name}`,
+        };
+      });
+      return res.json(successResponse({ teachers: formatted }));
+    } catch (err) {
+      console.error('getTeachers Error:', err);
+      return res.status(500).json(errorResponse(`Failed to fetch teachers: ${err.message}`));
+    }
   }
-}
 
-async function createTeacher(req, res) {
-  const transaction = await sequelize.transaction();
-  try {
-    const school = await getSchoolFromUser(req);
-    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+  async function createTeacher(req, res) {
+    const transaction = await sequelize.transaction();
+    try {
+      const school = await getSchoolFromUser(req);
+      if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
-    const { first_name, last_name, email, phone, employment_type, qualification, password, username } = req.body;
-    
-    // 1. Create User
-    const hashedPassword = await bcrypt.hash(password || 'Teacher@123', 10);
-    const user = await User.create({
-      username: username || email || `tch_${Date.now()}`,
-      password: hashedPassword,
-      email: email || null,
-      first_name,
-      last_name,
-      is_active: true,
-      role: 'teacher'
-    }, { transaction });
+      const { first_name, last_name, email, phone, employment_type, qualification, password, username } = req.body;
 
-    // 2. Create Teacher profile
-    const teacher = await Teacher.create({
-      school_id: school.id,
-      user_id: user.id,
-      phone_number: phone,
-      employment_type,
-      qualification,
-      is_active: true,
-    }, { transaction });
+      // 1. Create User
+      const hashedPassword = await bcrypt.hash(password || 'Teacher@123', 10);
+      const user = await User.create({
+        username: username || email || `tch_${Date.now()}`,
+        password: hashedPassword,
+        email: email || null,
+        first_name,
+        last_name,
+        is_active: true,
+        role: 'teacher'
+      }, { transaction });
 
-    await transaction.commit();
-    return res.json(successResponse({ teacher }, 'Teacher registered successfully'));
-  } catch (err) {
-    await transaction.rollback();
-    console.error('createTeacher Error:', err);
-    return res.status(400).json(errorResponse(`Failed to create teacher: ${err.message}`));
+      // 2. Create Teacher profile
+      const teacher = await Teacher.create({
+        school_id: school.id,
+        user_id: user.id,
+        phone_number: phone,
+        employment_type,
+        qualification,
+        is_active: true,
+      }, { transaction });
+
+      await transaction.commit();
+      return res.json(successResponse({ teacher }, 'Teacher registered successfully'));
+    } catch (err) {
+      await transaction.rollback();
+      console.error('createTeacher Error:', err);
+      return res.status(400).json(errorResponse(`Failed to create teacher: ${err.message}`));
+    }
   }
+  console.error(err);
+  return res.status(500).json(errorResponse('Failed to create teacher'));
 }
-    console.error(err);
-    return res.status(500).json(errorResponse('Failed to create teacher'));
-  }
-}
+
 
 async function getTeacherStats(req, res) {
   try {
@@ -973,7 +973,7 @@ async function updateTeacher(req, res) {
 
     const { id } = req.params;
     const { first_name, last_name, email, phone, employment_type, qualification } = req.body;
-    
+
     const teacher = await Teacher.findOne({ where: { id, school_id: school.id } });
     if (!teacher) return res.status(404).json(errorResponse('Teacher not found'));
 
