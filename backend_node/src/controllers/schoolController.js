@@ -14,6 +14,8 @@ const Exam = require('../models/Exam');
 const Notification = require('../models/Notification');
 const User = require('../models/User');
 const { Op } = require('sequelize');
+const bcrypt = require('bcryptjs');
+const sequelize = require('../config/db');
 
 const successResponse = (data = {}, message = "Success") => ({ success: true, message, ...data });
 const errorResponse = (message = "Error", status = 400) => ({ success: false, message, status });
@@ -316,100 +318,96 @@ async function updateStudent(req, res) {
     console.error('updateStudent Error:', err);
     return res.status(400).json(errorResponse(`Failed to update student: ${err.message}`));
   }
-  async function getStudentStats(req, res) {
-    try {
-      const school = await getSchoolFromUser(req);
-      if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+async function getStudentStats(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
-      const total = await Student.count({ where: { school_id: school.id } });
-      const active = await Student.count({ where: { school_id: school.id, is_active: true } });
-      const byGender = await Student.findAll({
-        attributes: [
-          ['gender', 'gender'],
-          [require('sequelize').fn('COUNT', require('sequelize').col('id')), 'count']
-        ],
-        where: { school_id: school.id },
-        group: ['gender'],
-      });
+    const total = await Student.count({ where: { school_id: school.id } });
+    const active = await Student.count({ where: { school_id: school.id, is_active: true } });
+    const byGender = await Student.findAll({
+      attributes: [
+        ['gender', 'gender'],
+        [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+      ],
+      where: { school_id: school.id },
+      group: ['gender'],
+    });
 
-      return res.json(successResponse({
-        total, active, by_gender: byGender,
-      }));
-    } catch (err) {
-      console.error(err);
-      return res.status(500).json(errorResponse('Failed to get student stats'));
-    }
+    return res.json(successResponse({
+      total, active, by_gender: byGender,
+    }));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Failed to get student stats'));
   }
-
-  /* ================= TEACHERS ================= */
-  async function getTeachers(req, res) {
-    try {
-      const school = await getSchoolFromUser(req);
-      if (!school) return res.status(401).json(errorResponse('Not authenticated'));
-
-      const teachers = await Teacher.findAll({
-        where: { school_id: school.id },
-        include: [{ model: User, attributes: ['first_name', 'last_name', 'email'] }]
-      });
-      const formatted = teachers.map(t => {
-        const userData = t.User || {};
-        return {
-          ...t.toJSON(),
-          first_name: userData.first_name,
-          last_name: userData.last_name,
-          email: userData.email || t.email,
-          full_name: `${userData.first_name} ${userData.last_name}`,
-        };
-      });
-      return res.json(successResponse({ teachers: formatted }));
-    } catch (err) {
-      console.error('getTeachers Error:', err);
-      return res.status(500).json(errorResponse(`Failed to fetch teachers: ${err.message}`));
-    }
-  }
-
-  async function createTeacher(req, res) {
-    const transaction = await sequelize.transaction();
-    try {
-      const school = await getSchoolFromUser(req);
-      if (!school) return res.status(401).json(errorResponse('Not authenticated'));
-
-      const { first_name, last_name, email, phone, employment_type, qualification, password, username } = req.body;
-
-      // 1. Create User
-      const hashedPassword = await bcrypt.hash(password || 'Teacher@123', 10);
-      const user = await User.create({
-        username: username || email || `tch_${Date.now()}`,
-        password: hashedPassword,
-        email: email || null,
-        first_name,
-        last_name,
-        is_active: true,
-        role: 'teacher'
-      }, { transaction });
-
-      // 2. Create Teacher profile
-      const teacher = await Teacher.create({
-        school_id: school.id,
-        user_id: user.id,
-        phone_number: phone,
-        employment_type,
-        qualification,
-        is_active: true,
-      }, { transaction });
-
-      await transaction.commit();
-      return res.json(successResponse({ teacher }, 'Teacher registered successfully'));
-    } catch (err) {
-      await transaction.rollback();
-      console.error('createTeacher Error:', err);
-      return res.status(400).json(errorResponse(`Failed to create teacher: ${err.message}`));
-    }
-  }
-  console.error(err);
-  return res.status(500).json(errorResponse('Failed to create teacher'));
 }
 
+/* ================= TEACHERS ================= */
+async function getTeachers(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+
+    const teachers = await Teacher.findAll({
+      where: { school_id: school.id },
+      include: [{ model: User, attributes: ['first_name', 'last_name', 'email'] }]
+    });
+    const formatted = teachers.map(t => {
+      const userData = t.User || {};
+      return {
+        ...t.toJSON(),
+        first_name: userData.first_name,
+        last_name: userData.last_name,
+        email: userData.email || t.email,
+        full_name: `${userData.first_name} ${userData.last_name}`,
+      };
+    });
+    return res.json(successResponse({ teachers: formatted }));
+  } catch (err) {
+    console.error('getTeachers Error:', err);
+    return res.status(500).json(errorResponse(`Failed to fetch teachers: ${err.message}`));
+  }
+}
+
+async function createTeacher(req, res) {
+  const transaction = await sequelize.transaction();
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+
+    const { first_name, last_name, email, phone, employment_type, qualification, password, username } = req.body;
+
+    // 1. Create User
+    const hashedPassword = await bcrypt.hash(password || 'Teacher@123', 10);
+    const user = await User.create({
+      username: username || email || `tch_${Date.now()}`,
+      password: hashedPassword,
+      email: email || null,
+      first_name,
+      last_name,
+      is_active: true,
+      role: 'teacher'
+    }, { transaction });
+
+    // 2. Create Teacher profile
+    const teacher = await Teacher.create({
+      school_id: school.id,
+      user_id: user.id,
+      phone_number: phone,
+      employment_type,
+      qualification,
+      is_active: true,
+    }, { transaction });
+
+    await transaction.commit();
+    return res.json(successResponse({ teacher }, 'Teacher registered successfully'));
+  } catch (err) {
+    if (transaction) await transaction.rollback();
+    console.error('createTeacher Error:', err);
+    return res.status(400).json(errorResponse(`Failed to create teacher: ${err.message}`));
+  }
+}
 
 async function getTeacherStats(req, res) {
   try {

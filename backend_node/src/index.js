@@ -38,20 +38,29 @@ if (process.env.RESEND_API_KEY) {
 const isAllowedOrigin = (origin) => {
   if (!origin) return true;
   if (allowedOrigins.includes(origin)) return true;
-  // Even more permissive check for pruhsms.africa subdomains
   if (origin.includes('pruhsms.africa')) return true;
   return false;
 };
 
-app.use(cors({
-  origin: true, // Allow all origins for now to resolve the blocker
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin || isAllowedOrigin(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRFToken', 'X-Requested-With', 'Accept'],
-  optionsSuccessStatus: 200
-}));
+  exposedHeaders: ['Content-Length', 'X-Request-Id'],
+  optionsSuccessStatus: 200,
+  preflightContinue: false,
+};
 
-// Fallback access control headers for any request that reaches the server
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
+
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   if (origin && isAllowedOrigin(origin)) {
@@ -65,9 +74,6 @@ app.use((req, res, next) => {
   }
   next();
 });
-
-// Manual preflight handler
-app.options('*', cors());
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
