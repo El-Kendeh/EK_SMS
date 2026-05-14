@@ -94,7 +94,13 @@ router.get('/school/student-stats/', applyAuth, getStudentStats);
 
 // ==================== TEACHERS ====================
 router.get('/school/teachers/', applyAuth, getTeachers);
-router.post('/school/teachers/', applyAuth, upload.single('profile_picture'), createTeacher);
+router.post('/school/teachers/', applyAuth, upload.fields([{ name: 'photo', maxCount: 1 }, { name: 'profile_picture', maxCount: 1 }]), (req, res, next) => {
+  // Consolidate the file into req.file for the controller
+  if (req.files) {
+    req.file = (req.files.photo && req.files.photo[0]) || (req.files.profile_picture && req.files.profile_picture[0]);
+  }
+  next();
+}, createTeacher);
 router.put('/school/teachers/:id/', applyAuth, updateTeacher);
 router.get('/school/teacher-stats/', applyAuth, getTeacherStats);
 

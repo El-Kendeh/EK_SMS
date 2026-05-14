@@ -2,8 +2,8 @@ const { DataTypes } = require('sequelize');
 const sequelize = require('../config/db');
 
 const Grade = sequelize.define('Grade', {
-  id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-  school_id: { type: DataTypes.INTEGER, allowNull: false },
+  id: { type: DataTypes.BIGINT, primaryKey: true, autoIncrement: true },
+  school_id: { type: DataTypes.BIGINT, allowNull: false },
   student_id: { type: DataTypes.INTEGER, allowNull: false },
   subject_id: { type: DataTypes.INTEGER, allowNull: false },
   term_id: { type: DataTypes.INTEGER, allowNull: false },
