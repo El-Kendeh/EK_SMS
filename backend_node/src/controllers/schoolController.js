@@ -351,16 +351,17 @@ async function getTeachers(req, res) {
 
     const teachers = await Teacher.findAll({
       where: { school_id: school.id },
-      include: [{ model: User, attributes: ['first_name', 'last_name', 'email'] }]
+      include: [{ model: User, attributes: ['username', 'first_name', 'last_name', 'email'] }]
     });
     const formatted = teachers.map(t => {
       const userData = t.User || {};
       return {
         ...t.toJSON(),
+        username: userData.username,
         first_name: userData.first_name,
         last_name: userData.last_name,
         email: userData.email || t.email,
-        full_name: `${userData.first_name} ${userData.last_name}`,
+        full_name: `${userData.first_name || ''} ${userData.last_name || ''}`.trim(),
         profile_picture: normalizePath(t.profile_picture),
       };
     });
