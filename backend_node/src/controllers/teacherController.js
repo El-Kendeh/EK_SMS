@@ -53,7 +53,21 @@ async function getTeacherMe(req, res) {
 }
 
 async function getTeacherClasses(req, res) {
-  return res.json(successResponse({ classes: [] }));
+  try {
+    const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
+    if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
+
+    const Class = require('../models/Class');
+    const classes = await Class.findAll({
+      where: { class_teacher_id: teacher.id },
+      attributes: ['id', 'name', 'form', 'category', 'capacity']
+    });
+
+    return res.json(successResponse({ classes }));
+  } catch (err) {
+    console.error('getTeacherClasses Error:', err);
+    return res.status(500).json(errorResponse('Failed to fetch teacher classes'));
+  }
 }
 
 async function getTeacherStudents(req, res) {

@@ -16,6 +16,17 @@ const {
 // Apply to all teacher routes
 router.use(authenticateToken);
 
+// Middleware to ensure user is a teacher
+function isTeacher(req, res, next) {
+  if (req.user && (req.user.role === 'teacher' || req.user.role === 'staff')) {
+    next();
+  } else {
+    return res.status(403).json({ success: false, message: 'Access denied. Teacher role required.' });
+  }
+}
+
+router.use(isTeacher);
+
 // GET /api/teacher/me/
 router.get('/me/', getTeacherMe);
 
