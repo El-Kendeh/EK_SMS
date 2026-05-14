@@ -377,19 +377,24 @@ async function createTeacher(req, res) {
     const school = await getSchoolFromUser(req);
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
-    const { first_name, last_name, email, phone, phone_number, employee_id, qualification, password, username, hire_date } = req.body;
+    const { 
+      first_name, last_name, email, phone, phone_number, 
+      employee_id, qualification, password, username, hire_date,
+      bio, linkedin_url, degrees, certifications, years_experience
+    } = req.body;
+    
     const finalPhone = phone || phone_number || '';
+    const finalUsername = (username || email || `tch_${Date.now()}`).trim();
 
     // 1. Create User
     const hashedPassword = await bcrypt.hash(password || 'Teacher@123', 10);
     const user = await User.create({
-      username: username || email || `tch_${Date.now()}`,
+      username: finalUsername,
       password: hashedPassword,
       email: email || null,
       first_name,
       last_name,
       is_active: true,
-      role: 'teacher'
     }, { transaction });
 
     // 2. Create Teacher profile
@@ -400,20 +405,23 @@ async function createTeacher(req, res) {
       phone_number: finalPhone || '0000000000',
       qualification: qualification || 'Not Specified',
       hire_date: hire_date || new Date(),
+      years_experience: years_experience || 0,
       is_active: true,
-      bio: '',
-      linkedin_url: '',
-      degrees: [],
-      certifications: [],
+      bio: bio || '',
+      linkedin_url: linkedin_url || '',
+      degrees: Array.isArray(degrees) ? degrees : [],
+      certifications: Array.isArray(certifications) ? certifications : [],
       profile_picture: req.file ? `/uploads/badges/${req.file.filename}` : null, 
     }, { transaction });
 
     await transaction.commit();
 
-    // 3. Send welcome email (asynchronously, don't block response)
+    // 3. Send welcome email
     const teacherName = `${first_name} ${last_name}`;
     const rawPassword = password || 'Teacher@123';
-    sendTeacherWelcomeEmail(email, teacherName, user.username, rawPassword, school.name);
+    if (email) {
+      sendTeacherWelcomeEmail(email, teacherName, user.username, rawPassword, school.name);
+    }
 
     return res.json(successResponse({ teacher }, 'Teacher registered successfully. Welcome email sent.'));
   } catch (err) {
