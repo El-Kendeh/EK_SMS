@@ -405,6 +405,8 @@ async function createTeacher(req, res) {
       is_active: true,
       bio: '',
       linkedin_url: '',
+      degrees: [],
+      certifications: [],
       profile_picture: req.file ? `/uploads/badges/${req.file.filename}` : null, 
     }, { transaction });
 
