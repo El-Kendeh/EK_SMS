@@ -1,21 +1,65 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/db');
+const Role = require('./Role');
 
-const User = sequelize.define('User', {
-  id: { type: DataTypes.BIGINT, primaryKey: true, autoIncrement: true },
-  username: { type: DataTypes.STRING, unique: true, allowNull: false },
-  password: { type: DataTypes.STRING, allowNull: false },
-  email: { type: DataTypes.STRING },
-  first_name: { type: DataTypes.STRING },
-  last_name: { type: DataTypes.STRING },
-  is_active: { type: DataTypes.BOOLEAN, defaultValue: false }, // Schools need approval
-  is_staff: { type: DataTypes.BOOLEAN, defaultValue: false },
-  is_superuser: { type: DataTypes.BOOLEAN, defaultValue: false },
-  date_joined: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
-  last_login: { type: DataTypes.DATE, allowNull: true },
-}, {
-  tableName: 'auth_user',
-  timestamps: false,
-});
+/**
+ * Primary account table: MySQL `users` + FK `roles`.
+ * JWT / middleware still expose `is_superuser` and `is_staff` as virtuals derived from `role.code`.
+ */
+const User = sequelize.define(
+  'User',
+  {
+    id: { type: DataTypes.BIGINT, primaryKey: true, autoIncrement: true },
+    username: { type: DataTypes.STRING(191), allowNull: false, unique: true },
+    password: {
+      type: DataTypes.STRING(255),
+      allowNull: false,
+      field: 'password_hash',
+    },
+    email: { type: DataTypes.STRING(191), allowNull: true, unique: true },
+    first_name: { type: DataTypes.STRING(191), allowNull: true },
+    last_name: { type: DataTypes.STRING(191), allowNull: true },
+    is_active: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
+    role_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: { model: Role, key: 'id' },
+    },
+    last_login: { type: DataTypes.DATE, allowNull: true },
+    is_superuser: {
+      type: DataTypes.VIRTUAL,
+      get() {
+        const r = this.get('role') || this.role;
+        return !!(r && r.code === 'superadmin');
+      },
+    },
+    is_staff: {
+      type: DataTypes.VIRTUAL,
+      get() {
+        const r = this.get('role') || this.role;
+        if (!r) return false;
+        return ['superadmin', 'schooladmin', 'principal', 'bursar', 'teacher'].includes(r.code);
+      },
+    },
+    date_joined: {
+      type: DataTypes.VIRTUAL,
+      get() {
+        return this.getDataValue('created_at') || this.createdAt;
+      },
+    },
+  },
+  {
+    tableName: 'users',
+    timestamps: true,
+    createdAt: 'created_at',
+    updatedAt: 'updated_at',
+    defaultScope: {
+      include: [{ model: Role, as: 'role', required: false }],
+    },
+  }
+);
+
+User.belongsTo(Role, { foreignKey: 'role_id', as: 'role' });
+Role.hasMany(User, { foreignKey: 'role_id', as: 'users' });
 
 module.exports = User;

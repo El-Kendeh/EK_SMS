@@ -17,6 +17,7 @@ const { Op } = require('sequelize');
 const bcrypt = require('bcryptjs');
 const sequelize = require('../config/db');
 const { sendTeacherWelcomeEmail } = require('../utils/email');
+const { requireRoleId } = require('../utils/roleIds');
 
 const successResponse = (data = {}, message = "Success") => ({ success: true, message, ...data });
 const errorResponse = (message = "Error", status = 400) => ({ success: false, message, status });
@@ -152,6 +153,7 @@ async function createStudent(req, res) {
     // 1. Create User account for student
     const username = data.student_username || data.admission_number || `stu_${Date.now()}`;
     const hashedPassword = await bcrypt.hash(data.student_password || 'Student@123', 10);
+    const studentRoleId = await requireRoleId('student');
 
     const user = await User.create({
       username,
@@ -160,7 +162,7 @@ async function createStudent(req, res) {
       first_name: data.first_name,
       last_name: data.last_name,
       is_active: true,
-      role: 'student'
+      role_id: studentRoleId,
     }, { transaction });
 
     // 2. Create Student profile
@@ -389,6 +391,7 @@ async function createTeacher(req, res) {
 
     // 1. Create User
     const hashedPassword = await bcrypt.hash(password || 'Teacher@123', 10);
+    const teacherRoleId = await requireRoleId('teacher');
     const user = await User.create({
       username: finalUsername,
       password: hashedPassword,
@@ -396,6 +399,7 @@ async function createTeacher(req, res) {
       first_name,
       last_name,
       is_active: true,
+      role_id: teacherRoleId,
     }, { transaction });
 
     // 2. Create Teacher profile

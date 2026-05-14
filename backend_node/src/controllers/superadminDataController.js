@@ -9,6 +9,7 @@ const BroadcastAlert = require('../models/BroadcastAlert');
 const SystemOpsAlert = require('../models/SystemOpsAlert');
 const ForensicEvent = require('../models/ForensicEvent');
 const { appendSecurityAuditLog } = require('../utils/auditLog');
+const { requireRoleId, mapInviteLabelToCode } = require('../utils/roleIds');
 
 const successResponse = (data = {}, message = 'Success') => ({ success: true, message, ...data });
 const errorResponse = (message = 'Error', status = 400) => ({ success: false, message, status });
@@ -86,7 +87,7 @@ async function getSecurityCounters(req, res) {
     const threats = await SecurityAuditLog.count({
       where: { type: { [Op.in]: ['threat_blocked', 'suspicious_activity'] } },
     });
-    const activeUsers = await User.count({ where: { is_active: true } });
+    const activeUsers = await User.unscoped().count({ where: { is_active: true } });
     return res.json(successResponse({
       threats_blocked: threats,
       failed_logins_24h: failed24,
@@ -271,7 +272,7 @@ async function postUsers(req, res) {
     const baseUsername = email.split('@')[0].replace(/[^a-zA-Z0-9._-]/g, '').slice(0, 20) || `user${Date.now()}`;
     let username = baseUsername;
     let n = 0;
-    while (await User.findOne({ where: { username } })) {
+    while (await User.unscoped().findOne({ where: { username } })) {
       n += 1;
       username = `${baseUsername}${n}`;
     }
@@ -279,7 +280,8 @@ async function postUsers(req, res) {
     const parts = String(name).trim().split(/\s+/);
     const first_name = parts[0] || username;
     const last_name = parts.slice(1).join(' ') || '';
-    const isSuper = role === 'Super Admin';
+    const roleCode = mapInviteLabelToCode(role);
+    const roleId = await requireRoleId(roleCode);
     const user = await User.create({
       username,
       email: String(email).trim().slice(0, 254),
@@ -287,9 +289,9 @@ async function postUsers(req, res) {
       first_name: first_name.slice(0, 150),
       last_name: last_name.slice(0, 150),
       is_active: false,
-      is_staff: role !== 'Teacher' && role !== 'Parent',
-      is_superuser: !!isSuper,
+      role_id: roleId,
     });
+    await user.reload();
     if (role === 'School Admin' && school) {
       const sch = await School.findOne({ where: { name: school } });
       if (sch) await SchoolAdmin.create({ user_id: user.id, school_id: sch.id });

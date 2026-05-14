@@ -1,9 +1,8 @@
 /**
  * Side-effect imports so `sequelize.sync({ alter: true })` creates/updates all tables.
  */
-require('./User');
 require('./Role');
-require('./PortalUser');
+require('./User');
 require('./School');
 require('./SchoolAdmin');
 require('./OTP');

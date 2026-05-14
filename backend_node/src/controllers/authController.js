@@ -9,6 +9,7 @@ const sequelize = require('../config/db');
 const { Resend } = require('resend');
 const { generateToken } = require('../utils/jwt');
 const { appendSecurityAuditLog } = require('../utils/auditLog');
+const { requireRoleId } = require('../utils/roleIds');
 
 let resend;
 if (process.env.RESEND_API_KEY && process.env.RESEND_API_KEY.trim() !== '') {
@@ -81,9 +82,12 @@ async function login(req, res) {
       return res.status(401).json(errorResponse("Invalid credentials", 401));
     }
 
+    const portalRoleCode = user.role?.code;
+    const isPortalSuper = portalRoleCode === 'superadmin';
+
     // School admins (and other non-superusers) stay gated until superadmin approval.
-    // Superadmin accounts must always be able to sign in even if is_active is false in DB (e.g. legacy import).
-    if (!user.is_active && !user.is_superuser) {
+    // Superadmin accounts must always be able to sign in even if is_active is false in DB.
+    if (!user.is_active && !isPortalSuper) {
       return res.status(403).json(errorResponse("Your account is pending approval by the Superadmin.", 403));
     }
 
@@ -91,13 +95,17 @@ async function login(req, res) {
     const teacherLink = await Teacher.findOne({ where: { user_id: user.id } });
 
     let role = 'user';
-    if (user.is_superuser) {
+    if (isPortalSuper) {
       role = 'superadmin';
     } else if (schoolAdminLink) {
       role = 'school_admin';
     } else if (teacherLink) {
       role = 'teacher';
-    } else if (user.is_staff) {
+    } else if (portalRoleCode === 'teacher') {
+      role = 'teacher';
+    } else if (['schooladmin', 'principal', 'bursar'].includes(portalRoleCode)) {
+      role = 'staff';
+    } else if (user.get('is_staff')) {
       role = 'staff';
     }
 
@@ -122,8 +130,8 @@ async function login(req, res) {
       id: user.id,
       username: user.username,
       email: user.email,
-      is_staff: user.is_staff,
-      is_superuser: user.is_superuser,
+      is_staff: user.get('is_staff'),
+      is_superuser: isPortalSuper,
       role,
     });
 
@@ -134,8 +142,8 @@ async function login(req, res) {
         id: user.id,
         username: user.username,
         email: user.email,
-        is_staff: user.is_staff,
-        is_superuser: user.is_superuser,
+        is_staff: user.get('is_staff'),
+        is_superuser: isPortalSuper,
         role,
         must_change_password,
       },
@@ -182,6 +190,7 @@ async function register(req, res) {
 
     // 1. Create User (Admin)
     const hashedPassword = await bcrypt.hash(password, 10);
+    const schoolAdminRoleId = await requireRoleId('schooladmin');
     const user = await User.create({
       username: adminUsername,
       password: hashedPassword,
@@ -189,6 +198,7 @@ async function register(req, res) {
       first_name: firstName,
       last_name: lastName,
       is_active: false, // Wait for approval
+      role_id: schoolAdminRoleId,
     }, { transaction });
 
     // 2. Create School

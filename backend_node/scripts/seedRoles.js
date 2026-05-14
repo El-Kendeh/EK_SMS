@@ -8,7 +8,7 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 const sequelize = require('../src/config/db');
 const Role = require('../src/models/Role');
-const PortalUser = require('../src/models/PortalUser');
+const User = require('../src/models/User');
 
 const ROLES = [
   { code: 'superadmin', name: 'Superadmin' },
@@ -22,7 +22,7 @@ const ROLES = [
 
 async function main() {
   await Role.sync();
-  await PortalUser.sync();
+  await User.sync();
 
   for (const row of ROLES) {
     const [instance, created] = await Role.findOrCreate({
