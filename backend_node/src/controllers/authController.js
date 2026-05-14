@@ -36,7 +36,9 @@ async function login(req, res) {
   const { username, password } = req.body;
   try {
     const identifier = (username || '').trim();
-    if (!identifier || !password) {
+    const cleanPassword = (password || '').trim();
+
+    if (!identifier || !cleanPassword) {
       return res.status(400).json(errorResponse("Username or email and password are required."));
     }
 
@@ -55,9 +57,10 @@ async function login(req, res) {
       return res.status(401).json(errorResponse("Invalid credentials", 401));
     }
 
-    const valid = await bcrypt.compare(password, user.password);
+    const valid = await bcrypt.compare(cleanPassword, user.password);
     if (!valid) {
       console.log(`[LOGIN DEBUG] Password mismatch for user: ${user.username}`);
+      console.log(`[LOGIN DEBUG] Provided pass length: ${cleanPassword.length}, Hash starts with: ${user.password.slice(0, 10)}`);
       await appendSecurityAuditLog({
         type: 'login_failure',
         severity: 'medium',

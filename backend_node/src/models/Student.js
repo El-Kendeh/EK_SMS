@@ -10,8 +10,8 @@ const Student = sequelize.define('Student', {
   gender: { type: DataTypes.STRING(10) },
   
   // Enrollment
-  classroom_id: { type: DataTypes.INTEGER },
-  academic_year_id: { type: DataTypes.INTEGER },
+  classroom_id: { type: DataTypes.BIGINT },
+  academic_year_id: { type: DataTypes.BIGINT },
   admission_date: { type: DataTypes.DATEONLY },
   student_type: { type: DataTypes.STRING(20) }, // Day, Boarding
   fee_category: { type: DataTypes.STRING(50) },
