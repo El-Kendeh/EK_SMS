@@ -3,6 +3,7 @@ const { Op } = require('sequelize');
 const User = require('../models/User');
 const School = require('../models/School');
 const SchoolAdmin = require('../models/SchoolAdmin');
+const Teacher = require('../models/Teacher');
 const OTP = require('../models/OTP');
 const sequelize = require('../config/db');
 const { Resend } = require('resend');
@@ -71,7 +72,6 @@ async function login(req, res) {
       return res.status(403).json(errorResponse("Your account is pending approval by the Superadmin.", 403));
     }
 
-const Teacher = require('../models/Teacher');
     const schoolAdminLink = await SchoolAdmin.findOne({ where: { user_id: user.id } });
     const teacherLink = await Teacher.findOne({ where: { user_id: user.id } });
 
@@ -86,7 +86,7 @@ const Teacher = require('../models/Teacher');
       role = 'staff';
     }
 
-    const must_change_password = !!(schoolAdminLink && schoolAdminLink.must_change_password);
+    const must_change_password = !!((schoolAdminLink && schoolAdminLink.must_change_password) || (teacherLink && teacherLink.must_change_password));
 
     try {
       user.last_login = new Date();
