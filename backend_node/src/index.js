@@ -79,6 +79,17 @@ app.get('/', (req, res) => {
   });
 });
 
+// DEBUG: DB Structure (Temporary)
+app.get('/api/debug/db-structure/:table', async (req, res) => {
+  try {
+    const { table } = req.params;
+    const [results] = await db.query(`DESCRIBE ${table}`);
+    res.json({ table, columns: results });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 // Frontend calls this on 403 to refresh CSRF; Node stack does not use Django CSRF — return 200 to avoid noisy 401s.
 app.get(['/api/csrf-token', '/api/csrf-token/'], (req, res) => {
