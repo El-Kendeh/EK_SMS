@@ -17,14 +17,37 @@ const { Op } = require('sequelize');
 const successResponse = (data = {}, message = "Success") => ({ success: true, message, ...data });
 const errorResponse = (message = "Error", status = 400) => ({ success: false, message, status });
 
+// Helper: Normalize image paths for the frontend
+function normalizePath(filePath) {
+  if (!filePath) return null;
+  // If it's already a URL or relative path, return as is
+  if (filePath.startsWith('http') || filePath.startsWith('/uploads')) return filePath;
+  // If it contains 'uploads', extract everything from 'uploads' onwards
+  const match = filePath.match(/\/uploads\/.+$/) || filePath.match(/uploads\/.+$/);
+  if (match) return match[0].startsWith('/') ? match[0] : `/${match[0]}`;
+  // Fallback: just return the filename if it's just a filename
+  return filePath;
+}
+
 // Helper: Get school from logged-in user
 async function getSchoolFromUser(req) {
-  if (!req.user || !req.user.id) return null;
-  const link = await SchoolAdmin.findOne({
-    where: { user_id: req.user.id },
-    include: [{ model: School }],
-  });
-  return link?.School || null;
+  try {
+    if (!req.user || !req.user.id) {
+      console.warn('getSchoolFromUser: No user or user ID in request');
+      return null;
+    }
+    const link = await SchoolAdmin.findOne({
+      where: { user_id: req.user.id },
+      include: [{ model: School }],
+    });
+    if (!link) {
+      console.warn(`getSchoolFromUser: No SchoolAdmin link found for user_id ${req.user.id}`);
+    }
+    return link?.School || null;
+  } catch (err) {
+    console.error('getSchoolFromUser Error:', err);
+    throw err; // Re-throw to be caught by the calling controller's catch block
+  }
 }
 
 /* ================= SCHOOL INFO ================= */
@@ -41,14 +64,14 @@ async function getSchoolInfo(req, res) {
     return res.json(successResponse({
       id: school.id, name: school.name, email: school.email,
       phone: school.phone, address: school.address, city: school.city,
-      country: school.country, badge: school.badge_path,
+      country: school.country, badge: normalizePath(school.badge_path),
       brand_colors: school.brand_colors || '', institution_type: school.institution_type || '',
       capacity: school.capacity, is_approved: !!school.is_approved,
       is_active: school.is_active !== false, code: String(school.id),
     }));
   } catch (err) {
     console.error(err);
-    return res.status(500).json(errorResponse('Internal server error', 500));
+    return res.status(500).json(errorResponse(`Internal server error: ${err.message}`, 500));
   }
 }
 
@@ -64,13 +87,16 @@ async function updateSchoolInfo(req, res) {
     if (country !== undefined) school.country = country;
     if (brand_colors !== undefined) school.brand_colors = brand_colors;
     if (motto !== undefined) school.motto = motto;
-    if (req.file) school.badge_path = req.file.path;
+    if (req.file) {
+      // Store only the relative path for the browser to use
+      school.badge_path = `/uploads/badges/${req.file.filename}`;
+    }
 
     await school.save();
     return res.json(successResponse({ school }, 'School information updated'));
   } catch (err) {
     console.error(err);
-    return res.status(500).json(errorResponse('Failed to update school information'));
+    return res.status(500).json(errorResponse(`Failed to update school information: ${err.message}`));
   }
 }
 
@@ -92,10 +118,14 @@ async function getStudents(req, res) {
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
     const students = await Student.findAll({ where: { school_id: school.id } });
-    return res.json(successResponse({ students }));
+    const formatted = students.map(s => ({
+      ...s.toJSON(),
+      passport_picture: normalizePath(s.passport_picture)
+    }));
+    return res.json(successResponse({ students: formatted }));
   } catch (err) {
-    console.error(err);
-    return res.status(500).json(errorResponse('Failed to fetch students'));
+    console.error('getStudents Error:', err);
+    return res.status(500).json(errorResponse(`Failed to fetch students: ${err.message}`));
   }
 }
 
@@ -114,7 +144,7 @@ async function createStudent(req, res) {
       school_id: school.id, admission_number, first_name, last_name,
       other_names, date_of_birth, gender, classroom_id, academic_year_id,
       parent_name, parent_email, parent_phone,
-      photo: req.file?.path || null,
+      photo: req.file ? `/uploads/students/${req.file.filename}` : null,
     });
 
     return res.json(successResponse({ student }, 'Student created'));
@@ -176,8 +206,8 @@ async function getTeachers(req, res) {
     const teachers = await Teacher.findAll({ where: { school_id: school.id } });
     return res.json(successResponse({ teachers }));
   } catch (err) {
-    console.error(err);
-    return res.status(500).json(errorResponse('Failed to fetch teachers'));
+    console.error('getTeachers Error:', err);
+    return res.status(500).json(errorResponse(`Failed to fetch teachers: ${err.message}`));
   }
 }
 

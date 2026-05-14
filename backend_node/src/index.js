@@ -70,6 +70,15 @@ try {
 app.use('/uploads', express.static(uploadsRoot));
 
 // Public endpoints
+app.get('/', (req, res) => {
+  res.json({
+    message: 'EK-SMS Backend API',
+    status: 'Running',
+    version: '1.0.0',
+    documentation: '/api/health'
+  });
+});
+
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 // Frontend calls this on 403 to refresh CSRF; Node stack does not use Django CSRF — return 200 to avoid noisy 401s.
 app.get(['/api/csrf-token', '/api/csrf-token/'], (req, res) => {
@@ -91,6 +100,15 @@ app.use('/api/student', studentRouter);
 db.sync({ alter: true }) // Using alter: true to add new tables like 'eksms_core_otp' without dropping data
   .then(() => console.log('✅ Database synchronized'))
   .catch(err => console.error('❌ Database sync failed:', err));
+
+// 404 Handler for undefined routes
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `Route ${req.originalUrl} not found on this server.`,
+    status: 404
+  });
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
