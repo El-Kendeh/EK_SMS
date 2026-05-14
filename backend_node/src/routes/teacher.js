@@ -17,15 +17,31 @@ const {
 router.use(authenticateToken);
 
 // Middleware to ensure user is a teacher
-function isTeacher(req, res, next) {
-  console.log(`[AUTH DEBUG] User: ${req.user.username}, Role: ${req.user.role}`);
-  if (req.user && (req.user.role === 'teacher' || req.user.role === 'staff' || req.user.is_superuser)) {
-    next();
-  } else {
+async function isTeacher(req, res, next) {
+  try {
+    // Check token first
+    if (req.user && (req.user.role === 'teacher' || req.user.role === 'staff' || req.user.is_superuser)) {
+      return next();
+    }
+
+    // Fallback: Check DB directly in case of stale token
+    if (req.user && req.user.id) {
+      const Teacher = require('../models/Teacher');
+      const teacherLink = await Teacher.findOne({ where: { user_id: req.user.id } });
+      if (teacherLink) {
+        req.user.role = 'teacher'; // Fix it for this request
+        return next();
+      }
+    }
+
+    console.log(`[AUTH DEBUG] 403 Access Denied for User: ${req.user?.username}, Role: ${req.user?.role}`);
     return res.status(403).json({ 
       success: false, 
-      message: `Access denied. Teacher role required. Current role: ${req.user.role || 'none'}` 
+      message: `Access denied. Teacher role required. Current role: ${req.user?.role || 'none'}` 
     });
+  } catch (err) {
+    console.error('isTeacher Middleware Error:', err);
+    return res.status(500).json({ success: false, message: 'Internal server error verifying role.' });
   }
 }
 
