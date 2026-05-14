@@ -71,12 +71,17 @@ async function login(req, res) {
       return res.status(403).json(errorResponse("Your account is pending approval by the Superadmin.", 403));
     }
 
+const Teacher = require('../models/Teacher');
     const schoolAdminLink = await SchoolAdmin.findOne({ where: { user_id: user.id } });
+    const teacherLink = await Teacher.findOne({ where: { user_id: user.id } });
+
     let role = 'user';
     if (user.is_superuser) {
       role = 'superadmin';
     } else if (schoolAdminLink) {
       role = 'school_admin';
+    } else if (teacherLink) {
+      role = 'teacher';
     } else if (user.is_staff) {
       role = 'staff';
     }

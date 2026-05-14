@@ -24,13 +24,11 @@ const errorResponse = (message = "Error", status = 400) => ({ success: false, me
 // Helper: Normalize image paths for the frontend
 function normalizePath(filePath) {
   if (!filePath) return null;
-  // If it's already a URL or relative path, return as is
-  if (filePath.startsWith('http') || filePath.startsWith('/uploads')) return filePath;
-  // If it contains 'uploads', extract everything from 'uploads' onwards
-  const match = filePath.match(/\/uploads\/.+$/) || filePath.match(/uploads\/.+$/);
-  if (match) return match[0].startsWith('/') ? match[0] : `/${match[0]}`;
-  // Fallback: just return the filename if it's just a filename
-  return filePath;
+  if (filePath.startsWith('http')) return filePath;
+  if (filePath.startsWith('/uploads')) return filePath;
+  if (filePath.startsWith('uploads')) return '/' + filePath;
+  // Fallback for files that might be in student or badge folders
+  return filePath.includes('student') ? `/uploads/students/${filePath}` : `/uploads/badges/${filePath}`;
 }
 
 // Helper: Get school from logged-in user

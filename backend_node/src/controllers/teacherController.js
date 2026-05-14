@@ -8,10 +8,13 @@ const errorResponse = (message = "Error", status = 400) => ({ success: false, me
 // Helper: Normalize image paths
 function normalizePath(filePath) {
   if (!filePath) return null;
-  if (filePath.startsWith('http') || filePath.startsWith('/uploads')) return filePath;
-  const match = filePath.match(/\/uploads\/.+$/) || filePath.match(/uploads\/.+$/);
-  if (match) return match[0].startsWith('/') ? match[0] : `/${match[0]}`;
-  return filePath;
+  // If it's already a full URL, return it
+  if (filePath.startsWith('http')) return filePath;
+  // Ensure it starts with /uploads
+  if (filePath.startsWith('/uploads')) return filePath;
+  if (filePath.startsWith('uploads')) return '/' + filePath;
+  // If it's just a filename, assume it's in badges (consistent with createTeacher)
+  return '/uploads/badges/' + filePath;
 }
 
 async function getTeacherMe(req, res) {
