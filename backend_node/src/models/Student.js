@@ -5,7 +5,7 @@ const Student = sequelize.define('Student', {
   id: { type: DataTypes.BIGINT, primaryKey: true, autoIncrement: true },
   school_id: { type: DataTypes.BIGINT, allowNull: false },
   admission_number: { type: DataTypes.STRING, unique: true },
-  user_id: { type: DataTypes.INTEGER, allowNull: false, unique: true },
+  user_id: { type: DataTypes.BIGINT, allowNull: false, unique: true },
   date_of_birth: { type: DataTypes.DATEONLY },
   gender: { type: DataTypes.STRING(10) },
   
