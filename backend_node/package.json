@@ -7,14 +7,7 @@
     "start": "node src/index.js",
     "dev": "npx nodemon src/index.js",
     "seed:superadmin": "node scripts/seedSuperAdmin.js",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev",
-    "prisma:deploy": "prisma migrate deploy",
-    "prisma:seed": "prisma db seed",
-    "postinstall": "prisma generate"
-  },
-  "prisma": {
-    "seed": "node prisma/seed.js"
+    "seed:roles": "node scripts/seedRoles.js"
   },
   "author": "Princess Magbie",
   "license": "MIT",
@@ -30,8 +23,6 @@
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
     "multer": "^2.1.1",
-    "@prisma/client": "^6.7.0",
-    "prisma": "^6.7.0",
     "mysql2": "^3.9.7",
     "resend": "^6.12.3",
     "sequelize": "^6.37.4"
