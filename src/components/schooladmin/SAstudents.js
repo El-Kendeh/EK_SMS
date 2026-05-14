@@ -920,7 +920,8 @@ export function StudentsPage({ school, openAddSignal }) {
     guardian2_address: '', guardian2_whatsapp: '', guardian2_username: '', guardian2_password: '', guardian2_existing_id: '',
     emergency_name: '', emergency_relationship: '', emergency_phone: '', emergency_address: '',
     blood_group: '', allergies: '', medical_conditions: '', doctor_name: '', doctor_phone: '',
-    sen_notes: '', sen_iep: false,
+    sen_notes: '', sen_iep: false, sen_tier: '',
+    is_critical_medical: false, vaccinations: '',
     disciplinary_history: false, disciplinary_notes: '',
     documents_birth_certificate: false, documents_passport_photo: false,
     documents_previous_school_report: false, documents_transfer_letter: false,
@@ -1004,7 +1005,8 @@ export function StudentsPage({ school, openAddSignal }) {
       blood_group: s.blood_type || '', allergies: s.allergies || '',
       medical_conditions: s.medical_notes || '',
       doctor_name: s.doctor_name || '', doctor_phone: s.doctor_phone || '',
-      sen_notes: s.sen_notes || '', sen_iep: !!s.sen_iep,
+      sen_notes: s.sen_notes || '', sen_iep: !!s.sen_iep, sen_tier: s.sen_tier || '',
+      is_critical_medical: !!s.is_critical_medical, vaccinations: s.vaccinations || '',
       disciplinary_history: !!s.disciplinary_history, disciplinary_notes: s.disciplinary_notes || '',
       documents_birth_certificate: !!s.documents_birth_certificate,
       documents_passport_photo: !!s.documents_passport_photo,
@@ -2307,18 +2309,40 @@ export function StudentsPage({ school, openAddSignal }) {
             </p>
             <div style={{ display: 'grid', gap: 12 }}>
               <label className="ska-form-group" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <input type="checkbox" checked={form.sen_iep}
-                  onChange={e => setForm(f => ({ ...f, sen_iep: e.target.checked }))}
+                <input type="checkbox" checked={form.is_critical_medical}
+                  onChange={e => setForm(f => ({ ...f, is_critical_medical: e.target.checked }))}
                   style={{ width: 16, height: 16, accentColor: 'var(--ska-primary)', cursor: 'pointer', flexShrink: 0 }} />
-                <span style={{ fontSize: '0.875rem' }}>Student has an active Individualized Education Plan (IEP)</span>
+                <span style={{ fontSize: '0.875rem', color: 'var(--ska-error)', fontWeight: 600 }}>Student has a CRITICAL medical condition (Flag in system)</span>
               </label>
+              <label className="ska-form-group">
+                <span>Vaccination History</span>
+                <input className="ska-input" value={form.vaccinations} placeholder="e.g. BCG, Polio, MMR..."
+                  onChange={e => setForm(f => ({ ...f, vaccinations: e.target.value }))} />
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <label className="ska-form-group" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <input type="checkbox" checked={form.sen_iep}
+                    onChange={e => setForm(f => ({ ...f, sen_iep: e.target.checked }))}
+                    style={{ width: 16, height: 16, accentColor: 'var(--ska-primary)', cursor: 'pointer', flexShrink: 0 }} />
+                  <span style={{ fontSize: '0.875rem' }}>Active IEP</span>
+                </label>
+                <label className="ska-form-group">
+                  <span>SEN Tier</span>
+                  <select className="ska-input" value={form.sen_tier} onChange={e => setForm(f => ({ ...f, sen_tier: e.target.value }))}>
+                    <option value="">— Select Tier —</option>
+                    <option value="Tier 1">Tier 1 (Mild)</option>
+                    <option value="Tier 2">Tier 2 (Moderate)</option>
+                    <option value="Tier 3">Tier 3 (Severe)</option>
+                  </select>
+                </label>
+              </div>
               <label className="ska-form-group">
                 <span>SEN Notes</span>
                 <textarea
                   className="ska-input"
-                  rows={4}
+                  rows={3}
                   value={form.sen_notes}
-                  placeholder="Describe any learning disabilities, assistive needs, accommodations required, or other relevant SEN information…"
+                  placeholder="Describe learning disabilities or accommodations..."
                   onChange={e => setForm(f => ({ ...f, sen_notes: e.target.value }))}
                   style={{ resize: 'vertical', fontFamily: 'inherit' }}
                 />

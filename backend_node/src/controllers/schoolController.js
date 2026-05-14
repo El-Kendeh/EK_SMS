@@ -141,27 +141,89 @@ async function getStudents(req, res) {
 }
 
 async function createStudent(req, res) {
+  const transaction = await sequelize.transaction();
   try {
     const school = await getSchoolFromUser(req);
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
-    const {
-      admission_number, first_name, last_name, other_names,
-      date_of_birth, gender, classroom_id, academic_year_id,
-      parent_name, parent_email, parent_phone
-    } = req.body;
+    const data = req.body;
+    
+    // 1. Create User account for student
+    const username = data.student_username || data.admission_number || `stu_${Date.now()}`;
+    const hashedPassword = await bcrypt.hash(data.student_password || 'Student@123', 10);
+    
+    const user = await User.create({
+      username,
+      password: hashedPassword,
+      email: data.email || null,
+      first_name: data.first_name,
+      last_name: data.last_name,
+      is_active: true,
+      role: 'student'
+    }, { transaction });
 
+    // 2. Create Student profile
     const student = await Student.create({
-      school_id: school.id, admission_number, first_name, last_name,
-      other_names, date_of_birth, gender, classroom_id, academic_year_id,
-      parent_name, parent_email, parent_phone,
-      photo: req.file ? `/uploads/students/${req.file.filename}` : null,
-    });
+      school_id: school.id,
+      user_id: user.id,
+      admission_number: data.admission_number,
+      admission_date: data.enrollment_date || new Date(),
+      date_of_birth: data.date_of_birth,
+      gender: data.gender === 'Male' ? 'M' : data.gender === 'Female' ? 'F' : 'O',
+      
+      classroom_id: data.classroom_id,
+      academic_year_id: data.academic_year_id,
+      student_type: data.student_type?.toLowerCase(),
+      fee_category: data.fee_category,
+      status: data.status || 'active',
+      is_active: true,
+      
+      place_of_birth: data.place_of_birth,
+      nationality: data.nationality,
+      religion: data.religion,
+      home_language: data.home_language,
+      
+      home_address: data.home_address,
+      city: data.city,
+      phone_number: data.phone_number,
+      
+      blood_type: data.blood_group,
+      allergies: data.allergies,
+      medical_notes: data.medical_conditions,
+      doctor_name: data.doctor_name,
+      doctor_phone: data.doctor_phone,
+      is_critical_medical: data.is_critical_medical === 'true' || data.is_critical_medical === true,
+      sen_tier: data.sen_tier,
+      sen_notes: data.sen_notes,
+      sen_iep: data.sen_iep === 'true' || data.sen_iep === true,
+      
+      disciplinary_history: data.disciplinary_history === 'true' || data.disciplinary_history === true,
+      disciplinary_notes: data.disciplinary_notes,
+      
+      passport_picture: req.file ? `/uploads/students/${req.file.filename}` : null,
+      
+      emergency_name: data.emergency_name,
+      emergency_relationship: data.emergency_relationship,
+      emergency_phone: data.emergency_phone,
+      emergency_address: data.emergency_address,
+      
+      // Document flags
+      documents_birth_certificate: data.documents_birth_certificate === 'true' || data.documents_birth_certificate === true,
+      documents_passport_photo: data.documents_passport_photo === 'true' || data.documents_passport_photo === true,
+      documents_previous_school_report: data.documents_previous_school_report === 'true' || data.documents_previous_school_report === true,
+      documents_transfer_letter: data.documents_transfer_letter === 'true' || data.documents_transfer_letter === true,
+      documents_medical_report: data.documents_medical_report === 'true' || data.documents_medical_report === true,
+      documents_other: data.documents_other === 'true' || data.documents_other === true,
+      
+      vaccinations: data.vaccinations || {},
+    }, { transaction });
 
-    return res.json(successResponse({ student }, 'Student created'));
+    await transaction.commit();
+    return res.json(successResponse({ student }, 'Student registered successfully'));
   } catch (err) {
-    console.error(err);
-    return res.status(500).json(errorResponse('Failed to create student'));
+    await transaction.rollback();
+    console.error('createStudent Error:', err);
+    return res.status(400).json(errorResponse(`Failed to create student: ${err.message}`));
   }
 }
 
@@ -183,7 +245,78 @@ async function getNextAdmissionNumber(req, res) {
   }
 }
 
-async function getStudentStats(req, res) {
+async function updateStudent(req, res) {
+  const transaction = await sequelize.transaction();
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+
+    const { id } = req.params;
+    const data = req.body;
+    const student = await Student.findOne({ where: { id, school_id: school.id } });
+    if (!student) return res.status(404).json(errorResponse('Student not found'));
+
+    // 1. Update User info
+    const user = await User.findByPk(student.user_id);
+    if (user) {
+      user.first_name = data.first_name || user.first_name;
+      user.last_name = data.last_name || user.last_name;
+      user.email = data.email || user.email;
+      await user.save({ transaction });
+    }
+
+    // 2. Update Student profile
+    const updateData = {
+      admission_number: data.admission_number || student.admission_number,
+      admission_date: data.enrollment_date || student.admission_date,
+      date_of_birth: data.date_of_birth || student.date_of_birth,
+      gender: data.gender === 'Male' ? 'M' : data.gender === 'Female' ? 'F' : data.gender || student.gender,
+      classroom_id: data.classroom_id || student.classroom_id,
+      academic_year_id: data.academic_year_id || student.academic_year_id,
+      student_type: data.student_type?.toLowerCase() || student.student_type,
+      fee_category: data.fee_category || student.fee_category,
+      status: data.status || student.status,
+      place_of_birth: data.place_of_birth || student.place_of_birth,
+      nationality: data.nationality || student.nationality,
+      religion: data.religion || student.religion,
+      home_language: data.home_language || student.home_language,
+      home_address: data.home_address || student.home_address,
+      city: data.city || student.city,
+      phone_number: data.phone_number || student.phone_number,
+      blood_type: data.blood_group || student.blood_type,
+      allergies: data.allergies || student.allergies,
+      medical_notes: data.medical_conditions || student.medical_notes,
+      doctor_name: data.doctor_name || student.doctor_name,
+      doctor_phone: data.doctor_phone || student.doctor_phone,
+      is_critical_medical: data.is_critical_medical !== undefined ? (data.is_critical_medical === 'true' || data.is_critical_medical === true) : student.is_critical_medical,
+      sen_tier: data.sen_tier || student.sen_tier,
+      sen_notes: data.sen_notes || student.sen_notes,
+      sen_iep: data.sen_iep !== undefined ? (data.sen_iep === 'true' || data.sen_iep === true) : student.sen_iep,
+      disciplinary_history: data.disciplinary_history !== undefined ? (data.disciplinary_history === 'true' || data.disciplinary_history === true) : student.disciplinary_history,
+      disciplinary_notes: data.disciplinary_notes || student.disciplinary_notes,
+      emergency_name: data.emergency_name || student.emergency_name,
+      emergency_relationship: data.emergency_relationship || student.emergency_relationship,
+      emergency_phone: data.emergency_phone || student.emergency_phone,
+      emergency_address: data.emergency_address || student.emergency_address,
+      documents_birth_certificate: data.documents_birth_certificate !== undefined ? (data.documents_birth_certificate === 'true' || data.documents_birth_certificate === true) : student.documents_birth_certificate,
+      documents_passport_photo: data.documents_passport_photo !== undefined ? (data.documents_passport_photo === 'true' || data.documents_passport_photo === true) : student.documents_passport_photo,
+      documents_previous_school_report: data.documents_previous_school_report !== undefined ? (data.documents_previous_school_report === 'true' || data.documents_previous_school_report === true) : student.documents_previous_school_report,
+      documents_transfer_letter: data.documents_transfer_letter !== undefined ? (data.documents_transfer_letter === 'true' || data.documents_transfer_letter === true) : student.documents_transfer_letter,
+      documents_medical_report: data.documents_medical_report !== undefined ? (data.documents_medical_report === 'true' || data.documents_medical_report === true) : student.documents_medical_report,
+      documents_other: data.documents_other !== undefined ? (data.documents_other === 'true' || data.documents_other === true) : student.documents_other,
+    };
+
+    if (req.file) updateData.passport_picture = `/uploads/students/${req.file.filename}`;
+
+    await student.update(updateData, { transaction });
+    await transaction.commit();
+    return res.json(successResponse({ student }, 'Student updated successfully'));
+  } catch (err) {
+    await transaction.rollback();
+    console.error('updateStudent Error:', err);
+    return res.status(400).json(errorResponse(`Failed to update student: ${err.message}`));
+  }
+}
   try {
     const school = await getSchoolFromUser(req);
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
@@ -236,18 +369,43 @@ async function getTeachers(req, res) {
 }
 
 async function createTeacher(req, res) {
+  const transaction = await sequelize.transaction();
   try {
     const school = await getSchoolFromUser(req);
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
-    const { first_name, last_name, email, phone, employment_type, qualification } = req.body;
-    const teacher = await Teacher.create({
-      school_id: school.id, first_name, last_name, email, phone,
-      employment_type, qualification,
-    });
+    const { first_name, last_name, email, phone, employment_type, qualification, password, username } = req.body;
+    
+    // 1. Create User
+    const hashedPassword = await bcrypt.hash(password || 'Teacher@123', 10);
+    const user = await User.create({
+      username: username || email || `tch_${Date.now()}`,
+      password: hashedPassword,
+      email: email || null,
+      first_name,
+      last_name,
+      is_active: true,
+      role: 'teacher'
+    }, { transaction });
 
-    return res.json(successResponse({ teacher }, 'Teacher created'));
+    // 2. Create Teacher profile
+    const teacher = await Teacher.create({
+      school_id: school.id,
+      user_id: user.id,
+      phone_number: phone,
+      employment_type,
+      qualification,
+      is_active: true,
+    }, { transaction });
+
+    await transaction.commit();
+    return res.json(successResponse({ teacher }, 'Teacher registered successfully'));
   } catch (err) {
+    await transaction.rollback();
+    console.error('createTeacher Error:', err);
+    return res.status(400).json(errorResponse(`Failed to create teacher: ${err.message}`));
+  }
+}
     console.error(err);
     return res.status(500).json(errorResponse('Failed to create teacher'));
   }
@@ -807,10 +965,47 @@ async function reviewModificationRequest(req, res) {
   }
 }
 
+async function updateTeacher(req, res) {
+  const transaction = await sequelize.transaction();
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+
+    const { id } = req.params;
+    const { first_name, last_name, email, phone, employment_type, qualification } = req.body;
+    
+    const teacher = await Teacher.findOne({ where: { id, school_id: school.id } });
+    if (!teacher) return res.status(404).json(errorResponse('Teacher not found'));
+
+    // 1. Update User
+    const user = await User.findByPk(teacher.user_id);
+    if (user) {
+      user.first_name = first_name || user.first_name;
+      user.last_name = last_name || user.last_name;
+      user.email = email || user.email;
+      await user.save({ transaction });
+    }
+
+    // 2. Update Teacher
+    await teacher.update({
+      phone_number: phone || teacher.phone_number,
+      employment_type: employment_type || teacher.employment_type,
+      qualification: qualification || teacher.qualification,
+    }, { transaction });
+
+    await transaction.commit();
+    return res.json(successResponse({ teacher }, 'Teacher updated successfully'));
+  } catch (err) {
+    await transaction.rollback();
+    console.error('updateTeacher Error:', err);
+    return res.status(400).json(errorResponse(`Failed to update teacher: ${err.message}`));
+  }
+}
+
 module.exports = {
   getSchoolInfo, updateSchoolInfo, checkSchoolName,
-  getStudents, createStudent, getNextAdmissionNumber, getStudentStats,
-  getTeachers, createTeacher, getTeacherStats,
+  getStudents, createStudent, updateStudent, getNextAdmissionNumber, getStudentStats,
+  getTeachers, createTeacher, updateTeacher, getTeacherStats,
   getClasses, createClass, bulkCreateClasses,
   getSubjects, createSubject,
   getAcademicYears, createAcademicYear, getTerms, createTerm,

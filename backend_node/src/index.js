@@ -60,7 +60,7 @@ app.use(cors({
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-const uploadsRoot = path.join(__dirname, '../../../uploads');
+const uploadsRoot = path.join(__dirname, '../../uploads');
 try {
   fs.mkdirSync(path.join(uploadsRoot, 'branding'), { recursive: true });
   fs.mkdirSync(path.join(uploadsRoot, 'badges'), { recursive: true });
@@ -79,12 +79,27 @@ app.get('/', (req, res) => {
   });
 });
 
-// DEBUG: DB Structure (Temporary)
+// DEBUG: DB Structure & Files (Temporary)
 app.get('/api/debug/db-structure/:table', async (req, res) => {
   try {
     const { table } = req.params;
     const [results] = await db.query(`DESCRIBE ${table}`);
-    res.json({ table, columns: results });
+    
+    // Also list uploads dir for debugging
+    let files = [];
+    try {
+      files = fs.readdirSync(path.join(uploadsRoot, 'badges'));
+    } catch (e) {
+      files = [`Error reading uploads: ${e.message}`];
+    }
+
+    res.json({ 
+      table, 
+      columns: results, 
+      dirname: __dirname, 
+      uploadsRoot, 
+      badgeFiles: files.slice(0, 20) 
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

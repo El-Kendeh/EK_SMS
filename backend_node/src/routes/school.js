@@ -88,12 +88,14 @@ router.post('/school/info/', applyAuth, upload.single('badge'), updateSchoolInfo
 // ==================== STUDENTS ====================
 router.get('/school/students/', applyAuth, getStudents);
 router.post('/school/students/', applyAuth, upload.single('photo'), createStudent);
+router.put('/school/students/:id/', applyAuth, upload.single('photo'), updateStudent);
 router.get('/school/students/next-admission-number/', applyAuth, getNextAdmissionNumber);
 router.get('/school/student-stats/', applyAuth, getStudentStats);
 
 // ==================== TEACHERS ====================
 router.get('/school/teachers/', applyAuth, getTeachers);
 router.post('/school/teachers/', applyAuth, createTeacher);
+router.put('/school/teachers/:id/', applyAuth, updateTeacher);
 router.get('/school/teacher-stats/', applyAuth, getTeacherStats);
 
 // ==================== CLASSES ====================

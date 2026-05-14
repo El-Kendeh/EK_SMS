@@ -28,7 +28,6 @@ const Student = sequelize.define('Student', {
   home_address: { type: DataTypes.TEXT },
   city: { type: DataTypes.STRING(100) },
   phone_number: { type: DataTypes.STRING(20) },
-  email: { type: DataTypes.STRING(100) },
   
   // Medical & SEN
   blood_type: { type: DataTypes.STRING(5) },
