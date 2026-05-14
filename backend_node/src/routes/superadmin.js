@@ -11,6 +11,7 @@ const {
   impersonate,
   getGradeAlerts,
   getSystemHealth,
+  resetUserPassword
 } = require('../controllers/superadminController');
 
 const data = require('../controllers/superadminDataController');
@@ -50,6 +51,7 @@ router.post('/schools/approve/', handleSchoolAction);
 router.post('/impersonate/', impersonate);
 router.get('/grade-alerts/', getGradeAlerts);
 router.get('/system-health/', getSystemHealth);
+router.post('/reset-user-password/', resetUserPassword);
 
 /* Superadmin dashboard — MySQL-backed */
 router.get('/security-logs/', data.getSecurityLogs);

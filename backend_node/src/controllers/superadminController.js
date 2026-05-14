@@ -1,11 +1,13 @@
 const School = require('../models/School');
 const User = require('../models/User');
 const SchoolAdmin = require('../models/SchoolAdmin');
+const Teacher = require('../models/Teacher');
 const SystemOpsAlert = require('../models/SystemOpsAlert');
 const sequelize = require('../config/db');
 const { Op } = require('sequelize');
+const bcrypt = require('bcryptjs');
 const { generateToken } = require('../utils/jwt');
-const { sendSchoolApprovedEmail } = require('../services/mailer');
+const { sendSchoolApprovedEmail, sendPasswordResetEmail } = require('../utils/email');
 const { appendSecurityAuditLog } = require('../utils/auditLog');
 
 const successResponse = (data = {}, message = "Success") => ({ success: true, message, ...data });
@@ -276,10 +278,66 @@ async function getSystemHealth(req, res) {
   }));
 }
 
+async function resetUserPassword(req, res) {
+  const { user_id, new_password } = req.body;
+  if (!user_id || !new_password) {
+    return res.status(400).json(errorResponse("User ID and new password are required"));
+  }
+
+  try {
+    const user = await User.findByPk(user_id);
+    if (!user) return res.status(404).json(errorResponse("User not found"));
+
+    // 1. Hash new password
+    const hashedPassword = await bcrypt.hash(new_password, 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    // 2. Identify Role
+    const schoolAdminLink = await SchoolAdmin.findOne({ where: { user_id } });
+    const teacherLink = await Teacher.findOne({ where: { user_id } });
+    let role = 'user';
+    if (user.is_superuser) role = 'superadmin';
+    else if (schoolAdminLink) role = 'school_admin';
+    else if (teacherLink) role = 'teacher';
+
+    // 3. Mark for password change
+    if (schoolAdminLink) {
+      schoolAdminLink.must_change_password = true;
+      await schoolAdminLink.save();
+    }
+    if (teacherLink) {
+      teacherLink.must_change_password = true;
+      await teacherLink.save();
+    }
+
+    // 4. Send Email
+    if (user.email) {
+      const fullName = `${user.first_name} ${user.last_name}`;
+      await sendPasswordResetEmail(user.email, fullName, role, new_password);
+    }
+
+    await appendSecurityAuditLog({
+      type: 'password_reset_admin',
+      severity: 'medium',
+      actor: req.user?.username || 'superadmin',
+      ip: req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || '—',
+      action: `Password reset by admin for user: ${user.username}`,
+      metadata: { target_user_id: user_id },
+    });
+
+    return res.json(successResponse({}, "Password reset successfully and notification email sent."));
+  } catch (err) {
+    console.error('resetUserPassword Error:', err);
+    return res.status(500).json(errorResponse("Internal server error during password reset"));
+  }
+}
+
 module.exports = {
   getAllSchools,
   handleSchoolAction,
   impersonate,
   getGradeAlerts,
-  getSystemHealth
+  getSystemHealth,
+  resetUserPassword
 };
