@@ -9,9 +9,9 @@ const {
   // School info
   getSchoolInfo, updateSchoolInfo, checkSchoolName,
   // Students
-  getStudents, createStudent, getNextAdmissionNumber, getStudentStats,
+  getStudents, createStudent, updateStudent, getNextAdmissionNumber, getStudentStats,
   // Teachers
-  getTeachers, createTeacher, getTeacherStats,
+  getTeachers, createTeacher, updateTeacher, getTeacherStats,
   // Classes
   getClasses, createClass, bulkCreateClasses,
   // Subjects
