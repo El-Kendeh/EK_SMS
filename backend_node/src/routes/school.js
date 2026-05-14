@@ -72,7 +72,7 @@ const upload = multer({
       cb(new Error('Invalid file type'), false);
     }
   },
-  limits: { fileSize: 5 * 1024 * 1024 } // 5MB
+  limits: { fileSize: 50 * 1024 * 1024 } // 50MB
 });
 
 // Public routes
