@@ -3352,7 +3352,10 @@ function _LegacyAddTeacherWizard_DEPRECATED({ school, onSave, onCancel, existing
     try {
       const fd = new FormData();
       Object.entries(form).forEach(([k, v]) => { if (v !== '') fd.append(k, v); });
-      if (profileImage) fd.append('profile_picture', profileImage);
+      if (profileImage) {
+        fd.append('profile_picture', profileImage);
+        fd.append('photo', profileImage);
+      }
       // Add class assignments as JSON
       if (classAssignments.length > 0) {
         fd.append('class_assignments', JSON.stringify(classAssignments));

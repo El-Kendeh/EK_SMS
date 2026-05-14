@@ -164,6 +164,7 @@ export default function AddTeacherWizard({ school, onSave, onCancel, existingTea
       if (photoBlob) {
         const fname = photoBlob instanceof File ? photoBlob.name : 'profile.jpg';
         fd.append('profile_picture', photoBlob, fname);
+        fd.append('photo', photoBlob, fname); // also send alternate field name for compatibility
       }
       if (classAssignments.length > 0) fd.append('class_assignments', JSON.stringify(classAssignments));
       fd.append('availability', JSON.stringify(availability));
