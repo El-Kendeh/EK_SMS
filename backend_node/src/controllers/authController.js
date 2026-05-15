@@ -43,8 +43,14 @@ async function login(req, res) {
       return res.status(400).json(errorResponse("Username or email and password are required."));
     }
 
+    const identifierLower = identifier.toLowerCase();
     const user = await User.findOne({
-      where: { [Op.or]: [{ username: identifier }, { email: identifier }] },
+      where: {
+        [Op.or]: [
+          sequelize.where(sequelize.fn('lower', sequelize.col('username')), identifierLower),
+          sequelize.where(sequelize.fn('lower', sequelize.col('email')), identifierLower),
+        ],
+      },
     });
     if (!user) {
       console.log(`[LOGIN DEBUG] User not found for identifier: ${identifier}`);
@@ -58,16 +64,9 @@ async function login(req, res) {
       return res.status(401).json(errorResponse("Invalid credentials", 401));
     }
 
-    const { verifyDjangoPassword } = require('../utils/password');
     let valid = false;
-    
-    if (user.password.startsWith('pbkdf2_')) {
-      valid = verifyDjangoPassword(cleanPassword, user.password);
-      console.log(`[LOGIN DEBUG] Django PBKDF2 check for ${user.username}: ${valid}`);
-    } else {
-      valid = await bcrypt.compare(cleanPassword, user.password);
-      console.log(`[LOGIN DEBUG] Bcrypt check for ${user.username}: ${valid}`);
-    }
+    valid = await bcrypt.compare(cleanPassword, user.password);
+    console.log(`[LOGIN DEBUG] Bcrypt check for ${user.username}: ${valid}`);
 
     if (!valid) {
       console.log(`[LOGIN DEBUG] Password mismatch for user: ${user.username}`);

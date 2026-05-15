@@ -3,7 +3,7 @@ require('dotenv').config();
 const { Sequelize } = require('sequelize');
 const mysql = require('mysql2/promise');
 
-const dbName = process.env.DB_NAME || 'eksms_db';
+const dbName = process.env.DB_NAME || 'pruh_db';
 const dbUser = process.env.DB_USER || 'root';
 const dbPassword = process.env.DB_PASSWORD || '';
 const dbHost = process.env.DB_HOST || 'localhost';
