@@ -9,26 +9,26 @@ DB_PASS="elkinson"
 DB_HOST="localhost"
 
 echo "🔄 Connecting to MySQL database: $DB_NAME"
-echo "📋 Tables to DROP (keeping users and roles):"
+echo "📋 Tables to DROP (keeping only users and roles):"
 
-# List all legacy eksms_core tables only
+# List all tables except users and roles
 TABLES_TO_DROP=$(
 mysql -u"$DB_USER" -p"$DB_PASS" -h"$DB_HOST" -D"$DB_NAME" -e "
 SELECT TABLE_NAME
 FROM information_schema.TABLES
 WHERE TABLE_SCHEMA = '$DB_NAME'
-AND TABLE_NAME LIKE 'eksms_core_%'
+AND TABLE_NAME NOT IN ('users', 'roles')
 ORDER BY TABLE_NAME;" 2>/dev/null | tail -n +2
 )
 
 if [ -z "$TABLES_TO_DROP" ]; then
-    echo "ℹ️  No legacy eksms_core_* tables found to drop"
+    echo "ℹ️  No tables found to drop (only users and roles exist)"
     exit 0
 fi
 
 echo "$TABLES_TO_DROP"
 echo ""
-echo "⚠️  WARNING: This will permanently delete all legacy eksms_core_* tables!"
+echo "⚠️  WARNING: This will permanently delete all tables except users and roles!"
 read -p "Are you sure you want to continue? (yes/no): " confirm
 
 if [ "$confirm" != "yes" ]; then
