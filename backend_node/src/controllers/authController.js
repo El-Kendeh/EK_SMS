@@ -70,7 +70,7 @@ async function login(req, res) {
 
     if (!valid) {
       console.log(`[LOGIN DEBUG] Password mismatch for user: ${user.username}`);
-      console.log(`[LOGIN DEBUG] Provided pass length: ${cleanPassword.length}, Hash starts with: ${user.password.slice(0, 10)}`);
+      console.log(`[LOGIN DEBUG] Provided pass length: ${cleanPassword.length}, Hash starts with: ${user.password ? user.password.slice(0, 10) : 'missing'}`);
       await appendSecurityAuditLog({
         type: 'login_failure',
         severity: 'medium',
@@ -90,8 +90,18 @@ async function login(req, res) {
       return res.status(403).json(errorResponse("Your account is pending approval by the Superadmin.", 403));
     }
 
-    const schoolAdminLink = await SchoolAdmin.findOne({ where: { user_id: user.id } });
-    const teacherLink = await Teacher.findOne({ where: { user_id: user.id } });
+    let schoolAdminLink = null;
+    let teacherLink = null;
+    try {
+      schoolAdminLink = await SchoolAdmin.findOne({ where: { user_id: user.id } });
+    } catch (findErr) {
+      console.warn('[LOGIN DEBUG] SchoolAdmin lookup failed, continuing without school admin link:', findErr.message);
+    }
+    try {
+      teacherLink = await Teacher.findOne({ where: { user_id: user.id } });
+    } catch (findErr) {
+      console.warn('[LOGIN DEBUG] Teacher lookup failed, continuing without teacher link:', findErr.message);
+    }
 
     let role = 'user';
     if (isPortalSuper) {
