@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const { Op } = require('sequelize');
 const User = require('../models/User');
+const Role = require('../models/Role');
 const School = require('../models/School');
 const SchoolAdmin = require('../models/SchoolAdmin');
 const Teacher = require('../models/Teacher');
@@ -44,13 +45,16 @@ async function login(req, res) {
     }
 
     const identifierLower = identifier.toLowerCase();
-    const user = await User.findOne({
+    const user = await User.unscoped().findOne({
       where: {
         [Op.or]: [
+          { username: identifier },
+          { email: identifier },
           sequelize.where(sequelize.fn('lower', sequelize.col('username')), identifierLower),
           sequelize.where(sequelize.fn('lower', sequelize.col('email')), identifierLower),
         ],
       },
+      include: [{ model: Role, as: 'role', required: false }],
     });
     if (!user) {
       console.log(`[LOGIN DEBUG] User not found for identifier: ${identifier}`);
