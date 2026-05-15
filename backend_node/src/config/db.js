@@ -8,15 +8,22 @@ const dbUser = process.env.DB_USER || 'root';
 const dbPassword = process.env.DB_PASSWORD || '';
 const dbHost = process.env.DB_HOST || 'localhost';
 const dbPort = process.env.DB_PORT || 3306;
+const dbSocketPath = process.env.DB_SOCKET_PATH || '';
+
+const connectionConfig = {
+  user: dbUser,
+  password: dbPassword,
+};
+if (dbSocketPath) {
+  connectionConfig.socketPath = dbSocketPath;
+} else {
+  connectionConfig.host = dbHost;
+  connectionConfig.port = dbPort;
+}
 
 async function ensureDatabaseExists() {
   try {
-    const connection = await mysql.createConnection({
-      host: dbHost,
-      port: dbPort,
-      user: dbUser,
-      password: dbPassword,
-    });
+    const connection = await mysql.createConnection(connectionConfig);
     await connection.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\`;`);
     await connection.end();
     console.log(`✅ Database "${dbName}" verified/created.`);
@@ -29,11 +36,17 @@ async function ensureDatabaseExists() {
 // Pre-connection check
 ensureDatabaseExists();
 
-const sequelize = new Sequelize(dbName, dbUser, dbPassword, {
-  host: dbHost,
-  port: dbPort,
+const sequelizeConfig = {
   dialect: 'mysql',
   logging: false,
-});
+};
+if (dbSocketPath) {
+  sequelizeConfig.dialectOptions = { socketPath: dbSocketPath };
+} else {
+  sequelizeConfig.host = dbHost;
+  sequelizeConfig.port = dbPort;
+}
+
+const sequelize = new Sequelize(dbName, dbUser, dbPassword, sequelizeConfig);
 
 module.exports = sequelize;
