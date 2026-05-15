@@ -45,7 +45,7 @@ const Student = sequelize.define('Student', {
   
   created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
 }, {
-  tableName: 'eksms_core_student',
+  tableName: 'pruh_core_student',
   timestamps: false,
 });
 

@@ -10,7 +10,7 @@ const Subject = sequelize.define('Subject', {
   is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
   created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
 }, {
-  tableName: 'eksms_core_subject',
+  tableName: 'pruh_core_subject',
   timestamps: false,
 });
 

@@ -7,7 +7,7 @@ const OTP = sequelize.define('OTP', {
   expires_at: { type: DataTypes.DATE, allowNull: false },
   is_used: { type: DataTypes.BOOLEAN, defaultValue: false },
 }, {
-  tableName: 'eksms_core_otp',
+  tableName: 'pruh_core_otp',
   timestamps: true,
   createdAt: 'created_at',
   updatedAt: 'updated_at',

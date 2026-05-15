@@ -11,7 +11,7 @@ const Term = sequelize.define('Term', {
   is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
   created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
 }, {
-  tableName: 'eksms_core_term',
+  tableName: 'pruh_core_term',
   timestamps: false,
 });
 

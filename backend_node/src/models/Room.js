@@ -11,7 +11,7 @@ const Room = sequelize.define('Room', {
   is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
   created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
 }, {
-  tableName: 'eksms_core_room',
+  tableName: 'pruh_core_room',
   timestamps: false,
 });
 

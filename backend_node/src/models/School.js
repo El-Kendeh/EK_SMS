@@ -19,7 +19,7 @@ const School = sequelize.define('School', {
   changes_requested: { type: DataTypes.BOOLEAN, defaultValue: false },
   created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
 }, {
-  tableName: 'eksms_core_school', // Assuming Django app name 'eksms_core'
+  tableName: 'pruh_core_school',
   timestamps: false,
 });
 

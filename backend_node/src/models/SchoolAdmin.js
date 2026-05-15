@@ -15,7 +15,7 @@ const SchoolAdmin = sequelize.define('SchoolAdmin', {
   },
   must_change_password: { type: DataTypes.BOOLEAN, defaultValue: false },
 }, {
-  tableName: 'eksms_core_schooladmin',
+  tableName: 'pruh_core_schooladmin',
   timestamps: false,
 });
 

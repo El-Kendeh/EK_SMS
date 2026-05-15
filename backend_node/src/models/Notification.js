@@ -10,7 +10,7 @@ const Notification = sequelize.define('Notification', {
   is_read: { type: DataTypes.BOOLEAN, defaultValue: false },
   created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
 }, {
-  tableName: 'eksms_core_notification',
+  tableName: 'pruh_core_notification',
   timestamps: false,
 });
 

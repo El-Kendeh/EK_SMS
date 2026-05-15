@@ -11,7 +11,7 @@ const Attendance = sequelize.define('Attendance', {
   remarks: { type: DataTypes.TEXT },
   created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
 }, {
-  tableName: 'eksms_core_attendance',
+  tableName: 'pruh_core_attendance',
   timestamps: false,
 });
 

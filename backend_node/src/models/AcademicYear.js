@@ -10,7 +10,7 @@ const AcademicYear = sequelize.define('AcademicYear', {
   is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
   created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
 }, {
-  tableName: 'eksms_core_academicyear',
+  tableName: 'pruh_core_academicyear',
   timestamps: false,
 });
 

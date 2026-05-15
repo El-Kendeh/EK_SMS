@@ -13,7 +13,7 @@ const Exam = sequelize.define('Exam', {
   is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
   created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
 }, {
-  tableName: 'eksms_core_exam',
+  tableName: 'pruh_core_exam',
   timestamps: false,
 });
 

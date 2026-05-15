@@ -21,7 +21,7 @@ const Teacher = sequelize.define('Teacher', {
   created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, allowNull: false },
   updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, allowNull: false },
 }, {
-  tableName: 'eksms_core_teacher',
+  tableName: 'pruh_core_teacher',
   timestamps: false,
 });
 

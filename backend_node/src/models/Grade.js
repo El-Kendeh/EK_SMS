@@ -16,7 +16,7 @@ const Grade = sequelize.define('Grade', {
   remarks: { type: DataTypes.TEXT },
   created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
 }, {
-  tableName: 'eksms_core_grade',
+  tableName: 'pruh_core_grade',
   timestamps: false,
 });
 

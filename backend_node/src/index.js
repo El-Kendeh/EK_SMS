@@ -141,7 +141,7 @@ app.use('/api/teacher', teacherRouter);
 app.use('/api/student', studentRouter);
 
 // Sync database models
-db.sync({ alter: true }) // Using alter: true to add new tables like 'eksms_core_otp' without dropping data
+db.sync({ alter: true }) // Using alter: true to add new tables like 'pruh_core_otp' without dropping data
   .then(() => console.log('✅ Database synchronized'))
   .catch(err => console.error('❌ Database sync failed:', err));
 

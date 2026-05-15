@@ -13,7 +13,7 @@ const Class = sequelize.define('Class', {
   is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
   created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
 }, {
-  tableName: 'eksms_core_class',
+  tableName: 'pruh_core_class',
   timestamps: false,
 });
 
