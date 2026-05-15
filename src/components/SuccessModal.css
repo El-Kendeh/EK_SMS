@@ -1,0 +1,102 @@
+.success-modal__backdrop {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: rgba(5, 19, 42, 0.82);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 9999;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+.success-modal__card {
+  width: min(520px, 100%);
+  background: rgba(6, 18, 44, 0.98);
+  border: 1px solid rgba(14, 132, 255, 0.18);
+  border-radius: 28px;
+  padding: 32px 28px;
+  box-shadow: 0 32px 90px rgba(0, 0, 0, 0.32);
+  text-align: center;
+  animation: successModalPop 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.success-modal__brand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 84px;
+  height: 84px;
+  margin: 0 auto 20px;
+}
+
+.success-modal__brand-ring {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.22), transparent 55%);
+  filter: blur(4px);
+  animation: brandPulseSuccess 2.2s ease-out infinite;
+}
+
+.success-modal__icon-box {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 20px;
+  border-radius: 24px;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.26);
+  color: #38BDF8;
+}
+
+.success-modal__icon-box svg {
+  width: 30px;
+  height: 30px;
+}
+
+.success-modal__title {
+  margin: 0 0 14px;
+  font-size: 1.5rem;
+  line-height: 1.2;
+  color: #F8FAFC;
+  letter-spacing: -0.02em;
+}
+
+.success-modal__message {
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 0.98rem;
+  line-height: 1.85;
+}
+
+@keyframes successModalPop {
+  from {
+    transform: translateY(20px) scale(0.98);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes brandPulseSuccess {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 0.55;
+  }
+}

@@ -2,6 +2,8 @@ import React, { useState, useCallback, useEffect } from 'react';
 import './Login.css';
 import ApiClient from '../api/client';
 import PruhLogo from './PruhLogo';
+import ErrorModal from './ErrorModal';
+import SuccessModal from './SuccessModal';
 
 /* ---- Icons ---- */
 const SparkleIcon = () => (
@@ -39,13 +41,6 @@ const AlertIcon = () => (
     <line x1="12" y1="16" x2="12.01" y2="16" />
   </svg>
 );
-
-/* ===================================================================
-   Error Modal Component
-   =================================================================== */
-function ErrorModal({ message, onClose }) {
-  // ... existing code ...
-}
 
 function UnderReviewModal({ onClose }) {
   return (
@@ -94,6 +89,9 @@ function Login({ onNavigate }) {
   const [remember, setRemember] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [successName, setSuccessName] = useState('');
+  const [successRole, setSuccessRole] = useState('');
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [forgotMsg, setForgotMsg] = useState(false);
   const [goingHome, setGoingHome] = useState(false);
   const [showUnderReview, setShowUnderReview] = useState(false);
@@ -164,27 +162,36 @@ function Login({ onNavigate }) {
       const user = { ...data.user, must_change_password: !!data.must_change_password };
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(user));
+      const displayName = user.first_name || user.username || identifier.trim();
+      setSuccessName(displayName);
+      setSuccessRole(user.role);
+      setShowSuccessModal(true);
 
-      if (onNavigate) {
-        if (data.must_change_password) {
-          onNavigate('force-change-password');
-          return;
+      const finishLogin = () => {
+        setShowSuccessModal(false);
+        if (onNavigate) {
+          if (data.must_change_password) {
+            onNavigate('force-change-password');
+            return;
+          }
+          const isSuper = user.is_superuser || user.role === 'superadmin' || user.role === 'admin' || user.role === 'superuser';
+          if (isSuper) {
+            onNavigate('superadmindashboard');
+          } else if (user.role === 'school_admin') {
+            onNavigate('sa-dashboard');
+          } else if (user.role === 'teacher') {
+            onNavigate('teacher-dashboard');
+          } else if (user.role === 'student') {
+            onNavigate('student-dashboard');
+          } else if (user.role === 'parent') {
+            onNavigate('parentdashboard');
+          } else {
+            onNavigate('home');
+          }
         }
-        const isSuper = user.is_superuser || user.role === 'superadmin' || user.role === 'admin' || user.role === 'superuser';
-        if (isSuper) {
-          onNavigate('superadmindashboard');
-        } else if (user.role === 'school_admin') {
-          onNavigate('sa-dashboard');
-        } else if (user.role === 'teacher') {
-          onNavigate('teacher-dashboard');
-        } else if (user.role === 'student') {
-          onNavigate('student-dashboard');
-        } else if (user.role === 'parent') {
-          onNavigate('parentdashboard');
-        } else {
-          onNavigate('home');
-        }
-      }
+      };
+
+      setTimeout(finishLogin, 1200);
     } catch (err) {
       const raw = err.message || '';
       if (raw.includes('pending approval')) {
@@ -400,7 +407,20 @@ function Login({ onNavigate }) {
       </div>{/* end .login-right */}
 
       {/* ── Error modal ── */}
-      {error && <ErrorModal message={error} onClose={() => setError('')} />}
+      {error && (
+        <ErrorModal
+          title={/password|username|credentials|incorrect/i.test(error) ? 'Credentials not recognized' : 'Sign in issue'}
+          message={error}
+          onClose={() => setError('')}
+        />
+      )}
+      {showSuccessModal && (
+        <SuccessModal
+          username={successName}
+          role={successRole}
+          onClose={() => setShowSuccessModal(false)}
+        />
+      )}
       {showUnderReview && <UnderReviewModal onClose={() => setShowUnderReview(false)} />}
     </div>
   );
