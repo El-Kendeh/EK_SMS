@@ -19,10 +19,9 @@ const { testEmail } = require('./controllers/testController');
 const app = express();
 
 const allowedOrigins = [
-  'http://localhost:3000',
+  'https://backend.pruhsms.africa',
   'https://pruhsms.africa',
   'https://www.pruhsms.africa',
-  'https://backend.pruhsms.africa',
   'https://ek-sms-one.vercel.app'
 ];
 

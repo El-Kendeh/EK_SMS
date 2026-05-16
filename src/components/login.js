@@ -150,7 +150,7 @@ function Login({ onNavigate }) {
 
     setIsLoading(true);
     try {
-      const data = await ApiClient.post('/api/login/', {
+      const data = await ApiClient.post('https://backend.pruhsms.africa/api/login/', {
         username: identifier.trim(),
         password
       });
