@@ -26,7 +26,7 @@
     "morgan": "^1.10.0",
     "multer": "^2.1.1",
     "mysql2": "^3.9.7",
-    "pdf-parse": "^2.2.2",
+    "pdf-parse": "^1.1.4",
     "resend": "^6.12.3",
     "sequelize": "^6.37.4"
   },
