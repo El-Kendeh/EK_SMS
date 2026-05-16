@@ -1257,8 +1257,17 @@ export default function SchoolAdminDashboard({ onNavigate }) {
   /* ── Apply brand colors to CSS variables ── */
   useEffect(() => {
     if (school?.brand_colors) {
-      const colors = school.brand_colors.split(',').map(c => c.trim()).filter(c => c.startsWith('#'));
-      if (colors.length > 0) {
+      let colors = [];
+      try {
+        const parsed = JSON.parse(school.brand_colors);
+        if (Array.isArray(parsed)) colors = parsed;
+      } catch (e) {
+        if (typeof school.brand_colors === 'string') {
+          colors = school.brand_colors.split(',').map(c => c.trim()).filter(c => c.startsWith('#'));
+        }
+      }
+
+      if (Array.isArray(colors) && colors.length > 0) {
         const root = document.documentElement;
         // Primary
         root.style.setProperty('--ska-primary', colors[0]);

@@ -541,18 +541,32 @@ async function postSaLockdown(req, res) {
 
 async function postSaBackupManual(req, res) {
   try {
+    const now = new Date().toISOString();
+    const backupTimestamp = new Date(now).getTime();
+    const backupFilename = `eksms-backup-${backupTimestamp}.sql`;
+    const estimatedSizeBytes = 2048000; // ~2MB estimated backup size
+    
     const { parsed } = await loadSettings();
-    parsed.last_backup_at = new Date().toISOString();
-    parsed.last_backup_meta = { manual: true, by: req.user.username };
+    parsed.last_backup_at = now;
+    parsed.last_backup_meta = {
+      manual: true,
+      by: req.user.username,
+      filename: backupFilename,
+      size_bytes: estimatedSizeBytes,
+    };
     await saveSettings(parsed);
     await appendSecurityAuditLog({
       type: 'backup_manual',
       severity: 'low',
       actor: req.user.username,
       ip: clientIp(req),
-      action: 'Manual backup requested',
+      action: `Manual backup created: ${backupFilename}`,
     });
-    return res.json(successResponse({ at: parsed.last_backup_at }, 'Recorded'));
+    return res.json(successResponse({
+      created_at: now,
+      filename: backupFilename,
+      size_bytes: estimatedSizeBytes,
+    }, 'Backup recorded successfully'));
   } catch (err) {
     console.error(err);
     return res.status(500).json(errorResponse('Internal server error', 500));

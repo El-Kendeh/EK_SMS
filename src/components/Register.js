@@ -1243,7 +1243,6 @@ function Register({ onNavigate }) {
         });
         payload.append('phone', form.phoneCode + form.phoneNumber);
         payload.append('adminPhone', form.adminPhoneCode + form.adminPhoneNumber);
-        payload.append('brandColor', form.brandColors.join(', '));
         payload.append('schoolBadge', badgeFile);
       } else {
         // Only fields the Node register handler reads (avoid sending arrays on TEXT-bound keys via spread).
@@ -1893,6 +1892,15 @@ function Register({ onNavigate }) {
         {/* ── STEP 8: Review ── */}
         {step === 8 && (
           <div>
+            {form.brandColors && form.brandColors.length > 0 && (
+              <style>{`
+                @media print {
+                  .reg-print-brand-text .brand-title { color: ${form.brandColors[0]} !important; }
+                  .review-section-title { color: ${form.brandColors[0]} !important; border-bottom-color: ${form.brandColors[0]} !important; }
+                  .review-section-icon { background: ${form.brandColors[0]} !important; }
+                }
+              `}</style>
+            )}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px', flexWrap: 'wrap', gap: 10 }}>
               <p className="step-intro" style={{ margin: 0 }}>
                 Review your information carefully before submitting. Go back to any step to make changes.
