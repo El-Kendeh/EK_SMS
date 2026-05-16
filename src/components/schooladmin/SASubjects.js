@@ -970,6 +970,10 @@ export function SubjectsPage({ school }) {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(newMeta)); } catch { /* ignore */ }
   }, [STORAGE_KEY]);
 
+  /* Track current meta in a ref to avoid stale closures in load */
+  const metaRef = useRef(meta);
+  useEffect(() => { metaRef.current = meta; }, [meta]);
+
   /* Fetch subjects + teachers + classes */
   const load = useCallback(async () => {
     setLoading(true);
@@ -983,8 +987,9 @@ export function SubjectsPage({ school }) {
       const subjectsData = sRes.value.subjects || sRes.value || [];
       setSubjects(subjectsData);
 
-      // Merge backend class_ids into localStorage meta
-      const mergedMeta = { ...meta };
+      // Merge backend class_ids into localStorage meta (use ref to avoid stale closure)
+      const currentMeta = metaRef.current;
+      const mergedMeta = { ...currentMeta };
       subjectsData.forEach(s => {
         if (s.class_ids && s.class_ids.length > 0) {
           const existing = mergedMeta[s.id] || defaultMeta();
@@ -1021,7 +1026,7 @@ export function SubjectsPage({ school }) {
       })));
     }
     setLoading(false);
-  }, [meta, saveMeta]);
+  }, [saveMeta]);
 
   useEffect(() => { load(); }, [load]);
 
