@@ -1,6 +1,6 @@
 const path = require('path');
 const fs = require('fs');
-const pdfParse = require('pdf-parse');
+let pdfParse = null;
 const mammoth = require('mammoth');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
@@ -11,6 +11,9 @@ async function extractText(filePath, mimetype) {
   const buffer = fs.readFileSync(filePath);
 
   if (mimetype === 'application/pdf') {
+    if (!pdfParse) {
+      pdfParse = require('pdf-parse');
+    }
     const data = await pdfParse(buffer);
     return data.text;
   } else if (mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
