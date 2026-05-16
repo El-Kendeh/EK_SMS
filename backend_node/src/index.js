@@ -60,19 +60,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (origin && isAllowedOrigin(origin)) {
-    res.header('Access-Control-Allow-Origin', origin);
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS,PATCH');
-    res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-CSRFToken,X-Requested-With,Accept');
-  }
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
-  next();
-});
+
 
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
@@ -101,7 +89,7 @@ app.get('/api/debug/db-structure/:table', async (req, res) => {
   try {
     const { table } = req.params;
     const [results] = await db.query(`DESCRIBE ${table}`);
-    
+
     // Also list uploads dir for debugging
     let files = [];
     try {
@@ -110,12 +98,12 @@ app.get('/api/debug/db-structure/:table', async (req, res) => {
       files = [`Error reading uploads: ${e.message}`];
     }
 
-    res.json({ 
-      table, 
-      columns: results, 
-      dirname: __dirname, 
-      uploadsRoot, 
-      badgeFiles: files.slice(0, 20) 
+    res.json({
+      table,
+      columns: results,
+      dirname: __dirname,
+      uploadsRoot,
+      badgeFiles: files.slice(0, 20)
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
