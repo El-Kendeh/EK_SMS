@@ -26,7 +26,7 @@ export function useTeacherProfile() {
           if (data.success === false) {
             setError(data.message || 'Failed to load profile');
           } else {
-            setProfile(data.teacher || data);
+            setProfile(data.profile || data.teacher || data);
           }
         }
       })

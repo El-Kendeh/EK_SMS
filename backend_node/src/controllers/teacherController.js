@@ -22,28 +22,50 @@ async function getTeacherMe(req, res) {
     const teacher = await Teacher.findOne({
       where: { user_id: req.user.id },
       include: [
-        { model: User, attributes: ['first_name', 'last_name', 'email', 'username'] },
+        { model: User, attributes: ['first_name', 'last_name', 'email', 'username', 'last_login'] },
         { model: School, attributes: ['name', 'badge_path', 'brand_colors'] }
       ]
     });
 
     if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
 
+    const firstName = teacher.User.first_name || '';
+    const lastName = teacher.User.last_name || '';
+    const fullName = `${firstName} ${lastName}`.trim();
+    const initials = (firstName[0] || '') + (lastName[0] || '');
+
     return res.json(successResponse({
       profile: {
         id: teacher.id,
         user_id: teacher.user_id,
-        first_name: teacher.User.first_name,
-        last_name: teacher.User.last_name,
-        full_name: `${teacher.User.first_name} ${teacher.User.last_name}`,
+        firstName,
+        lastName,
+        fullName,
+        initials: initials.toUpperCase(),
         email: teacher.User.email,
         username: teacher.User.username,
+        phone: teacher.phone_number,
         phone_number: teacher.phone_number,
         qualification: teacher.qualification,
         profile_picture: normalizePath(teacher.profile_picture),
+        school: teacher.School?.name || 'EK-SMS School',
         school_name: teacher.School?.name || 'EK-SMS School',
         school_badge: normalizePath(teacher.School?.badge_path),
         school_colors: teacher.School?.brand_colors,
+        employeeNumber: teacher.employee_id,
+        employee_id: teacher.employee_id,
+        joinedDate: teacher.hire_date || teacher.created_at,
+        status: teacher.is_active ? 'active' : 'inactive',
+        lastLogin: teacher.User.last_login || teacher.created_at,
+        activeSessions: 1,
+        twoFactorEnabled: false,
+        specializations: teacher.qualification ? [teacher.qualification] : [],
+        subjects: [],
+        years_experience: teacher.years_experience,
+        bio: teacher.bio,
+        linkedin_url: teacher.linkedin_url,
+        degrees: teacher.degrees || [],
+        certifications: teacher.certifications || [],
       }
     }));
   } catch (err) {
