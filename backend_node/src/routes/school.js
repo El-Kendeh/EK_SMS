@@ -51,6 +51,7 @@ const {
   // Modification requests
   reviewModificationRequest,
 } = require('../controllers/schoolController');
+const { generateSyllabusFromDocument } = require('../controllers/syllabusGenerator');
 
 // Multer config for badge/file uploads
 const storage = multer.diskStorage({
@@ -173,6 +174,36 @@ router.post('/school/syllabus-topics/', applyAuth, createSyllabusTopic);
 router.put('/school/syllabus-topics/:id/', applyAuth, updateSyllabusTopic);
 router.delete('/school/syllabus-topics/:id/', applyAuth, deleteSyllabusTopic);
 router.get('/school/syllabus-stats/', applyAuth, getSyllabusStats);
+
+// Syllabus generation from document upload
+const syllabusUploadStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = path.join(__dirname, '../../../uploads/syllabus-docs/');
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `syllabus-${Date.now()}${ext}`);
+  },
+});
+const syllabusUpload = multer({
+  storage: syllabusUploadStorage,
+  fileFilter: (req, file, cb) => {
+    const allowed = [
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain',
+    ];
+    if (allowed.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF, DOCX, and TXT files are allowed.'), false);
+    }
+  },
+  limits: { fileSize: 20 * 1024 * 1024 }, // 20MB
+});
+router.post('/school/syllabus/generate/', applyAuth, syllabusUpload.single('document'), generateSyllabusFromDocument);
 
 // ==================== GRADES ====================
 router.get('/school/grades/', applyAuth, getGrades);
