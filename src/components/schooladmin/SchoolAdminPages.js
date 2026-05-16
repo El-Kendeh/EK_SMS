@@ -2219,6 +2219,13 @@ export function SyllabusPage({ school }) {
             <p className="ska-empty-desc">Choose above to view, plan and track curriculum coverage.</p>
           </div>
         </div>
+      ) : loading ? (
+        <div className="ska-card">
+          <div className="ska-empty" style={{ padding: '48px 24px' }}>
+            <Ic name="sync" size="xl" style={{ color: 'var(--ska-primary)', marginBottom: 12, animation: 'spin 1s linear infinite' }} />
+            <p className="ska-empty-title">Loading topics…</p>
+          </div>
+        </div>
       ) : (
         <>
           {/* Filters bar */}
