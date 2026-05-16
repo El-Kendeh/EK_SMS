@@ -1140,131 +1140,7 @@ export function ReportsPage({ school }) {
                     ))}
                     {years.length === 0 && (
                       <span style={{ fontSize: '0.8rem', color: 'var(--ska-text-3)', padding: '6px 0' }}>No academic years found</span>
-      )}
-
-      {/* AI Generate from Document Modal */}
-      {aiModalOpen && (
-        <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', zIndex: 300,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
-        }} onClick={e => e.target === e.currentTarget && !aiGenerating && setAiModalOpen(false)}>
-          <div style={{ background: 'var(--ska-surface)', borderRadius: 16, padding: 28, width: '100%', maxWidth: 640, maxHeight: '90vh', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h3 style={{ margin: 0, fontWeight: 800, fontSize: '1.125rem', color: 'var(--ska-text)' }}>
-                <Ic name="auto_awesome" size="sm" style={{ marginRight: 8, color: 'var(--ska-primary)' }} />
-                AI Generate Syllabus from Document
-              </h3>
-              {!aiGenerating && (
-                <button className="ska-btn ska-btn--ghost ska-btn--sm" onClick={() => { setAiModalOpen(false); setAiPreview(null); setAiFile(null); setAiError(''); }}>
-                  <Ic name="close" size="sm" />
-                </button>
-              )}
-            </div>
-
-            {aiError && (
-              <div style={{ padding: '10px 14px', borderRadius: 10, background: 'var(--ska-error-dim)', color: 'var(--ska-error)', marginBottom: 16, fontSize: '0.875rem' }}>
-                {aiError}
-              </div>
-            )}
-
-            {!aiPreview ? (
-              /* Upload and config form */
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                <label className="ska-form-group">
-                  <span>Upload Syllabus Document (PDF, DOCX, TXT) *</span>
-                  <input type="file" accept=".pdf,.docx,.txt" onChange={handleAiFileChange}
-                    className="ska-input" style={{ padding: 10 }} />
-                  {aiFile && <span style={{ fontSize: '0.75rem', color: 'var(--ska-text-3)', marginTop: 4 }}>Selected: {aiFile.name}</span>}
-                </label>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  <label className="ska-form-group" style={{ margin: 0 }}>
-                    <span>Subject *</span>
-                    <select className="ska-input" value={aiSubject} onChange={e => setAiSubject(e.target.value)}>
-                      <option value="">— Select subject —</option>
-                      {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                    </select>
-                  </label>
-                  <label className="ska-form-group" style={{ margin: 0 }}>
-                    <span>Class *</span>
-                    <select className="ska-input" value={aiClass} onChange={e => setAiClass(e.target.value)}>
-                      <option value="">— Select class —</option>
-                      {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </select>
-                  </label>
-                </div>
-
-                <label className="ska-form-group">
-                  <span>Term (optional)</span>
-                  <select className="ska-input" value={aiTerm} onChange={e => setAiTerm(e.target.value)}>
-                    <option value="">— No term —</option>
-                    {terms.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                  </select>
-                </label>
-
-                <div style={{ padding: 14, borderRadius: 10, background: 'var(--ska-surface-high)', fontSize: '0.8125rem', color: 'var(--ska-text-2)' }}>
-                  <Ic name="info" size="sm" style={{ marginRight: 6, verticalAlign: 'middle' }} />
-                  The AI will extract topics from your document and generate a weekly lesson plan in order. All content will be covered, even if it takes multiple weeks.
-                </div>
-
-                {aiGenerating && (
-                  <div style={{ textAlign: 'center', padding: 20 }}>
-                    <div style={{ fontSize: '0.875rem', color: 'var(--ska-text-2)', marginBottom: 8 }}>{aiProgress}</div>
-                    <div style={{ width: '100%', height: 6, background: 'var(--ska-surface-high)', borderRadius: 999, overflow: 'hidden' }}>
-                      <div style={{ width: '60%', height: '100%', background: 'var(--ska-primary)', borderRadius: 999, animation: 'pulse 1.5s infinite' }} />
-                    </div>
-                  </div>
-                )}
-
-                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                  <button className="ska-btn ska-btn--ghost" onClick={() => { setAiModalOpen(false); setAiPreview(null); setAiFile(null); setAiError(''); }} disabled={aiGenerating}>Cancel</button>
-                  <button className="ska-btn ska-btn--primary" onClick={handleGenerateSyllabus} disabled={aiGenerating || !aiFile || !aiSubject || !aiClass}>
-                    {aiGenerating ? 'Generating…' : 'Generate with AI'}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              /* Preview generated weeks */
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                <div style={{ padding: 14, borderRadius: 10, background: 'var(--ska-green-dim)', color: 'var(--ska-green)', fontWeight: 700, fontSize: '0.875rem' }}>
-                  <Ic name="check_circle" style={{ marginRight: 6, verticalAlign: 'middle' }} />
-                  Successfully generated {aiPreview.length} weeks of lesson plans!
-                </div>
-
-                <div style={{ maxHeight: 400, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {aiPreview.map((week, idx) => (
-                    <div key={idx} style={{ padding: 14, borderRadius: 10, border: '1px solid var(--ska-border)', background: 'var(--ska-surface-high)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                        <strong style={{ fontSize: '0.9rem', color: 'var(--ska-text)' }}>Week {week.week_number}: {week.title}</strong>
-                        <span className="ska-badge ska-badge--cyan" style={{ fontSize: '0.65rem' }}>{week.duration_weeks || 1} week(s)</span>
-                      </div>
-                      {week.description && <p style={{ margin: '4px 0', fontSize: '0.8rem', color: 'var(--ska-text-2)' }}>{week.description}</p>}
-                      {week.objectives && week.objectives.length > 0 && (
-                        <div style={{ fontSize: '0.75rem', color: 'var(--ska-text-3)', marginTop: 4 }}>
-                          <strong>Objectives:</strong> {Array.isArray(week.objectives) ? week.objectives.join('; ') : week.objectives}
-                        </div>
-                      )}
-                      {week.assessment && (
-                        <div style={{ fontSize: '0.75rem', color: 'var(--ska-text-3)', marginTop: 2 }}>
-                          <strong>Assessment:</strong> {week.assessment}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-
-                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                  <button className="ska-btn ska-btn--ghost" onClick={() => { setAiPreview(null); setAiFile(null); setAiError(''); }}>Discard</button>
-                  <button className="ska-btn ska-btn--primary" onClick={handleSaveGeneratedSyllabus} disabled={aiGenerating}>
-                    {aiGenerating ? aiProgress : 'Save All Weeks'}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
+                    )}
                 )}
               </div>
             </div>
@@ -2754,6 +2630,129 @@ export function SyllabusPage({ school }) {
                 {modal === 'add' ? 'Add Topic' : 'Save Changes'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI Generate from Document Modal */}
+      {aiModalOpen && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', zIndex: 300,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+        }} onClick={e => e.target === e.currentTarget && !aiGenerating && setAiModalOpen(false)}>
+          <div style={{ background: 'var(--ska-surface)', borderRadius: 16, padding: 28, width: '100%', maxWidth: 640, maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h3 style={{ margin: 0, fontWeight: 800, fontSize: '1.125rem', color: 'var(--ska-text)' }}>
+                <Ic name="auto_awesome" size="sm" style={{ marginRight: 8, color: 'var(--ska-primary)' }} />
+                AI Generate Syllabus from Document
+              </h3>
+              {!aiGenerating && (
+                <button className="ska-btn ska-btn--ghost ska-btn--sm" onClick={() => { setAiModalOpen(false); setAiPreview(null); setAiFile(null); setAiError(''); }}>
+                  <Ic name="close" size="sm" />
+                </button>
+              )}
+            </div>
+
+            {aiError && (
+              <div style={{ padding: '10px 14px', borderRadius: 10, background: 'var(--ska-error-dim)', color: 'var(--ska-error)', marginBottom: 16, fontSize: '0.875rem' }}>
+                {aiError}
+              </div>
+            )}
+
+            {!aiPreview ? (
+              /* Upload and config form */
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <label className="ska-form-group">
+                  <span>Upload Syllabus Document (PDF, DOCX, TXT) *</span>
+                  <input type="file" accept=".pdf,.docx,.txt" onChange={handleAiFileChange}
+                    className="ska-input" style={{ padding: 10 }} />
+                  {aiFile && <span style={{ fontSize: '0.75rem', color: 'var(--ska-text-3)', marginTop: 4 }}>Selected: {aiFile.name}</span>}
+                </label>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <label className="ska-form-group" style={{ margin: 0 }}>
+                    <span>Subject *</span>
+                    <select className="ska-input" value={aiSubject} onChange={e => setAiSubject(e.target.value)}>
+                      <option value="">— Select subject —</option>
+                      {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    </select>
+                  </label>
+                  <label className="ska-form-group" style={{ margin: 0 }}>
+                    <span>Class *</span>
+                    <select className="ska-input" value={aiClass} onChange={e => setAiClass(e.target.value)}>
+                      <option value="">— Select class —</option>
+                      {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  </label>
+                </div>
+
+                <label className="ska-form-group">
+                  <span>Term (optional)</span>
+                  <select className="ska-input" value={aiTerm} onChange={e => setAiTerm(e.target.value)}>
+                    <option value="">— No term —</option>
+                    {terms.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                  </select>
+                </label>
+
+                <div style={{ padding: 14, borderRadius: 10, background: 'var(--ska-surface-high)', fontSize: '0.8125rem', color: 'var(--ska-text-2)' }}>
+                  <Ic name="info" size="sm" style={{ marginRight: 6, verticalAlign: 'middle' }} />
+                  The AI will extract topics from your document and generate a weekly lesson plan in order. All content will be covered, even if it takes multiple weeks.
+                </div>
+
+                {aiGenerating && (
+                  <div style={{ textAlign: 'center', padding: 20 }}>
+                    <div style={{ fontSize: '0.875rem', color: 'var(--ska-text-2)', marginBottom: 8 }}>{aiProgress}</div>
+                    <div style={{ width: '100%', height: 6, background: 'var(--ska-surface-high)', borderRadius: 999, overflow: 'hidden' }}>
+                      <div style={{ width: '60%', height: '100%', background: 'var(--ska-primary)', borderRadius: 999, animation: 'pulse 1.5s infinite' }} />
+                    </div>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                  <button className="ska-btn ska-btn--ghost" onClick={() => { setAiModalOpen(false); setAiPreview(null); setAiFile(null); setAiError(''); }} disabled={aiGenerating}>Cancel</button>
+                  <button className="ska-btn ska-btn--primary" onClick={handleGenerateSyllabus} disabled={aiGenerating || !aiFile || !aiSubject || !aiClass}>
+                    {aiGenerating ? 'Generating…' : 'Generate with AI'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* Preview generated weeks */
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div style={{ padding: 14, borderRadius: 10, background: 'var(--ska-green-dim)', color: 'var(--ska-green)', fontWeight: 700, fontSize: '0.875rem' }}>
+                  <Ic name="check_circle" style={{ marginRight: 6, verticalAlign: 'middle' }} />
+                  Successfully generated {aiPreview.length} weeks of lesson plans!
+                </div>
+
+                <div style={{ maxHeight: 400, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {aiPreview.map((week, idx) => (
+                    <div key={idx} style={{ padding: 14, borderRadius: 10, border: '1px solid var(--ska-border)', background: 'var(--ska-surface-high)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                        <strong style={{ fontSize: '0.9rem', color: 'var(--ska-text)' }}>Week {week.week_number}: {week.title}</strong>
+                        <span className="ska-badge ska-badge--cyan" style={{ fontSize: '0.65rem' }}>{week.duration_weeks || 1} week(s)</span>
+                      </div>
+                      {week.description && <p style={{ margin: '4px 0', fontSize: '0.8rem', color: 'var(--ska-text-2)' }}>{week.description}</p>}
+                      {week.objectives && week.objectives.length > 0 && (
+                        <div style={{ fontSize: '0.75rem', color: 'var(--ska-text-3)', marginTop: 4 }}>
+                          <strong>Objectives:</strong> {Array.isArray(week.objectives) ? week.objectives.join('; ') : week.objectives}
+                        </div>
+                      )}
+                      {week.assessment && (
+                        <div style={{ fontSize: '0.75rem', color: 'var(--ska-text-3)', marginTop: 2 }}>
+                          <strong>Assessment:</strong> {week.assessment}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                  <button className="ska-btn ska-btn--ghost" onClick={() => { setAiPreview(null); setAiFile(null); setAiError(''); }}>Discard</button>
+                  <button className="ska-btn ska-btn--primary" onClick={handleSaveGeneratedSyllabus} disabled={aiGenerating}>
+                    {aiGenerating ? aiProgress : 'Save All Weeks'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
