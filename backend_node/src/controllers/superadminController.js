@@ -13,6 +13,15 @@ const { appendSecurityAuditLog } = require('../utils/auditLog');
 const successResponse = (data = {}, message = "Success") => ({ success: true, message, ...data });
 const errorResponse = (message = "Error", status = 400) => ({ success: false, message, status });
 
+function normalizePath(filePath) {
+  if (!filePath) return null;
+  const normalized = filePath.replace(/\\/g, '/');
+  if (normalized.startsWith('http')) return normalized;
+  if (normalized.startsWith('/uploads')) return normalized;
+  if (normalized.startsWith('uploads')) return '/' + normalized;
+  return normalized.includes('student') ? `/uploads/students/${normalized}` : `/uploads/badges/${normalized}`;
+}
+
 function serializeSchool(school) {
   const p = school.get({ plain: true });
   const admins = p.SchoolAdmins || [];
@@ -32,8 +41,8 @@ function serializeSchool(school) {
     email: p.email,
     capacity: p.capacity,
     brand_colors: p.brand_colors,
-    badge_path: p.badge_path,
-    badge: p.badge_path,
+    badge_path: normalizePath(p.badge_path),
+    badge: normalizePath(p.badge_path),
     motto: p.motto,
     region: p.region,
     website: p.website,
