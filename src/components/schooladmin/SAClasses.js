@@ -269,7 +269,7 @@ function ClassRow({ cls, onView, onEdit, onDelete, onAssignStudents, onAssignTea
       </td>
 
       {/* Code */}
-      <td><span className="ska-badge ska-badge--cyan">{cls.code}</span></td>
+      <td><span className="ska-badge ska-badge--cyan">{cls.code || '—'}</span></td>
 
       {/* Form */}
       <td>Form {cls.form_number}</td>
@@ -1600,7 +1600,7 @@ export function ClassesPage({ school }) {
   const filtered = useMemo(() => {
     return classes.filter(c => {
       const q = search.toLowerCase();
-      if (q && !c.name.toLowerCase().includes(q) && !c.code.toLowerCase().includes(q)) return false;
+      if (q && !c.name.toLowerCase().includes(q) && !(c.code || '').toLowerCase().includes(q)) return false;
       if (filterForm   && String(c.form_number) !== String(filterForm)) return false;
       if (filterTeacher === 'unassigned') {
         if (c.class_teacher_id || c.teacher_id) return false;

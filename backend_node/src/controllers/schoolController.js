@@ -4,6 +4,8 @@ const Student = require('../models/Student');
 const Teacher = require('../models/Teacher');
 const Class = require('../models/Class');
 const Subject = require('../models/Subject');
+const ClassSubject = require('../models/ClassSubject');
+const ClassAssistantTeacher = require('../models/ClassAssistantTeacher');
 const AcademicYear = require('../models/AcademicYear');
 const Term = require('../models/Term');
 const Grade = require('../models/Grade');
@@ -120,8 +122,13 @@ async function getStudents(req, res) {
     const school = await getSchoolFromUser(req);
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
+    const where = { school_id: school.id };
+    if (req.query.classroom_id) {
+      where.classroom_id = req.query.classroom_id;
+    }
+
     const students = await Student.findAll({
-      where: { school_id: school.id },
+      where,
       include: [{ model: User, attributes: ['first_name', 'last_name', 'email'] }]
     });
     const formatted = students.map(s => {
@@ -131,7 +138,7 @@ async function getStudents(req, res) {
         first_name: userData.first_name,
         last_name: userData.last_name,
         email: userData.email || s.email,
-        full_name: `${userData.first_name} ${userData.last_name}`,
+        full_name: `${userData.first_name} ${userData.last_name}`.trim(),
         passport_picture: normalizePath(s.passport_picture)
       };
     });
@@ -489,10 +496,161 @@ async function getClasses(req, res) {
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
     const classes = await Class.findAll({ where: { school_id: school.id } });
-    return res.json(successResponse({ classes }));
+
+    // Enrich each class with teacher info and subject counts
+    const teacherIds = [...new Set(classes.map(c => c.class_teacher_id).filter(Boolean))];
+    const teachers = teacherIds.length > 0
+      ? await Teacher.findAll({
+          where: { id: teacherIds, school_id: school.id },
+          include: [{ model: User, attributes: ['username', 'first_name', 'last_name', 'email'] }],
+        })
+      : [];
+    const teacherMap = {};
+    teachers.forEach(t => {
+      teacherMap[t.id] = {
+        id: t.id,
+        name: `${t.User?.first_name || ''} ${t.User?.last_name || ''}`.trim() || t.User?.username || 'Teacher',
+        email: t.User?.email || '',
+      };
+    });
+
+    // Get subject counts per class
+    const classIds = classes.map(c => c.id);
+    const subjectCounts = classIds.length > 0
+      ? await ClassSubject.findAll({
+          where: { class_id: classIds },
+          attributes: ['class_id', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
+          group: ['class_id'],
+        })
+      : [];
+    const subjectCountMap = {};
+    subjectCounts.forEach(sc => {
+      subjectCountMap[sc.class_id] = parseInt(sc.dataValues.count, 10);
+    });
+
+    // Get assistant teacher counts per class
+    const assistantCounts = classIds.length > 0
+      ? await ClassAssistantTeacher.findAll({
+          where: { class_id: classIds },
+          attributes: ['class_id', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
+          group: ['class_id'],
+        })
+      : [];
+    const assistantCountMap = {};
+    assistantCounts.forEach(ac => {
+      assistantCountMap[ac.class_id] = parseInt(ac.dataValues.count, 10);
+    });
+
+    // Get student counts per class
+    const studentCounts = classIds.length > 0
+      ? await Student.findAll({
+          where: { classroom_id: classIds, school_id: school.id },
+          attributes: ['classroom_id', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
+          group: ['classroom_id'],
+        })
+      : [];
+    const studentCountMap = {};
+    studentCounts.forEach(sc => {
+      studentCountMap[sc.classroom_id] = parseInt(sc.dataValues.count, 10);
+    });
+
+    const enriched = classes.map(c => {
+      const raw = c.toJSON();
+      const teacher = teacherMap[c.class_teacher_id] || null;
+      return {
+        ...raw,
+        class_teacher: teacher,
+        teacher_name: teacher?.name || null,
+        teacher_id: c.class_teacher_id,
+        subjects_count: subjectCountMap[c.id] || 0,
+        assistant_teachers_count: assistantCountMap[c.id] || 0,
+        student_count: studentCountMap[c.id] || 0,
+        enrolled: studentCountMap[c.id] || 0,
+        density_pct: c.capacity > 0 ? Math.round(((studentCountMap[c.id] || 0) / c.capacity) * 100) : 0,
+        is_at_risk: (studentCountMap[c.id] || 0) > c.capacity,
+      };
+    });
+
+    return res.json(successResponse({ classes: enriched }));
   } catch (err) {
-    console.error(err);
-    return res.status(500).json(errorResponse('Failed to fetch classes'));
+    console.error('getClasses Error:', err);
+    return res.status(500).json(errorResponse(`Failed to fetch classes: ${err.message}`));
+  }
+}
+
+async function getClassById(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+
+    const { id } = req.params;
+    const cls = await Class.findOne({ where: { id, school_id: school.id } });
+    if (!cls) return res.status(404).json(errorResponse('Class not found'));
+
+    // Get subjects for this class
+    const classSubjects = await ClassSubject.findAll({
+      where: { class_id: cls.id },
+      include: [{ model: Subject, attributes: ['id', 'name', 'code'] }],
+    });
+    const subjects = classSubjects.map(cs => cs.Subject);
+
+    // Get assistant teachers
+    const assistantTeachers = await ClassAssistantTeacher.findAll({
+      where: { class_id: cls.id },
+      include: [{ model: Teacher, include: [{ model: User, attributes: ['username', 'first_name', 'last_name', 'email'] }] }],
+    });
+    const assistants = assistantTeachers.map(at => ({
+      id: at.Teacher.id,
+      name: `${at.Teacher.User?.first_name || ''} ${at.Teacher.User?.last_name || ''}`.trim() || at.Teacher.User?.username,
+      email: at.Teacher.User?.email || '',
+    }));
+
+    // Get students
+    const students = await Student.findAll({
+      where: { classroom_id: cls.id, school_id: school.id },
+      include: [{ model: User, attributes: ['first_name', 'last_name', 'email'] }],
+    });
+    const studentList = students.map(s => ({
+      id: s.id,
+      full_name: `${s.User?.first_name || ''} ${s.User?.last_name || ''}`.trim(),
+      admission_number: s.admission_number,
+    }));
+
+    // Get class teacher
+    let classTeacher = null;
+    if (cls.class_teacher_id) {
+      const teacher = await Teacher.findOne({
+        where: { id: cls.class_teacher_id },
+        include: [{ model: User, attributes: ['username', 'first_name', 'last_name', 'email'] }],
+      });
+      if (teacher) {
+        classTeacher = {
+          id: teacher.id,
+          name: `${teacher.User?.first_name || ''} ${teacher.User?.last_name || ''}`.trim() || teacher.User?.username,
+          email: teacher.User?.email || '',
+        };
+      }
+    }
+
+    const raw = cls.toJSON();
+    return res.json(successResponse({
+      class: {
+        ...raw,
+        class_teacher: classTeacher,
+        teacher_name: classTeacher?.name || null,
+        teacher_id: cls.class_teacher_id,
+        subjects,
+        subject_ids: subjects.map(s => s.id),
+        assistant_teachers: assistants,
+        assistant_teacher_ids: assistants.map(a => a.id),
+        students: studentList,
+        student_count: studentList.length,
+        enrolled: studentList.length,
+      },
+    }));
+  } catch (err) {
+    console.error('getClassById Error:', err);
+    return res.status(500).json(errorResponse(`Failed to fetch class: ${err.message}`));
   }
 }
 
@@ -501,15 +659,214 @@ async function createClass(req, res) {
     const school = await getSchoolFromUser(req);
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
-    const { name, form, category, class_teacher_id, capacity, academic_year_id } = req.body;
+    const {
+      name, code, form, form_number, category, stream,
+      class_teacher_id, teacher_id, capacity, academic_year_id,
+      room, start_time, end_time, colour_tag, education_level,
+      track, notes, auto_promotion_target_id, is_active,
+      subject_ids, assistant_teacher_ids,
+    } = req.body;
+
     const cls = await Class.create({
-      school_id: school.id, name, form, category, class_teacher_id, capacity, academic_year_id,
+      school_id: school.id,
+      name,
+      code: code || null,
+      form: form || null,
+      form_number: form_number || null,
+      category: category || null,
+      stream: stream || null,
+      class_teacher_id: class_teacher_id || teacher_id || null,
+      capacity: capacity || 50,
+      academic_year_id: academic_year_id || null,
+      room: room || null,
+      start_time: start_time || null,
+      end_time: end_time || null,
+      colour_tag: colour_tag || '#3B82F6',
+      education_level: education_level || null,
+      track: track || null,
+      notes: notes || null,
+      auto_promotion_target_id: auto_promotion_target_id || null,
+      is_active: is_active !== undefined ? is_active : true,
     });
+
+    // Assign subjects if provided
+    if (Array.isArray(subject_ids) && subject_ids.length > 0) {
+      const subjectEntries = subject_ids.map(sid => ({
+        class_id: cls.id,
+        subject_id: sid,
+      }));
+      await ClassSubject.bulkCreate(subjectEntries, { ignoreDuplicates: true });
+    }
+
+    // Assign assistant teachers if provided
+    if (Array.isArray(assistant_teacher_ids) && assistant_teacher_ids.length > 0) {
+      const assistantEntries = assistant_teacher_ids.map(tid => ({
+        class_id: cls.id,
+        teacher_id: tid,
+      }));
+      await ClassAssistantTeacher.bulkCreate(assistantEntries, { ignoreDuplicates: true });
+    }
 
     return res.json(successResponse({ class: cls }, 'Class created'));
   } catch (err) {
-    console.error(err);
-    return res.status(500).json(errorResponse('Failed to create class'));
+    console.error('createClass Error:', err);
+    return res.status(500).json(errorResponse(`Failed to create class: ${err.message}`));
+  }
+}
+
+async function updateClass(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+
+    const { id } = req.params;
+    const cls = await Class.findOne({ where: { id, school_id: school.id } });
+    if (!cls) return res.status(404).json(errorResponse('Class not found'));
+
+    const {
+      name, code, form, form_number, category, stream,
+      class_teacher_id, teacher_id, capacity, academic_year_id,
+      room, start_time, end_time, colour_tag, education_level,
+      track, notes, auto_promotion_target_id, is_active,
+      subject_ids, assistant_teacher_ids,
+    } = req.body;
+
+    await cls.update({
+      name: name !== undefined ? name : cls.name,
+      code: code !== undefined ? code : cls.code,
+      form: form !== undefined ? form : cls.form,
+      form_number: form_number !== undefined ? form_number : cls.form_number,
+      category: category !== undefined ? category : cls.category,
+      stream: stream !== undefined ? stream : cls.stream,
+      class_teacher_id: class_teacher_id !== undefined ? class_teacher_id : (teacher_id !== undefined ? teacher_id : cls.class_teacher_id),
+      capacity: capacity !== undefined ? capacity : cls.capacity,
+      academic_year_id: academic_year_id !== undefined ? academic_year_id : cls.academic_year_id,
+      room: room !== undefined ? room : cls.room,
+      start_time: start_time !== undefined ? start_time : cls.start_time,
+      end_time: end_time !== undefined ? end_time : cls.end_time,
+      colour_tag: colour_tag !== undefined ? colour_tag : cls.colour_tag,
+      education_level: education_level !== undefined ? education_level : cls.education_level,
+      track: track !== undefined ? track : cls.track,
+      notes: notes !== undefined ? notes : cls.notes,
+      auto_promotion_target_id: auto_promotion_target_id !== undefined ? auto_promotion_target_id : cls.auto_promotion_target_id,
+      is_active: is_active !== undefined ? is_active : cls.is_active,
+    });
+
+    // Update subjects if provided
+    if (Array.isArray(subject_ids)) {
+      await ClassSubject.destroy({ where: { class_id: cls.id } });
+      if (subject_ids.length > 0) {
+        const subjectEntries = subject_ids.map(sid => ({
+          class_id: cls.id,
+          subject_id: sid,
+        }));
+        await ClassSubject.bulkCreate(subjectEntries, { ignoreDuplicates: true });
+      }
+    }
+
+    // Update assistant teachers if provided
+    if (Array.isArray(assistant_teacher_ids)) {
+      await ClassAssistantTeacher.destroy({ where: { class_id: cls.id } });
+      if (assistant_teacher_ids.length > 0) {
+        const assistantEntries = assistant_teacher_ids.map(tid => ({
+          class_id: cls.id,
+          teacher_id: tid,
+        }));
+        await ClassAssistantTeacher.bulkCreate(assistantEntries, { ignoreDuplicates: true });
+      }
+    }
+
+    return res.json(successResponse({ class: cls }, 'Class updated'));
+  } catch (err) {
+    console.error('updateClass Error:', err);
+    return res.status(500).json(errorResponse(`Failed to update class: ${err.message}`));
+  }
+}
+
+async function deleteClass(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+
+    const { id } = req.params;
+    const cls = await Class.findOne({ where: { id, school_id: school.id } });
+    if (!cls) return res.status(404).json(errorResponse('Class not found'));
+
+    // Remove related records
+    await ClassSubject.destroy({ where: { class_id: cls.id } });
+    await ClassAssistantTeacher.destroy({ where: { class_id: cls.id } });
+    await cls.destroy();
+
+    return res.json(successResponse({}, 'Class deleted'));
+  } catch (err) {
+    console.error('deleteClass Error:', err);
+    return res.status(500).json(errorResponse(`Failed to delete class: ${err.message}`));
+  }
+}
+
+async function assignStudentsToClass(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+
+    const { id } = req.params;
+    const { student_ids } = req.body;
+
+    const cls = await Class.findOne({ where: { id, school_id: school.id } });
+    if (!cls) return res.status(404).json(errorResponse('Class not found'));
+
+    if (!Array.isArray(student_ids)) {
+      return res.status(400).json(errorResponse('student_ids must be an array'));
+    }
+
+    // Update all specified students to this class
+    await Student.update(
+      { classroom_id: cls.id },
+      { where: { id: student_ids, school_id: school.id } }
+    );
+
+    // Unassign students not in the list (optional: only if they were previously in this class)
+    await Student.update(
+      { classroom_id: null },
+      { where: { school_id: school.id, classroom_id: cls.id, id: { [Op.notIn]: student_ids } } }
+    );
+
+    return res.json(successResponse({ assigned_count: student_ids.length }, 'Students assigned to class'));
+  } catch (err) {
+    console.error('assignStudentsToClass Error:', err);
+    return res.status(500).json(errorResponse(`Failed to assign students: ${err.message}`));
+  }
+}
+
+async function assignSubjectsToClass(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+
+    const { id } = req.params;
+    const { subject_ids } = req.body;
+
+    const cls = await Class.findOne({ where: { id, school_id: school.id } });
+    if (!cls) return res.status(404).json(errorResponse('Class not found'));
+
+    if (!Array.isArray(subject_ids)) {
+      return res.status(400).json(errorResponse('subject_ids must be an array'));
+    }
+
+    // Replace all subjects for this class
+    await ClassSubject.destroy({ where: { class_id: cls.id } });
+    if (subject_ids.length > 0) {
+      const entries = subject_ids.map(sid => ({
+        class_id: cls.id,
+        subject_id: sid,
+      }));
+      await ClassSubject.bulkCreate(entries, { ignoreDuplicates: true });
+    }
+
+    return res.json(successResponse({ subject_count: subject_ids.length }, 'Subjects assigned to class'));
+  } catch (err) {
+    console.error('assignSubjectsToClass Error:', err);
+    return res.status(500).json(errorResponse(`Failed to assign subjects: ${err.message}`));
   }
 }
 
@@ -518,17 +875,55 @@ async function bulkCreateClasses(req, res) {
     const school = await getSchoolFromUser(req);
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
-    const { classes } = req.body;
-    if (!Array.isArray(classes)) return res.status(400).json(errorResponse('Invalid data'));
+    const {
+      name_template, code_template, form_number, capacity,
+      education_level, track, colour_tag, start_time, end_time,
+      room, notes, class_teacher_id, streams,
+    } = req.body;
 
-    const created = await Class.bulkCreate(
-      classes.map(c => ({ ...c, school_id: school.id }))
-    );
+    if (!Array.isArray(streams) || streams.length < 2) {
+      return res.status(400).json(errorResponse('streams must be an array with at least 2 items'));
+    }
 
-    return res.json(successResponse({ classes: created }, 'Classes created'));
+    const created = [];
+    const skipped = [];
+
+    for (const stream of streams) {
+      const name = `${name_template} ${stream}`;
+      const code = code_template ? `${code_template}${stream}` : null;
+
+      try {
+        const cls = await Class.create({
+          school_id: school.id,
+          name,
+          code,
+          form_number: form_number || null,
+          capacity: capacity || 50,
+          education_level: education_level || null,
+          track: track || null,
+          colour_tag: colour_tag || '#3B82F6',
+          start_time: start_time || null,
+          end_time: end_time || null,
+          room: room || null,
+          notes: notes || null,
+          class_teacher_id: class_teacher_id || null,
+          stream,
+          is_active: true,
+        });
+        created.push(cls);
+      } catch (err) {
+        skipped.push({ code, reason: err.message });
+      }
+    }
+
+    return res.json(successResponse({
+      created,
+      skipped,
+      message: `Created ${created.length} class(es), skipped ${skipped.length}.`,
+    }));
   } catch (err) {
-    console.error(err);
-    return res.status(500).json(errorResponse('Failed to create classes'));
+    console.error('bulkCreateClasses Error:', err);
+    return res.status(500).json(errorResponse(`Failed to bulk create classes: ${err.message}`));
   }
 }
 
@@ -539,10 +934,33 @@ async function getSubjects(req, res) {
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
     const subjects = await Subject.findAll({ where: { school_id: school.id } });
-    return res.json(successResponse({ subjects }));
+
+    // Enrich with class count
+    const subjectIds = subjects.map(s => s.id);
+    const classCounts = subjectIds.length > 0
+      ? await ClassSubject.findAll({
+          where: { subject_id: subjectIds },
+          attributes: ['subject_id', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
+          group: ['subject_id'],
+        })
+      : [];
+    const classCountMap = {};
+    classCounts.forEach(cc => {
+      classCountMap[cc.subject_id] = parseInt(cc.dataValues.count, 10);
+    });
+
+    const enriched = subjects.map(s => {
+      const raw = s.toJSON();
+      return {
+        ...raw,
+        class_count: classCountMap[s.id] || 0,
+      };
+    });
+
+    return res.json(successResponse({ subjects: enriched }));
   } catch (err) {
-    console.error(err);
-    return res.status(500).json(errorResponse('Failed to fetch subjects'));
+    console.error('getSubjects Error:', err);
+    return res.status(500).json(errorResponse(`Failed to fetch subjects: ${err.message}`));
   }
 }
 
@@ -551,15 +969,60 @@ async function createSubject(req, res) {
     const school = await getSchoolFromUser(req);
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
-    const { name, code, description } = req.body;
+    const { name, code, description, is_active } = req.body;
     const subject = await Subject.create({
       school_id: school.id, name, code, description,
+      is_active: is_active !== undefined ? is_active : true,
     });
 
     return res.json(successResponse({ subject }, 'Subject created'));
   } catch (err) {
-    console.error(err);
-    return res.status(500).json(errorResponse('Failed to create subject'));
+    console.error('createSubject Error:', err);
+    return res.status(500).json(errorResponse(`Failed to create subject: ${err.message}`));
+  }
+}
+
+async function updateSubject(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+
+    const { id } = req.params;
+    const subject = await Subject.findOne({ where: { id, school_id: school.id } });
+    if (!subject) return res.status(404).json(errorResponse('Subject not found'));
+
+    const { name, code, description, is_active } = req.body;
+    await subject.update({
+      name: name !== undefined ? name : subject.name,
+      code: code !== undefined ? code : subject.code,
+      description: description !== undefined ? description : subject.description,
+      is_active: is_active !== undefined ? is_active : subject.is_active,
+    });
+
+    return res.json(successResponse({ subject }, 'Subject updated'));
+  } catch (err) {
+    console.error('updateSubject Error:', err);
+    return res.status(500).json(errorResponse(`Failed to update subject: ${err.message}`));
+  }
+}
+
+async function deleteSubject(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+
+    const { id } = req.params;
+    const subject = await Subject.findOne({ where: { id, school_id: school.id } });
+    if (!subject) return res.status(404).json(errorResponse('Subject not found'));
+
+    // Remove class-subject associations
+    await ClassSubject.destroy({ where: { subject_id: subject.id } });
+    await subject.destroy();
+
+    return res.json(successResponse({}, 'Subject deleted'));
+  } catch (err) {
+    console.error('deleteSubject Error:', err);
+    return res.status(500).json(errorResponse(`Failed to delete subject: ${err.message}`));
   }
 }
 
@@ -1146,8 +1609,9 @@ module.exports = {
   getSchoolInfo, updateSchoolInfo, checkSchoolName,
   getStudents, createStudent, updateStudent, getNextAdmissionNumber, getStudentStats,
   getTeachers, createTeacher, updateTeacher, getTeacherStats,
-  getClasses, createClass, bulkCreateClasses,
-  getSubjects, createSubject,
+  getClasses, getClassById, createClass, updateClass, deleteClass, bulkCreateClasses,
+  assignStudentsToClass, assignSubjectsToClass,
+  getSubjects, createSubject, updateSubject, deleteSubject,
   getAcademicYears, createAcademicYear, getTerms, createTerm,
   getGrades, saveGrades,
   recordAttendance,

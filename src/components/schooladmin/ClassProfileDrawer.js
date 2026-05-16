@@ -30,7 +30,7 @@ export default function ClassProfileDrawer({ cls: initialCls, onClose, onEdit, o
   // Refresh class details (gives us assistant_teachers, subjects, etc.)
   useEffect(() => {
     ApiClient.get(`/api/school/classes/${initialCls.id}/`)
-      .then(d => setCls(prev => ({ ...prev, ...d })))
+      .then(d => setCls(prev => ({ ...prev, ...(d.class || d) })))
       .catch(() => {});
   }, [initialCls.id]);
 

@@ -13,9 +13,10 @@ const {
   // Teachers
   getTeachers, createTeacher, updateTeacher, getTeacherStats,
   // Classes
-  getClasses, createClass, bulkCreateClasses,
+  getClasses, getClassById, createClass, updateClass, deleteClass, bulkCreateClasses,
+  assignStudentsToClass, assignSubjectsToClass,
   // Subjects
-  getSubjects, createSubject,
+  getSubjects, createSubject, updateSubject, deleteSubject,
   // Academic
   getAcademicYears, createAcademicYear, getTerms, createTerm,
   // Grades
@@ -141,12 +142,19 @@ router.get('/school/teacher-stats/', applyAuth, getTeacherStats);
 
 // ==================== CLASSES ====================
 router.get('/school/classes/', applyAuth, getClasses);
+router.get('/school/classes/:id/', applyAuth, getClassById);
 router.post('/school/classes/', applyAuth, createClass);
+router.put('/school/classes/:id/', applyAuth, updateClass);
+router.delete('/school/classes/:id/', applyAuth, deleteClass);
 router.post('/school/classes/bulk-create/', applyAuth, bulkCreateClasses);
+router.post('/school/classes/:id/assign-students/', applyAuth, assignStudentsToClass);
+router.post('/school/classes/:id/assign-subjects/', applyAuth, assignSubjectsToClass);
 
 // ==================== SUBJECTS ====================
 router.get('/school/subjects/', applyAuth, getSubjects);
 router.post('/school/subjects/', applyAuth, createSubject);
+router.put('/school/subjects/:id/', applyAuth, updateSubject);
+router.delete('/school/subjects/:id/', applyAuth, deleteSubject);
 
 // ==================== ACADEMIC YEARS & TERMS ====================
 router.get('/school/academic-years/', applyAuth, getAcademicYears);
