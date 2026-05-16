@@ -1143,7 +1143,7 @@ export function ReportsPage({ school }) {
                     )}
                 )}
               </div>
-            </div>
+            </label>
             <label className="ska-form-group">
               <span>Class <span style={{ color: 'var(--ska-text-3)', fontSize: '0.75rem' }}>(optional)</span></span>
               <select className="ska-input" value={form.classId}
