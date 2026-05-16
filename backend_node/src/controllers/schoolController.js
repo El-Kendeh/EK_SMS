@@ -935,12 +935,12 @@ async function getSubjects(req, res) {
 
     const subjects = await Subject.findAll({ where: { school_id: school.id } });
 
-    // Enrich with class count
+    // Get class counts per subject
     const subjectIds = subjects.map(s => s.id);
     const classCounts = subjectIds.length > 0
       ? await ClassSubject.findAll({
           where: { subject_id: subjectIds },
-          attributes: ['subject_id', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
+          attributes: ['subject_id', [sequelize.fn('COUNT', sequelize.col('class_id')), 'count']],
           group: ['subject_id'],
         })
       : [];
@@ -949,11 +949,80 @@ async function getSubjects(req, res) {
       classCountMap[cc.subject_id] = parseInt(cc.dataValues.count, 10);
     });
 
+    // Get student counts per subject (sum of students in all classes that have this subject)
+    const subjectClassMap = subjectIds.length > 0
+      ? await ClassSubject.findAll({
+          where: { subject_id: subjectIds },
+          attributes: ['subject_id', 'class_id'],
+        })
+      : [];
+    const classIdsBySubject = {};
+    subjectClassMap.forEach(sc => {
+      if (!classIdsBySubject[sc.subject_id]) classIdsBySubject[sc.subject_id] = [];
+      classIdsBySubject[sc.subject_id].push(sc.class_id);
+    });
+
+    const allClassIds = [...new Set(Object.values(classIdsBySubject).flat())];
+    const studentCounts = allClassIds.length > 0
+      ? await Student.findAll({
+          where: { classroom_id: allClassIds, school_id: school.id },
+          attributes: ['classroom_id', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
+          group: ['classroom_id'],
+        })
+      : [];
+    const studentCountByClass = {};
+    studentCounts.forEach(sc => {
+      studentCountByClass[sc.classroom_id] = parseInt(sc.dataValues.count, 10);
+    });
+
+    const studentCountMap = {};
+    for (const [subjId, classIds] of Object.entries(classIdsBySubject)) {
+      studentCountMap[subjId] = classIds.reduce((sum, cid) => sum + (studentCountByClass[cid] || 0), 0);
+    }
+
+    // Get teacher assignments per subject (from ClassSubject where teacher_id is set)
+    const teacherAssignments = subjectIds.length > 0
+      ? await ClassSubject.findAll({
+          where: { subject_id: subjectIds, teacher_id: { [Op.ne]: null } },
+          attributes: ['subject_id', 'teacher_id'],
+        })
+      : [];
+    const teacherIdMap = {};
+    teacherAssignments.forEach(ta => {
+      if (!teacherIdMap[ta.subject_id]) teacherIdMap[ta.subject_id] = [];
+      teacherIdMap[ta.subject_id].push(ta.teacher_id);
+    });
+
+    // Fetch teacher names
+    const allTeacherIds = [...new Set(Object.values(teacherIdMap).flat())];
+    const teachers = allTeacherIds.length > 0
+      ? await Teacher.findAll({
+          where: { id: allTeacherIds },
+          include: [{ model: User, attributes: ['username', 'first_name', 'last_name', 'email'] }],
+        })
+      : [];
+    const teacherMap = {};
+    teachers.forEach(t => {
+      teacherMap[t.id] = {
+        id: t.id,
+        name: `${t.User?.first_name || ''} ${t.User?.last_name || ''}`.trim() || t.User?.username || 'Teacher',
+        email: t.User?.email || '',
+      };
+    });
+
+    const teacherListMap = {};
+    for (const [subjId, tIds] of Object.entries(teacherIdMap)) {
+      teacherListMap[subjId] = tIds.map(tid => teacherMap[tid]).filter(Boolean);
+    }
+
     const enriched = subjects.map(s => {
       const raw = s.toJSON();
       return {
         ...raw,
         class_count: classCountMap[s.id] || 0,
+        student_count: studentCountMap[s.id] || 0,
+        assigned_teachers: teacherListMap[s.id] || [],
+        class_ids: classIdsBySubject[s.id] || [],
       };
     });
 
@@ -1023,6 +1092,80 @@ async function deleteSubject(req, res) {
   } catch (err) {
     console.error('deleteSubject Error:', err);
     return res.status(500).json(errorResponse(`Failed to delete subject: ${err.message}`));
+  }
+}
+
+async function assignClassesToSubject(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+
+    const { id } = req.params;
+    const { class_ids } = req.body;
+
+    const subject = await Subject.findOne({ where: { id, school_id: school.id } });
+    if (!subject) return res.status(404).json(errorResponse('Subject not found'));
+
+    if (!Array.isArray(class_ids)) {
+      return res.status(400).json(errorResponse('class_ids must be an array'));
+    }
+
+    // Replace all class assignments for this subject
+    await ClassSubject.destroy({ where: { subject_id: subject.id } });
+    if (class_ids.length > 0) {
+      const entries = class_ids.map(cid => ({
+        class_id: cid,
+        subject_id: subject.id,
+      }));
+      await ClassSubject.bulkCreate(entries, { ignoreDuplicates: true });
+    }
+
+    return res.json(successResponse({ class_count: class_ids.length }, 'Classes assigned to subject'));
+  } catch (err) {
+    console.error('assignClassesToSubject Error:', err);
+    return res.status(500).json(errorResponse(`Failed to assign classes: ${err.message}`));
+  }
+}
+
+async function assignTeachersToSubject(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+
+    const { id } = req.params;
+    const { teacher_ids } = req.body;
+
+    const subject = await Subject.findOne({ where: { id, school_id: school.id } });
+    if (!subject) return res.status(404).json(errorResponse('Subject not found'));
+
+    if (!Array.isArray(teacher_ids)) {
+      return res.status(400).json(errorResponse('teacher_ids must be an array'));
+    }
+
+    // Update teacher_id on all ClassSubject entries for this subject
+    // First, get all class-subject entries for this subject
+    const classSubjects = await ClassSubject.findAll({ where: { subject_id: subject.id } });
+
+    if (classSubjects.length > 0 && teacher_ids.length > 0) {
+      // Assign the first teacher as the primary teacher for all class-subject entries
+      // (In a more advanced system, you could map teachers to specific classes)
+      const primaryTeacherId = teacher_ids[0];
+      await ClassSubject.update(
+        { teacher_id: primaryTeacherId },
+        { where: { subject_id: subject.id } }
+      );
+    } else if (classSubjects.length > 0 && teacher_ids.length === 0) {
+      // Remove teacher assignments
+      await ClassSubject.update(
+        { teacher_id: null },
+        { where: { subject_id: subject.id } }
+      );
+    }
+
+    return res.json(successResponse({ teacher_count: teacher_ids.length }, 'Teachers assigned to subject'));
+  } catch (err) {
+    console.error('assignTeachersToSubject Error:', err);
+    return res.status(500).json(errorResponse(`Failed to assign teachers: ${err.message}`));
   }
 }
 
@@ -1612,6 +1755,7 @@ module.exports = {
   getClasses, getClassById, createClass, updateClass, deleteClass, bulkCreateClasses,
   assignStudentsToClass, assignSubjectsToClass,
   getSubjects, createSubject, updateSubject, deleteSubject,
+  assignClassesToSubject, assignTeachersToSubject,
   getAcademicYears, createAcademicYear, getTerms, createTerm,
   getGrades, saveGrades,
   recordAttendance,

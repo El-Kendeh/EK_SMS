@@ -17,6 +17,7 @@ const {
   assignStudentsToClass, assignSubjectsToClass,
   // Subjects
   getSubjects, createSubject, updateSubject, deleteSubject,
+  assignClassesToSubject, assignTeachersToSubject,
   // Academic
   getAcademicYears, createAcademicYear, getTerms, createTerm,
   // Grades
@@ -155,6 +156,8 @@ router.get('/school/subjects/', applyAuth, getSubjects);
 router.post('/school/subjects/', applyAuth, createSubject);
 router.put('/school/subjects/:id/', applyAuth, updateSubject);
 router.delete('/school/subjects/:id/', applyAuth, deleteSubject);
+router.post('/school/subjects/:id/assign-classes/', applyAuth, assignClassesToSubject);
+router.post('/school/subjects/:id/assign-teachers/', applyAuth, assignTeachersToSubject);
 
 // ==================== ACADEMIC YEARS & TERMS ====================
 router.get('/school/academic-years/', applyAuth, getAcademicYears);

@@ -47,12 +47,16 @@ function defaultMeta() {
 }
 
 /* ============================================================
-   STATS CARDS
-   ============================================================ */
+    STATS CARDS
+    ============================================================ */
 function StatsCards({ subjects, meta }) {
   const active   = subjects.filter(s => (meta[s.id]?.status || 'Active') === 'Active').length;
-  const assigned = subjects.filter(s => (meta[s.id]?.teacher_ids || []).length > 0).length;
-  const inUse    = subjects.filter(s => (meta[s.id]?.class_ids   || []).length > 0).length;
+  const assigned = subjects.filter(s => {
+    const backendTeachers = s.assigned_teachers || [];
+    const localTeachers = meta[s.id]?.teacher_ids || [];
+    return backendTeachers.length > 0 || localTeachers.length > 0;
+  }).length;
+  const inUse    = subjects.filter(s => (s.class_count || 0) > 0 || (meta[s.id]?.class_ids || []).length > 0).length;
 
   const cards = [
     { label: 'Total Subjects',    value: subjects.length, icon: 'menu_book',    color: 'var(--ska-primary)',   bg: 'var(--ska-primary-dim)' },
@@ -156,15 +160,17 @@ function FiltersBar({ search, setSearch, filters, setFilters, teachers, classes 
 }
 
 /* ============================================================
-   SUBJECT ROW
-   ============================================================ */
+    SUBJECT ROW
+    ============================================================ */
 function SubjectRow({ subject, teachers, classes, meta, onView, onEdit, onAssignTeacher, onAssignClasses, onToggleStatus, onDelete }) {
   const m                = meta[subject.id] || defaultMeta();
-  const assignedTeachers = teachers.filter(t => m.teacher_ids.includes(t.id));
+  const assignedTeachers = (subject.assigned_teachers && subject.assigned_teachers.length > 0)
+    ? subject.assigned_teachers
+    : teachers.filter(t => m.teacher_ids.includes(t.id));
   const assignedClasses  = classes.filter(c => m.class_ids.includes(c.id));
   const isArchived       = m.status === 'Archived';
-  const isHighUsage      = assignedClasses.length >= 3;
-  const studentCount     = assignedClasses.reduce((sum, c) => sum + (c.student_count || 0), 0);
+  const isHighUsage      = (subject.class_count || assignedClasses.length) >= 3;
+  const studentCount     = subject.student_count ?? assignedClasses.reduce((sum, c) => sum + (c.student_count || 0), 0);
 
   return (
     <tr className={isArchived ? 'subj-row--archived' : ''}>
@@ -206,13 +212,16 @@ function SubjectRow({ subject, teachers, classes, meta, onView, onEdit, onAssign
 
       {/* Classes */}
       <td>
-        {assignedClasses.length > 0 ? (
+        {(subject.class_count || assignedClasses.length) > 0 ? (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
             {assignedClasses.slice(0, 2).map(c => (
               <span key={c.id} className="ska-badge ska-badge--primary" style={{ fontSize: '0.625rem' }}>{c.name}</span>
             ))}
             {assignedClasses.length > 2 && (
               <span className="ska-badge ska-badge--inactive">+{assignedClasses.length - 2}</span>
+            )}
+            {subject.class_count > assignedClasses.length && (
+              <span className="ska-badge ska-badge--inactive">{subject.class_count} total</span>
             )}
             {isHighUsage && <span className="subj-high-usage">⚠ High</span>}
           </div>
@@ -346,9 +355,11 @@ const TT_PERIODS = ['8:00', '10:00', '12:00', '14:00'];
 
 function SubjectDetails({ subject, teachers, classes, meta, onBack, onEdit, onAssignTeacher, onAssignClasses }) {
   const m                = meta[subject.id] || defaultMeta();
-  const assignedTeachers = teachers.filter(t => m.teacher_ids.includes(t.id));
+  const assignedTeachers = (subject.assigned_teachers && subject.assigned_teachers.length > 0)
+    ? subject.assigned_teachers
+    : teachers.filter(t => m.teacher_ids.includes(t.id));
   const assignedClasses  = classes.filter(c => m.class_ids.includes(c.id));
-  const isHighUsage      = assignedClasses.length >= 3;
+  const isHighUsage      = (subject.class_count || assignedClasses.length) >= 3;
 
   /* Deterministic mock scores (no randomness on re-render) */
   const performance = useMemo(() => (
@@ -476,12 +487,15 @@ function SubjectDetails({ subject, teachers, classes, meta, onBack, onEdit, onAs
         {/* Classes */}
         <div className="ska-card ska-card-pad">
           <div className="ska-card-head">
-            <h2 className="ska-card-title">Classes</h2>
+            <h2 className="ska-card-title">
+              Classes
+              <span className="cls-section-count">{subject.class_count || assignedClasses.length}</span>
+            </h2>
             <button className="ska-btn ska-btn--ghost ska-btn--sm" onClick={() => onAssignClasses(subject)}>
               <Ic name="add" size="sm" /> Assign
             </button>
           </div>
-          {assignedClasses.length > 0 ? (
+          {assignedClasses.length > 0 || (subject.class_count || 0) > 0 ? (
             <div className="cls-subject-list">
               {assignedClasses.map(c => (
                 <div key={c.id} className="cls-subject-item">
@@ -494,10 +508,25 @@ function SubjectDetails({ subject, teachers, classes, meta, onBack, onEdit, onAs
                   )}
                 </div>
               ))}
+              {(subject.class_count || 0) > assignedClasses.length && (
+                <div className="cls-subject-item" style={{ opacity: 0.7 }}>
+                  <div className="cls-subject-dot" />
+                  <span className="cls-subject-name">+{subject.class_count - assignedClasses.length} more classes</span>
+                </div>
+              )}
             </div>
           ) : (
             <div className="ska-empty" style={{ padding: '20px 0' }}>
               <p className="ska-empty-desc">Not assigned to any classes yet.</p>
+            </div>
+          )}
+          {/* Student count summary */}
+          {(subject.student_count || 0) > 0 && (
+            <div style={{ marginTop: 16, padding: 12, borderRadius: 10, background: 'var(--ska-surface-high)', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Ic name="people" size="sm" style={{ color: 'var(--ska-primary)' }} />
+              <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>
+                {subject.student_count} total student{subject.student_count !== 1 ? 's' : ''} across all classes
+              </span>
             </div>
           )}
         </div>
@@ -951,7 +980,29 @@ export function SubjectsPage({ school }) {
     ]);
 
     if (sRes.status === 'fulfilled') {
-      setSubjects(sRes.value.subjects || sRes.value || []);
+      const subjectsData = sRes.value.subjects || sRes.value || [];
+      setSubjects(subjectsData);
+
+      // Merge backend class_ids into localStorage meta
+      const mergedMeta = { ...meta };
+      subjectsData.forEach(s => {
+        if (s.class_ids && s.class_ids.length > 0) {
+          const existing = mergedMeta[s.id] || defaultMeta();
+          mergedMeta[s.id] = {
+            ...existing,
+            class_ids: [...new Set([...(existing.class_ids || []), ...s.class_ids])],
+          };
+        }
+        if (s.assigned_teachers && s.assigned_teachers.length > 0) {
+          const existing = mergedMeta[s.id] || defaultMeta();
+          const backendTeacherIds = s.assigned_teachers.map(t => t.id);
+          mergedMeta[s.id] = {
+            ...existing,
+            teacher_ids: [...new Set([...(existing.teacher_ids || []), ...backendTeacherIds])],
+          };
+        }
+      });
+      saveMeta(mergedMeta);
     }
     if (tRes.status === 'fulfilled') {
       const raw = tRes.value.teachers || tRes.value || [];
@@ -966,11 +1017,11 @@ export function SubjectsPage({ school }) {
       setClasses(raw.map(x => ({
         id:            x.id,
         name:          x.name || x.class_name || 'Unknown',
-        student_count: x.student_count ?? x.students_count,
+        student_count: x.student_count ?? x.students_count ?? 0,
       })));
     }
     setLoading(false);
-  }, []);
+  }, [meta, saveMeta]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -994,21 +1045,91 @@ export function SubjectsPage({ school }) {
     const res  = await ApiClient.get('/api/school/subjects/');
     const all  = res.subjects || res || [];
     const newS = all.find(s => s.code.toUpperCase() === apiData.code.toUpperCase());
-    if (newS) saveMeta({ ...meta, [newS.id]: { ...defaultMeta(), ...metaData } });
-    setSubjects(all);
+    if (newS) {
+      const newMeta = { ...meta, [newS.id]: { ...defaultMeta(), ...metaData } };
+      saveMeta(newMeta);
+
+      // Sync class assignments with backend
+      if (metaData.class_ids && metaData.class_ids.length > 0) {
+        try {
+          await ApiClient.post(`/api/school/subjects/${newS.id}/assign-classes/`, {
+            class_ids: metaData.class_ids,
+          });
+        } catch (e) {
+          console.warn('Failed to sync class assignments:', e);
+        }
+      }
+      // Sync teacher assignments with backend
+      if (metaData.teacher_ids && metaData.teacher_ids.length > 0) {
+        try {
+          await ApiClient.post(`/api/school/subjects/${newS.id}/assign-teachers/`, {
+            teacher_ids: metaData.teacher_ids,
+          });
+        } catch (e) {
+          console.warn('Failed to sync teacher assignments:', e);
+        }
+      }
+      // Reload to get fresh data
+      load();
+    }
     setModal(null);
   };
 
   const handleEditSave = async (apiData, metaData) => {
     await ApiClient.put(`/api/school/subjects/${modal.subject.id}/`, apiData);
+
+    // Sync class assignments with backend
+    if (metaData.class_ids) {
+      try {
+        await ApiClient.post(`/api/school/subjects/${modal.subject.id}/assign-classes/`, {
+          class_ids: metaData.class_ids,
+        });
+      } catch (e) {
+        console.warn('Failed to sync class assignments:', e);
+      }
+    }
+    // Sync teacher assignments with backend
+    if (metaData.teacher_ids) {
+      try {
+        await ApiClient.post(`/api/school/subjects/${modal.subject.id}/assign-teachers/`, {
+          teacher_ids: metaData.teacher_ids,
+        });
+      } catch (e) {
+        console.warn('Failed to sync teacher assignments:', e);
+      }
+    }
+
     saveMeta({ ...meta, [modal.subject.id]: { ...(meta[modal.subject.id] || defaultMeta()), ...metaData } });
     setModal(null);
     load();
   };
 
   const handleAssignMetaSave = async (subjectId, metaUpdate) => {
+    // Sync class assignments with backend
+    if (metaUpdate.class_ids) {
+      try {
+        await ApiClient.post(`/api/school/subjects/${subjectId}/assign-classes/`, {
+          class_ids: metaUpdate.class_ids,
+        });
+      } catch (e) {
+        console.warn('Failed to sync class assignments with backend:', e);
+      }
+    }
+    // Sync teacher assignments with backend (via class-subject teacher_id)
+    if (metaUpdate.teacher_ids) {
+      try {
+        await ApiClient.post(`/api/school/subjects/${subjectId}/assign-teachers/`, {
+          teacher_ids: metaUpdate.teacher_ids,
+        });
+      } catch (e) {
+        console.warn('Failed to sync teacher assignments with backend:', e);
+      }
+    }
+    // Update local meta
     saveMeta({ ...meta, [subjectId]: { ...(meta[subjectId] || defaultMeta()), ...metaUpdate } });
     setModal(null);
+    // Reload to get fresh data from backend
+    load();
   };
 
   const handleToggleStatus = subject => {
