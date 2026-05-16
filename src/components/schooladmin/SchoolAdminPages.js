@@ -1118,7 +1118,7 @@ export function ReportsPage({ school }) {
                 {REPORT_TYPES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
               </select>
             </label>
-            <div className="ska-form-group">
+            <label className="ska-form-group">
               <span>Academic Year</span>
               <div className="ska-year-filter" style={{ marginTop: 8 }}>
                 {yearsLoading ? (
@@ -1146,7 +1146,7 @@ export function ReportsPage({ school }) {
                   </div>
                 )}
               </div>
-            </div>
+            </label>
             <label className="ska-form-group">
               <span>Class <span style={{ color: 'var(--ska-text-3)', fontSize: '0.75rem' }}>(optional)</span></span>
                 <select className="ska-input" value={form.classId}
