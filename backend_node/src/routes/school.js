@@ -95,6 +95,27 @@ function teacherUpload(req, res, next) {
   });
 }
 
+function studentUpload(req, res, next) {
+  const handler = upload.any();
+
+  handler(req, res, (err) => {
+    if (err) {
+      console.error('Student upload error:', err);
+      const message = err.code === 'LIMIT_FILE_SIZE'
+        ? 'Uploaded file is too large. Maximum size is 50 MB.'
+        : err.message || 'File upload failed. Please upload a valid image file.';
+      return res.status(400).json({ success: false, message });
+    }
+
+    if (Array.isArray(req.files) && req.files.length > 0) {
+      req.file = req.files.find((file) => file.fieldname === 'profile_photo')
+        || req.files.find((file) => file.fieldname === 'photo')
+        || req.files.find((file) => file.fieldname === 'passport_picture');
+    }
+    next();
+  });
+}
+
 // Public routes
 router.get('/check-school-name/', checkSchoolName);
 
@@ -107,8 +128,8 @@ router.post('/school/info/', applyAuth, upload.single('badge'), updateSchoolInfo
 
 // ==================== STUDENTS ====================
 router.get('/school/students/', applyAuth, getStudents);
-router.post('/school/students/', applyAuth, upload.single('photo'), createStudent);
-router.put('/school/students/:id/', applyAuth, upload.single('photo'), updateStudent);
+router.post('/school/students/', applyAuth, studentUpload, createStudent);
+router.put('/school/students/:id/', applyAuth, studentUpload, updateStudent);
 router.get('/school/students/next-admission-number/', applyAuth, getNextAdmissionNumber);
 router.get('/school/student-stats/', applyAuth, getStudentStats);
 

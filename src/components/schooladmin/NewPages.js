@@ -2911,8 +2911,10 @@ function TeacherProfilePanel({ teacher: initTeacher, onClose, onEdit, focus }) {
   const infoRows = [
     { icon: 'badge',          label: 'Employee ID',   value: teacher.employee_id  || '—' },
     { icon: 'school',         label: 'Qualification', value: teacher.qualification || '—' },
+    { icon: 'history',        label: 'Experience',    value: teacher.years_experience ? `${teacher.years_experience} Years` : '—' },
     { icon: 'mail',           label: 'Email',         value: teacher.email         || '—' },
     { icon: 'phone',          label: 'Phone',         value: teacher.phone_number  || '—' },
+    { icon: 'link',           label: 'LinkedIn',      value: teacher.linkedin_url  || '—' },
     { icon: 'calendar_today', label: 'Hire Date',     value: teacher.hire_date
         ? new Date(teacher.hire_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
         : '—' },
@@ -3154,6 +3156,37 @@ function TeacherProfilePanel({ teacher: initTeacher, onClose, onEdit, focus }) {
                     </div>
                   ))}
                 </div>
+                {/* Additional details: Bio, Degrees, Certifications */}
+                {(teacher.bio || (teacher.degrees && teacher.degrees.length > 0) || (teacher.certifications && teacher.certifications.length > 0)) && (
+                  <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--ska-border)' }}>
+                    {teacher.bio && (
+                      <div style={{ marginBottom: 12 }}>
+                        <p style={{ margin: '0 0 4px', fontSize: '0.625rem', color: 'var(--ska-text-3)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Biography</p>
+                        <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--ska-text)', lineHeight: 1.5 }}>{teacher.bio}</p>
+                      </div>
+                    )}
+                    {teacher.degrees && teacher.degrees.length > 0 && (
+                      <div style={{ marginBottom: 12 }}>
+                        <p style={{ margin: '0 0 4px', fontSize: '0.625rem', color: 'var(--ska-text-3)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Degrees</p>
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          {teacher.degrees.map((deg, i) => (
+                            <span key={i} style={{ fontSize: '0.75rem', padding: '4px 10px', background: 'var(--ska-surface-high)', borderRadius: 20, color: 'var(--ska-text-2)', border: '1px solid var(--ska-border)' }}>{deg}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {teacher.certifications && teacher.certifications.length > 0 && (
+                      <div>
+                        <p style={{ margin: '0 0 4px', fontSize: '0.625rem', color: 'var(--ska-text-3)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Certifications</p>
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          {teacher.certifications.map((cert, i) => (
+                            <span key={i} style={{ fontSize: '0.75rem', padding: '4px 10px', background: 'var(--ska-surface-high)', borderRadius: 20, color: 'var(--ska-text-2)', border: '1px solid var(--ska-border)' }}>{cert}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </>
           )}
