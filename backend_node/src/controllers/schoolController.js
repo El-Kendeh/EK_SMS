@@ -15,6 +15,7 @@ const Room = require('../models/Room');
 const Exam = require('../models/Exam');
 const Notification = require('../models/Notification');
 const User = require('../models/User');
+const SyllabusTopic = require('../models/SyllabusTopic');
 const { Op } = require('sequelize');
 const bcrypt = require('bcryptjs');
 const sequelize = require('../config/db');
@@ -1748,6 +1749,168 @@ async function updateTeacher(req, res) {
   }
 }
 
+/* ================= SYLLABUS TOPICS ================= */
+async function getSyllabusTopics(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+
+    const { class_id, subject_id, term_id } = req.query;
+    const where = { school_id: school.id };
+    if (class_id) where.class_id = class_id;
+    if (subject_id) where.subject_id = subject_id;
+    if (term_id) where.term_id = term_id;
+
+    const topics = await SyllabusTopic.findAll({
+      where,
+      order: [['week_number', 'ASC'], ['created_at', 'DESC']],
+    });
+
+    // Enrich with teacher names
+    const teacherIds = [...new Set(topics.map(t => t.teacher_id).filter(Boolean))];
+    const teachers = teacherIds.length > 0
+      ? await Teacher.findAll({
+          where: { id: teacherIds },
+          include: [{ model: User, attributes: ['username', 'first_name', 'last_name', 'email'] }],
+        })
+      : [];
+    const teacherMap = {};
+    teachers.forEach(t => {
+      teacherMap[t.id] = {
+        id: t.id,
+        name: `${t.User?.first_name || ''} ${t.User?.last_name || ''}`.trim() || t.User?.username || 'Teacher',
+        email: t.User?.email || '',
+      };
+    });
+
+    const enriched = topics.map(t => {
+      const raw = t.toJSON();
+      return {
+        ...raw,
+        teacher: teacherMap[t.teacher_id] || null,
+        teacher_name: teacherMap[t.teacher_id]?.name || null,
+      };
+    });
+
+    return res.json(successResponse({ topics: enriched }));
+  } catch (err) {
+    console.error('getSyllabusTopics Error:', err);
+    return res.status(500).json(errorResponse(`Failed to fetch syllabus topics: ${err.message}`));
+  }
+}
+
+async function createSyllabusTopic(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+
+    const {
+      class_id, subject_id, term_id, title, description,
+      group, priority, duration_weeks, week_number, teacher_id,
+    } = req.body;
+
+    if (!title?.trim()) return res.status(400).json(errorResponse('Title is required'));
+    if (!class_id) return res.status(400).json(errorResponse('Class is required'));
+    if (!subject_id) return res.status(400).json(errorResponse('Subject is required'));
+
+    const topic = await SyllabusTopic.create({
+      school_id: school.id,
+      class_id,
+      subject_id,
+      term_id: term_id || null,
+      title: title.trim(),
+      description: description || '',
+      group: group || 'General',
+      priority: priority || 'medium',
+      duration_weeks: duration_weeks || 1,
+      week_number: week_number || null,
+      teacher_id: teacher_id || null,
+      status: 'not_started',
+    });
+
+    return res.json(successResponse({ topic }, 'Topic created'));
+  } catch (err) {
+    console.error('createSyllabusTopic Error:', err);
+    return res.status(500).json(errorResponse(`Failed to create topic: ${err.message}`));
+  }
+}
+
+async function updateSyllabusTopic(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+
+    const { id } = req.params;
+    const topic = await SyllabusTopic.findOne({ where: { id, school_id: school.id } });
+    if (!topic) return res.status(404).json(errorResponse('Topic not found'));
+
+    const {
+      title, description, group, priority, duration_weeks,
+      week_number, term_id, teacher_id, status, date_covered,
+    } = req.body;
+
+    await topic.update({
+      title: title !== undefined ? title : topic.title,
+      description: description !== undefined ? description : topic.description,
+      group: group !== undefined ? group : topic.group,
+      priority: priority !== undefined ? priority : topic.priority,
+      duration_weeks: duration_weeks !== undefined ? duration_weeks : topic.duration_weeks,
+      week_number: week_number !== undefined ? week_number : topic.week_number,
+      term_id: term_id !== undefined ? term_id : topic.term_id,
+      teacher_id: teacher_id !== undefined ? teacher_id : topic.teacher_id,
+      status: status !== undefined ? status : topic.status,
+      date_covered: date_covered !== undefined ? date_covered : topic.date_covered,
+    });
+
+    return res.json(successResponse({ topic }, 'Topic updated'));
+  } catch (err) {
+    console.error('updateSyllabusTopic Error:', err);
+    return res.status(500).json(errorResponse(`Failed to update topic: ${err.message}`));
+  }
+}
+
+async function deleteSyllabusTopic(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+
+    const { id } = req.params;
+    const topic = await SyllabusTopic.findOne({ where: { id, school_id: school.id } });
+    if (!topic) return res.status(404).json(errorResponse('Topic not found'));
+
+    await topic.destroy();
+    return res.json(successResponse({}, 'Topic deleted'));
+  } catch (err) {
+    console.error('deleteSyllabusTopic Error:', err);
+    return res.status(500).json(errorResponse(`Failed to delete topic: ${err.message}`));
+  }
+}
+
+async function getSyllabusStats(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+
+    const { class_id, subject_id } = req.query;
+    const where = { school_id: school.id };
+    if (class_id) where.class_id = class_id;
+    if (subject_id) where.subject_id = subject_id;
+
+    const total = await SyllabusTopic.count({ where });
+    const completed = await SyllabusTopic.count({ where: { ...where, status: 'completed' } });
+    const inProgress = await SyllabusTopic.count({ where: { ...where, status: 'in_progress' } });
+    const notStarted = await SyllabusTopic.count({ where: { ...where, status: 'not_started' } });
+    const coverage = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+    return res.json(successResponse({
+      total, completed, in_progress: inProgress, not_started: notStarted, coverage,
+    }));
+  } catch (err) {
+    console.error('getSyllabusStats Error:', err);
+    return res.status(500).json(errorResponse(`Failed to fetch stats: ${err.message}`));
+  }
+}
+
 module.exports = {
   getSchoolInfo, updateSchoolInfo, checkSchoolName,
   getStudents, createStudent, updateStudent, getNextAdmissionNumber, getStudentStats,
@@ -1771,4 +1934,5 @@ module.exports = {
   createParent,
   generateTimetable, deleteTimetable,
   reviewModificationRequest,
+  getSyllabusTopics, createSyllabusTopic, updateSyllabusTopic, deleteSyllabusTopic, getSyllabusStats,
 };

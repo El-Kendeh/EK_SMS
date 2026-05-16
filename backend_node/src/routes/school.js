@@ -20,6 +20,8 @@ const {
   assignClassesToSubject, assignTeachersToSubject,
   // Academic
   getAcademicYears, createAcademicYear, getTerms, createTerm,
+  // Syllabus
+  getSyllabusTopics, createSyllabusTopic, updateSyllabusTopic, deleteSyllabusTopic, getSyllabusStats,
   // Grades
   getGrades, saveGrades,
   // Attendance
@@ -164,6 +166,13 @@ router.get('/school/academic-years/', applyAuth, getAcademicYears);
 router.post('/school/academic-years/', applyAuth, createAcademicYear);
 router.get('/school/terms/', applyAuth, getTerms);
 router.post('/school/terms/', applyAuth, createTerm);
+
+// ==================== SYLLABUS ====================
+router.get('/school/syllabus-topics/', applyAuth, getSyllabusTopics);
+router.post('/school/syllabus-topics/', applyAuth, createSyllabusTopic);
+router.put('/school/syllabus-topics/:id/', applyAuth, updateSyllabusTopic);
+router.delete('/school/syllabus-topics/:id/', applyAuth, deleteSyllabusTopic);
+router.get('/school/syllabus-stats/', applyAuth, getSyllabusStats);
 
 // ==================== GRADES ====================
 router.get('/school/grades/', applyAuth, getGrades);

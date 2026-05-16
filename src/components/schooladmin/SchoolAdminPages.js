@@ -1794,7 +1794,6 @@ export function SettingsPage({ school: schoolProp, onSchoolUpdate }) {
    SYLLABUS / CURRICULUM PAGE — Curriculum Management System
    ============================================================ */
 
-const SYL_TERMS = ['Term 1', 'Term 2', 'Term 3'];
 const SYL_STATUSES = ['not_started', 'in_progress', 'completed'];
 
 const SYL_STATUS_META = {
@@ -1808,56 +1807,6 @@ const SYL_PRIORITY_META = {
   medium: { label: 'Medium', color: '#F59E0B',             bg: 'rgba(245,158,11,0.14)' },
   low:    { label: 'Low',    color: 'var(--ska-secondary)',bg: 'var(--ska-secondary-dim)' },
 };
-
-const SYL_MOCK_TEACHERS = ['Mr. Johnson', 'Mrs. Kamara', 'Mr. Bangura', 'Ms. Conteh', 'Mr. Sesay'];
-
-/* Mock seed: deterministic curriculum per subject keyword. */
-function sylSeedTopics(subjectName, classId) {
-  const s = (subjectName || '').toLowerCase();
-  const tNow = Date.now();
-  const teacher = SYL_MOCK_TEACHERS[(classId?.toString().length || 0) % SYL_MOCK_TEACHERS.length];
-  const mk = (i, title, group, term, status, priority, weeks, desc) => ({
-    id: tNow + i,
-    title, group, term, status, priority,
-    durationWeeks: weeks,
-    description: desc || '',
-    teacher,
-    dateCovered: status === 'completed' ? new Date(Date.now() - (8 - i) * 86400000 * 3).toISOString().slice(0, 10) : null,
-    lastUpdatedBy: teacher,
-  });
-
-  if (s.includes('math')) return [
-    mk(1, 'Linear Equations',     'Algebra',    'Term 1', 'completed',   'high',   2, 'Solve and graph linear equations in one and two variables.'),
-    mk(2, 'Quadratic Equations',  'Algebra',    'Term 1', 'in_progress', 'high',   3, 'Factoring, completing the square, quadratic formula.'),
-    mk(3, 'Angles & Triangles',   'Geometry',   'Term 1', 'completed',   'medium', 2, 'Properties of angles, triangle congruence.'),
-    mk(4, 'Circles',              'Geometry',   'Term 2', 'not_started', 'medium', 2, 'Tangents, chords, sectors.'),
-    mk(5, 'Trigonometric Ratios', 'Trigonometry','Term 2','not_started', 'high',   3, 'Sin, cos, tan and their applications.'),
-    mk(6, 'Probability Basics',   'Statistics', 'Term 3', 'not_started', 'low',    2, 'Sample spaces, probability rules.'),
-    mk(7, 'Mean / Median / Mode', 'Statistics', 'Term 3', 'not_started', 'medium', 1, 'Measures of central tendency.'),
-  ];
-  if (s.includes('eng')) return [
-    mk(1, 'Parts of Speech',      'Grammar',    'Term 1', 'completed',   'medium', 2, ''),
-    mk(2, 'Sentence Structure',   'Grammar',    'Term 1', 'in_progress', 'high',   2, ''),
-    mk(3, 'Comprehension',        'Reading',    'Term 1', 'completed',   'high',   2, ''),
-    mk(4, 'Essay Writing',        'Composition','Term 2', 'not_started', 'high',   3, ''),
-    mk(5, 'Poetry Analysis',      'Literature', 'Term 2', 'not_started', 'low',    2, ''),
-    mk(6, 'Oral Presentation',    'Speaking',   'Term 3', 'not_started', 'medium', 2, ''),
-  ];
-  if (s.includes('sci') || s.includes('phys') || s.includes('chem') || s.includes('bio')) return [
-    mk(1, 'Scientific Method',    'Foundations','Term 1', 'completed',   'medium', 1, ''),
-    mk(2, 'Matter & Its States',  'Chemistry',  'Term 1', 'in_progress', 'high',   2, ''),
-    mk(3, 'Forces & Motion',      'Physics',    'Term 2', 'not_started', 'high',   3, ''),
-    mk(4, 'Cells & Tissues',      'Biology',    'Term 2', 'not_started', 'medium', 2, ''),
-    mk(5, 'Ecosystems',           'Biology',    'Term 3', 'not_started', 'low',    2, ''),
-  ];
-  /* generic fallback */
-  return [
-    mk(1, `${subjectName} — Introduction`, 'General', 'Term 1', 'completed',   'medium', 1, ''),
-    mk(2, `${subjectName} — Core Concepts`,'General', 'Term 1', 'in_progress', 'high',   3, ''),
-    mk(3, `${subjectName} — Practice`,     'General', 'Term 2', 'not_started', 'medium', 2, ''),
-    mk(4, `${subjectName} — Advanced`,     'General', 'Term 3', 'not_started', 'low',    2, ''),
-  ];
-}
 
 /* ── Status pill ── */
 function SylStatusPill({ status }) {
@@ -1982,48 +1931,46 @@ function SylSearchableSelect({ label, value, onChange, options, placeholder }) {
 export function SyllabusPage({ school }) {
   const [classes,  setClasses]  = useState([]);
   const [subjects, setSubjects] = useState([]);
+  const [terms,    setTerms]    = useState([]);
+  const [teachers, setTeachers] = useState([]);
   const [selClass, setSelClass] = useState('');
   const [selSubj,  setSelSubj]  = useState('');
-  const [topicsByKey, setTopicsByKey] = useState({}); // { "classId|subjId": [topics] }
-  const [modal,    setModal]    = useState(null); // null | 'add' | topic-object
+  const [topics,   setTopics]   = useState([]);
+  const [loading,  setLoading]  = useState(false);
+  const [modal,    setModal]    = useState(null);
   const [form,     setForm]     = useState({
-    title: '', description: '', term: 'Term 1',
-    durationWeeks: 2, priority: 'medium', group: 'General',
+    title: '', description: '', term_id: '',
+    durationWeeks: 2, priority: 'medium', group: 'General', teacher_id: '',
   });
-  const [view,     setView]     = useState('list');   // 'list' | 'timeline'
+  const [view,     setView]     = useState('list');
   const [search,   setSearch]   = useState('');
   const [fStatus,  setFStatus]  = useState('all');
   const [fTerm,    setFTerm]    = useState('all');
   const [fPriority,setFPriority]= useState('all');
 
+  /* Load classes, subjects, terms, teachers on mount */
   useEffect(() => {
-    ApiClient.get('/api/school/classes/').then(d => setClasses(d.classes   || [])).catch(() => {});
+    ApiClient.get('/api/school/classes/').then(d => setClasses(d.classes || [])).catch(() => {});
     ApiClient.get('/api/school/subjects/').then(d => setSubjects(d.subjects || [])).catch(() => {});
+    ApiClient.get('/api/school/terms/').then(d => setTerms(d.terms || [])).catch(() => {});
+    ApiClient.get('/api/school/teachers/').then(d => setTeachers(d.teachers || [])).catch(() => {});
   }, []);
 
+  /* Load topics when class+subject selected */
+  useEffect(() => {
+    if (!selClass || !selSubj) { setTopics([]); return; }
+    setLoading(true);
+    ApiClient.get(`/api/school/syllabus-topics/?class_id=${selClass}&subject_id=${selSubj}`)
+      .then(d => setTopics(d.topics || []))
+      .catch(() => setTopics([]))
+      .finally(() => setLoading(false));
+  }, [selClass, selSubj]);
+
   const ready = !!(selClass && selSubj);
-  const key   = ready ? `${selClass}|${selSubj}` : '';
-  const selectedClass = classes.find(c  => String(c.id) === String(selClass));
+  const selectedClass = classes.find(c => String(c.id) === String(selClass));
   const selectedSubj  = subjects.find(s => String(s.id) === String(selSubj));
   const selectedClassName = selectedClass?.name || '';
   const selectedSubjName  = selectedSubj?.name  || '';
-  const teacher = ready
-    ? SYL_MOCK_TEACHERS[((selectedSubjName.length || 0) + Number(selClass || 0)) % SYL_MOCK_TEACHERS.length]
-    : '';
-
-  /* Seed mock data the first time a class+subject pair is opened. */
-  useEffect(() => {
-    if (!ready) return;
-    if (topicsByKey[key]) return;
-    setTopicsByKey(prev => ({ ...prev, [key]: sylSeedTopics(selectedSubjName, selClass) }));
-  }, [ready, key, topicsByKey, selectedSubjName, selClass]);
-
-  const topics = ready ? (topicsByKey[key] || []) : [];
-  const setTopics = (updater) =>
-    setTopicsByKey(prev => ({
-      ...prev,
-      [key]: typeof updater === 'function' ? updater(prev[key] || []) : updater,
-    }));
 
   /* ── Derived stats ── */
   const total      = topics.length;
@@ -2036,25 +1983,25 @@ export function SyllabusPage({ school }) {
   /* ── Filter / search ── */
   const visible = topics.filter(t => {
     if (fStatus   !== 'all' && t.status   !== fStatus)   return false;
-    if (fTerm     !== 'all' && t.term     !== fTerm)     return false;
+    if (fTerm     !== 'all' && String(t.term_id) !== String(fTerm)) return false;
     if (fPriority !== 'all' && t.priority !== fPriority) return false;
-    if (search.trim() && !`${t.title} ${t.group} ${t.description}`.toLowerCase().includes(search.toLowerCase())) return false;
+    if (search.trim() && !`${t.title} ${t.group} ${t.description || ''}`.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
 
   /* ── Group visible topics for the list view: term → group → topics ── */
-  const grouped = SYL_TERMS.map(term => {
-    const inTerm = visible.filter(t => t.term === term);
+  const grouped = terms.map(term => {
+    const inTerm = visible.filter(t => String(t.term_id) === String(term.id));
     const groups = {};
     inTerm.forEach(t => { (groups[t.group] = groups[t.group] || []).push(t); });
-    return { term, groups, count: inTerm.length };
+    return { term, termName: term.name, groups, count: inTerm.length };
   });
 
   /* ── Per-term analytics (uses unfiltered topics) ── */
-  const termStats = SYL_TERMS.map(term => {
-    const list = topics.filter(t => t.term === term);
+  const termStats = terms.map(term => {
+    const list = topics.filter(t => String(t.term_id) === String(term.id));
     const done = list.filter(t => t.status === 'completed').length;
-    return { term, total: list.length, completed: done, pct: list.length ? Math.round(done / list.length * 100) : 0 };
+    return { id: term.id, name: term.name, total: list.length, completed: done, pct: list.length ? Math.round(done / list.length * 100) : 0 };
   });
 
   /* ── Alerts ── */
@@ -2064,56 +2011,88 @@ export function SyllabusPage({ school }) {
 
   /* ── Actions ── */
   const openAdd = () => {
-    setForm({ title: '', description: '', term: 'Term 1', durationWeeks: 2, priority: 'medium', group: 'General' });
+    setForm({ title: '', description: '', term_id: '', durationWeeks: 2, priority: 'medium', group: 'General', teacher_id: '' });
     setModal('add');
   };
   const openEdit = (t) => {
     setForm({
       title: t.title, description: t.description || '',
-      term: t.term, durationWeeks: t.durationWeeks || 2,
+      term_id: t.term_id || '', durationWeeks: t.duration_weeks || 2,
       priority: t.priority || 'medium', group: t.group || 'General',
+      teacher_id: t.teacher_id || '',
     });
     setModal(t);
   };
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.title.trim()) return;
-    if (modal === 'add') {
-      setTopics(ts => [...ts, {
-        id: Date.now(), ...form,
-        durationWeeks: Number(form.durationWeeks) || 1,
-        status: 'not_started', dateCovered: null,
-        teacher, lastUpdatedBy: teacher,
-      }]);
-    } else {
-      setTopics(ts => ts.map(t => t.id === modal.id ? {
-        ...t, ...form,
-        durationWeeks: Number(form.durationWeeks) || 1,
-        lastUpdatedBy: teacher,
-      } : t));
+    try {
+      if (modal === 'add') {
+        await ApiClient.post('/api/school/syllabus-topics/', {
+          class_id: selClass,
+          subject_id: selSubj,
+          title: form.title.trim(),
+          description: form.description,
+          term_id: form.term_id || null,
+          group: form.group,
+          priority: form.priority,
+          duration_weeks: Number(form.durationWeeks) || 1,
+          teacher_id: form.teacher_id || null,
+        });
+      } else {
+        await ApiClient.put(`/api/school/syllabus-topics/${modal.id}/`, {
+          title: form.title.trim(),
+          description: form.description,
+          term_id: form.term_id || null,
+          group: form.group,
+          priority: form.priority,
+          duration_weeks: Number(form.durationWeeks) || 1,
+          teacher_id: form.teacher_id || null,
+        });
+      }
+      setModal(null);
+      // Reload topics
+      const d = await ApiClient.get(`/api/school/syllabus-topics/?class_id=${selClass}&subject_id=${selSubj}`);
+      setTopics(d.topics || []);
+    } catch (e) {
+      alert(e.message || 'Failed to save topic.');
     }
-    setModal(null);
   };
-  const setStatus = (id, status) => {
+  const setStatus = async (id, status) => {
     const today = new Date().toISOString().slice(0, 10);
-    setTopics(ts => ts.map(t => t.id === id ? {
-      ...t, status,
-      dateCovered: status === 'completed' ? today : null,
-      lastUpdatedBy: teacher,
-    } : t));
+    try {
+      await ApiClient.put(`/api/school/syllabus-topics/${id}/`, {
+        status,
+        date_covered: status === 'completed' ? today : null,
+      });
+      setTopics(ts => ts.map(t => t.id === id ? {
+        ...t, status,
+        date_covered: status === 'completed' ? today : null,
+      } : t));
+    } catch (e) {
+      alert(e.message || 'Failed to update status.');
+    }
   };
-  const deleteTopic = id => { if (window.confirm('Remove this topic?')) setTopics(ts => ts.filter(t => t.id !== id)); };
+  const deleteTopic = async id => {
+    if (!window.confirm('Remove this topic?')) return;
+    try {
+      await ApiClient.delete(`/api/school/syllabus-topics/${id}/`);
+      setTopics(ts => ts.filter(t => t.id !== id));
+    } catch (e) {
+      alert(e.message || 'Failed to delete topic.');
+    }
+  };
 
   /* ── Build week → topic map for timeline ── */
   const buildTimeline = () => {
-    const result = SYL_TERMS.map(term => {
-      const items = topics.filter(t => t.term === term);
+    const result = terms.map(term => {
+      const items = topics.filter(t => String(t.term_id) === String(term.id));
       let cursor = 1;
       const lanes = items.map(t => {
-        const span = { start: cursor, end: cursor + (t.durationWeeks || 1) - 1, topic: t };
-        cursor += (t.durationWeeks || 1);
+        const span = { start: cursor, end: cursor + (t.duration_weeks || 1) - 1, topic: t };
+        cursor += (t.duration_weeks || 1);
         return span;
       });
-      return { term, lanes, totalWeeks: Math.max(cursor - 1, 1) };
+      return { term, termName: term.name, lanes, totalWeeks: Math.max(cursor - 1, 1) };
     });
     return result;
   };
@@ -2181,8 +2160,7 @@ export function SyllabusPage({ school }) {
                   {selectedClassName} — {selectedSubjName}
                 </div>
                 <div style={{ fontSize: '0.78rem', color: 'var(--ska-text-3)', marginTop: 2 }}>
-                  Teacher: <strong style={{ color: 'var(--ska-text-2)' }}>{teacher}</strong>
-                  &nbsp;·&nbsp; Term: <strong style={{ color: 'var(--ska-text-2)' }}>First Term (active)</strong>
+                  Term: <strong style={{ color: 'var(--ska-text-2)' }}>{terms.find(t => String(t.id) === String(fTerm))?.name || 'All terms'}</strong>
                 </div>
               </div>
             </div>
@@ -2262,7 +2240,7 @@ export function SyllabusPage({ school }) {
                 <span>Term</span>
                 <select className="ska-input" value={fTerm} onChange={e => setFTerm(e.target.value)}>
                   <option value="all">All</option>
-                  {SYL_TERMS.map(t => <option key={t} value={t}>{t}</option>)}
+                  {terms.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
               </label>
               <label className="ska-form-group" style={{ flex: 1, minWidth: 120, margin: 0 }}>
@@ -2289,12 +2267,12 @@ export function SyllabusPage({ school }) {
             <h3 style={{ margin: '0 0 12px', fontSize: '0.95rem', fontWeight: 800, color: 'var(--ska-text)' }}>Term Analytics</h3>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
               {termStats.map(s => (
-                <div key={s.term} style={{
+                <div key={s.id} style={{
                   padding: 12, borderRadius: 10,
                   background: 'var(--ska-surface-high)', border: '1px solid var(--ska-border)',
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
-                    <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--ska-text)' }}>{s.term}</span>
+                    <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--ska-text)' }}>{s.name}</span>
                     <span style={{ fontSize: '0.75rem', color: 'var(--ska-text-3)' }}>{s.completed}/{s.total} topics</span>
                   </div>
                   <SylCoverageBar pct={s.pct} />
@@ -2328,10 +2306,10 @@ export function SyllabusPage({ school }) {
             </div>
           ) : view === 'timeline' ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {timeline.map(({ term, lanes, totalWeeks }) => lanes.length === 0 ? null : (
-                <div key={term} className="ska-card ska-card-pad">
+              {timeline.map(({ term, termName, lanes, totalWeeks }) => lanes.length === 0 ? null : (
+                <div key={term.id} className="ska-card ska-card-pad">
                   <div className="ska-card-head" style={{ marginBottom: 14 }}>
-                    <h2 className="ska-card-title">{term}</h2>
+                    <h2 className="ska-card-title">{termName}</h2>
                     <span className="ska-badge ska-badge--cyan">{totalWeeks} week{totalWeeks !== 1 ? 's' : ''}</span>
                   </div>
                   <div style={{ overflowX: 'auto', paddingBottom: 4 }}>
@@ -2383,10 +2361,10 @@ export function SyllabusPage({ school }) {
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              {grouped.map(({ term, groups, count }) => count === 0 ? null : (
-                <div key={term} className="ska-card ska-card-pad">
+              {grouped.map(({ term, termName, groups, count }) => count === 0 ? null : (
+                <div key={term.id} className="ska-card ska-card-pad">
                   <div className="ska-card-head" style={{ marginBottom: 16 }}>
-                    <h2 className="ska-card-title">{term}</h2>
+                    <h2 className="ska-card-title">{termName}</h2>
                     <span className="ska-badge ska-badge--cyan">{count} topic{count !== 1 ? 's' : ''}</span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -2419,19 +2397,18 @@ export function SyllabusPage({ school }) {
                                     </p>
                                     <SylStatusPill status={t.status} />
                                     <SylPriorityPill priority={t.priority} />
-                                    <span style={{ fontSize: '0.7rem', color: 'var(--ska-text-3)' }}>
-                                      <Ic name="schedule" size="sm" style={{ verticalAlign: 'middle', marginRight: 2 }} />
-                                      {t.durationWeeks}w
-                                    </span>
-                                  </div>
-                                  {t.description && (
-                                    <p style={{ margin: '6px 0 0', fontSize: '0.8125rem', color: 'var(--ska-text-3)' }}>{t.description}</p>
-                                  )}
-                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, marginTop: 6, fontSize: '0.72rem', color: 'var(--ska-text-3)' }}>
-                                    <span><Ic name="person" size="sm" style={{ verticalAlign: 'middle' }} /> {t.teacher}</span>
-                                    {t.dateCovered && <span><Ic name="event_available" size="sm" style={{ verticalAlign: 'middle' }} /> Covered {t.dateCovered}</span>}
-                                    <span><Ic name="history" size="sm" style={{ verticalAlign: 'middle' }} /> Updated by {t.lastUpdatedBy}</span>
-                                  </div>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--ska-text-3)' }}>
+                      <Ic name="schedule" size="sm" style={{ verticalAlign: 'middle', marginRight: 2 }} />
+                      {t.duration_weeks || 1}w
+                    </span>
+                  </div>
+                  {t.description && (
+                    <p style={{ margin: '6px 0 0', fontSize: '0.8125rem', color: 'var(--ska-text-3)' }}>{t.description}</p>
+                  )}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, marginTop: 6, fontSize: '0.72rem', color: 'var(--ska-text-3)' }}>
+                    {t.teacher_name && <span><Ic name="person" size="sm" style={{ verticalAlign: 'middle' }} /> {t.teacher_name}</span>}
+                    {t.date_covered && <span><Ic name="event_available" size="sm" style={{ verticalAlign: 'middle' }} /> Covered {t.date_covered}</span>}
+                  </div>
                                 </div>
                                 <div style={{ display: 'flex', gap: 4, flexShrink: 0, flexDirection: 'column', alignItems: 'flex-end' }}>
                                   <select
@@ -2502,10 +2479,20 @@ export function SyllabusPage({ school }) {
               </label>
               <label className="ska-form-group">
                 <span>Term</span>
-                <select className="ska-input" value={form.term} onChange={e => setForm(f => ({ ...f, term: e.target.value }))}>
-                  {SYL_TERMS.map(t => <option key={t} value={t}>{t}</option>)}
+                <select className="ska-input" value={form.term_id} onChange={e => setForm(f => ({ ...f, term_id: e.target.value }))}>
+                  <option value="">— Select term —</option>
+                  {terms.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
               </label>
+              {teachers.length > 0 && (
+                <label className="ska-form-group">
+                  <span>Teacher</span>
+                  <select className="ska-input" value={form.teacher_id} onChange={e => setForm(f => ({ ...f, teacher_id: e.target.value }))}>
+                    <option value="">— Unassigned —</option>
+                    {teachers.map(t => <option key={t.id} value={t.id}>{t.full_name || t.username || 'Teacher'}</option>)}
+                  </select>
+                </label>
+              )}
               <label className="ska-form-group">
                 <span>Estimated Duration (weeks)</span>
                 <input className="ska-input" type="number" min={1} max={20}
