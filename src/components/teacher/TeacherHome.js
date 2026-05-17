@@ -292,8 +292,11 @@ export default function TeacherHome({ navigateTo }) {
             <div className="tch-home__class-list">
               {assignedClasses.map((cls, i) => {
                 const stats    = cls.gradeStats || {};
-                const lockedPct = stats.total ? (stats.locked / stats.total) * 100 : 0;
-                const draftPct  = stats.total ? (stats.draft  / stats.total) * 100 : 0;
+                const total    = stats.total || 0;
+                const lockedPct = total ? (stats.locked / total) * 100 : 0;
+                const draftPct  = total ? (stats.draft  / total) * 100 : 0;
+                const subjectName = cls.subject?.name || cls.subjects?.[0]?.name || 'No subject';
+                const room = cls.room || 'TBD';
                 return (
                   <motion.div key={cls.id} className="tch-home__class-row"
                     initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
@@ -302,10 +305,10 @@ export default function TeacherHome({ navigateTo }) {
                       <div className="tch-home__class-row-name">{cls.name}</div>
                       <div className="tch-home__class-row-meta">
                         <span className="tch-chip">
-                          <span className="material-symbols-outlined">subject</span>{cls.subject.name}
+                          <span className="material-symbols-outlined">subject</span>{subjectName}
                         </span>
                         <span className="tch-chip">
-                          <span className="material-symbols-outlined">meeting_room</span>{cls.room}
+                          <span className="material-symbols-outlined">meeting_room</span>{room}
                         </span>
                       </div>
                       <div className="tch-completion-bar" style={{ marginTop: 8 }}>

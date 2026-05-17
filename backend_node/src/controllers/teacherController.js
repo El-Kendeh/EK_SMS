@@ -80,12 +80,41 @@ async function getTeacherClasses(req, res) {
     if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
 
     const Class = require('../models/Class');
+    const ClassSubject = require('../models/ClassSubject');
+    const Subject = require('../models/Subject');
+
     const classes = await Class.findAll({
       where: { class_teacher_id: teacher.id },
-      attributes: ['id', 'name', 'form', 'category', 'capacity']
+      attributes: ['id', 'name', 'form', 'category', 'capacity', 'room', 'code', 'stream', 'colour_tag'],
+      include: [
+        {
+          model: ClassSubject,
+          as: 'classSubjects',
+          include: [{ model: Subject, as: 'subject', attributes: ['id', 'name', 'code'] }],
+        },
+      ],
     });
 
-    return res.json(successResponse({ classes }));
+    // Flatten to match frontend shape
+    const formatted = classes.map(cls => {
+      const subjects = (cls.classSubjects || []).map(cs => cs.subject).filter(Boolean);
+      return {
+        id: cls.id,
+        name: cls.name,
+        form: cls.form,
+        category: cls.category,
+        capacity: cls.capacity,
+        room: cls.room || '',
+        code: cls.code || '',
+        stream: cls.stream || '',
+        colour_tag: cls.colour_tag || '',
+        subject: subjects[0] || null,
+        subjects,
+        gradeStats: { total: 0, locked: 0, draft: 0, pending: 0 },
+      };
+    });
+
+    return res.json(successResponse({ classes: formatted }));
   } catch (err) {
     console.error('getTeacherClasses Error:', err);
     return res.status(500).json(errorResponse('Failed to fetch teacher classes'));
