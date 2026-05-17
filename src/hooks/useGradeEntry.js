@@ -21,17 +21,18 @@ export function useGradeEntry(classId) {
       teacherApi.getClassStudents(classId),
       teacherApi.getGradingScheme(),
     ])
-      .then(([studs, schemeData]) => {
+      .then(([studsRes, schemeData]) => {
         if (cancelled) return;
-        setStudents(studs || []);
+        const studsArray = studsRes?.students || studsRes?.data || (Array.isArray(studsRes) ? studsRes : []);
+        setStudents(studsArray);
         setScheme(schemeData);
         // Initialize local grades from student data
         const initial = {};
-        (studs || []).forEach(s => {
-          if (s.currentGrade.status !== 'locked') {
+        studsArray.forEach(s => {
+          if (s.currentGrade?.status !== 'locked') {
             initial[s.id] = {
-              score: s.currentGrade.score !== null ? String(s.currentGrade.score) : '',
-              remarks: s.currentGrade.remarks || '',
+              score: s.currentGrade?.score !== null ? String(s.currentGrade.score) : '',
+              remarks: s.currentGrade?.remarks || '',
             };
           }
         });

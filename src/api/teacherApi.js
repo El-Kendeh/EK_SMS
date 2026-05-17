@@ -71,7 +71,8 @@ export const teacherApi = {
   },
 
   async getGradingScheme() {
-    const res = await fetch(`${API_BASE}/api/school/grading-scheme/`, { headers: authHeaders() });
+    const res = await fetch(`${API_BASE}/api/teacher/grading-scheme/`, { headers: authHeaders() });
+    if (!res.ok) return null;
     const data = await res.json();
     return data.success ? data.scheme : null;
   },
