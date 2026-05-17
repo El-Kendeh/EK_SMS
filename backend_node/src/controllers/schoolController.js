@@ -130,7 +130,10 @@ async function getStudents(req, res) {
 
     const students = await Student.findAll({
       where,
-      include: [{ model: User, attributes: ['first_name', 'last_name', 'email'] }]
+      include: [
+        { model: User, attributes: ['first_name', 'last_name', 'email'] },
+        { model: require('../models/Class'), as: 'classroom', attributes: ['id', 'name'], required: false },
+      ],
     });
     const formatted = students.map(s => {
       const userData = s.User || {};
@@ -140,7 +143,9 @@ async function getStudents(req, res) {
         last_name: userData.last_name,
         email: userData.email || s.email,
         full_name: `${userData.first_name} ${userData.last_name}`.trim(),
-        passport_picture: normalizePath(s.passport_picture)
+        passport_picture: normalizePath(s.passport_picture),
+        classroom: s.classroom?.name || null,
+        classroom_id: s.classroom_id,
       };
     });
     return res.json(successResponse({ students: formatted }));

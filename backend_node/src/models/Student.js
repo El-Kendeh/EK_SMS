@@ -83,6 +83,8 @@ const Student = sequelize.define('Student', {
 });
 
 const User = require('./User');
+const Class = require('./Class');
 Student.belongsTo(User, { foreignKey: 'user_id' });
+Student.belongsTo(Class, { foreignKey: 'classroom_id', as: 'classroom' });
 
 module.exports = Student;
