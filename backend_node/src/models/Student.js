@@ -8,28 +8,20 @@ const Student = sequelize.define('Student', {
   user_id: { type: DataTypes.BIGINT, allowNull: false, unique: true },
   date_of_birth: { type: DataTypes.DATEONLY },
   gender: { type: DataTypes.STRING(10) },
-  
-  // Enrollment
   classroom_id: { type: DataTypes.BIGINT },
   academic_year_id: { type: DataTypes.BIGINT },
   admission_date: { type: DataTypes.DATEONLY },
-  student_type: { type: DataTypes.STRING(20) }, // Day, Boarding
+  student_type: { type: DataTypes.STRING(20) },
   fee_category: { type: DataTypes.STRING(50) },
   status: { type: DataTypes.STRING(20), defaultValue: 'active' },
   is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
-
-  // Bio
   place_of_birth: { type: DataTypes.STRING(200) },
   nationality: { type: DataTypes.STRING(100) },
   religion: { type: DataTypes.STRING(100) },
   home_language: { type: DataTypes.STRING(100) },
-  
-  // Contact
   home_address: { type: DataTypes.TEXT },
   city: { type: DataTypes.STRING(100) },
   phone_number: { type: DataTypes.STRING(20) },
-  
-  // Medical & SEN
   blood_type: { type: DataTypes.STRING(5) },
   allergies: { type: DataTypes.TEXT },
   medical_notes: { type: DataTypes.TEXT },
@@ -39,15 +31,12 @@ const Student = sequelize.define('Student', {
   sen_tier: { type: DataTypes.STRING(20) },
   sen_notes: { type: DataTypes.TEXT },
   sen_iep: { type: DataTypes.BOOLEAN, defaultValue: false },
-  
-  // Guardians
   father_name: { type: DataTypes.STRING(100) },
   father_phone: { type: DataTypes.STRING(20) },
   father_email: { type: DataTypes.STRING(100) },
   father_occupation: { type: DataTypes.STRING(100) },
   father_address: { type: DataTypes.TEXT },
   father_whatsapp: { type: DataTypes.BOOLEAN, defaultValue: false },
-  
   mother_name: { type: DataTypes.STRING(100) },
   mother_phone: { type: DataTypes.STRING(20) },
   mother_email: { type: DataTypes.STRING(100) },
@@ -55,16 +44,12 @@ const Student = sequelize.define('Student', {
   mother_address: { type: DataTypes.TEXT },
   mother_whatsapp: { type: DataTypes.BOOLEAN, defaultValue: false },
   mother_relationship: { type: DataTypes.STRING(50) },
-  
   emergency_name: { type: DataTypes.STRING(100) },
   emergency_relationship: { type: DataTypes.STRING(50) },
   emergency_phone: { type: DataTypes.STRING(20) },
   emergency_address: { type: DataTypes.TEXT },
-
-  // Behavior & Documents
   disciplinary_history: { type: DataTypes.BOOLEAN, defaultValue: false },
   disciplinary_notes: { type: DataTypes.TEXT },
-  
   documents_birth_certificate: { type: DataTypes.BOOLEAN, defaultValue: false },
   documents_passport_photo: { type: DataTypes.BOOLEAN, defaultValue: false },
   documents_previous_school_report: { type: DataTypes.BOOLEAN, defaultValue: false },
@@ -72,10 +57,7 @@ const Student = sequelize.define('Student', {
   documents_medical_report: { type: DataTypes.BOOLEAN, defaultValue: false },
   documents_other: { type: DataTypes.BOOLEAN, defaultValue: false },
   vaccinations: { type: DataTypes.JSON },
-  
-  // Media
   passport_picture: { type: DataTypes.STRING(255) },
-  
   created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
 }, {
   tableName: 'pruh_core_student',
@@ -83,6 +65,8 @@ const Student = sequelize.define('Student', {
 });
 
 const User = require('./User');
+const Class = require('./Class');
 Student.belongsTo(User, { foreignKey: 'user_id' });
+Student.belongsTo(Class, { foreignKey: 'classroom_id', as: 'classroom' });
 
 module.exports = Student;
