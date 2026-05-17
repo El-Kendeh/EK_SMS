@@ -1179,13 +1179,48 @@ async function assignTeachersToSubject(req, res) {
 }
 
 /* ================= ACADEMIC YEARS & TERMS ================= */
+async function updateTerm(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+
+    const { id } = req.params;
+    const { name, start_date, end_date, academic_year_id, is_active } = req.body;
+    const term = await Term.findOne({ where: { id, school_id: school.id } });
+    if (!term) return res.status(404).json(errorResponse('Term not found'));
+
+    await term.update({ name, start_date, end_date, academic_year_id, is_active });
+    return res.json(successResponse({ term }, 'Term updated'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Failed to update term'));
+  }
+}
+
+async function deleteTerm(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+
+    const { id } = req.params;
+    const term = await Term.findOne({ where: { id, school_id: school.id } });
+    if (!term) return res.status(404).json(errorResponse('Term not found'));
+
+    await term.destroy();
+    return res.json(successResponse({}, 'Term deleted'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Failed to delete term'));
+  }
+}
+
 async function getAcademicYears(req, res) {
   try {
     const school = await getSchoolFromUser(req);
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
-    const academic_years = await AcademicYear.findAll({ where: { school_id: school.id } });
-    return res.json(successResponse({ academic_years }));
+    const years = await AcademicYear.findAll({ where: { school_id: school.id }, order: [['start_date', 'DESC']] });
+    return res.json(successResponse({ years }));
   } catch (err) {
     console.error(err);
     return res.status(500).json(errorResponse('Failed to fetch academic years'));
@@ -1214,7 +1249,11 @@ async function getTerms(req, res) {
     const school = await getSchoolFromUser(req);
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
-    const terms = await Term.findAll({ where: { school_id: school.id } });
+    const terms = await Term.findAll({
+      where: { school_id: school.id },
+      include: [{ model: AcademicYear, as: 'academicYear', attributes: ['id', 'name', 'start_date', 'end_date'] }],
+      order: [['created_at', 'DESC']],
+    });
     return res.json(successResponse({ terms }));
   } catch (err) {
     console.error(err);
@@ -1927,7 +1966,7 @@ module.exports = {
   assignStudentsToClass, assignSubjectsToClass,
   getSubjects, createSubject, updateSubject, deleteSubject,
   assignClassesToSubject, assignTeachersToSubject,
-  getAcademicYears, createAcademicYear, getTerms, createTerm,
+  getAcademicYears, createAcademicYear, getTerms, createTerm, updateTerm, deleteTerm,
   getGrades, saveGrades,
   recordAttendance,
   getGradingScheme, setGradingScheme,

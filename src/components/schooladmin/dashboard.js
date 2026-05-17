@@ -14,7 +14,7 @@ import {
 import { StudentsPage } from './SAstudents';
 import {
   ModRequestsPage, GradingSchemePage, AcademicCalendarPage, SecurityPageEnhanced,
-  GradeOversightPage, RoomsPage, ExamOfficersPage, TeacherAssignmentsPage, StudentPromotionPage,
+  GradeOversightPage, RoomsPage, ExamOfficersPage, TeacherAssignmentsPage, StudentPromotionPage, TermsPage,
 } from './SAExtraPages';
 import { ClassesPage } from './SAClasses';
 import { SubjectsPage } from './SASubjects';
@@ -60,6 +60,7 @@ const NAV_ITEMS = [
   { key: 'mod_requests',   icon: 'rate_review',      label: 'Mod Requests' },
   { key: 'grading_scheme', icon: 'grading',          label: 'Grading Scheme' },
   { key: 'academic_cal',   icon: 'event_note',       label: 'Academic Calendar' },
+  { key: 'terms',          icon: 'event',             label: 'Terms' },
   { key: 'rooms',          icon: 'meeting_room',     label: 'Rooms' },
   { key: 'exam_officers',  icon: 'verified_user',    label: 'Exam Officers' },
   { key: 'teacher_assign', icon: 'assignment_ind',   label: 'Assignments' },
@@ -1352,6 +1353,7 @@ export default function SchoolAdminDashboard({ onNavigate }) {
   else if (activePage === 'mod_requests')   pageContent = <ModRequestsPage />;
   else if (activePage === 'grading_scheme') pageContent = <GradingSchemePage />;
   else if (activePage === 'academic_cal')   pageContent = <AcademicCalendarPage />;
+  else if (activePage === 'terms')          pageContent = <TermsPage />;
   else if (activePage === 'grade_oversight')pageContent = <GradeOversightPage />;
   else if (activePage === 'rooms')          pageContent = <RoomsPage />;
   else if (activePage === 'exam_officers')  pageContent = <ExamOfficersPage />;

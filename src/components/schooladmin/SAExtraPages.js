@@ -1207,7 +1207,200 @@ export function ExamOfficersPage() {
               </div>
             ))}
           </div>
-        )}
+      )}
+    </div>
+  );
+}
+
+export function TermsPage() {
+  const { terms, years, loading, error, createTerm, updateTerm, deleteTerm, refresh } = require('../../hooks/useTerms').useTerms();
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState({ name: '', academic_year_id: '', start_date: '', end_date: '', is_active: true });
+  const [saving, setSaving] = useState(false);
+  const [banner, setBanner] = useState(null);
+  const [deleting, setDeleting] = useState(null);
+
+  const openCreate = () => {
+    setEditing(null);
+    setForm({ name: '', academic_year_id: '', start_date: '', end_date: '', is_active: true });
+    setModalOpen(true);
+  };
+
+  const openEdit = (term) => {
+    setEditing(term);
+    setForm({
+      name: term.name || '',
+      academic_year_id: term.academic_year_id || '',
+      start_date: term.start_date ? term.start_date.split('T')[0] : '',
+      end_date: term.end_date ? term.end_date.split('T')[0] : '',
+      is_active: term.is_active !== false,
+    });
+    setModalOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (!form.name || !form.academic_year_id) {
+      setBanner({ type: 'err', text: 'Term name and academic year are required.' });
+      return;
+    }
+    setSaving(true);
+    try {
+      if (editing) {
+        await updateTerm(editing.id, form);
+        setBanner({ type: 'ok', text: 'Term updated successfully.' });
+      } else {
+        await createTerm(form);
+        setBanner({ type: 'ok', text: 'Term created successfully.' });
+      }
+      setModalOpen(false);
+    } catch (e) {
+      setBanner({ type: 'err', text: e.message || 'Failed to save term.' });
+    }
+    setSaving(false);
+  };
+
+  const handleDelete = async () => {
+    if (!deleting) return;
+    try {
+      await deleteTerm(deleting.id);
+      setBanner({ type: 'ok', text: `Term "${deleting.name}" deleted.` });
+    } catch (e) {
+      setBanner({ type: 'err', text: e.message || 'Failed to delete term.' });
+    }
+    setDeleting(null);
+  };
+
+  const setNamePreset = (preset) => {
+    setForm(f => ({ ...f, name: preset }));
+  };
+
+  return (
+    <div className="ska-content">
+      <div className="ska-page-head">
+        <div>
+          <h1 className="ska-page-title">Terms Management</h1>
+          <p className="ska-page-sub">Create and manage academic terms by year</p>
+        </div>
+        <button className="ska-btn ska-btn--primary" onClick={openCreate}>
+          <Ic name="add" size="sm" /> Add Term
+        </button>
+      </div>
+
+      <Banner msg={banner} />
+
+      {error && (
+        <div style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 8, fontSize: '0.8125rem', background: 'var(--ska-error-dim)', color: 'var(--ska-error)', border: '1px solid rgba(239,68,68,.25)' }}>
+          Failed to load terms. <button style={{ background: 'none', border: 'none', color: 'inherit', textDecoration: 'underline', cursor: 'pointer' }} onClick={refresh}>Retry</button>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="ska-card ska-card-pad"><div className="ska-empty"><p className="ska-empty-desc">Loading terms…</p></div></div>
+      ) : terms.length === 0 ? (
+        <div className="ska-card ska-card-pad">
+          <div className="ska-empty">
+            <Ic name="event_note" size="xl" style={{ color: 'var(--ska-text-3)', display: 'block', margin: '0 auto 12px', fontSize: 40 }} />
+            <p className="ska-empty-title">No terms yet</p>
+            <p className="ska-empty-desc">Create your first academic term to get started.</p>
+            <button className="ska-btn ska-btn--primary" onClick={openCreate} style={{ marginTop: 12 }}>
+              <Ic name="add" size="sm" /> Add Term
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="ska-card" style={{ overflowX: 'auto' }}>
+          <table className="ska-table">
+            <thead>
+              <tr>
+                <th>Term</th>
+                <th>Academic Year</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {terms.map(t => (
+                <tr key={t.id}>
+                  <td style={{ fontWeight: 700 }}>{t.name}</td>
+                  <td>{t.academicYear?.name || t.academic_year_id}</td>
+                  <td>{t.start_date ? new Date(t.start_date).toLocaleDateString() : '—'}</td>
+                  <td>{t.end_date ? new Date(t.end_date).toLocaleDateString() : '—'}</td>
+                  <td>
+                    <span style={{
+                      padding: '3px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 700,
+                      background: t.is_active !== false ? 'var(--ska-green-dim)' : 'var(--ska-surface-high)',
+                      color: t.is_active !== false ? 'var(--ska-green)' : 'var(--ska-text-3)',
+                    }}>
+                      {t.is_active !== false ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                  <td style={{ display: 'flex', gap: 8 }}>
+                    <button className="ska-btn ska-btn--sm" onClick={() => openEdit(t)} title="Edit">
+                      <Ic name="edit" size="sm" />
+                    </button>
+                    <button className="ska-btn ska-btn--sm" style={{ color: 'var(--ska-error)' }} onClick={() => setDeleting(t)} title="Delete">
+                      <Ic name="delete" size="sm" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {modalOpen && (
+        <Modal title={editing ? `Edit: ${editing.name}` : 'Add New Term'} onClose={() => setModalOpen(false)}>
+          <label className="ska-form-group">
+            <span>Term Name *</span>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+              {['Term 1', 'Term 2', 'Term 3'].map(p => (
+                <button key={p} type="button" className="ska-btn ska-btn--sm" style={{ flex: 1, background: form.name === p ? 'var(--ska-primary)' : 'var(--ska-surface-high)', color: form.name === p ? '#fff' : 'var(--ska-text)' }} onClick={() => setNamePreset(p)}>{p}</button>
+              ))}
+            </div>
+            <input className="ska-input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g., Term 1, Semester 1" />
+          </label>
+          <label className="ska-form-group">
+            <span>Academic Year *</span>
+            <select className="ska-input" value={form.academic_year_id} onChange={e => setForm(f => ({ ...f, academic_year_id: e.target.value }))}>
+              <option value="">— Select year —</option>
+              {years.map(y => <option key={y.id} value={y.id}>{y.name}</option>)}
+            </select>
+          </label>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <label className="ska-form-group">
+              <span>Start Date</span>
+              <input type="date" className="ska-input" value={form.start_date} onChange={e => setForm(f => ({ ...f, start_date: e.target.value }))} />
+            </label>
+            <label className="ska-form-group">
+              <span>End Date</span>
+              <input type="date" className="ska-input" value={form.end_date} onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))} />
+            </label>
+          </div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20, cursor: 'pointer' }}>
+            <input type="checkbox" checked={form.is_active} onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} />
+            <span style={{ fontSize: '0.875rem' }}>Active</span>
+          </label>
+          <button className="ska-btn ska-btn--primary" style={{ width: '100%' }} disabled={saving} onClick={handleSave}>
+            {saving ? 'Saving…' : (editing ? 'Update Term' : 'Create Term')}
+          </button>
+        </Modal>
+      )}
+
+      {deleting && (
+        <Modal title="Delete Term" onClose={() => setDeleting(null)} width={400}>
+          <p style={{ fontSize: '0.875rem', color: 'var(--ska-text-2)', marginBottom: 20 }}>
+            Are you sure you want to delete <strong>{deleting.name}</strong>? This action cannot be undone.
+          </p>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <button className="ska-btn" style={{ flex: 1 }} onClick={() => setDeleting(null)}>Cancel</button>
+            <button className="ska-btn ska-btn--primary" style={{ flex: 1, background: 'var(--ska-error)' }} onClick={handleDelete}>Delete</button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
