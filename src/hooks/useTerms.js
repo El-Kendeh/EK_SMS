@@ -1,14 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
-import ApiClient from '../api/client';
-
-const api = new ApiClient();
 
 const cache = { terms: null, years: null, fetchedAt: 0 };
 
+function getClient() {
+  const ApiClient = require('../api/client').default || require('../api/client');
+  return ApiClient.instance || (ApiClient.instance = new ApiClient());
+}
+
 export function useTerms() {
-  const [terms, setTerms] = useState(cache.terms || []);
-  const [years, setYears] = useState(cache.years || []);
-  const [loading, setLoading] = useState(!cache.terms);
+  const [terms, setTerms] = useState([]);
+  const [years, setYears] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const fetchTerms = useCallback(async (force = false) => {
@@ -20,6 +22,7 @@ export function useTerms() {
     setLoading(true);
     setError(null);
     try {
+      const api = getClient();
       const [termsRes, yearsRes] = await Promise.all([
         api.request('/api/school/terms/', { method: 'GET' }),
         api.request('/api/school/academic-years/', { method: 'GET' }),
@@ -39,6 +42,7 @@ export function useTerms() {
   }, []);
 
   const createTerm = useCallback(async (data) => {
+    const api = getClient();
     const res = await api.request('/api/school/terms/', { method: 'POST', body: data });
     const newTerm = res.data?.term;
     if (newTerm) {
@@ -50,6 +54,7 @@ export function useTerms() {
   }, []);
 
   const updateTerm = useCallback(async (id, data) => {
+    const api = getClient();
     const res = await api.request(`/api/school/terms/${id}/`, { method: 'PUT', body: data });
     const updated = res.data?.term;
     if (updated && cache.terms) {
@@ -61,6 +66,7 @@ export function useTerms() {
   }, []);
 
   const deleteTerm = useCallback(async (id) => {
+    const api = getClient();
     await api.request(`/api/school/terms/${id}/`, { method: 'DELETE' });
     if (cache.terms) {
       cache.terms = cache.terms.filter(t => t.id !== id);

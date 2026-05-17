@@ -6,6 +6,7 @@
  */
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ApiClient from '../../api/client';
+import { useTerms } from '../../hooks/useTerms';
 
 /* ── Shared helpers ──────────────────────────────────────────── */
 const Ic = ({ name, size, style, className = '' }) => (
@@ -1213,7 +1214,7 @@ export function ExamOfficersPage() {
 }
 
 export function TermsPage() {
-  const { terms, years, loading, error, createTerm, updateTerm, deleteTerm, refresh } = require('../../hooks/useTerms').useTerms();
+  const { terms, years, loading, error, createTerm, updateTerm, deleteTerm, refresh } = useTerms();
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ name: '', academic_year_id: '', start_date: '', end_date: '', is_active: true });
