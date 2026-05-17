@@ -3,6 +3,12 @@
  * Utility functions only — all data comes from the backend.
  */
 
+export function puHealthColor(score) {
+  if (score >= 80) return 'var(--ska-green)';
+  if (score >= 65) return 'var(--ska-tertiary)';
+  return 'var(--ska-error)';
+}
+
 export const fmtUsd = (n) =>
   '$' + Number(n || 0).toLocaleString();
 
