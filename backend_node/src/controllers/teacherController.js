@@ -603,7 +603,7 @@ async function getFeedbackTemplates(req, res) {
         { id: 1, label: 'Excellent', text: 'Excellent work. Keep this up.' },
         { id: 2, label: 'See me', text: 'Please come and see me before the next class.' },
         { id: 3, label: 'Show working', text: 'Show all working — partial credit is awarded for method.' },
-        { id: 4, label: 'Practice more', text: 'You're close — more practice on the homework set will help.' },
+        { id: 4, label: 'Practice more', text: 'You are close - more practice on the homework set will help.' },
       ],
     }));
   } catch (err) {
