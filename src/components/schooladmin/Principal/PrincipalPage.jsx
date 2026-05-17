@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import ApiClient from '../../../api/client';
-import { puHealthColor } from './principal.utils';
 
 import StatsCards       from './StatsCards';
 import HealthScoreCard  from './HealthScoreCard';
