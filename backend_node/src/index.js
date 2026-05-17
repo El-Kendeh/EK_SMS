@@ -127,10 +127,13 @@ app.use('/api', superadminRouter); // Now at /api/schools, /api/impersonate, etc
 app.use('/api/teacher', teacherRouter);
 app.use('/api/student', studentRouter);
 
-// Sync database models
-db.sync({ alter: true }) // Using alter: true to add new tables like 'pruh_core_otp' without dropping data
+// Sync database models — use alter only in dev; in production the schema is managed manually
+db.sync({ alter: process.env.NODE_ENV !== 'production' })
   .then(() => console.log('✅ Database synchronized'))
-  .catch(err => console.error('❌ Database sync failed:', err));
+  .catch(err => {
+    console.error('❌ Database sync failed:', err.message);
+    console.warn('⚠️  Continuing without sync — ensure schema is up to date manually.');
+  });
 
 // 404 Handler for undefined routes
 app.use((req, res) => {
