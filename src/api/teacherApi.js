@@ -448,10 +448,6 @@ export const teacherApi = {
 
   // ── Teacher ↔ Parent threads ───────────────────────────────────────
   async getParentThreads() {
-    if (USE_MOCK) {
-      await delay();
-      return Object.entries(mockTeacherParentThreads).map(([childId, t]) => ({ childId, ...t }));
-    }
     const res = await fetch(`${API_BASE}/api/teacher/parent-threads/`, { headers: authHeaders() });
     return res.json();
   },
@@ -481,12 +477,6 @@ export const teacherApi = {
     return res.json();
   },
   async fileBehaviourIncident({ studentId, type, severity, title, notes, evidenceFiles }) {
-    if (USE_MOCK) {
-      await delay(700);
-      const inc = { id: `bi-${Date.now()}`, studentId, type, severity, title, notes, reportedAt: new Date().toISOString(), evidenceUrls: (evidenceFiles || []).map((f) => f.name) };
-      mockBehaviourIncidents.unshift(inc);
-      return inc;
-    }
     const fd = new FormData();
     fd.append('student_id', studentId);
     fd.append('type', type);
@@ -534,7 +524,6 @@ export const teacherApi = {
 
   // ── Bulk feedback templates ────────────────────────────────────────
   async getFeedbackTemplates() {
-    if (USE_MOCK) { await delay(150); return mockBulkFeedbackTemplates; }
     const res = await fetch(`${API_BASE}/api/teacher/feedback-templates/`, { headers: authHeaders() });
     return res.json();
   },
