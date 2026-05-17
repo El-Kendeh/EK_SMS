@@ -46,8 +46,6 @@ const {
   getMessages, sendMessage,
   // Parent
   createParent,
-  // Principal users
-  getPrincipalUsers, createPrincipalUser, updatePrincipalUser,
   // Timetable
   generateTimetable, deleteTimetable,
   // Modification requests
