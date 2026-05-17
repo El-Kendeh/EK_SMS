@@ -45,19 +45,12 @@ function formatCalDate(dateStr) {
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }
 
-const MOCK_ACTIVITY = [
-  { id: 1, type: 'grade_viewed',     studentName: 'Amara Koroma',   detail: 'Viewed their Mathematics grade',          time: new Date(Date.now() - 12 * 60000).toISOString() },
-  { id: 2, type: 'parent_notified',  studentName: 'Ibrahim Sesay',  detail: 'Parent notified of English grade lock',   time: new Date(Date.now() - 45 * 60000).toISOString() },
-  { id: 3, type: 'report_downloaded',studentName: 'Fatima Bangura', detail: 'Downloaded term report card',             time: new Date(Date.now() - 2 * 3600000).toISOString() },
-  { id: 4, type: 'grade_viewed',     studentName: 'Mohamed Conteh', detail: 'Viewed their Science grade',             time: new Date(Date.now() - 3 * 3600000).toISOString() },
-];
-
 export default function TeacherHome({ navigateTo }) {
   const { assignedClasses, pendingCounts, currentTerm, actionFeedback, clearActionFeedback } = useTeacher();
   const { profile } = useTeacherProfile();
   const { notifications } = useTeacherNotifications();
   const { timetable } = useTeacherTimetable();
-  const [activity, setActivity] = useState(MOCK_ACTIVITY);
+  const [activity, setActivity] = useState([]);
   const [attendanceStatus, setAttendanceStatus] = useState({ classes: [], at_risk: [] });
   const [atRiskStudents, setAtRiskStudents] = useState([]);
   const [modSummary, setModSummary] = useState({ pending: 0, approved: 0, rejected: 0 });
@@ -292,8 +285,11 @@ export default function TeacherHome({ navigateTo }) {
             <div className="tch-home__class-list">
               {assignedClasses.map((cls, i) => {
                 const stats    = cls.gradeStats || {};
-                const lockedPct = stats.total ? (stats.locked / stats.total) * 100 : 0;
-                const draftPct  = stats.total ? (stats.draft  / stats.total) * 100 : 0;
+                const total    = stats.total || 0;
+                const lockedPct = total ? (stats.locked / total) * 100 : 0;
+                const draftPct  = total ? (stats.draft  / total) * 100 : 0;
+                const subjectName = cls.subject?.name || cls.subjects?.[0]?.name || 'No subject';
+                const room = cls.room || 'TBD';
                 return (
                   <motion.div key={cls.id} className="tch-home__class-row"
                     initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
@@ -302,10 +298,10 @@ export default function TeacherHome({ navigateTo }) {
                       <div className="tch-home__class-row-name">{cls.name}</div>
                       <div className="tch-home__class-row-meta">
                         <span className="tch-chip">
-                          <span className="material-symbols-outlined">subject</span>{cls.subject.name}
+                          <span className="material-symbols-outlined">subject</span>{subjectName}
                         </span>
                         <span className="tch-chip">
-                          <span className="material-symbols-outlined">meeting_room</span>{cls.room}
+                          <span className="material-symbols-outlined">meeting_room</span>{room}
                         </span>
                       </div>
                       <div className="tch-completion-bar" style={{ marginTop: 8 }}>

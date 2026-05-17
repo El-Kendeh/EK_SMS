@@ -5,12 +5,6 @@ import { teacherApi } from '../../api/teacherApi';
 import { getPeriodsForDay, getPeriodClass, isPeriodNow, getCurrentDay, getWorkloadSummary } from '../../utils/teacherUtils';
 import './TimetableScreen.css';
 
-const MOCK_EXAM_DUTIES = [
-  { id: 1, exam_name: 'Mid-Term Mathematics Exam',  date: new Date(Date.now() + 3  * 86400000).toISOString().split('T')[0], start_time: '09:00', end_time: '12:00', venue: 'Hall A', class_name: 'Form 3A', subject: 'Mathematics', role: 'Invigilator',  status: 'upcoming' },
-  { id: 2, exam_name: 'End-of-Term Science Exam',   date: new Date(Date.now() + 10 * 86400000).toISOString().split('T')[0], start_time: '14:00', end_time: '16:00', venue: 'Room 12', class_name: 'Form 4B', subject: 'Science',     role: 'Examiner',    status: 'upcoming' },
-  { id: 3, exam_name: 'English Literature Mock',    date: new Date(Date.now() - 5  * 86400000).toISOString().split('T')[0], start_time: '09:00', end_time: '11:00', venue: 'Hall B', class_name: 'Form 3A', subject: 'English',     role: 'Invigilator',  status: 'completed' },
-];
-
 function formatExamDate(dateStr) {
   const d    = new Date(dateStr);
   const today = new Date(); today.setHours(0,0,0,0);
@@ -55,10 +49,9 @@ export default function TimetableScreen({ navigateTo }) {
     setLoadingDuties(true);
     teacherApi.getExamDuties()
       .then(data => {
-        const duties = data.duties || [];
-        setExamDuties(duties.length > 0 ? duties : MOCK_EXAM_DUTIES);
+        setExamDuties(data.duties || []);
       })
-      .catch(() => setExamDuties(MOCK_EXAM_DUTIES))
+      .catch(() => setExamDuties([]))
       .finally(() => setLoadingDuties(false));
   }, [activeTab]);
 

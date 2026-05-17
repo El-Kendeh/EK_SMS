@@ -18,8 +18,15 @@ const ClassSubject = sequelize.define('ClassSubject', {
 });
 
 const Class = require('./Class');
+<<<<<<< HEAD
 ClassSubject.belongsTo(Class, { foreignKey: 'class_id', as: 'class' });
 ClassSubject.belongsTo(Subject, { foreignKey: 'subject_id', as: 'subject' });
 ClassSubject.belongsTo(Teacher, { foreignKey: 'teacher_id' });
+=======
+
+ClassSubject.belongsTo(Class, { foreignKey: 'class_id', as: 'class' });
+ClassSubject.belongsTo(Subject, { foreignKey: 'subject_id', as: 'subject' });
+ClassSubject.belongsTo(Teacher, { foreignKey: 'teacher_id', as: 'teacher' });
+>>>>>>> 822da3806a517c3a2c4dc393a8df97da47ac0ad7
 
 module.exports = ClassSubject;
