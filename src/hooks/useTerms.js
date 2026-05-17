@@ -1,11 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
+import apiClient from '../api/client';
 
 const cache = { terms: null, years: null, fetchedAt: 0 };
-
-function getClient() {
-  const ApiClient = require('../api/client').default || require('../api/client');
-  return ApiClient.instance || (ApiClient.instance = new ApiClient());
-}
 
 export function useTerms() {
   const [terms, setTerms] = useState([]);
@@ -22,13 +18,12 @@ export function useTerms() {
     setLoading(true);
     setError(null);
     try {
-      const api = getClient();
       const [termsRes, yearsRes] = await Promise.all([
-        api.request('/api/school/terms/', { method: 'GET' }),
-        api.request('/api/school/academic-years/', { method: 'GET' }),
+        apiClient.get('/api/school/terms/'),
+        apiClient.get('/api/school/academic-years/'),
       ]);
-      const t = termsRes.data?.terms || [];
-      const y = yearsRes.data?.years || [];
+      const t = termsRes.terms || [];
+      const y = yearsRes.years || [];
       cache.terms = t;
       cache.years = y;
       cache.fetchedAt = Date.now();
@@ -42,9 +37,8 @@ export function useTerms() {
   }, []);
 
   const createTerm = useCallback(async (data) => {
-    const api = getClient();
-    const res = await api.request('/api/school/terms/', { method: 'POST', body: data });
-    const newTerm = res.data?.term;
+    const res = await apiClient.post('/api/school/terms/', data);
+    const newTerm = res.term;
     if (newTerm) {
       cache.terms = [newTerm, ...(cache.terms || [])];
       cache.fetchedAt = Date.now();
@@ -54,9 +48,8 @@ export function useTerms() {
   }, []);
 
   const updateTerm = useCallback(async (id, data) => {
-    const api = getClient();
-    const res = await api.request(`/api/school/terms/${id}/`, { method: 'PUT', body: data });
-    const updated = res.data?.term;
+    const res = await apiClient.put(`/api/school/terms/${id}/`, data);
+    const updated = res.term;
     if (updated && cache.terms) {
       cache.terms = cache.terms.map(t => t.id === id ? updated : t);
       cache.fetchedAt = Date.now();
@@ -66,8 +59,7 @@ export function useTerms() {
   }, []);
 
   const deleteTerm = useCallback(async (id) => {
-    const api = getClient();
-    await api.request(`/api/school/terms/${id}/`, { method: 'DELETE' });
+    await apiClient.delete(`/api/school/terms/${id}/`);
     if (cache.terms) {
       cache.terms = cache.terms.filter(t => t.id !== id);
       cache.fetchedAt = Date.now();
