@@ -120,12 +120,12 @@ app.post('/api/logs/', logFrontendEvent); // Support both with and without trail
 app.post('/api/test-email', testEmail);
 app.post('/api/test-email/', testEmail);
 
-// Mount routers
+// Mount routers - SPECIFIC paths BEFORE catch-all /api routers
 app.use('/api', authRouter);
-app.use('/api', schoolRouter);
-app.use('/api', superadminRouter); // Now at /api/schools, /api/impersonate, etc.
 app.use('/api/teacher', teacherRouter);
 app.use('/api/student', studentRouter);
+app.use('/api', schoolRouter);
+app.use('/api', superadminRouter);
 
 // Sync database models — use alter only in dev; in production the schema is managed manually
 db.sync({ alter: process.env.NODE_ENV !== 'production' })
