@@ -5,20 +5,6 @@ import { teacherApi } from '../../api/teacherApi';
 import { formatRelativeTime } from '../../utils/teacherUtils';
 import './FeedbackScreen.css';
 
-const MOCK_STUDENTS = [
-  { id: 1, name: 'Amara Koroma',    className: 'Form 3A', subject: 'Mathematics', unreadCount: 2 },
-  { id: 2, name: 'Ibrahim Sesay',   className: 'Form 3A', subject: 'Mathematics', unreadCount: 0 },
-  { id: 3, name: 'Fatima Bangura',  className: 'Form 4B', subject: 'Mathematics', unreadCount: 1 },
-  { id: 4, name: 'Mohamed Conteh',  className: 'Form 4B', subject: 'Mathematics', unreadCount: 0 },
-  { id: 5, name: 'Aminata Kamara',  className: 'Form 3A', subject: 'Mathematics', unreadCount: 0 },
-];
-
-const MOCK_MESSAGES = (studentId) => [
-  { id: 1, message: `Good progress this term — keep it up!`, sender: 'teacher', created_at: new Date(Date.now() - 2 * 3600000).toISOString() },
-  { id: 2, message: `Thank you, sir/madam! I will work harder.`, sender: 'student', created_at: new Date(Date.now() - 1.5 * 3600000).toISOString() },
-  { id: 3, message: `Focus on your calculation speed for the final exam. Try timed exercises.`, sender: 'teacher', created_at: new Date(Date.now() - 30 * 60000).toISOString() },
-];
-
 export default function FeedbackScreen({ navigateTo }) {
   const { assignedClasses } = useTeacher();
   const [students, setStudents]         = useState([]);
@@ -39,10 +25,9 @@ export default function FeedbackScreen({ navigateTo }) {
     setLoading(true);
     teacherApi.getFeedbackStudents()
       .then(data => {
-        const list = data.students || [];
-        setStudents(list.length > 0 ? list : MOCK_STUDENTS);
+        setStudents(data.students || []);
       })
-      .catch(() => setStudents(MOCK_STUDENTS))
+      .catch(() => setStudents([]))
       .finally(() => setLoading(false));
   }, []);
 
@@ -52,10 +37,9 @@ export default function FeedbackScreen({ navigateTo }) {
     setMessages([]);
     teacherApi.getFeedbackMessages(selected.id)
       .then(data => {
-        const list = data.messages || [];
-        setMessages(list.length > 0 ? list : MOCK_MESSAGES(selected.id));
+        setMessages(data.messages || []);
       })
-      .catch(() => setMessages(MOCK_MESSAGES(selected.id)))
+      .catch(() => setMessages([]))
       .finally(() => setLoadingMsgs(false));
   }, [selected]);
 

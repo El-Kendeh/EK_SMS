@@ -45,19 +45,12 @@ function formatCalDate(dateStr) {
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }
 
-const MOCK_ACTIVITY = [
-  { id: 1, type: 'grade_viewed',     studentName: 'Amara Koroma',   detail: 'Viewed their Mathematics grade',          time: new Date(Date.now() - 12 * 60000).toISOString() },
-  { id: 2, type: 'parent_notified',  studentName: 'Ibrahim Sesay',  detail: 'Parent notified of English grade lock',   time: new Date(Date.now() - 45 * 60000).toISOString() },
-  { id: 3, type: 'report_downloaded',studentName: 'Fatima Bangura', detail: 'Downloaded term report card',             time: new Date(Date.now() - 2 * 3600000).toISOString() },
-  { id: 4, type: 'grade_viewed',     studentName: 'Mohamed Conteh', detail: 'Viewed their Science grade',             time: new Date(Date.now() - 3 * 3600000).toISOString() },
-];
-
 export default function TeacherHome({ navigateTo }) {
   const { assignedClasses, pendingCounts, currentTerm, actionFeedback, clearActionFeedback } = useTeacher();
   const { profile } = useTeacherProfile();
   const { notifications } = useTeacherNotifications();
   const { timetable } = useTeacherTimetable();
-  const [activity, setActivity] = useState(MOCK_ACTIVITY);
+  const [activity, setActivity] = useState([]);
   const [attendanceStatus, setAttendanceStatus] = useState({ classes: [], at_risk: [] });
   const [atRiskStudents, setAtRiskStudents] = useState([]);
   const [modSummary, setModSummary] = useState({ pending: 0, approved: 0, rejected: 0 });
