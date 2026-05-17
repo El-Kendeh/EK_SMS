@@ -13,6 +13,7 @@ const schoolRouter = require('./routes/school');
 const teacherRouter = require('./routes/teacher');
 const studentRouter = require('./routes/student');
 const superadminRouter = require('./routes/superadmin');
+const principalRouter = require('./routes/principal');
 const { logFrontendEvent } = require('./controllers/loggingController');
 const { testEmail } = require('./controllers/testController');
 
@@ -124,6 +125,7 @@ app.post('/api/test-email/', testEmail);
 app.use('/api', authRouter);
 app.use('/api/teacher', teacherRouter);
 app.use('/api/student', studentRouter);
+app.use('/api/principal', principalRouter);
 app.use('/api', schoolRouter);
 app.use('/api', superadminRouter);
 

@@ -1,9 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import ApiClient from '../../../api/client';
-import {
-  puEnrich, schoolSummary, buildAlerts, buildInsights,
-  classPerformance, teacherInsights, financeSnapshot, activityFeed,
-} from './principal.utils';
+import { puHealthColor } from './principal.utils';
 
 import StatsCards       from './StatsCards';
 import HealthScoreCard  from './HealthScoreCard';
@@ -34,14 +31,6 @@ function Banner({ msg }) {
   );
 }
 
-/**
- * Principal page — School Command Dashboard.
- * Backend logic untouched (same /api/school/principal-users/ endpoints).
- *
- * `onNavigate` (optional) — invoked by Quick Actions with a page key
- * (e.g. 'analytics', 'teachers'). Wire it from dashboard.js if you want
- * cross-page navigation.
- */
 export default function PrincipalPage({ school, onNavigate }) {
   const [rawUsers,     setRawUsers]     = useState([]);
   const [loading,      setLoading]      = useState(true);
@@ -53,25 +42,62 @@ export default function PrincipalPage({ school, onNavigate }) {
   const [statusFilter, setStatusFilter] = useState('all');
   const [detailsUser,  setDetailsUser]  = useState(null);
 
+  const [dashboard,    setDashboard]    = useState(null);
+  const [classPerf,    setClassPerf]    = useState({ top: [], low: [] });
+  const [teacherData,  setTeacherData]  = useState({ overloaded: 0, underperforming: 0, pendingGrades: 0 });
+  const [financeData,  setFinanceData]  = useState({ revenue: 0, outstanding: 0, paymentsToday: 0, transactions: [] });
+  const [activityItems, setActivityItems] = useState([]);
+  const [alerts,       setAlerts]       = useState([]);
+  const [insights,     setInsights]     = useState([]);
+
   const load = useCallback(() => {
     setLoading(true);
-    ApiClient.get('/api/school/principal-users/')
-      .then(d => setRawUsers(d.principal_users || []))
-      .catch(() => setRawUsers([]))
-      .finally(() => setLoading(false));
+    Promise.all([
+      ApiClient.get('/api/school/principal-users/').then(d => setRawUsers(d.principal_users || [])).catch(() => setRawUsers([])),
+      ApiClient.get('/api/principal/dashboard/').then(d => setDashboard(d)).catch(() => {}),
+      ApiClient.get('/api/principal/class-performance/').then(d => setClassPerf(d || { top: [], low: [] })).catch(() => {}),
+      ApiClient.get('/api/principal/teacher-insights/').then(d => setTeacherData(d || {})).catch(() => {}),
+      ApiClient.get('/api/principal/finance-snapshot/').then(d => setFinanceData(d || {})).catch(() => {}),
+      ApiClient.get('/api/principal/activity-feed/').then(d => setActivityItems(d?.items || [])).catch(() => {}),
+    ]).finally(() => setLoading(false));
   }, []);
+
   useEffect(() => { load(); }, [load]);
 
-  const users    = useMemo(() => rawUsers.map((u, i) => puEnrich(u, i)), [rawUsers]);
-  const summary  = useMemo(() => schoolSummary(users, school), [users, school]);
-  const alerts   = useMemo(() => buildAlerts(summary), [summary]);
-  const insights = useMemo(() => buildInsights(summary), [summary]);
-  const classes  = useMemo(() => classPerformance(summary, school), [summary, school]);
-  const tInsight = useMemo(() => teacherInsights(summary, school), [summary, school]);
-  const finance  = useMemo(() => financeSnapshot(summary, school), [summary, school]);
-  const feed     = useMemo(() => activityFeed(users), [users]);
+  useEffect(() => {
+    if (!dashboard) return;
+    const d = dashboard;
+    const newAlerts = [];
+    if (d.totalGradeMods > 0) {
+      newAlerts.push({ key: 'grades', tone: 'critical', icon: 'edit_note', title: `${d.totalGradeMods} grade modification attempt${d.totalGradeMods > 1 ? 's' : ''}`, detail: 'Audit teacher access and review change history.' });
+    }
+    if (d.totalAtRisk > 5) {
+      newAlerts.push({ key: 'atrisk', tone: 'warning', icon: 'trending_down', title: `${d.totalAtRisk} students at academic risk`, detail: 'Convene a support meeting and assign mentors.' });
+    }
+    if (d.totalFinAnom > 0) {
+      newAlerts.push({ key: 'finanom', tone: 'critical', icon: 'account_balance', title: 'Financial anomaly detected', detail: `${d.totalFinAnom} unusual transaction${d.totalFinAnom > 1 ? 's' : ''} in last 24h.` });
+    }
+    if (d.totalLowAttend > 0) {
+      newAlerts.push({ key: 'lowatt', tone: 'warning', icon: 'event_busy', title: 'Low attendance classes', detail: `${d.totalLowAttend} class${d.totalLowAttend > 1 ? 'es' : ''} below 85% attendance.` });
+    }
+    setAlerts(newAlerts);
 
-  /* CRUD handlers — backend untouched */
+    const newInsights = [];
+    if (d.avgAcademic < 75) newInsights.push('Consider a curriculum review for underperforming classes.');
+    if (d.avgAttendance < 88) newInsights.push('Attendance dropping — schedule home visits.');
+    if (d.totalAtRisk > 8) newInsights.push(`${d.totalAtRisk} students at risk — convene a support meeting.`);
+    if (d.finance !== 'Stable') newInsights.push('Finance status is unstable — review collections this week.');
+    if (newInsights.length === 0) newInsights.push('All key metrics within target. Keep monitoring trend lines.');
+    setInsights(newInsights);
+  }, [dashboard]);
+
+  const summary = useMemo(() => {
+    if (!dashboard) {
+      return { totalStudents: 0, totalTeachers: 0, totalClasses: 0, avgAcademic: 0, avgAttendance: 0, finance: 'Stable', healthScore: 0 };
+    }
+    return dashboard;
+  }, [dashboard]);
+
   const handleCreate = async (payload) => {
     setSaving(true);
     try {
@@ -84,6 +110,7 @@ export default function PrincipalPage({ school, onNavigate }) {
     }
     setSaving(false);
   };
+
   const handleToggle = async (u) => {
     try {
       const res = await ApiClient.put(`/api/school/principal-users/${u.id}/`, {});
@@ -94,12 +121,12 @@ export default function PrincipalPage({ school, onNavigate }) {
       setBanner({ type: 'err', text: 'Failed to update status.' });
     }
   };
+
   const handleEdit = (u) =>
     setBanner({ type: 'ok', text: `Edit ${u.full_name}'s leadership profile (coming soon).` });
 
-  /* Filtering */
-  const totalCount = users.length;
-  const visibleUsers = users.filter(u => {
+  const totalCount = rawUsers.length;
+  const visibleUsers = rawUsers.filter(u => {
     if (roleFilter !== 'all' && u.role !== roleFilter) return false;
     if (statusFilter === 'active'    && !u.is_active) return false;
     if (statusFilter === 'suspended' &&  u.is_active) return false;
@@ -110,7 +137,7 @@ export default function PrincipalPage({ school, onNavigate }) {
     return true;
   });
 
-  const existingEmails = users.map(u => (u.email || '').trim().toLowerCase()).filter(Boolean);
+  const existingEmails = rawUsers.map(u => (u.email || '').trim().toLowerCase()).filter(Boolean);
 
   return (
     <div className="ska-content pu-page">
@@ -129,17 +156,13 @@ export default function PrincipalPage({ school, onNavigate }) {
 
       <Banner msg={banner} />
 
-      {/* 1. Executive KPI cards */}
       <StatsCards summary={summary} loading={loading} />
-
-      {/* 2. School Health Score (hero) */}
       <HealthScoreCard summary={summary} loading={loading} />
 
-      {/* 3+4. 2-column row: left academic/teacher, right alerts/insights */}
       <div className="pu-two-col">
         <div className="pu-two-col__left">
-          <ClassPerformance data={classes} />
-          <TeacherPanel data={tInsight}
+          <ClassPerformance data={classPerf} />
+          <TeacherPanel data={teacherData}
             onManage={onNavigate ? () => onNavigate('teachers') : undefined} />
         </div>
         <div className="pu-two-col__right">
@@ -148,20 +171,17 @@ export default function PrincipalPage({ school, onNavigate }) {
         </div>
       </div>
 
-      {/* 5+6. Finance + Quick Actions side by side */}
       <div className="pu-two-col">
         <div className="pu-two-col__left">
-          <FinancePanel data={finance} />
+          <FinancePanel data={financeData} />
         </div>
         <div className="pu-two-col__right">
           <QuickActions onAction={(target) => onNavigate ? onNavigate(target) : null} />
         </div>
       </div>
 
-      {/* 7. Activity feed */}
-      <ActivityFeed items={feed} />
+      <ActivityFeed items={activityItems} />
 
-      {/* ── Add form ── */}
       {showForm && (
         <AddPrincipalForm
           existingEmails={existingEmails}
@@ -170,7 +190,6 @@ export default function PrincipalPage({ school, onNavigate }) {
           onCancel={() => setShowForm(false)} />
       )}
 
-      {/* ── Principal Staff Management ── */}
       <div className="pu-section-divider">
         <Ic name="admin_panel_settings" size="sm" />
         <strong>Principal Staff Management</strong>
@@ -223,6 +242,10 @@ export default function PrincipalPage({ school, onNavigate }) {
       {detailsUser && (
         <PrincipalDetails
           u={detailsUser}
+          dashboard={dashboard}
+          classPerf={classPerf}
+          teacherData={teacherData}
+          financeData={financeData}
           onClose={() => setDetailsUser(null)}
           onEdit={(u) => { setDetailsUser(null); handleEdit(u); }}
           onToggle={handleToggle} />

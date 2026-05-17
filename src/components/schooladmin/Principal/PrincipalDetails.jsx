@@ -1,72 +1,36 @@
 import React from 'react';
 import { PU_ROLES, PU_ACCESS_LEVELS, PU_FINANCE_STYLE } from './principal.constants';
-import { puHash, fmtUsd } from './principal.utils';
+import { fmtUsd } from './principal.utils';
 import { PuRoleBadge } from './PrincipalCard';
 
 const Ic = ({ name, size, style }) => (
   <span className={`ska-icon${size ? ` ska-icon--${size}` : ''}`} aria-hidden="true" style={style}>{name}</span>
 );
 
-/**
- * Detail modal for a principal — leadership dashboard view of one staff
- * member's oversight scope: school overview, academic, teachers, syllabus,
- * finance, alerts, decision insights, recent actions.
- */
-export default function PrincipalDetails({ u, onClose, onEdit, onToggle }) {
+export default function PrincipalDetails({ u, dashboard, classPerf, teacherData, financeData, onClose, onEdit, onToggle }) {
   const r  = PU_ROLES[u.role] || PU_ROLES.Principal;
-  const al = PU_ACCESS_LEVELS[u.access] || PU_ACCESS_LEVELS.Full;
-  const fs = PU_FINANCE_STYLE[u.finance] || PU_FINANCE_STYLE.Stable;
-  const h  = puHash(u.email || u.id);
+  const al = PU_ACCESS_LEVELS[u.access_level] || PU_ACCESS_LEVELS.Full;
+  const fs = PU_FINANCE_STYLE[u.finance || dashboard?.finance || 'Stable'] || PU_FINANCE_STYLE.Stable;
   const initials = (u.full_name || u.email || '?').trim().charAt(0).toUpperCase();
 
-  /* Deterministic mock breakdowns */
-  const topClasses = [
-    { name: 'Grade 11A', score: 88 + (h % 7) },
-    { name: 'Grade 9B',  score: 84 + (h % 6) },
-    { name: 'Grade 12A', score: 82 + (h % 5) },
-  ];
-  const lowClasses = [
-    { name: 'Grade 8A',  score: 56 + (h % 8) },
-    { name: 'Grade 10B', score: 60 + (h % 5) },
-  ];
-  const trend = [62, 65, 70, 72, 71, 76, u.academic];
-
-  const teacherInsights = {
-    overloaded:      2 + (h % 3),
-    underperforming: 1 + (h % 3),
-    pendingGrades:   8 + (h % 12),
-  };
-
-  const syllabus = [
-    { name: 'Mathematics', pct: 78 + (h % 12), pending: 'Calculus intro' },
-    { name: 'English',     pct: 84 + (h % 8),  pending: 'Essay writing' },
-    { name: 'Science',     pct: 70 + (h % 14), pending: 'Lab reports' },
-    { name: 'Social',      pct: 88 + (h % 6),  pending: '—' },
-  ];
-
-  const finance = {
-    revenue:     45000 + (h % 9000),
-    outstanding: 8000  + (h % 4000),
-    transactions: [
-      { label: 'Tuition payment — Grade 11', amount: 1200 + (h % 300), at: 'Today, 10:24' },
-      { label: 'Lab fees — Grade 9',         amount: 450  + (h % 120), at: 'Today, 09:11' },
-      { label: 'Bus fee — multiple',         amount: 870  + (h % 200), at: 'Yesterday' },
-    ],
-  };
+  const topClasses = classPerf?.top || [];
+  const lowClasses = classPerf?.low || [];
+  const tInsights = teacherData || { overloaded: 0, underperforming: 0, pendingGrades: 0 };
+  const finance = financeData || { revenue: 0, outstanding: 0, transactions: [] };
 
   const alerts = [
-    u.flags.gradeMods > 0 ? { kind: 'err',  text: `${u.flags.gradeMods} grade modification attempt${u.flags.gradeMods > 1 ? 's' : ''} flagged` } : null,
-    u.flags.lowAttend     ? { kind: 'warn', text: `Low attendance detected — ${u.attendance}% school-wide` } : null,
-    u.flags.finAnomaly    ? { kind: 'err',  text: 'Financial anomaly detected in last 24h' } : null,
-    u.flags.atRisk > 3    ? { kind: 'warn', text: `${u.flags.atRisk} students at academic risk` } : null,
+    dashboard?.totalGradeMods > 0 ? { kind: 'err',  text: `${dashboard.totalGradeMods} grade modification attempt${dashboard.totalGradeMods > 1 ? 's' : ''} flagged` } : null,
+    dashboard?.totalLowAttend > 0 ? { kind: 'warn', text: `Low attendance detected — ${dashboard.avgAttendance}% school-wide` } : null,
+    dashboard?.totalFinAnom > 0   ? { kind: 'err',  text: 'Financial anomaly detected in last 24h' } : null,
+    dashboard?.totalAtRisk > 3    ? { kind: 'warn', text: `${dashboard.totalAtRisk} students at academic risk` } : null,
   ].filter(Boolean);
 
   const insights = [
-    teacherInsights.overloaded > 2     ? '💡 Consider assigning more teachers to Grade 9' : null,
-    u.attendance < 88                  ? '💡 Attendance dropping in Grade 10B — schedule home visits' : null,
-    finance.outstanding > 9000         ? '💡 High outstanding fees this term — send reminders' : null,
-    u.academic < 75                    ? '💡 Grade 9 performance declining — consider curriculum review' : null,
-    teacherInsights.pendingGrades > 12 ? '💡 Many pending grades — nudge teachers before report cards' : null,
+    tInsights.overloaded > 2     ? 'Consider assigning more teachers to reduce workload' : null,
+    dashboard?.avgAttendance < 88 ? 'Attendance dropping — schedule home visits' : null,
+    finance.outstanding > 9000    ? 'High outstanding fees this term — send reminders' : null,
+    dashboard?.avgAcademic < 75   ? 'Performance declining — consider curriculum review' : null,
+    tInsights.pendingGrades > 12  ? 'Many pending grades — nudge teachers before report cards' : null,
   ].filter(Boolean);
 
   return (
@@ -117,9 +81,9 @@ export default function PrincipalDetails({ u, onClose, onEdit, onToggle }) {
           <section className="pu-modal__sec">
             <h4 className="pu-modal__sec-title"><Ic name="domain" /> School Overview</h4>
             <div className="pu-modal__overview">
-              <div><span>Students</span><strong>{u.totalStudents}</strong></div>
-              <div><span>Teachers</span><strong>{u.totalTeachers}</strong></div>
-              <div><span>Classes</span><strong>{u.totalClasses}</strong></div>
+              <div><span>Students</span><strong>{dashboard?.totalStudents || 0}</strong></div>
+              <div><span>Teachers</span><strong>{dashboard?.totalTeachers || 0}</strong></div>
+              <div><span>Classes</span><strong>{dashboard?.totalClasses || 0}</strong></div>
             </div>
           </section>
 
@@ -128,33 +92,21 @@ export default function PrincipalDetails({ u, onClose, onEdit, onToggle }) {
             <div className="pu-modal__academic">
               <div className="pu-modal__academic-col">
                 <div className="pu-modal__academic-hd pu-modal__academic-hd--good">Top Performing</div>
-                {topClasses.map(c => (
+                {topClasses.length > 0 ? topClasses.map(c => (
                   <div key={c.name} className="pu-modal__perf-row">
                     <span>{c.name}</span>
                     <strong style={{ color: 'var(--ska-green)' }}>{c.score}%</strong>
                   </div>
-                ))}
+                )) : <p style={{ fontSize: '0.8125rem', color: 'var(--ska-text-3)' }}>No data yet</p>}
               </div>
               <div className="pu-modal__academic-col">
                 <div className="pu-modal__academic-hd pu-modal__academic-hd--bad">Needs Attention</div>
-                {lowClasses.map(c => (
+                {lowClasses.length > 0 ? lowClasses.map(c => (
                   <div key={c.name} className="pu-modal__perf-row">
                     <span>{c.name}</span>
                     <strong style={{ color: 'var(--ska-error)' }}>{c.score}%</strong>
                   </div>
-                ))}
-              </div>
-            </div>
-            <div className="pu-modal__trend">
-              <span className="pu-modal__trend-lbl">7-Term Trend</span>
-              <div className="pu-modal__trend-bars">
-                {trend.map((v, i) => (
-                  <div key={i} className="pu-modal__trend-bar" title={`${v}%`}
-                    style={{
-                      height: `${v}%`,
-                      background: i === trend.length - 1 ? 'var(--ska-primary)' : 'var(--ska-text-3)',
-                    }} />
-                ))}
+                )) : <p style={{ fontSize: '0.8125rem', color: 'var(--ska-text-3)' }}>No data yet</p>}
               </div>
             </div>
           </section>
@@ -163,35 +115,14 @@ export default function PrincipalDetails({ u, onClose, onEdit, onToggle }) {
             <h4 className="pu-modal__sec-title"><Ic name="group" /> Teacher Insights</h4>
             <div className="pu-modal__overview">
               <div className="pu-modal__overview-warn">
-                <span>Overloaded</span><strong>{teacherInsights.overloaded}</strong>
+                <span>Overloaded</span><strong>{tInsights.overloaded}</strong>
               </div>
               <div className="pu-modal__overview-warn">
-                <span>Underperforming</span><strong>{teacherInsights.underperforming}</strong>
+                <span>Underperforming</span><strong>{tInsights.underperforming}</strong>
               </div>
               <div>
-                <span>Pending Grades</span><strong>{teacherInsights.pendingGrades}</strong>
+                <span>Pending Grades</span><strong>{tInsights.pendingGrades}</strong>
               </div>
-            </div>
-          </section>
-
-          <section className="pu-modal__sec">
-            <h4 className="pu-modal__sec-title"><Ic name="menu_book" /> Syllabus Progress</h4>
-            <div className="pu-modal__syllabus">
-              {syllabus.map(s => (
-                <div key={s.name} className="pu-modal__syllabus-row">
-                  <div className="pu-modal__syllabus-top">
-                    <span>{s.name}</span>
-                    <strong>{s.pct}%</strong>
-                  </div>
-                  <div className="pu-progress">
-                    <div style={{
-                      width: `${s.pct}%`,
-                      background: s.pct >= 85 ? 'var(--ska-green)' : s.pct >= 70 ? 'var(--ska-tertiary)' : 'var(--ska-error)',
-                    }} />
-                  </div>
-                  <small>Pending: {s.pending}</small>
-                </div>
-              ))}
             </div>
           </section>
 
@@ -210,21 +141,23 @@ export default function PrincipalDetails({ u, onClose, onEdit, onToggle }) {
               </div>
               <div>
                 <span>Status</span>
-                <strong style={{ color: fs.color }}>{u.finance}</strong>
+                <strong style={{ color: fs.color }}>{dashboard?.finance || 'Stable'}</strong>
               </div>
             </div>
-            <ul className="pu-modal__tx-list">
-              {finance.transactions.map((t, i) => (
-                <li key={i}>
-                  <Ic name="receipt_long" size="sm" />
-                  <div>
-                    <p>{t.label}</p>
-                    <span>{t.at}</span>
-                  </div>
-                  <strong>{fmtUsd(t.amount)}</strong>
-                </li>
-              ))}
-            </ul>
+            {finance.transactions && finance.transactions.length > 0 && (
+              <ul className="pu-modal__tx-list">
+                {finance.transactions.map((t, i) => (
+                  <li key={i}>
+                    <Ic name="receipt_long" size="sm" />
+                    <div>
+                      <p>{t.label}</p>
+                      <span>{t.at}</span>
+                    </div>
+                    <strong>{fmtUsd(t.amount)}</strong>
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
 
           {insights.length > 0 && (
@@ -235,21 +168,6 @@ export default function PrincipalDetails({ u, onClose, onEdit, onToggle }) {
               </ul>
             </section>
           )}
-
-          <section className="pu-modal__sec">
-            <h4 className="pu-modal__sec-title"><Ic name="history" /> Recent Actions</h4>
-            <ul className="pu-modal__activity">
-              {u.actions.map((a, i) => (
-                <li key={i}>
-                  <span className="pu-modal__activity-dot" />
-                  <div>
-                    <p>{a.text}</p>
-                    <span>{a.at}</span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </section>
 
           <div className="ska-modal-actions">
             <button className="ska-btn ska-btn--ghost" onClick={onClose}>Close</button>

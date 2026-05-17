@@ -46,11 +46,16 @@ const {
   getMessages, sendMessage,
   // Parent
   createParent,
+  // Principal users
+  getPrincipalUsers, createPrincipalUser, updatePrincipalUser,
   // Timetable
   generateTimetable, deleteTimetable,
   // Modification requests
   reviewModificationRequest,
 } = require('../controllers/schoolController');
+const {
+  getPrincipalUsers, createPrincipalUser, updatePrincipalUser,
+} = require('../controllers/principalController');
 const { generateSyllabusFromDocument } = require('../controllers/syllabusGenerator');
 
 // Multer config for badge/file uploads
@@ -253,6 +258,11 @@ router.post('/school/messages/', applyAuth, sendMessage);
 
 // ==================== PARENTS ====================
 router.post('/school/parents/', applyAuth, createParent);
+
+// ==================== PRINCIPAL USERS ====================
+router.get('/school/principal-users/', applyAuth, getPrincipalUsers);
+router.post('/school/principal-users/', applyAuth, createPrincipalUser);
+router.put('/school/principal-users/:id/', applyAuth, updatePrincipalUser);
 
 // ==================== TIMETABLE ====================
 router.post('/school/timetable/generate/', applyAuth, generateTimetable);
