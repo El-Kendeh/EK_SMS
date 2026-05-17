@@ -2123,12 +2123,10 @@ export function ReportsPage({ school }) {
 
       try {
         setAiProgress('Generating weekly lesson plan with AI…');
-      const res = await fetch('/api/school/syllabus/generate/', {
+      const res = await ApiClient.request('/api/school/syllabus/generate/', {
         method: 'POST',
-      headers: {'Authorization': `Bearer ${localStorage.getItem('token') || sessionStorage.getItem('token') || ''}` },
-      body: formData,
+        body: formData,
       });
-
       const data = await res.json();
       if (!data.success) {
         setAiError(data.message || 'Failed to generate syllabus.');
