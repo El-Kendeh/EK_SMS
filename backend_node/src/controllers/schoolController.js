@@ -132,8 +132,13 @@ async function getStudents(req, res) {
       where,
       include: [
         { model: User, attributes: ['first_name', 'last_name', 'email'] },
+<<<<<<< HEAD
         { model: require('../models/Class'), as: 'classroom', attributes: ['id', 'name'], required: false }
       ]
+=======
+        { model: require('../models/Class'), as: 'classroom', attributes: ['id', 'name'], required: false },
+      ],
+>>>>>>> ecf302fb6cab98d7d734ee6da585ba9291c70a0a
     });
     const formatted = students.map(s => {
       const userData = s.User || {};
