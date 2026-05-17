@@ -5,7 +5,7 @@ const authenticateToken = require('../middleware/auth');
 const {
   getOverview, listGradeApprovals, reviewGradeChange,
   listReportCards, publishReportCard, commentReportCard,
-} = require('../controllers/principalController');
+} = require('../controllers/financeController');
 
 router.use(authenticateToken);
 

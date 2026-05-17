@@ -54,6 +54,9 @@ const {
 const {
   getPrincipalUsers, createPrincipalUser, updatePrincipalUser,
 } = require('../controllers/principalController');
+const {
+  getFinanceUsers, createFinanceUser, updateFinanceUser,
+} = require('../controllers/financeController');
 const { generateSyllabusFromDocument } = require('../controllers/syllabusGenerator');
 
 // Multer config for badge/file uploads
@@ -261,6 +264,11 @@ router.post('/school/parents/', applyAuth, createParent);
 router.get('/school/principal-users/', applyAuth, getPrincipalUsers);
 router.post('/school/principal-users/', applyAuth, createPrincipalUser);
 router.put('/school/principal-users/:id/', applyAuth, updatePrincipalUser);
+
+// ==================== FINANCE USERS ====================
+router.get('/school/finance-users/', applyAuth, getFinanceUsers);
+router.post('/school/finance-users/', applyAuth, createFinanceUser);
+router.put('/school/finance-users/:id/', applyAuth, updateFinanceUser);
 
 // ==================== TIMETABLE ====================
 router.post('/school/timetable/generate/', applyAuth, generateTimetable);

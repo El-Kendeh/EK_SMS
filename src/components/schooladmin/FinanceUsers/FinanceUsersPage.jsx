@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import ApiClient from '../../../api/client';
-import { fuEnrich, summariseUsers, heatSummary, generateAlerts } from './finance.utils';
+import { summariseUsers, heatSummary, generateAlerts } from './finance.utils';
 import StatsCards          from './StatsCards';
 import ActivityPanel       from './ActivityPanel';
 import AlertsPanel         from './AlertsPanel';
@@ -16,7 +16,6 @@ const Ic = ({ name, size, style }) => (
   <span className={`ska-icon${size ? ` ska-icon--${size}` : ''}`} aria-hidden="true" style={style}>{name}</span>
 );
 
-/* ── Inline banner for create / status messages ───────────── */
 function Banner({ msg }) {
   if (!msg) return null;
   return (
@@ -27,10 +26,6 @@ function Banner({ msg }) {
   );
 }
 
-/**
- * Finance Users — Financial Control Dashboard.
- * Backend logic unchanged from the previous inline implementation.
- */
 export default function FinanceUsersPage({ school }) {
   const [rawUsers,       setRawUsers]       = useState([]);
   const [loading,        setLoading]        = useState(true);
@@ -40,8 +35,6 @@ export default function FinanceUsersPage({ school }) {
   const [search,         setSearch]         = useState('');
   const [roleFilter,     setRoleFilter]     = useState('all');
   const [statusFilter,   setStatusFilter]   = useState('all');
-  const [activityFilter, setActivityFilter] = useState('all');
-  const [riskFilter,     setRiskFilter]     = useState('all');
   const [detailsUser,    setDetailsUser]    = useState(null);
 
   const load = useCallback(() => {
@@ -53,10 +46,9 @@ export default function FinanceUsersPage({ school }) {
   }, []);
   useEffect(() => { load(); }, [load]);
 
-  const users = useMemo(() => rawUsers.map(fuEnrich), [rawUsers]);
-  const summary = useMemo(() => summariseUsers(users), [users]);
-  const heat    = useMemo(() => heatSummary(users), [users]);
-  const alerts  = useMemo(() => generateAlerts(users), [users]);
+  const summary = useMemo(() => summariseUsers(rawUsers), [rawUsers]);
+  const heat    = useMemo(() => heatSummary(rawUsers), [rawUsers]);
+  const alerts  = useMemo(() => generateAlerts(rawUsers), [rawUsers]);
 
   const handleCreate = async (payload) => {
     setSaving(true);
@@ -85,15 +77,10 @@ export default function FinanceUsersPage({ school }) {
   const handleEdit = (u) =>
     setBanner({ type: 'ok', text: `Edit Role: open ${u.full_name}'s role editor (coming soon).` });
 
-  /* ── Filtering ───────────────────────────────────────── */
-  const visibleUsers = users.filter(u => {
+  const visibleUsers = rawUsers.filter(u => {
     if (roleFilter !== 'all'   && u.role !== roleFilter) return false;
     if (statusFilter === 'active'    && !u.is_active) return false;
     if (statusFilter === 'suspended' &&  u.is_active) return false;
-    if (activityFilter === 'high' && u.txToday < 10)  return false;
-    if (activityFilter === 'low'  && u.txToday >= 10) return false;
-    if (activityFilter === 'idle' && u.txToday !== 0) return false;
-    if (riskFilter !== 'all' && u.risk !== riskFilter) return false;
     if (search) {
       const q = search.toLowerCase();
       const hay = `${u.full_name || ''} ${u.email || ''}`.toLowerCase();
@@ -102,11 +89,10 @@ export default function FinanceUsersPage({ school }) {
     return true;
   });
 
-  const existingEmails = users.map(u => (u.email || '').trim().toLowerCase()).filter(Boolean);
+  const existingEmails = rawUsers.map(u => (u.email || '').trim().toLowerCase()).filter(Boolean);
 
   return (
     <div className="ska-content fu-page">
-      {/* ── Page head ── */}
       <div className="fu-page__head">
         <div>
           <h1 className="ska-page-title">Finance Users</h1>
@@ -122,25 +108,20 @@ export default function FinanceUsersPage({ school }) {
 
       <Banner msg={banner} />
 
-      {/* ── 1. Stats cards ── */}
       <StatsCards summary={summary} loading={loading} />
 
-      {/* ── 2. Activity panel ── */}
       {!loading && summary.total > 0 && (
         <ActivityPanel summary={summary} />
       )}
 
-      {/* ── 5. Transaction heat (after activity) ── */}
       {!loading && summary.total > 0 && (
         <TransactionHeat heat={heat} />
       )}
 
-      {/* ── 4. Alerts panel ── */}
       {!loading && summary.total > 0 && (
         <AlertsPanel alerts={alerts} />
       )}
 
-      {/* ── Add form ── */}
       {showForm && (
         <AddFinanceUserForm
           existingEmails={existingEmails}
@@ -149,18 +130,14 @@ export default function FinanceUsersPage({ school }) {
           onCancel={() => setShowForm(false)} />
       )}
 
-      {/* ── 6. Filters bar ── */}
       {!loading && summary.total > 0 && (
         <FiltersBar
           search={search}             onSearch={setSearch}
           roleFilter={roleFilter}     onRole={setRoleFilter}
           statusFilter={statusFilter} onStatus={setStatusFilter}
-          activityFilter={activityFilter} onActivity={setActivityFilter}
-          riskFilter={riskFilter}     onRisk={setRiskFilter}
         />
       )}
 
-      {/* ── 3. Finance user cards (or empty / loading) ── */}
       {loading ? (
         <div className="fu-empty">
           <Ic name="hourglass_empty" size="xl" style={{ color: 'var(--ska-text-3)' }} />
@@ -197,10 +174,8 @@ export default function FinanceUsersPage({ school }) {
         </div>
       )}
 
-      {/* ── 7. System integrity panel (always visible) ── */}
       <IntegrityPanel summary={summary} />
 
-      {/* ── Details modal ── */}
       {detailsUser && (
         <FinanceUserDetails
           u={detailsUser}
