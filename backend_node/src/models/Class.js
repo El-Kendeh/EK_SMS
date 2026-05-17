@@ -35,7 +35,3 @@ Class.hasMany(ClassSubject, { foreignKey: 'class_id', as: 'classSubjects' });
 Class.belongsTo(Teacher, { foreignKey: 'class_teacher_id', as: 'classTeacher' });
 
 module.exports = Class;
-const ClassSubject = require('./ClassSubject');
-const Teacher = require('./Teacher');
-Class.hasMany(ClassSubject, { foreignKey: 'class_id', as: 'classSubjects' });
-Class.belongsTo(Teacher, { foreignKey: 'class_teacher_id', as: 'classTeacher' });

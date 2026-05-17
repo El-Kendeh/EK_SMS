@@ -182,3 +182,11 @@ router.get('/credentials/', getTeacherCredentials);
 router.patch('/credentials/', updateTeacherCredentials);
 
 module.exports = router;
+
+// Grading scheme (read-only for teachers)
+
+// Grading scheme (read-only for teachers)
+const { getGradingScheme } = require('../controllers/schoolController');
+router.get('/grading-scheme/', getGradingScheme);
+
+module.exports = router;
