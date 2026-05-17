@@ -38,6 +38,10 @@ function authHeadersNoContent() {
 export const teacherApi = {
   async getTeacherProfile() {
     const res = await fetch(`${API_BASE}/api/teacher/me/`, { headers: authHeaders() });
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      throw new Error(data?.message || `Server responded with ${res.status}`);
+    }
     return res.json();
   },
 

@@ -16,11 +16,11 @@ const {
 // Apply to all teacher routes
 router.use(authenticateToken);
 
-// Middleware to ensure user is a teacher
+// Middleware to ensure user is a teacher or authorized staff
 async function isTeacher(req, res, next) {
   try {
-    // Check token first
-    if (req.user && (req.user.role === 'teacher' || req.user.role === 'staff' || req.user.is_superuser)) {
+    const allowedRoles = ['teacher', 'staff', 'superadmin', 'school_admin'];
+    if (req.user && allowedRoles.includes(req.user.role)) {
       return next();
     }
 
@@ -29,15 +29,16 @@ async function isTeacher(req, res, next) {
       const Teacher = require('../models/Teacher');
       const teacherLink = await Teacher.findOne({ where: { user_id: req.user.id } });
       if (teacherLink) {
-        req.user.role = 'teacher'; // Fix it for this request
+        req.user.role = 'teacher';
         return next();
       }
     }
 
-    console.log(`[AUTH DEBUG] 403 Access Denied for User: ${req.user?.username}, Role: ${req.user?.role}`);
-    return res.status(403).json({ 
-      success: false, 
-      message: `Access denied. Teacher role required. Current role: ${req.user?.role || 'none'}` 
+    console.warn(`[AUTH] Teacher access denied — User: ${req.user?.username}, Role: ${req.user?.role}, ID: ${req.user?.id}`);
+    return res.status(403).json({
+      success: false,
+      message: `This area is for teachers only. Your account role is "${req.user?.role || 'unknown'}". If you should have teacher access, ask your school admin to link your account to a teacher profile.`,
+      debug: { role: req.user?.role, userId: req.user?.id }
     });
   } catch (err) {
     console.error('isTeacher Middleware Error:', err);

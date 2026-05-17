@@ -177,7 +177,7 @@ function TeacherDashboardInner({ onNavigate }) {
   const { theme, toggleTheme } = useTheme();
   const { unreadCount } = useTeacherNotifyCtx();
   const { pendingCounts, selectedClass, currentTerm } = useTeacher();
-  const { profile } = useTeacherProfile();
+  const { profile, loading: profileLoading, error: profileError } = useTeacherProfile();
 
   useTeacherClasses();
 
@@ -263,10 +263,26 @@ function TeacherDashboardInner({ onNavigate }) {
     }
   };
 
+  if (profileError) {
+    return (
+      <div style={{ padding: 40, textAlign: 'center', maxWidth: 480, margin: '0 auto' }}>
+        <span className="material-symbols-outlined" style={{ fontSize: 48, color: '#EF4444' }}>error_outline</span>
+        <h2 style={{ margin: '16px 0 8px', fontSize: 18 }}>Unable to load teacher profile</h2>
+        <p style={{ opacity: 0.7, fontSize: 14, marginBottom: 20 }}>{profileError}</p>
+        <button
+          onClick={() => { localStorage.removeItem('token'); localStorage.removeItem('user'); window.location.href = '/login'; }}
+          style={{ padding: '10px 24px', borderRadius: 8, border: 'none', background: '#10B981', color: '#fff', fontWeight: 600, cursor: 'pointer' }}
+        >
+          Return to Login
+        </button>
+      </div>
+    );
+  }
+
   if (!profile) {
     return (
       <div style={{ padding: 40, textAlign: 'center', fontWeight: 700 }}>
-        <p>Loading teacher profile…</p>
+        <p>{profileLoading ? 'Loading teacher profile…' : 'No profile data available.'}</p>
       </div>
     );
   }
