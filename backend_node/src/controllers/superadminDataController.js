@@ -229,11 +229,11 @@ async function getUsers(req, res) {
       attributes: { exclude: ['password'] },
       order: [['id', 'ASC']],
     });
-    const adminLinks = await SchoolAdmin.findAll({ include: [{ model: School, required: false }] });
+    const adminLinks = await SchoolAdmin.findAll({ include: [{ model: School, as: 'school', required: false }] });
     const schoolByUserId = {};
     adminLinks.forEach((a) => {
       const p = a.get({ plain: true });
-      schoolByUserId[p.user_id] = p.School?.name || '';
+      schoolByUserId[p.user_id] = p.school?.name || '';
     });
     const rows = users.map((u) => mapUserToSaRow(u, schoolByUserId[u.id] || ''));
     return res.json(successResponse({ users: rows }));

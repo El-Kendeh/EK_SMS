@@ -77,9 +77,9 @@ async function listGradeApprovals(req, res) {
     const grades = await Grade.findAll({
       where,
       include: [
-        { model: Student, include: [{ model: User, attributes: ['first_name', 'last_name'] }] },
-        { model: Subject, attributes: ['id', 'name', 'code'] },
-        { model: Term, attributes: ['id', 'name'] },
+        { model: Student, as: 'student', include: [{ model: User, as: 'user', attributes: ['first_name', 'last_name'] }] },
+        { model: Subject, as: 'subject', attributes: ['id', 'name', 'code'] },
+        { model: Term, as: 'term', attributes: ['id', 'name'] },
         { model: Class, as: 'classroom', attributes: ['id', 'name'] },
       ],
       order: [['created_at', 'DESC']],
@@ -89,13 +89,13 @@ async function listGradeApprovals(req, res) {
     const formatted = grades.map(g => ({
       id: g.id,
       student_id: g.student_id,
-      student_name: g.Student ? `${g.Student.User?.first_name} ${g.Student.User?.last_name}`.trim() : '',
-      admission_number: g.Student?.admission_number || '',
+      student_name: g.student ? `${g.student.user?.first_name} ${g.student.user?.last_name}`.trim() : '',
+      admission_number: g.student?.admission_number || '',
       subject_id: g.subject_id,
-      subject_name: g.Subject?.name || '',
-      subject_code: g.Subject?.code || '',
+      subject_name: g.subject?.name || '',
+      subject_code: g.subject?.code || '',
       term_id: g.term_id,
-      term_name: g.Term?.name || '',
+      term_name: g.term?.name || '',
       class_id: g.classroom_id,
       class_name: g.classroom?.name || '',
       ca: g.ca,
@@ -184,8 +184,8 @@ async function listReportCards(req, res) {
     const grades = await Grade.findAll({
       where: { school_id: school.id, term_id: activeTerm?.id || null },
       include: [
-        { model: Student, include: [{ model: User, attributes: ['first_name', 'last_name'] }] },
-        { model: Subject, attributes: ['id', 'name', 'code'] },
+        { model: Student, as: 'student', include: [{ model: User, as: 'user', attributes: ['first_name', 'last_name'] }] },
+        { model: Subject, as: 'subject', attributes: ['id', 'name', 'code'] },
       ],
       order: [['created_at', 'DESC']],
       limit: 500,
@@ -197,15 +197,15 @@ async function listReportCards(req, res) {
       if (!studentMap[sid]) {
         studentMap[sid] = {
           student_id: sid,
-          student_name: g.Student ? `${g.Student.User?.first_name} ${g.Student.User?.last_name}`.trim() : '',
-          admission_number: g.Student?.admission_number || '',
+          student_name: g.student ? `${g.student.user?.first_name} ${g.student.user?.last_name}`.trim() : '',
+          admission_number: g.student?.admission_number || '',
           subjects: [],
           approved: true,
         };
       }
       studentMap[sid].subjects.push({
-        subject_name: g.Subject?.name || '',
-        subject_code: g.Subject?.code || '',
+        subject_name: g.subject?.name || '',
+        subject_code: g.subject?.code || '',
         ca: g.ca,
         midterm: g.midterm,
         final: g.final,
@@ -297,16 +297,16 @@ async function getPrincipalUsers(req, res) {
 
     const admins = await SchoolAdmin.findAll({
       where: { school_id: school.id },
-      include: [{ model: User, attributes: ['id', 'username', 'first_name', 'last_name', 'email', 'phone'] }],
+      include: [{ model: User, as: 'user', attributes: ['id', 'username', 'first_name', 'last_name', 'email', 'phone'] }],
       order: [['created_at', 'DESC']],
     });
 
     const users = admins.map(a => ({
       id: a.id,
-      full_name: `${a.User?.first_name || ''} ${a.User?.last_name || ''}`.trim() || a.User?.username,
-      email: a.User?.email,
-      phone: a.User?.phone,
-      username: a.User?.username,
+      full_name: `${a.user?.first_name || ''} ${a.user?.last_name || ''}`.trim() || a.user?.username,
+      email: a.user?.email,
+      phone: a.user?.phone,
+      username: a.user?.username,
       is_active: a.is_active !== false,
       role: a.role || 'Principal',
       access_level: a.access_level || 'Full',
@@ -428,14 +428,14 @@ async function getClassPerformance(req, res) {
         {
           model: Student,
           as: 'students',
-          include: [{ model: Grade, attributes: ['total'] }],
+          include: [{ model: Grade, as: 'grades', attributes: ['total'] }],
         },
       ],
     });
 
     const performance = classes.map(c => {
       const students = c.students || [];
-      const totals = students.flatMap(s => s.Grades?.map(g => g.total) || []).filter(Boolean);
+      const totals = students.flatMap(s => s.grades?.map(g => g.total) || []).filter(Boolean);
       const avg = totals.length ? Math.round(totals.reduce((a, b) => a + b, 0) / totals.length) : 0;
       return { name: c.name, score: avg, studentCount: students.length };
     }).filter(c => c.studentCount > 0);

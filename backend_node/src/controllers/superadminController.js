@@ -28,7 +28,7 @@ function serializeSchool(school) {
   const p = school.get({ plain: true });
   const admins = p.SchoolAdmins || [];
   const firstLink = admins[0];
-  const usr = firstLink?.User;
+  const usr = firstLink?.user;
   const adminFull = usr ? [usr.first_name, usr.last_name].filter(Boolean).join(' ').trim() : '';
   const regDate = p.created_at ? new Date(p.created_at).toISOString() : null;
   const approved = !!p.is_approved;
@@ -70,7 +70,8 @@ async function getAllSchools(req, res) {
     const schools = await School.findAll({
       include: [{
         model: SchoolAdmin,
-        include: [User]
+        as: 'schoolAdmins',
+        include: [{ model: User, as: 'user' }]
       }],
       order: [['id', 'DESC']],
     });
@@ -88,7 +89,7 @@ async function handleSchoolAction(req, res) {
   const transaction = await sequelize.transaction();
   try {
     const school = await School.findByPk(school_id, {
-      include: [{ model: SchoolAdmin }]
+      include: [{ model: SchoolAdmin, as: 'schoolAdmins' }]
     });
 
     if (!school) {
@@ -183,14 +184,14 @@ async function impersonate(req, res) {
   try {
     const adminLink = await SchoolAdmin.findOne({
       where: { school_id },
-      include: [User]
+      include: [{ model: User, as: 'user' }]
     });
 
-    if (!adminLink || !adminLink.User) {
+    if (!adminLink || !adminLink.user) {
       return res.status(404).json(errorResponse("No administrator found for this school", 404));
     }
 
-    const user = adminLink.User;
+    const user = adminLink.user;
     // Generate token for the school admin
     const token = generateToken({
       id: user.id,

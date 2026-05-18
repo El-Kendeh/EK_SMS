@@ -56,7 +56,7 @@ async function getStudentFromUser(req) {
   const student = await Student.findOne({
     where: { user_id: req.user.id },
     include: [
-      { model: User, attributes: ['id', 'username', 'first_name', 'last_name', 'email', 'phone'] },
+      { model: User, as: 'user', attributes: ['id', 'username', 'first_name', 'last_name', 'email', 'phone'] },
       { model: Class, as: 'classroom', attributes: ['id', 'name'] },
     ],
   });
@@ -68,7 +68,7 @@ async function getProfile(req, res) {
     const student = await getStudentFromUser(req);
     if (!student) return res.status(404).json(errorResponse('Student profile not found'));
 
-    const u = student.User || {};
+    const u = student.user || {};
     const c = student.classroom;
 
     return res.json(successResponse({
@@ -192,8 +192,8 @@ async function getGrades(req, res) {
     const grades = await Grade.findAll({
       where,
       include: [
-        { model: Subject, attributes: ['id', 'name', 'code'] },
-        { model: Term, attributes: ['id', 'name'] },
+        { model: Subject, as: 'subject', attributes: ['id', 'name', 'code'] },
+        { model: Term, as: 'term', attributes: ['id', 'name'] },
       ],
       order: [['created_at', 'DESC']],
     });
@@ -201,9 +201,9 @@ async function getGrades(req, res) {
     const formatted = grades.map(g => ({
       id: g.id,
       subjectId: g.subject_id,
-      subject: g.Subject ? { id: g.Subject.id, name: g.Subject.name, code: g.Subject.code } : null,
+      subject: g.subject ? { id: g.subject.id, name: g.subject.name, code: g.subject.code } : null,
       termId: g.term_id,
-      term: g.Term ? { id: g.Term.id, name: g.Term.name } : null,
+      term: g.term ? { id: g.term.id, name: g.term.name } : null,
       ca: g.ca,
       midterm: g.midterm,
       final: g.final,
@@ -360,14 +360,14 @@ async function getRemedialPlan(req, res) {
 
     const grades = await Grade.findAll({
       where: { student_id: student.id },
-      include: [{ model: Subject, attributes: ['id', 'name', 'code'] }],
+      include: [{ model: Subject, as: 'subject', attributes: ['id', 'name', 'code'] }],
     });
 
     const remedialSubjects = grades
       .filter(g => (g.total || 0) < 50)
       .map(g => ({
         subjectId: g.subject_id,
-        subjectName: g.Subject?.name || '',
+        subjectName: g.subject?.name || '',
         currentScore: g.total,
         gradeLetter: g.grade_letter,
         recommendation: g.total < 30 ? 'Intensive remedial required' : 'Targeted practice recommended',
@@ -395,13 +395,13 @@ async function confirmRemedialSession(req, res) {
     const { subject_id, session_time } = req.body;
     const grade = await Grade.findOne({
       where: { student_id: student.id, subject_id },
-      include: [{ model: Subject, attributes: ['id', 'name'] }],
+      include: [{ model: Subject, as: 'subject', attributes: ['id', 'name'] }],
     });
 
     if (!grade) return res.status(404).json(errorResponse('Grade not found for this subject'));
 
     return res.json(successResponse({
-      subject: grade.Subject?.name,
+      subject: grade.subject?.name,
       currentScore: grade.total,
       sessionTime: session_time,
       confirmed: true,
@@ -569,7 +569,7 @@ async function getAssignments(req, res) {
         is_active: true,
       },
       include: [
-        { model: Subject, attributes: ['id', 'name', 'code'] },
+        { model: Subject, as: 'subject', attributes: ['id', 'name', 'code'] },
       ],
       order: [['due_date', 'ASC']],
     });
@@ -728,7 +728,7 @@ async function getResources(req, res) {
         is_active: true,
       },
       include: [
-        { model: Subject, attributes: ['id', 'name', 'code'] },
+        { model: Subject, as: 'subject', attributes: ['id', 'name', 'code'] },
       ],
       order: [['created_at', 'DESC']],
     });
@@ -740,7 +740,7 @@ async function getResources(req, res) {
       resourceType: r.resource_type,
       filePath: r.file_path,
       url: r.url,
-      subject: r.Subject,
+      subject: r.subject,
       downloadCount: r.download_count,
       createdAt: r.created_at,
     }));
@@ -759,7 +759,7 @@ async function getFinancials(req, res) {
 
     const fees = await Fee.findAll({
       where: { student_id: student.id },
-      include: [{ model: FeeCategory, attributes: ['id', 'name'] }, { model: Term, attributes: ['id', 'name'] }],
+      include: [{ model: FeeCategory, as: 'feeCategory', attributes: ['id', 'name'] }, { model: Term, as: 'term', attributes: ['id', 'name'] }],
       order: [['created_at', 'DESC']],
     });
 
@@ -774,8 +774,8 @@ async function getFinancials(req, res) {
     const transactions = fees.map(f => ({
       id: f.id,
       type: 'fee',
-      category: f.FeeCategory?.name || '',
-      term: f.Term?.name || '',
+      category: f.feeCategory?.name || '',
+      term: f.term?.name || '',
       amount: f.amount_due,
       paid: f.amount_paid,
       balance: f.amount_due - f.amount_paid,
@@ -835,12 +835,12 @@ async function getGradeInsights(req, res) {
 
     const grades = await Grade.findAll({
       where: { student_id: student.id },
-      include: [{ model: Subject, attributes: ['id', 'name', 'code'] }],
+      include: [{ model: Subject, as: 'subject', attributes: ['id', 'name', 'code'] }],
     });
 
     const insights = grades.map(g => ({
       subjectId: g.subject_id,
-      subjectName: g.Subject?.name || '',
+      subjectName: g.subject?.name || '',
       currentTotal: g.total,
       trend: 'stable',
       points: [],
@@ -970,8 +970,8 @@ async function getReportCards(req, res) {
     const grades = await Grade.findAll({
       where: { student_id: student.id },
       include: [
-        { model: Subject, attributes: ['id', 'name', 'code'] },
-        { model: Term, attributes: ['id', 'name'] },
+        { model: Subject, as: 'subject', attributes: ['id', 'name', 'code'] },
+        { model: Term, as: 'term', attributes: ['id', 'name'] },
       ],
       order: [['term_id', 'ASC']],
     });
@@ -980,11 +980,11 @@ async function getReportCards(req, res) {
     grades.forEach(g => {
       const tid = g.term_id;
       if (!termMap[tid]) {
-        termMap[tid] = { termId: tid, termName: g.Term?.name || '', subjects: [], total: 0, count: 0 };
+        termMap[tid] = { termId: tid, termName: g.term?.name || '', subjects: [], total: 0, count: 0 };
       }
       termMap[tid].subjects.push({
-        subjectName: g.Subject?.name || '',
-        subjectCode: g.Subject?.code || '',
+        subjectName: g.subject?.name || '',
+        subjectCode: g.subject?.code || '',
         ca: g.ca,
         midterm: g.midterm,
         final: g.final,
@@ -1020,22 +1020,22 @@ async function downloadReportCard(req, res) {
     const grades = await Grade.findAll({
       where,
       include: [
-        { model: Subject, attributes: ['id', 'name', 'code'] },
-        { model: Term, attributes: ['id', 'name'] },
+        { model: Subject, as: 'subject', attributes: ['id', 'name', 'code'] },
+        { model: Term, as: 'term', attributes: ['id', 'name'] },
       ],
     });
 
     if (!grades.length) return res.status(404).json(errorResponse('Report card not found'));
 
-    const u = student.User || {};
+    const u = student.user || {};
     const reportCard = {
       studentName: `${u.first_name || ''} ${u.last_name || ''}`.trim(),
       studentNumber: student.admission_number,
       className: student.classroom?.name || '',
-      term: grades[0].Term?.name || '',
+      term: grades[0].term?.name || '',
       subjects: grades.map(g => ({
-        name: g.Subject?.name || '',
-        code: g.Subject?.code || '',
+        name: g.subject?.name || '',
+        code: g.subject?.code || '',
         ca: g.ca,
         midterm: g.midterm,
         final: g.final,
@@ -1061,16 +1061,16 @@ async function getTranscript(req, res) {
     const grades = await Grade.findAll({
       where: { student_id: student.id },
       include: [
-        { model: Subject, attributes: ['id', 'name', 'code'] },
-        { model: Term, attributes: ['id', 'name'] },
+        { model: Subject, as: 'subject', attributes: ['id', 'name', 'code'] },
+        { model: Term, as: 'term', attributes: ['id', 'name'] },
       ],
       order: [['term_id', 'ASC']],
     });
 
     const transcript = grades.map(g => ({
-      subjectName: g.Subject?.name || '',
-      subjectCode: g.Subject?.code || '',
-      term: g.Term?.name || '',
+      subjectName: g.subject?.name || '',
+      subjectCode: g.subject?.code || '',
+      term: g.term?.name || '',
       ca: g.ca,
       midterm: g.midterm,
       final: g.final,
@@ -1093,24 +1093,24 @@ async function downloadTranscript(req, res) {
     const grades = await Grade.findAll({
       where: { student_id: student.id },
       include: [
-        { model: Subject, attributes: ['id', 'name', 'code'] },
-        { model: Term, attributes: ['id', 'name'] },
+        { model: Subject, as: 'subject', attributes: ['id', 'name', 'code'] },
+        { model: Term, as: 'term', attributes: ['id', 'name'] },
       ],
       order: [['term_id', 'ASC']],
     });
 
     if (!grades.length) return res.status(404).json(errorResponse('Transcript not available'));
 
-    const u = student.User || {};
+    const u = student.user || {};
     const transcript = {
       studentName: `${u.first_name || ''} ${u.last_name || ''}`.trim(),
       studentNumber: student.admission_number,
       className: student.classroom?.name || '',
       schoolId: student.school_id,
       entries: grades.map(g => ({
-        subjectName: g.Subject?.name || '',
-        subjectCode: g.Subject?.code || '',
-        term: g.Term?.name || '',
+        subjectName: g.subject?.name || '',
+        subjectCode: g.subject?.code || '',
+        term: g.term?.name || '',
         total: g.total,
         gradeLetter: g.grade_letter,
       })),
@@ -1650,7 +1650,7 @@ async function getStudyGroups(req, res) {
         ],
       },
       include: [
-        { model: Subject, attributes: ['id', 'name', 'code'] },
+        { model: Subject, as: 'subject', attributes: ['id', 'name', 'code'] },
       ],
     });
 
@@ -1658,7 +1658,7 @@ async function getStudyGroups(req, res) {
       id: g.id,
       name: g.name,
       description: g.description,
-      subject: g.Subject,
+      subject: g.subject,
       meetingSchedule: g.meeting_schedule,
       isMember: groupIds.includes(g.id),
     }));
@@ -2018,7 +2018,7 @@ async function getVoiceSummary(req, res) {
 
     const grades = await Grade.findAll({
       where: { student_id: student.id },
-      include: [{ model: Subject, attributes: ['id', 'name'] }],
+      include: [{ model: Subject, as: 'subject', attributes: ['id', 'name'] }],
     });
 
     const attendance = await Attendance.findAll({
@@ -2036,11 +2036,11 @@ async function getVoiceSummary(req, res) {
 
     const weakSubjects = grades
       .filter(g => (g.total || 0) < 50)
-      .map(g => g.Subject?.name || 'Unknown');
+      .map(g => g.subject?.name || 'Unknown');
 
     const strongSubjects = grades
       .filter(g => (g.total || 0) >= 80)
-      .map(g => g.Subject?.name || 'Unknown');
+      .map(g => g.subject?.name || 'Unknown');
 
     let summary = `Hello! Here's your academic summary. `;
     summary += `Your average grade is ${avgGrade}%. `;
@@ -2067,13 +2067,13 @@ async function getSubjectDeepDive(req, res) {
 
     const grade = await Grade.findOne({
       where: { student_id: student.id, subject_id: subjectId },
-      include: [{ model: Subject, attributes: ['id', 'name', 'code'] }],
+      include: [{ model: Subject, as: 'subject', attributes: ['id', 'name', 'code'] }],
     });
 
     if (!grade) return res.status(404).json(errorResponse('Grade not found for this subject'));
 
     return res.json(successResponse({
-      subject: grade.Subject,
+      subject: grade.subject,
       currentGrade: { score: grade.total, gradeLetter: grade.grade_letter },
       breakdown: {
         ca: { score: grade.ca, max: 20 },
@@ -2102,7 +2102,7 @@ async function listLiveClasses(req, res) {
         is_active: true,
       },
       include: [
-        { model: Subject, attributes: ['id', 'name', 'code'] },
+        { model: Subject, as: 'subject', attributes: ['id', 'name', 'code'] },
       ],
       order: [['scheduled_at', 'ASC']],
     });
@@ -2114,7 +2114,7 @@ async function listLiveClasses(req, res) {
       meetingUrl: lc.meeting_url,
       scheduledAt: lc.scheduled_at,
       durationMinutes: lc.duration_minutes,
-      subject: lc.Subject,
+      subject: lc.subject,
     }));
 
     return res.json(successResponse({ liveClasses: formatted }));

@@ -35,15 +35,15 @@ async function getTeacherMe(req, res) {
     const teacher = await Teacher.findOne({
       where: { user_id: req.user.id },
       include: [
-        { model: User, attributes: ['first_name', 'last_name', 'email', 'username', 'last_login'] },
-        { model: School, attributes: ['name', 'badge_path', 'brand_colors'] }
+        { model: User, as: 'user', attributes: ['first_name', 'last_name', 'email', 'username', 'last_login'] },
+        { model: School, as: 'school', attributes: ['name', 'badge_path', 'brand_colors'] }
       ]
     });
 
     if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
 
-    const firstName = teacher.User.first_name || '';
-    const lastName = teacher.User.last_name || '';
+    const firstName = teacher.user.first_name || '';
+    const lastName = teacher.user.last_name || '';
     const fullName = `${firstName} ${lastName}`.trim();
     const initials = (firstName[0] || '') + (lastName[0] || '');
 
@@ -55,21 +55,21 @@ async function getTeacherMe(req, res) {
         lastName,
         fullName,
         initials: initials.toUpperCase(),
-        email: teacher.User.email,
-        username: teacher.User.username,
+        email: teacher.user.email,
+        username: teacher.user.username,
         phone: teacher.phone_number,
         phone_number: teacher.phone_number,
         qualification: teacher.qualification,
         profile_picture: normalizePath(teacher.profile_picture),
-        school: teacher.School?.name || 'EK-SMS School',
-        school_name: teacher.School?.name || 'EK-SMS School',
-        school_badge: normalizePath(teacher.School?.badge_path),
-        school_colors: teacher.School?.brand_colors,
+        school: teacher.school?.name || 'EK-SMS School',
+        school_name: teacher.school?.name || 'EK-SMS School',
+        school_badge: normalizePath(teacher.school?.badge_path),
+        school_colors: teacher.school?.brand_colors,
         employeeNumber: teacher.employee_id,
         employee_id: teacher.employee_id,
         joinedDate: teacher.hire_date || teacher.created_at,
         status: teacher.is_active ? 'active' : 'inactive',
-        lastLogin: teacher.User.last_login || teacher.created_at,
+        lastLogin: teacher.user.last_login || teacher.created_at,
         activeSessions: 1,
         twoFactorEnabled: false,
         specializations: teacher.qualification ? [teacher.qualification] : [],
@@ -144,17 +144,17 @@ async function getTeacherStudents(req, res) {
 
     const students = await Student.findAll({
       where: { classroom_id: class_id, school_id: teacher.school_id, status: 'active' },
-      include: [{ model: User, attributes: ['id', 'first_name', 'last_name', 'email'] }],
-      order: [[sequelize.fn('lower', sequelize.col('User.first_name')), 'ASC']],
+      include: [{ model: User, as: 'user', attributes: ['id', 'first_name', 'last_name', 'email'] }],
+      order: [[sequelize.fn('lower', sequelize.col('user.first_name')), 'ASC']],
     });
 
     const formatted = students.map(s => ({
       id: s.id,
       admission_number: s.admission_number,
-      first_name: s.User?.first_name || '',
-      last_name: s.User?.last_name || '',
-      full_name: `${s.User?.first_name || ''} ${s.User?.last_name || ''}`.trim(),
-      email: s.User?.email || '',
+      first_name: s.user?.first_name || '',
+      last_name: s.user?.last_name || '',
+      full_name: `${s.user?.first_name || ''} ${s.user?.last_name || ''}`.trim(),
+      email: s.user?.email || '',
       gender: s.gender,
       status: s.status,
     }));
@@ -178,7 +178,7 @@ async function getTeacherGradebook(req, res) {
 
     const students = await Student.findAll({
       where: { classroom_id: class_id, school_id: teacher.school_id, status: 'active' },
-      include: [{ model: User, attributes: ['id', 'first_name', 'last_name'] }],
+      include: [{ model: User, as: 'user', attributes: ['id', 'first_name', 'last_name'] }],
     });
 
     const grades = await Grade.findAll({
@@ -199,7 +199,7 @@ async function getTeacherGradebook(req, res) {
       return {
         student_id: s.id,
         admission_number: s.admission_number,
-        full_name: `${s.User?.first_name || ''} ${s.User?.last_name || ''}`.trim(),
+        full_name: `${s.user?.first_name || ''} ${s.user?.last_name || ''}`.trim(),
         ca: g?.ca || null,
         midterm: g?.midterm || null,
         final: g?.final || null,
@@ -522,7 +522,7 @@ async function getTeacherAtRiskStudents(req, res) {
 
     const students = await Student.findAll({
       where: { classroom_id: { [Op.in]: classIds }, school_id: teacher.school_id, status: 'active' },
-      include: [{ model: User, attributes: ['first_name', 'last_name', 'email'] }],
+      include: [{ model: User, as: 'user', attributes: ['first_name', 'last_name', 'email'] }],
     });
 
     const grades = await Grade.findAll({
@@ -545,7 +545,7 @@ async function getTeacherAtRiskStudents(req, res) {
         const avg = avgs.length ? avgs.reduce((a, b) => a + b, 0) / avgs.length : null;
         return {
           id: s.id,
-          full_name: `${s.User?.first_name || ''} ${s.User?.last_name || ''}`.trim(),
+          full_name: `${s.user?.first_name || ''} ${s.user?.last_name || ''}`.trim(),
           admission_number: s.admission_number,
           average: avg ? Math.round(avg) : null,
           classroom_id: s.classroom_id,
@@ -694,16 +694,16 @@ async function getFeedbackStudents(req, res) {
 
     const students = await Student.findAll({
       where: { classroom_id: { [Op.in]: classIds }, school_id: teacher.school_id, status: 'active' },
-      include: [{ model: User, attributes: ['id', 'first_name', 'last_name', 'email'] }],
-      order: [[sequelize.fn('lower', sequelize.col('User.first_name')), 'ASC']],
+      include: [{ model: User, as: 'user', attributes: ['id', 'first_name', 'last_name', 'email'] }],
+      order: [[sequelize.fn('lower', sequelize.col('user.first_name')), 'ASC']],
     });
 
     const formatted = students.map(s => ({
       id: s.id,
-      full_name: `${s.User?.first_name || ''} ${s.User?.last_name || ''}`.trim(),
+      full_name: `${s.user?.first_name || ''} ${s.user?.last_name || ''}`.trim(),
       admission_number: s.admission_number,
       classroom_id: s.classroom_id,
-      email: s.User?.email || '',
+      email: s.user?.email || '',
     }));
 
     return res.json(successResponse({ students: formatted }));
@@ -1612,7 +1612,7 @@ async function getSpotlightStudent(req, res) {
         week_start: { [Op.lte]: weekEnd },
         week_end: { [Op.gte]: weekStart },
       },
-      include: [{ model: Student, include: [{ model: User, attributes: ['first_name', 'last_name'] }] }],
+      include: [{ model: Student, as: 'student', include: [{ model: User, as: 'user', attributes: ['first_name', 'last_name'] }] }],
     });
 
     if (!spotlight) return res.json(successResponse({}));
@@ -1620,7 +1620,7 @@ async function getSpotlightStudent(req, res) {
     return res.json(successResponse({
       id: spotlight.id,
       student_id: spotlight.student_id,
-      student_name: spotlight.Student?.User ? `${spotlight.Student.User.first_name} ${spotlight.Student.User.last_name}` : 'Unknown',
+      student_name: spotlight.student?.user ? `${spotlight.student.user.first_name} ${spotlight.student.user.last_name}` : 'Unknown',
       reason: spotlight.reason,
       week_start: spotlight.week_start,
       week_end: spotlight.week_end,
@@ -1860,7 +1860,7 @@ async function getModificationRequests(req, res) {
       where: { requested_by: teacher.id, school_id: teacher.school_id },
       include: [
         { model: Subject, as: 'subject', attributes: ['id', 'name'] },
-        { model: Student, as: 'student', include: [{ model: User, attributes: ['first_name', 'last_name'] }] },
+        { model: Student, as: 'student', include: [{ model: User, as: 'user', attributes: ['first_name', 'last_name'] }] },
       ],
       order: [['created_at', 'DESC']],
     });
@@ -1868,9 +1868,9 @@ async function getModificationRequests(req, res) {
     const formatted = requests.map(r => ({
       id: r.id,
       student_id: r.student_id,
-      student_name: r.Student?.User ? `${r.Student.User.first_name} ${r.Student.User.last_name}` : 'Unknown',
+      student_name: r.student?.user ? `${r.student.user.first_name} ${r.student.user.last_name}` : 'Unknown',
       subject_id: r.subject_id,
-      subject_name: r.Subject?.name || 'Unknown',
+      subject_name: r.subject?.name || 'Unknown',
       request_type: r.request_type,
       reason: r.reason,
       current_value: r.current_value,
@@ -2263,7 +2263,7 @@ async function getStudentGradeHistory(req, res) {
     const { studentId } = req.params;
     const grades = await Grade.findAll({
       where: { student_id: studentId },
-      include: [{ model: Subject, attributes: ['id', 'name'] }, { model: Term, attributes: ['id', 'name'] }],
+      include: [{ model: Subject, as: 'subject', attributes: ['id', 'name'] }, { model: Term, as: 'term', attributes: ['id', 'name'] }],
       order: [['created_at', 'DESC']],
     });
     return res.json(successResponse({ grades }));
@@ -2294,7 +2294,7 @@ async function getStudentReportCards(req, res) {
 
     const student = await Student.findOne({
       where: { id: student_id, school_id: teacher.school_id },
-      include: [{ model: User, attributes: ['first_name', 'last_name', 'email'] }],
+      include: [{ model: User, as: 'user', attributes: ['first_name', 'last_name', 'email'] }],
     });
 
     const report_cards = grades.map(g => ({

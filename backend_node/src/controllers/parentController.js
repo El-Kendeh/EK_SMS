@@ -63,14 +63,14 @@ async function getChildren(req, res) {
         status: 'active',
       },
       include: [
-        { model: User, attributes: ['id', 'username', 'first_name', 'last_name', 'email', 'phone'] },
+        { model: User, as: 'user', attributes: ['id', 'username', 'first_name', 'last_name', 'email', 'phone'] },
         { model: Class, as: 'classroom', attributes: ['id', 'name'] },
       ],
     });
 
     const children = students.map(s => ({
       id: s.id,
-      full_name: `${s.User?.first_name || ''} ${s.User?.last_name || ''}`.trim(),
+      full_name: `${s.user?.first_name || ''} ${s.user?.last_name || ''}`.trim(),
       admission_number: s.admission_number,
       class_name: s.classroom?.name || null,
       class_id: s.classroom_id,
@@ -106,8 +106,8 @@ async function getChildGrades(req, res) {
     const grades = await Grade.findAll({
       where,
       include: [
-        { model: Subject, attributes: ['id', 'name', 'code'] },
-        { model: Term, attributes: ['id', 'name'] },
+        { model: Subject, as: 'subject', attributes: ['id', 'name', 'code'] },
+        { model: Term, as: 'term', attributes: ['id', 'name'] },
       ],
       order: [['created_at', 'DESC']],
     });
@@ -115,9 +115,9 @@ async function getChildGrades(req, res) {
     const formatted = grades.map(g => ({
       id: g.id,
       subject_id: g.subject_id,
-      subject: g.Subject ? { id: g.Subject.id, name: g.Subject.name, code: g.Subject.code } : null,
+      subject: g.subject ? { id: g.subject.id, name: g.subject.name, code: g.subject.code } : null,
       term_id: g.term_id,
-      term: g.Term ? { id: g.Term.id, name: g.Term.name } : null,
+      term: g.term ? { id: g.term.id, name: g.term.name } : null,
       ca: g.ca,
       midterm: g.midterm,
       final: g.final,
@@ -166,8 +166,8 @@ async function getChildReportCards(req, res) {
     const grades = await Grade.findAll({
       where,
       include: [
-        { model: Subject, attributes: ['id', 'name', 'code'] },
-        { model: Term, attributes: ['id', 'name'] },
+        { model: Subject, as: 'subject', attributes: ['id', 'name', 'code'] },
+        { model: Term, as: 'term', attributes: ['id', 'name'] },
       ],
       order: [['Subject.name', 'ASC']],
     });
@@ -186,13 +186,13 @@ async function getChildReportCards(req, res) {
       const tid = g.term_id;
       if (!terms[tid]) {
         terms[tid] = {
-          term: g.Term ? { id: g.Term.id, name: g.Term.name } : null,
+          term: g.term ? { id: g.term.id, name: g.term.name } : null,
           subjects: [],
         };
       }
       terms[tid].subjects.push({
         id: g.id,
-        subject: g.Subject ? { id: g.Subject.id, name: g.Subject.name, code: g.Subject.code } : null,
+        subject: g.subject ? { id: g.subject.id, name: g.subject.name, code: g.subject.code } : null,
         ca: g.ca,
         midterm: g.midterm,
         final: g.final,
@@ -227,8 +227,8 @@ async function downloadChildReportCard(req, res) {
     const grades = await Grade.findAll({
       where,
       include: [
-        { model: Subject, attributes: ['id', 'name', 'code'] },
-        { model: Term, attributes: ['id', 'name'] },
+        { model: Subject, as: 'subject', attributes: ['id', 'name', 'code'] },
+        { model: Term, as: 'term', attributes: ['id', 'name'] },
       ],
       order: [['Subject.name', 'ASC']],
     });
@@ -239,25 +239,25 @@ async function downloadChildReportCard(req, res) {
 
     const student = await Student.findByPk(childId, {
       include: [
-        { model: User, attributes: ['first_name', 'last_name'] },
+        { model: User, as: 'user', attributes: ['first_name', 'last_name'] },
         { model: Class, as: 'classroom', attributes: ['name'] },
       ],
     });
 
     const reportData = {
-      student_name: `${student?.User?.first_name || ''} ${student?.User?.last_name || ''}`.trim(),
+      student_name: `${student?.user?.first_name || ''} ${student?.user?.last_name || ''}`.trim(),
       class_name: student?.classroom?.name || '',
       admission_number: student?.admission_number || '',
       grades: grades.map(g => ({
-        subject: g.Subject?.name || '',
-        code: g.Subject?.code || '',
+        subject: g.subject?.name || '',
+        code: g.subject?.code || '',
         ca: g.ca,
         midterm: g.midterm,
         final: g.final,
         total: g.total,
         grade_letter: g.grade_letter,
         remarks: g.remarks,
-        term: g.Term?.name || '',
+        term: g.term?.name || '',
       })),
       generated_at: new Date().toISOString(),
     };
@@ -482,7 +482,7 @@ async function getChildFees(req, res) {
 
     const fees = await Fee.findAll({
       where: { student_id: childId },
-      include: [{ model: FeeCategory, attributes: ['id', 'name', 'frequency'] }, { model: Term, attributes: ['id', 'name'] }],
+      include: [{ model: FeeCategory, as: 'feeCategory', attributes: ['id', 'name', 'frequency'] }, { model: Term, as: 'term', attributes: ['id', 'name'] }],
       order: [['created_at', 'DESC']],
     });
 
@@ -496,8 +496,8 @@ async function getChildFees(req, res) {
 
     const formattedFees = fees.map(f => ({
       id: f.id,
-      category: f.FeeCategory?.name || '',
-      term: f.Term?.name || '',
+      category: f.feeCategory?.name || '',
+      term: f.term?.name || '',
       amount: f.amount,
       discount: f.discount,
       amount_due: f.amount_due,
@@ -650,13 +650,13 @@ async function downloadReceipt(req, res) {
     }
 
     const student = await Student.findByPk(payment.student_id, {
-      include: [{ model: User, attributes: ['first_name', 'last_name'] }],
+      include: [{ model: User, as: 'user', attributes: ['first_name', 'last_name'] }],
     });
 
     const receipt = {
       id: payment.id,
       receipt_number: payment.receipt_number,
-      student_name: `${student?.User?.first_name || ''} ${student?.User?.last_name || ''}`.trim(),
+      student_name: `${student?.user?.first_name || ''} ${student?.user?.last_name || ''}`.trim(),
       amount: payment.amount,
       method: payment.payment_method,
       status: payment.status,
@@ -682,8 +682,8 @@ async function verifyHash(req, res) {
       const grade = await Grade.findOne({
         where: { payment_hash: hash },
         include: [
-          { model: Subject, attributes: ['name', 'code'] },
-          { model: Term, attributes: ['name'] },
+          { model: Subject, as: 'subject', attributes: ['name', 'code'] },
+          { model: Term, as: 'term', attributes: ['name'] },
         ],
       });
       if (grade) {
@@ -691,8 +691,8 @@ async function verifyHash(req, res) {
           valid: true,
           type: 'grade',
           data: {
-            subject: grade.Subject?.name || '',
-            term: grade.Term?.name || '',
+            subject: grade.subject?.name || '',
+            term: grade.term?.name || '',
             total: grade.total,
             grade_letter: grade.grade_letter,
             created_at: grade.created_at,
@@ -897,7 +897,7 @@ async function checkWhistleblowerStatus(req, res) {
 
     const report = await WhistleblowerReport.findOne({
       where: { follow_up_key: key },
-      include: [{ model: WhistleblowerCategory, attributes: ['name'] }],
+      include: [{ model: WhistleblowerCategory, as: 'category', attributes: ['name'] }],
     });
 
     if (!report) {
@@ -907,7 +907,7 @@ async function checkWhistleblowerStatus(req, res) {
     return res.json(successResponse({
       ticketId: report.follow_up_key,
       status: report.status,
-      category: report.WhistleblowerCategory?.name || '',
+      category: report.category?.name || '',
       created_at: report.created_at,
       updates: [],
     }));
@@ -1140,7 +1140,7 @@ async function getCoGuardians(req, res) {
       where: {
         student_id: { [Op.in]: studentIds },
       },
-      include: [{ model: User, as: 'guardianUser', attributes: ['id', 'first_name', 'last_name', 'email', 'phone'] }],
+      include: [{ model: User, as: 'guardian', attributes: ['id', 'first_name', 'last_name', 'email', 'phone'] }],
       order: [['created_at', 'DESC']],
     });
 
@@ -1151,11 +1151,11 @@ async function getCoGuardians(req, res) {
       relationship: g.relationship,
       status: g.status,
       invited_at: g.invited_at,
-      guardian: g.guardianUser ? {
-        id: g.guardianUser.id,
-        name: `${g.guardianUser.first_name || ''} ${g.guardianUser.last_name || ''}`.trim(),
-        email: g.guardianUser.email,
-        phone: g.guardianUser.phone,
+      guardian: g.guardian ? {
+        id: g.guardian.id,
+        name: `${g.guardian.first_name || ''} ${g.guardian.last_name || ''}`.trim(),
+        email: g.guardian.email,
+        phone: g.guardian.phone,
       } : null,
     }));
 
@@ -1578,8 +1578,8 @@ async function getEndOfTermPack(req, res) {
     const grades = await Grade.findAll({
       where: { student_id: targetStudentId },
       include: [
-        { model: Subject, attributes: ['name', 'code'] },
-        { model: Term, attributes: ['name'] },
+        { model: Subject, as: 'subject', attributes: ['name', 'code'] },
+        { model: Term, as: 'term', attributes: ['name'] },
       ],
     });
 
@@ -1589,7 +1589,7 @@ async function getEndOfTermPack(req, res) {
 
     const fees = await Fee.findAll({
       where: { student_id: targetStudentId },
-      include: [{ model: FeeCategory, attributes: ['name'] }],
+      include: [{ model: FeeCategory, as: 'feeCategory', attributes: ['name'] }],
     });
 
     const totalFees = fees.reduce((sum, f) => sum + (f.amount_due || 0), 0);
@@ -1604,8 +1604,8 @@ async function getEndOfTermPack(req, res) {
         type: 'grades',
         count: grades.length,
         data: grades.map(g => ({
-          subject: g.Subject?.name || '',
-          term: g.Term?.name || '',
+          subject: g.subject?.name || '',
+          term: g.term?.name || '',
           total: g.total,
           grade_letter: g.grade_letter,
         })),
@@ -1648,7 +1648,7 @@ async function getWeeklyDigest(req, res) {
         student_id: { [Op.in]: studentIds },
         created_at: { [Op.gte]: weekAgo },
       },
-      include: [{ model: Subject, attributes: ['name'] }],
+      include: [{ model: Subject, as: 'subject', attributes: ['name'] }],
     });
 
     const attendance = await Attendance.findAll({
@@ -1672,7 +1672,7 @@ async function getWeeklyDigest(req, res) {
         type: 'new_grades',
         count: grades.length,
         items: grades.map(g => ({
-          subject: g.Subject?.name || '',
+          subject: g.subject?.name || '',
           total: g.total,
           grade_letter: g.grade_letter,
         })),
@@ -1713,7 +1713,7 @@ async function getVoiceDigest(req, res) {
         student_id: { [Op.in]: studentIds },
         created_at: { [Op.gte]: weekAgo },
       },
-      include: [{ model: Subject, attributes: ['name'] }],
+      include: [{ model: Subject, as: 'subject', attributes: ['name'] }],
     });
 
     const attendance = await Attendance.findAll({
@@ -1741,7 +1741,7 @@ async function getVoiceDigest(req, res) {
     if (grades.length > 0) {
       text += 'Recent grades: ';
       grades.slice(0, 5).forEach(g => {
-        text += `${g.Subject?.name || 'Subject'}: ${g.total} points (${g.grade_letter || 'N/A'}). `;
+        text += `${g.subject?.name || 'Subject'}: ${g.total} points (${g.grade_letter || 'N/A'}). `;
       });
     }
 

@@ -52,7 +52,7 @@ async function getSchoolFromUser(req) {
     }
     const link = await SchoolAdmin.findOne({
       where: { user_id: req.user.id },
-      include: [{ model: School }],
+      include: [{ model: School, as: 'school' }],
     });
     if (!link) {
       console.warn(`getSchoolFromUser: No SchoolAdmin link found for user_id ${req.user.id}`);
@@ -405,10 +405,10 @@ async function getTeachers(req, res) {
 
     const teachers = await Teacher.findAll({
       where: { school_id: school.id },
-      include: [{ model: User, attributes: ['username', 'first_name', 'last_name', 'email'] }]
+      include: [{ model: User, as: 'user', attributes: ['username', 'first_name', 'last_name', 'email'] }]
     });
     const formatted = teachers.map(t => {
-      const userData = t.User || {};
+      const userData = t.user || {};
       return {
         ...t.toJSON(),
         username: userData.username,
@@ -516,15 +516,15 @@ async function getClasses(req, res) {
     const teachers = teacherIds.length > 0
       ? await Teacher.findAll({
           where: { id: teacherIds, school_id: school.id },
-          include: [{ model: User, attributes: ['username', 'first_name', 'last_name', 'email'] }],
+          include: [{ model: User, as: 'user', attributes: ['username', 'first_name', 'last_name', 'email'] }],
         })
       : [];
     const teacherMap = {};
     teachers.forEach(t => {
       teacherMap[t.id] = {
         id: t.id,
-        name: `${t.User?.first_name || ''} ${t.User?.last_name || ''}`.trim() || t.User?.username || 'Teacher',
-        email: t.User?.email || '',
+        name: `${t.user?.first_name || ''} ${t.user?.last_name || ''}`.trim() || t.user?.username || 'Teacher',
+        email: t.user?.email || '',
       };
     });
 
@@ -604,32 +604,32 @@ async function getClassById(req, res) {
     // Get subjects for this class
     const classSubjects = await ClassSubject.findAll({
       where: { class_id: cls.id },
-      include: [{ model: Subject, attributes: ['id', 'name', 'code'] }],
+      include: [{ model: Subject, as: 'subject', attributes: ['id', 'name', 'code'] }],
     });
-    const subjects = classSubjects.map(cs => cs.Subject);
+    const subjects = classSubjects.map(cs => cs.subject);
 
     // Get assistant teachers
     const assistantTeachers = await ClassAssistantTeacher.findAll({
       where: { class_id: cls.id },
-      include: [{ model: Teacher, include: [{ model: User, attributes: ['username', 'first_name', 'last_name', 'email'] }] }],
+      include: [{ model: Teacher, as: 'teacher', include: [{ model: User, as: 'user', attributes: ['username', 'first_name', 'last_name', 'email'] }] }],
     });
     const assistants = assistantTeachers.map(at => ({
-      id: at.Teacher.id,
-      name: `${at.Teacher.User?.first_name || ''} ${at.Teacher.User?.last_name || ''}`.trim() || at.Teacher.User?.username,
-      email: at.Teacher.User?.email || '',
+      id: at.teacher.id,
+      name: `${at.teacher.user?.first_name || ''} ${at.teacher.user?.last_name || ''}`.trim() || at.teacher.user?.username,
+      email: at.teacher.user?.email || '',
     }));
 
     // Get students
     const students = await Student.findAll({
       where: { classroom_id: cls.id, school_id: school.id },
       include: [
-        { model: User, attributes: ['first_name', 'last_name', 'email'] },
+        { model: User, as: 'user', attributes: ['first_name', 'last_name', 'email'] },
         { model: require('../models/Class'), as: 'classroom', attributes: ['id', 'name'] },
       ],
     });
     const studentList = students.map(s => ({
       id: s.id,
-      full_name: `${s.User?.first_name || ''} ${s.User?.last_name || ''}`.trim(),
+      full_name: `${s.user?.first_name || ''} ${s.user?.last_name || ''}`.trim(),
       admission_number: s.admission_number,
     }));
 
@@ -638,13 +638,13 @@ async function getClassById(req, res) {
     if (cls.class_teacher_id) {
       const teacher = await Teacher.findOne({
         where: { id: cls.class_teacher_id },
-        include: [{ model: User, attributes: ['username', 'first_name', 'last_name', 'email'] }],
+        include: [{ model: User, as: 'user', attributes: ['username', 'first_name', 'last_name', 'email'] }],
       });
       if (teacher) {
         classTeacher = {
           id: teacher.id,
-          name: `${teacher.User?.first_name || ''} ${teacher.User?.last_name || ''}`.trim() || teacher.User?.username,
-          email: teacher.User?.email || '',
+          name: `${teacher.user?.first_name || ''} ${teacher.user?.last_name || ''}`.trim() || teacher.user?.username,
+          email: teacher.user?.email || '',
         };
       }
     }
@@ -1015,15 +1015,15 @@ async function getSubjects(req, res) {
     const teachers = allTeacherIds.length > 0
       ? await Teacher.findAll({
           where: { id: allTeacherIds },
-          include: [{ model: User, attributes: ['username', 'first_name', 'last_name', 'email'] }],
+          include: [{ model: User, as: 'user', attributes: ['username', 'first_name', 'last_name', 'email'] }],
         })
       : [];
     const teacherMap = {};
     teachers.forEach(t => {
       teacherMap[t.id] = {
         id: t.id,
-        name: `${t.User?.first_name || ''} ${t.User?.last_name || ''}`.trim() || t.User?.username || 'Teacher',
-        email: t.User?.email || '',
+        name: `${t.user?.first_name || ''} ${t.user?.last_name || ''}`.trim() || t.user?.username || 'Teacher',
+        email: t.user?.email || '',
       };
     });
 
@@ -1674,10 +1674,14 @@ async function getTeacherAssignments(req, res) {
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
     const assignments = await Assignment.findAll({
       where: { school_id: school.id, is_active: true },
-      include: [{ model: Subject, attributes: ['id', 'name'] }, { model: Class, attributes: ['id', 'name'] }, { model: Teacher, attributes: ['id'], include: [{ model: User, attributes: ['first_name', 'last_name'] }] }],
+      include: [
+        { model: Subject, as: 'subject', attributes: ['id', 'name'] },
+        { model: Class, as: 'class', attributes: ['id', 'name'] },
+        { model: Teacher, as: 'teacher', attributes: ['id'], include: [{ model: User, as: 'user', attributes: ['first_name', 'last_name'] }] }
+      ],
       order: [['created_at', 'DESC']],
     });
-    return res.json(successResponse({ assignments: assignments.map(a => ({ id: a.id, title: a.title, subject: a.Subject, class: a.Class, teacher: a.Teacher, dueDate: a.due_date })) }));
+    return res.json(successResponse({ assignments: assignments.map(a => ({ id: a.id, title: a.title, subject: a.subject, class: a.class, teacher: a.teacher, dueDate: a.due_date })) }));
   } catch (err) {
     return res.status(500).json(errorResponse('Failed to fetch assignments'));
   }
@@ -1971,9 +1975,9 @@ async function generateTimetable(req, res) {
     const classSubjects = await ClassSubject.findAll({
       where: class_id ? { class_id } : {},
       include: [
-        { model: Subject, attributes: ['id', 'name', 'code'] },
-        { model: Teacher, attributes: ['id'], include: [{ model: User, attributes: ['first_name', 'last_name'] }] },
-        { model: Class, attributes: ['id', 'name'] },
+        { model: Subject, as: 'subject', attributes: ['id', 'name', 'code'] },
+        { model: Teacher, as: 'teacher', attributes: ['id'], include: [{ model: User, as: 'user', attributes: ['first_name', 'last_name'] }] },
+        { model: Class, as: 'class', attributes: ['id', 'name'] },
       ],
     });
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
@@ -1982,7 +1986,7 @@ async function generateTimetable(req, res) {
       day,
       periods: periods.map((period, idx) => {
         const cs = classSubjects[idx % classSubjects.length];
-        return cs ? { period, subject: cs.Subject?.name, teacher: `${cs.Teacher?.User?.first_name} ${cs.Teacher?.User?.last_name}`.trim(), class: cs.Class?.name } : { period, subject: 'Free', teacher: '', class: '' };
+        return cs ? { period, subject: cs.subject?.name, teacher: `${cs.teacher?.user?.first_name} ${cs.teacher?.user?.last_name}`.trim(), class: cs.class?.name } : { period, subject: 'Free', teacher: '', class: '' };
       }),
     }));
     return res.json(successResponse({ timetable }, 'Timetable generated'));
@@ -2077,15 +2081,15 @@ async function getSyllabusTopics(req, res) {
     const teachers = teacherIds.length > 0
       ? await Teacher.findAll({
           where: { id: teacherIds },
-          include: [{ model: User, attributes: ['username', 'first_name', 'last_name', 'email'] }],
+          include: [{ model: User, as: 'user', attributes: ['username', 'first_name', 'last_name', 'email'] }],
         })
       : [];
     const teacherMap = {};
     teachers.forEach(t => {
       teacherMap[t.id] = {
         id: t.id,
-        name: `${t.User?.first_name || ''} ${t.User?.last_name || ''}`.trim() || t.User?.username || 'Teacher',
-        email: t.User?.email || '',
+        name: `${t.user?.first_name || ''} ${t.user?.last_name || ''}`.trim() || t.user?.username || 'Teacher',
+        email: t.user?.email || '',
       };
     });
 
