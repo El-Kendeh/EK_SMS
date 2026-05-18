@@ -1,6 +1,6 @@
-import ApiClient from './client';
+import apiClient from './client';
 
-const api = new ApiClient();
+const api = apiClient;
 
 export async function fetchParentChildren() {
   return api.request('/api/parent/children/');
