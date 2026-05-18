@@ -2,6 +2,7 @@ const School = require('../models/School');
 const User = require('../models/User');
 const SchoolAdmin = require('../models/SchoolAdmin');
 const Teacher = require('../models/Teacher');
+const Student = require('../models/Student');
 const SystemOpsAlert = require('../models/SystemOpsAlert');
 const sequelize = require('../config/db');
 const { Op } = require('sequelize');
@@ -127,11 +128,7 @@ async function handleSchoolAction(req, res) {
       if (!alreadyApproved && emailQueue.length) {
         for (const row of emailQueue) {
           try {
-            await sendSchoolApprovedEmail({
-              toEmail: row.email,
-              schoolName: school.name,
-              adminUsername: row.username,
-            });
+            await sendSchoolApprovedEmail(row.email, row.username || 'Admin', school.name, row.username, 'Please change on first login');
           } catch (err) {
             console.error('Approval email failed:', err.message || err);
           }
@@ -305,10 +302,12 @@ async function resetUserPassword(req, res) {
     // 2. Identify Role
     const schoolAdminLink = await SchoolAdmin.findOne({ where: { user_id } });
     const teacherLink = await Teacher.findOne({ where: { user_id } });
-    let role = 'user';
+    const studentLink = await Student.findOne({ where: { user_id } });
+    let role = user.role?.code || 'user';
     if (user.is_superuser) role = 'superadmin';
     else if (schoolAdminLink) role = 'school_admin';
     else if (teacherLink) role = 'teacher';
+    else if (studentLink) role = 'student';
 
     // 3. Mark for password change
     if (schoolAdminLink) {

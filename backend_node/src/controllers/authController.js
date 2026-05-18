@@ -5,6 +5,7 @@ const Role = require('../models/Role');
 const School = require('../models/School');
 const SchoolAdmin = require('../models/SchoolAdmin');
 const Teacher = require('../models/Teacher');
+const Student = require('../models/Student');
 const OTP = require('../models/OTP');
 const sequelize = require('../config/db');
 const { Resend } = require('resend');
@@ -96,28 +97,45 @@ async function login(req, res) {
 
     let schoolAdminLink = null;
     let teacherLink = null;
+    let studentLink = null;
     try {
       schoolAdminLink = await SchoolAdmin.findOne({ where: { user_id: user.id } });
     } catch (findErr) {
-      console.warn('[LOGIN DEBUG] SchoolAdmin lookup failed, continuing without school admin link:', findErr.message);
+      console.warn('[LOGIN DEBUG] SchoolAdmin lookup failed:', findErr.message);
     }
     try {
       teacherLink = await Teacher.findOne({ where: { user_id: user.id } });
     } catch (findErr) {
-      console.warn('[LOGIN DEBUG] Teacher lookup failed, continuing without teacher link:', findErr.message);
+      console.warn('[LOGIN DEBUG] Teacher lookup failed:', findErr.message);
+    }
+    try {
+      studentLink = await Student.findOne({ where: { user_id: user.id } });
+    } catch (findErr) {
+      console.warn('[LOGIN DEBUG] Student lookup failed:', findErr.message);
     }
 
     let role = 'user';
+    let schoolId = schoolAdminLink ? schoolAdminLink.school_id : null;
     if (isPortalSuper) {
       role = 'superadmin';
     } else if (schoolAdminLink) {
       role = 'school_admin';
     } else if (teacherLink) {
       role = 'teacher';
+      schoolId = teacherLink.school_id;
+    } else if (studentLink) {
+      role = 'student';
+      schoolId = studentLink.school_id;
     } else if (portalRoleCode === 'teacher') {
       role = 'teacher';
-    } else if (['schooladmin', 'principal', 'bursar'].includes(portalRoleCode)) {
-      role = 'staff';
+    } else if (portalRoleCode === 'principal') {
+      role = 'principal';
+    } else if (portalRoleCode === 'bursar') {
+      role = 'bursar';
+    } else if (portalRoleCode === 'parent') {
+      role = 'parent';
+    } else if (['schooladmin'].includes(portalRoleCode)) {
+      role = 'school_admin';
     } else if (user.get('is_staff')) {
       role = 'staff';
     }
@@ -143,9 +161,13 @@ async function login(req, res) {
       id: user.id,
       username: user.username,
       email: user.email,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      phone: user.phone,
       is_staff: user.get('is_staff'),
       is_superuser: isPortalSuper,
       role,
+      school_id: schoolId,
     });
 
     return res.json(successResponse({
@@ -155,9 +177,13 @@ async function login(req, res) {
         id: user.id,
         username: user.username,
         email: user.email,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        phone: user.phone,
         is_staff: user.get('is_staff'),
         is_superuser: isPortalSuper,
         role,
+        school_id: schoolId,
         must_change_password,
       },
     }));
@@ -260,13 +286,19 @@ async function sendOtp(req, res) {
   if (!email) return res.status(400).json(errorResponse("Email is required"));
 
   const code = Math.floor(100000 + Math.random() * 900000).toString();
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
   try {
-    // 1. Store in DB
+    await OTP.destroy({ where: { email, is_used: false } });
+
+    const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000);
+    const recentCount = await OTP.count({ where: { email, created_at: { [Op.gte]: tenMinAgo } } });
+    if (recentCount >= 3) {
+      return res.status(429).json(errorResponse("Too many OTP requests. Please wait 10 minutes."));
+    }
+
     await OTP.create({ email, code, expires_at: expiresAt });
 
-    // 2. Send via Resend
     if (resend) {
       const { data, error } = await resend.emails.send({
         from: process.env.DEFAULT_FROM_EMAIL || 'EK-SMS <noreply@elkendeh.com>',

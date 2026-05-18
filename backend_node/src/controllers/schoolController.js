@@ -1703,12 +1703,61 @@ async function sendMessage(req, res) {
 }
 
 async function createParent(req, res) {
+  const transaction = await sequelize.transaction();
   try {
     const school = await getSchoolFromUser(req);
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
-    return res.json(successResponse({ parent: {} }, 'Parent created'));
+
+    const { first_name, last_name, email, phone, password, student_ids, relationship } = req.body;
+    if (!phone) return res.status(400).json(errorResponse('Phone number is required'));
+
+    const username = email || `parent_${Date.now()}`;
+    const hashedPassword = await bcrypt.hash(password || 'Parent@123', 10);
+    const parentRoleId = await requireRoleId('parent');
+
+    const user = await User.create({
+      username,
+      password: hashedPassword,
+      email: email || null,
+      first_name,
+      last_name,
+      is_active: true,
+      role_id: parentRoleId,
+    }, { transaction });
+
+    if (student_ids && student_ids.length) {
+      for (const sid of student_ids) {
+        const updateFields = {};
+        if (relationship === 'father') {
+          updateFields.father_phone = phone;
+          updateFields.father_name = `${first_name} ${last_name}`.trim();
+          if (email) updateFields.father_email = email;
+        } else if (relationship === 'mother') {
+          updateFields.mother_phone = phone;
+          updateFields.mother_name = `${first_name} ${last_name}`.trim();
+          if (email) updateFields.mother_email = email;
+        } else {
+          updateFields.emergency_phone = phone;
+          updateFields.emergency_name = `${first_name} ${last_name}`.trim();
+        }
+        await Student.update(updateFields, { where: { id: sid, school_id: school.id }, transaction });
+      }
+    }
+
+    await Notification.create({
+      school_id: school.id,
+      title: 'New Parent Account',
+      message: `Parent account created for ${first_name} ${last_name}`,
+      type: 'info',
+      is_read: false,
+    }, { transaction });
+
+    await transaction.commit();
+    return res.json(successResponse({ parent: { id: user.id, name: `${first_name} ${last_name}`.trim(), phone } }, 'Parent created'));
   } catch (err) {
-    return res.status(500).json(errorResponse('Failed to create parent'));
+    await transaction.rollback();
+    console.error('createParent Error:', err);
+    return res.status(400).json(errorResponse(`Failed to create parent: ${err.message}`));
   }
 }
 
@@ -1781,16 +1830,6 @@ async function sendMessage(req, res) {
     return res.json(successResponse({ message: {} }, 'Message sent'));
   } catch (err) {
     return res.status(500).json(errorResponse('Failed to send message'));
-  }
-}
-
-async function createParent(req, res) {
-  try {
-    const school = await getSchoolFromUser(req);
-    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
-    return res.json(successResponse({ parent: {} }, 'Parent created'));
-  } catch (err) {
-    return res.status(500).json(errorResponse('Failed to create parent'));
   }
 }
 
