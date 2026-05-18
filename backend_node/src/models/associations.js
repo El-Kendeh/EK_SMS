@@ -214,48 +214,6 @@ Notification.belongsTo(User, { foreignKey: 'user_id', as: 'targetUser' });
 Expense.belongsTo(User, { foreignKey: 'approved_by', as: 'approver' });
 
 // ============================================
-// SyllabusTopic associations
-// ============================================
-SyllabusTopic.belongsTo(Class, { foreignKey: 'class_id', as: 'class' });
-SyllabusTopic.belongsTo(Subject, { foreignKey: 'subject_id', as: 'subject' });
-SyllabusTopic.belongsTo(Term, { foreignKey: 'term_id', as: 'term' });
-SyllabusTopic.belongsTo(Teacher, { foreignKey: 'teacher_id', as: 'teacher' });
-
-// ============================================
-// Exam associations
-// ============================================
-Exam.belongsTo(Term, { foreignKey: 'term_id', as: 'term' });
-Exam.belongsTo(Subject, { foreignKey: 'subject_id', as: 'subject' });
-Exam.belongsTo(Class, { foreignKey: 'classroom_id', as: 'classroom' });
-
-// ============================================
-// Grade associations
-// ============================================
-Grade.belongsTo(Student, { foreignKey: 'student_id', as: 'student' });
-Grade.belongsTo(Subject, { foreignKey: 'subject_id', as: 'subject' });
-Grade.belongsTo(Term, { foreignKey: 'term_id', as: 'term' });
-Grade.belongsTo(Class, { foreignKey: 'classroom_id', as: 'classroom' });
-
-// ============================================
-// Attendance associations
-// ============================================
-Attendance.belongsTo(Student, { foreignKey: 'student_id', as: 'student' });
-Attendance.belongsTo(Class, { foreignKey: 'classroom_id', as: 'classroom' });
-
-// ============================================
-// ClassSubject associations
-// ============================================
-ClassSubject.belongsTo(Class, { foreignKey: 'class_id', as: 'class' });
-ClassSubject.belongsTo(Subject, { foreignKey: 'subject_id', as: 'subject' });
-ClassSubject.belongsTo(Teacher, { foreignKey: 'teacher_id', as: 'teacher' });
-
-// ============================================
-// ClassAssistantTeacher associations
-// ============================================
-ClassAssistantTeacher.belongsTo(Class, { foreignKey: 'class_id', as: 'class' });
-ClassAssistantTeacher.belongsTo(Teacher, { foreignKey: 'teacher_id', as: 'teacher' });
-
-// ============================================
 // New model associations
 // ============================================
 
