@@ -26,7 +26,7 @@ function normalizePath(filePath) {
 
 function serializeSchool(school) {
   const p = school.get({ plain: true });
-  const admins = p.SchoolAdmins || [];
+  const admins = p.schoolAdmins || [];
   const firstLink = admins[0];
   const usr = firstLink?.user;
   const adminFull = usr ? [usr.first_name, usr.last_name].filter(Boolean).join(' ').trim() : '';
@@ -106,7 +106,7 @@ async function handleSchoolAction(req, res) {
       await school.save({ transaction });
 
       const emailQueue = [];
-      for (const adminLink of school.SchoolAdmins) {
+      for (const adminLink of school.schoolAdmins) {
         const user = await User.findByPk(adminLink.user_id, { transaction });
         if (user) {
           user.is_active = true;
