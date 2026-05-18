@@ -65,6 +65,9 @@ const SpotlightStudent = require('./SpotlightStudent');
 // ============================================
 // School associations
 // ============================================
+Role.hasMany(User, { foreignKey: 'role_id', as: 'users' });
+User.belongsTo(Role, { foreignKey: 'role_id', as: 'role' });
+
 School.hasMany(AcademicYear, { foreignKey: 'school_id', as: 'academicYears' });
 School.hasMany(Term, { foreignKey: 'school_id', as: 'terms' });
 School.hasMany(Class, { foreignKey: 'school_id', as: 'classes' });
