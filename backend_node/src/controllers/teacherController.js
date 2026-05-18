@@ -172,8 +172,8 @@ async function getTeacherGradebook(req, res) {
     if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
 
     const { class_id, subject_id, term_id } = req.query;
-    if (!class_id || !subject_id || !term_id) {
-      return res.status(400).json(errorResponse('class_id, subject_id, and term_id are required'));
+    if (!class_id) {
+      return res.status(400).json(errorResponse('class_id is required'));
     }
 
     const students = await Student.findAll({
@@ -181,15 +181,18 @@ async function getTeacherGradebook(req, res) {
       include: [{ model: User, as: 'user', attributes: ['id', 'first_name', 'last_name'] }],
     });
 
-    const grades = await Grade.findAll({
-      where: {
-        school_id: teacher.school_id,
-        classroom_id: class_id,
-        subject_id,
-        term_id,
-        student_id: { [Op.in]: students.map(s => s.id) },
-      },
-    });
+    let grades = [];
+    if (subject_id && term_id) {
+      grades = await Grade.findAll({
+        where: {
+          school_id: teacher.school_id,
+          classroom_id: class_id,
+          subject_id,
+          term_id,
+          student_id: { [Op.in]: students.map(s => s.id) },
+        },
+      });
+    }
 
     const gradeMap = {};
     grades.forEach(g => { gradeMap[g.student_id] = g; });
@@ -504,6 +507,38 @@ async function getTeacherAttendanceStatus(req, res) {
   } catch (err) {
     console.error('getTeacherAttendanceStatus Error:', err);
     return res.json(successResponse({ classes: [], at_risk: [] }));
+  }
+}
+
+async function recordClassAttendance(req, res) {
+  try {
+    const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
+    if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
+
+    const { classroom_id, date, records, notes } = req.body;
+    if (!classroom_id || !records || !Array.isArray(records)) {
+      return res.status(400).json(errorResponse('classroom_id and records array are required'));
+    }
+
+    const Attendance = require('../models/Attendance');
+    const today = date || new Date().toISOString().split('T')[0];
+
+    const created = [];
+    for (const r of records) {
+      const [record] = await Attendance.upsert({
+        student_id: r.student_id,
+        classroom_id,
+        date: today,
+        status: r.status || 'absent',
+        notes: notes || null,
+      });
+      created.push(record);
+    }
+
+    return res.json(successResponse({ count: created.length, date: today }, 'Attendance recorded'));
+  } catch (err) {
+    console.error('recordClassAttendance Error:', err);
+    return res.status(500).json(errorResponse('Failed to record attendance'));
   }
 }
 
@@ -1857,7 +1892,7 @@ async function getModificationRequests(req, res) {
     if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
 
     const requests = await ModificationRequest.findAll({
-      where: { requested_by: teacher.id, school_id: teacher.school_id },
+      where: { requested_by: req.user.id, school_id: teacher.school_id },
       include: [
         { model: Subject, as: 'subject', attributes: ['id', 'name'] },
         { model: Student, as: 'student', include: [{ model: User, as: 'user', attributes: ['first_name', 'last_name'] }] },
@@ -2455,6 +2490,7 @@ module.exports = {
   getTeacherTimetable,
   getTeacherExamDuties,
   getTeacherAttendanceStatus,
+  recordClassAttendance,
   getTeacherAtRiskStudents,
   getTeacherModificationSummary,
   getTeacherAcademicCalendar,

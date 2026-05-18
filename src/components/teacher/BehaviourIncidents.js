@@ -30,7 +30,7 @@ export default function BehaviourIncidents() {
   const fileRef = useRef(null);
 
   useEffect(() => {
-    teacherApi.getBehaviourIncidents().then(setIncidents).catch(() => setError('Could not load incidents.'));
+    teacherApi.getBehaviourIncidents().then((data) => setIncidents(Array.isArray(data) ? data : (data?.incidents || []))).catch(() => setError('Could not load incidents.'));
   }, []);
 
   useEffect(() => {

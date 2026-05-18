@@ -13,6 +13,7 @@ const {
   getTeacherTimetable,
   getTeacherExamDuties,
   getTeacherAttendanceStatus,
+  recordClassAttendance,
   getTeacherAtRiskStudents,
   getTeacherModificationSummary,
   getTeacherAcademicCalendar,
@@ -127,6 +128,7 @@ router.get('/exam-duties/', getTeacherExamDuties);
 
 // Attendance & Analytics
 router.get('/attendance/status/', getTeacherAttendanceStatus);
+router.post('/attendance/', recordClassAttendance);
 router.get('/at-risk-students/', getTeacherAtRiskStudents);
 router.get('/analytics/', getClassAnalytics);
 router.get('/modification-requests/summary/', getTeacherModificationSummary);
