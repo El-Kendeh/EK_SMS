@@ -8,12 +8,15 @@ const Grade = sequelize.define('Grade', {
   subject_id: { type: DataTypes.BIGINT, allowNull: false },
   term_id: { type: DataTypes.BIGINT, allowNull: false },
   classroom_id: { type: DataTypes.BIGINT },
-  ca: { type: DataTypes.FLOAT }, // Continuous Assessment
+  ca: { type: DataTypes.FLOAT },
   midterm: { type: DataTypes.FLOAT },
   final: { type: DataTypes.FLOAT },
   total: { type: DataTypes.FLOAT },
-  grade_letter: { type: DataTypes.STRING }, // A, B, C, etc.
+  grade_letter: { type: DataTypes.STRING },
   remarks: { type: DataTypes.TEXT },
+  approval_status: { type: DataTypes.STRING, defaultValue: 'pending' },
+  approved_by: { type: DataTypes.BIGINT },
+  approved_at: { type: DataTypes.DATE },
   created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
 }, {
   tableName: 'pruh_core_grade',

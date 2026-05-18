@@ -67,7 +67,57 @@ async function listGradeApprovals(req, res) {
     const school = await getSchoolFromUser(req);
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
-    return res.json(successResponse({ requests: [] }));
+    const { status, class_id, term_id } = req.query;
+    const where = { school_id: school.id };
+    if (status) where.approval_status = status;
+    else where.approval_status = { [Op.in]: ['pending', 'rejected'] };
+    if (class_id) where.classroom_id = class_id;
+    if (term_id) where.term_id = term_id;
+
+    const grades = await Grade.findAll({
+      where,
+      include: [
+        { model: Student, include: [{ model: User, attributes: ['first_name', 'last_name'] }] },
+        { model: Subject, attributes: ['id', 'name', 'code'] },
+        { model: Term, attributes: ['id', 'name'] },
+        { model: Class, as: 'classroom', attributes: ['id', 'name'] },
+      ],
+      order: [['created_at', 'DESC']],
+      limit: 200,
+    });
+
+    const formatted = grades.map(g => ({
+      id: g.id,
+      student_id: g.student_id,
+      student_name: g.Student ? `${g.Student.User?.first_name} ${g.Student.User?.last_name}`.trim() : '',
+      admission_number: g.Student?.admission_number || '',
+      subject_id: g.subject_id,
+      subject_name: g.Subject?.name || '',
+      subject_code: g.Subject?.code || '',
+      term_id: g.term_id,
+      term_name: g.Term?.name || '',
+      class_id: g.classroom_id,
+      class_name: g.classroom?.name || '',
+      ca: g.ca,
+      midterm: g.midterm,
+      final: g.final,
+      total: g.total,
+      grade_letter: g.grade_letter,
+      remarks: g.remarks,
+      approval_status: g.approval_status,
+      approved_by: g.approved_by,
+      approved_at: g.approved_at,
+      created_at: g.created_at,
+    }));
+
+    const pending = await Grade.count({ where: { school_id: school.id, approval_status: 'pending' } });
+    const approved = await Grade.count({ where: { school_id: school.id, approval_status: 'approved' } });
+    const rejected = await Grade.count({ where: { school_id: school.id, approval_status: 'rejected' } });
+
+    return res.json(successResponse({
+      requests: formatted,
+      counts: { pending, approved, rejected },
+    }));
   } catch (err) {
     console.error('listGradeApprovals Error:', err);
     return res.status(500).json(errorResponse(`Failed to fetch approvals: ${err.message}`));
@@ -76,8 +126,40 @@ async function listGradeApprovals(req, res) {
 
 async function reviewGradeChange(req, res) {
   try {
-    const { mod_id, action, comment } = req.body;
-    return res.json(successResponse({}, `Grade ${action}`));
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+
+    const { grade_ids, action, comment } = req.body;
+    if (!grade_ids || !grade_ids.length) return res.status(400).json(errorResponse('grade_ids are required'));
+    if (!['approve', 'reject'].includes(action)) return res.status(400).json(errorResponse('Action must be approve or reject'));
+
+    const ids = Array.isArray(grade_ids) ? grade_ids : [grade_ids];
+    const grades = await Grade.findAll({
+      where: { id: ids, school_id: school.id, approval_status: 'pending' },
+    });
+
+    let count = 0;
+    for (const g of grades) {
+      await g.update({
+        approval_status: action === 'approve' ? 'approved' : 'rejected',
+        approved_by: req.user?.id || null,
+        approved_at: new Date(),
+      });
+
+      if (action === 'approve') {
+        await Notification.create({
+          school_id: school.id,
+          title: 'Grade Approved',
+          message: `Grade for ${g.Subject?.name || 'subject'} has been approved by the principal.`,
+          type: 'info',
+          is_read: false,
+        });
+      }
+
+      count++;
+    }
+
+    return res.json(successResponse({ count }, `${count} grade(s) ${action}d`));
   } catch (err) {
     console.error('reviewGradeChange Error:', err);
     return res.status(500).json(errorResponse(`Failed to review: ${err.message}`));
@@ -91,9 +173,20 @@ async function listReportCards(req, res) {
 
     const activeTerm = await Term.findOne({ where: { school_id: school.id, is_active: true } });
 
+    const approvedGrades = await Grade.count({
+      where: { school_id: school.id, approval_status: 'approved', term_id: activeTerm?.id || null },
+    });
+
+    const totalGrades = await Grade.count({
+      where: { school_id: school.id, term_id: activeTerm?.id || null },
+    });
+
     return res.json(successResponse({
       report_cards: [],
       term: activeTerm?.name || null,
+      term_id: activeTerm?.id || null,
+      approved_count: approvedGrades,
+      total_count: totalGrades,
     }));
   } catch (err) {
     console.error('listReportCards Error:', err);
@@ -103,7 +196,21 @@ async function listReportCards(req, res) {
 
 async function publishReportCard(req, res) {
   try {
-    return res.json(successResponse({}, 'Report card published'));
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+
+    const { student_ids, term_id } = req.body;
+    if (!term_id) return res.status(400).json(errorResponse('term_id is required'));
+
+    await Notification.create({
+      school_id: school.id,
+      title: 'Report Cards Published',
+      message: `Report cards for term have been published and are now available.`,
+      type: 'alert',
+      is_read: false,
+    });
+
+    return res.json(successResponse({}, 'Report cards published'));
   } catch (err) {
     console.error('publishReportCard Error:', err);
     return res.status(500).json(errorResponse(`Failed to publish: ${err.message}`));

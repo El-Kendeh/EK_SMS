@@ -11,6 +11,10 @@ const Term = require('../models/Term');
 const AcademicYear = require('../models/AcademicYear');
 const SecurityAuditLog = require('../models/SecurityAuditLog');
 const Notification = require('../models/Notification');
+const FeeCategory = require('../models/FeeCategory');
+const Fee = require('../models/Fee');
+const Payment = require('../models/Payment');
+const Expense = require('../models/Expense');
 
 const successResponse = (data = {}, message = 'Success') => ({ success: true, message, ...data });
 const errorResponse = (message) => ({ success: false, message });
@@ -31,13 +35,18 @@ async function getFinanceStats(req, res) {
     const school = await getSchoolFromUser(req);
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
+    const totalCollected = await Payment.sum('amount', { where: { school_id: school.id, status: 'completed' } }) || 0;
+    const totalDue = await Fee.sum('amount_due', { where: { school_id: school.id } }) || 0;
+    const totalPaid = await Fee.sum('amount_paid', { where: { school_id: school.id } }) || 0;
+    const outstanding = totalDue - totalPaid;
+    const totalExpenses = await Expense.sum('amount', { where: { school_id: school.id, status: 'approved' } }) || 0;
     const totalStudents = await Student.count({ where: { school_id: school.id, status: 'active' } });
 
     return res.json(successResponse({
-      total_collected: 0,
-      outstanding_balance: 0,
-      expenses: 0,
-      balance: 0,
+      total_collected: Math.round(totalCollected * 100) / 100,
+      outstanding_balance: Math.round(outstanding * 100) / 100,
+      expenses: Math.round(totalExpenses * 100) / 100,
+      balance: Math.round((totalCollected - totalExpenses) * 100) / 100,
       total_students: totalStudents,
     }));
   } catch (err) {
@@ -51,10 +60,287 @@ async function getFinanceFees(req, res) {
     const school = await getSchoolFromUser(req);
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
-    return res.json(successResponse({ fees: [] }));
+    const { class_id, status, student_id } = req.query;
+    const where = { school_id: school.id };
+    if (class_id) {
+      const students = await Student.findAll({ where: { classroom_id: class_id, school_id: school.id }, attributes: ['id'] });
+      where.student_id = { [Op.in]: students.map(s => s.id) };
+    }
+    if (student_id) where.student_id = student_id;
+    if (status) where.status = status;
+
+    const fees = await Fee.findAll({
+      where,
+      include: [
+        { model: FeeCategory, attributes: ['id', 'name', 'frequency'] },
+        { model: Student, include: [{ model: User, attributes: ['first_name', 'last_name'] }] },
+        { model: Term, attributes: ['id', 'name'] },
+      ],
+      order: [['created_at', 'DESC']],
+      limit: 200,
+    });
+
+    const formatted = fees.map(f => ({
+      id: f.id,
+      student_id: f.student_id,
+      student_name: f.Student ? `${f.Student.User?.first_name || ''} ${f.Student.User?.last_name || ''}`.trim() : '',
+      admission_number: f.Student?.admission_number || '',
+      category_id: f.fee_category_id,
+      category_name: f.FeeCategory?.name || '',
+      term_id: f.term_id,
+      term_name: f.Term?.name || '',
+      amount: f.amount,
+      discount: f.discount,
+      amount_due: f.amount_due,
+      amount_paid: f.amount_paid,
+      balance: f.amount_due - f.amount_paid,
+      status: f.status,
+      due_date: f.due_date,
+      created_at: f.created_at,
+    }));
+
+    return res.json(successResponse({ fees: formatted }));
   } catch (err) {
     console.error('getFinanceFees Error:', err);
     return res.status(500).json(errorResponse(`Failed to fetch fees: ${err.message}`));
+  }
+}
+
+async function createFeeCategory(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+
+    const { name, description, amount, frequency, applicable_classes } = req.body;
+    if (!name || amount == null) return res.status(400).json(errorResponse('Name and amount are required'));
+
+    const category = await FeeCategory.create({
+      school_id: school.id, name, description, amount,
+      frequency: frequency || 'term',
+      applicable_classes: applicable_classes ? JSON.stringify(applicable_classes) : null,
+    });
+
+    return res.json(successResponse({ category }, 'Fee category created'));
+  } catch (err) {
+    console.error('createFeeCategory Error:', err);
+    return res.status(500).json(errorResponse(`Failed to create fee category: ${err.message}`));
+  }
+}
+
+async function getFeeCategories(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+
+    const categories = await FeeCategory.findAll({
+      where: { school_id: school.id },
+      order: [['name', 'ASC']],
+    });
+
+    return res.json(successResponse({ categories }));
+  } catch (err) {
+    console.error('getFeeCategories Error:', err);
+    return res.status(500).json(errorResponse(`Failed to fetch fee categories: ${err.message}`));
+  }
+}
+
+async function assignFees(req, res) {
+  const transaction = await sequelize.transaction();
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+
+    const { fee_category_id, student_ids, term_id, discount } = req.body;
+    if (!fee_category_id || !student_ids || !student_ids.length) {
+      return res.status(400).json(errorResponse('fee_category_id and student_ids are required'));
+    }
+
+    const category = await FeeCategory.findByPk(fee_category_id);
+    if (!category) return res.status(404).json(errorResponse('Fee category not found'));
+
+    const term = term_id ? await Term.findByPk(term_id) : null;
+
+    let count = 0;
+    for (const sid of student_ids) {
+      const existing = await Fee.findOne({
+        where: { school_id: school.id, student_id: sid, fee_category_id, term_id: term?.id || null },
+        transaction,
+      });
+      if (existing) continue;
+
+      const disc = discount || 0;
+      const amountDue = category.amount - disc;
+
+      await Fee.create({
+        school_id: school.id,
+        student_id: sid,
+        fee_category_id,
+        term_id: term?.id || null,
+        amount: category.amount,
+        discount: disc,
+        amount_due: amountDue,
+        amount_paid: 0,
+        status: 'pending',
+        due_date: term?.end_date || null,
+      }, { transaction });
+
+      count++;
+    }
+
+    await transaction.commit();
+    return res.json(successResponse({ count }, `${count} fee(s) assigned`));
+  } catch (err) {
+    await transaction.rollback();
+    console.error('assignFees Error:', err);
+    return res.status(500).json(errorResponse(`Failed to assign fees: ${err.message}`));
+  }
+}
+
+async function recordPayment(req, res) {
+  const transaction = await sequelize.transaction();
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+
+    const { student_id, fee_id, amount, payment_method, reference, notes, paid_by } = req.body;
+    if (!student_id || !amount) return res.status(400).json(errorResponse('student_id and amount are required'));
+
+    const receiptNumber = `RCP-${Date.now().toString(36).toUpperCase()}`;
+    const paymentHash = `${student_id}-${fee_id || 'none'}-${amount}-${Date.now()}`.replace(/[^a-zA-Z0-9-]/g, '');
+
+    const payment = await Payment.create({
+      school_id: school.id,
+      student_id,
+      fee_id: fee_id || null,
+      amount,
+      payment_method: payment_method || 'cash',
+      reference: reference || null,
+      receipt_number: receiptNumber,
+      payment_hash: paymentHash,
+      status: 'completed',
+      notes: notes || null,
+      paid_by: paid_by || null,
+    }, { transaction });
+
+    if (fee_id) {
+      const fee = await Fee.findByPk(fee_id, { transaction });
+      if (fee) {
+        const newPaid = (fee.amount_paid || 0) + amount;
+        await fee.update({
+          amount_paid: newPaid,
+          status: newPaid >= fee.amount_due ? 'paid' : 'partial',
+        }, { transaction });
+      }
+    }
+
+    const student = await Student.findByPk(student_id, {
+      include: [{ model: User, attributes: ['first_name', 'last_name'] }],
+      transaction,
+    });
+
+    await Notification.create({
+      school_id: school.id,
+      title: 'Payment Received',
+      message: `Payment of ${amount} received for ${student ? `${student.User?.first_name} ${student.User?.last_name}` : 'student'} (Receipt: ${receiptNumber})`,
+      type: 'info',
+      is_read: false,
+    }, { transaction });
+
+    await transaction.commit();
+    return res.json(successResponse({
+      payment: {
+        id: payment.id,
+        amount: payment.amount,
+        receipt_number: payment.receipt_number,
+        payment_hash: payment.payment_hash,
+        payment_method: payment.payment_method,
+        paid_at: payment.paid_at,
+      },
+    }, 'Payment recorded'));
+  } catch (err) {
+    await transaction.rollback();
+    console.error('recordPayment Error:', err);
+    return res.status(500).json(errorResponse(`Failed to record payment: ${err.message}`));
+  }
+}
+
+async function getPayments(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+
+    const { student_id, date_from, date_to } = req.query;
+    const where = { school_id: school.id };
+    if (student_id) where.student_id = student_id;
+    if (date_from || date_to) {
+      where.paid_at = {};
+      if (date_from) where.paid_at[Op.gte] = date_from;
+      if (date_to) where.paid_at[Op.lte] = date_to;
+    }
+
+    const payments = await Payment.findAll({
+      where,
+      include: [{ model: Student, include: [{ model: User, attributes: ['first_name', 'last_name'] }] }],
+      order: [['paid_at', 'DESC']],
+      limit: 200,
+    });
+
+    const formatted = payments.map(p => ({
+      id: p.id,
+      student_id: p.student_id,
+      student_name: p.Student ? `${p.Student.User?.first_name} ${p.Student.User?.last_name}`.trim() : '',
+      admission_number: p.Student?.admission_number || '',
+      amount: p.amount,
+      payment_method: p.payment_method,
+      receipt_number: p.receipt_number,
+      payment_hash: p.payment_hash,
+      reference: p.reference,
+      status: p.status,
+      notes: p.notes,
+      paid_by: p.paid_by,
+      paid_at: p.paid_at,
+    }));
+
+    return res.json(successResponse({ payments: formatted }));
+  } catch (err) {
+    console.error('getPayments Error:', err);
+    return res.status(500).json(errorResponse(`Failed to fetch payments: ${err.message}`));
+  }
+}
+
+async function getStudentFees(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+
+    const { student_id } = req.params;
+    if (!student_id) return res.status(400).json(errorResponse('student_id is required'));
+
+    const fees = await Fee.findAll({
+      where: { school_id: school.id, student_id },
+      include: [
+        { model: FeeCategory, attributes: ['id', 'name', 'frequency'] },
+        { model: Term, attributes: ['id', 'name'] },
+      ],
+      order: [['created_at', 'DESC']],
+    });
+
+    const payments = await Payment.findAll({
+      where: { school_id: school.id, student_id },
+      order: [['paid_at', 'DESC']],
+    });
+
+    const totalDue = fees.reduce((sum, f) => sum + (f.amount_due || 0), 0);
+    const totalPaid = fees.reduce((sum, f) => sum + (f.amount_paid || 0), 0);
+
+    return res.json(successResponse({
+      fees,
+      payments,
+      summary: { total_due: totalDue, total_paid: totalPaid, balance: totalDue - totalPaid },
+    }));
+  } catch (err) {
+    console.error('getStudentFees Error:', err);
+    return res.status(500).json(errorResponse(`Failed to fetch student fees: ${err.message}`));
   }
 }
 
@@ -63,11 +349,19 @@ async function recordExpense(req, res) {
     const school = await getSchoolFromUser(req);
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
-    const { description, amount, category, date } = req.body;
+    const { description, amount, category, date, receipt_path } = req.body;
+    if (!description || !amount) return res.status(400).json(errorResponse('Description and amount are required'));
 
-    return res.json(successResponse({
-      expense: { id: Date.now(), description, amount, category, date, school_id: school.id },
-    }, 'Expense recorded'));
+    const expense = await Expense.create({
+      school_id: school.id,
+      category: category || 'general',
+      description,
+      amount,
+      date: date || new Date(),
+      receipt_path: receipt_path || null,
+    });
+
+    return res.json(successResponse({ expense }, 'Expense recorded'));
   } catch (err) {
     console.error('recordExpense Error:', err);
     return res.status(500).json(errorResponse(`Failed to record expense: ${err.message}`));
@@ -79,7 +373,24 @@ async function getExpenses(req, res) {
     const school = await getSchoolFromUser(req);
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
-    return res.json(successResponse({ expenses: [] }));
+    const { category, date_from, date_to } = req.query;
+    const where = { school_id: school.id };
+    if (category) where.category = category;
+    if (date_from || date_to) {
+      where.date = {};
+      if (date_from) where.date[Op.gte] = date_from;
+      if (date_to) where.date[Op.lte] = date_to;
+    }
+
+    const expenses = await Expense.findAll({
+      where,
+      order: [['date', 'DESC']],
+      limit: 200,
+    });
+
+    const total = await Expense.sum('amount', { where: { school_id: school.id } }) || 0;
+
+    return res.json(successResponse({ expenses, total }));
   } catch (err) {
     console.error('getExpenses Error:', err);
     return res.status(500).json(errorResponse(`Failed to fetch expenses: ${err.message}`));
@@ -122,7 +433,6 @@ async function createFinanceUser(req, res) {
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
     const { full_name, email, phone, username, password, role, access_level } = req.body;
-
     const bcrypt = require('bcryptjs');
     const hashedPassword = await bcrypt.hash(password || 'Finance@123', 10);
 
@@ -160,7 +470,6 @@ async function updateFinanceUser(req, res) {
     if (!admin) return res.status(404).json(errorResponse('Finance user not found'));
 
     await admin.update({ is_active: !admin.is_active });
-
     return res.json(successResponse({}, 'Status updated'));
   } catch (err) {
     console.error('updateFinanceUser Error:', err);
@@ -183,6 +492,9 @@ async function getOverview(req, res) {
       where: { school_id: school.id, grade_letter: null },
     });
 
+    const totalCollected = await Payment.sum('amount', { where: { school_id: school.id, status: 'completed' } }) || 0;
+    const totalExpenses = await Expense.sum('amount', { where: { school_id: school.id, status: 'approved' } }) || 0;
+
     return res.json(successResponse({
       school: { id: school.id },
       metrics: {
@@ -193,6 +505,8 @@ async function getOverview(req, res) {
         report_cards_pending: 0,
         report_cards_published: 0,
         active_term: activeTerm?.name || null,
+        total_collected: Math.round(totalCollected * 100) / 100,
+        total_expenses: Math.round(totalExpenses * 100) / 100,
       },
     }));
   } catch (err) {
@@ -362,11 +676,40 @@ async function getFinanceSnapshot(req, res) {
     const school = await getSchoolFromUser(req);
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const paymentsToday = await Payment.count({
+      where: { school_id: school.id, paid_at: { [Op.gte]: today, [Op.lt]: tomorrow } },
+    });
+
+    const revenue = await Payment.sum('amount', { where: { school_id: school.id, status: 'completed' } }) || 0;
+    const outstanding = await Fee.sum('amount_due', { where: { school_id: school.id } }) || 0;
+    const paid = await Fee.sum('amount_paid', { where: { school_id: school.id } }) || 0;
+
+    const recentPayments = await Payment.findAll({
+      where: { school_id: school.id },
+      include: [{ model: Student, include: [{ model: User, attributes: ['first_name', 'last_name'] }] }],
+      order: [['paid_at', 'DESC']],
+      limit: 10,
+    });
+
+    const transactions = recentPayments.map(p => ({
+      id: p.id,
+      student_name: p.Student ? `${p.Student.User?.first_name} ${p.Student.User?.last_name}`.trim() : '',
+      amount: p.amount,
+      method: p.payment_method,
+      receipt: p.receipt_number,
+      date: p.paid_at,
+    }));
+
     return res.json(successResponse({
-      revenue: 0,
-      outstanding: 0,
-      paymentsToday: 0,
-      transactions: [],
+      revenue: Math.round(revenue * 100) / 100,
+      outstanding: Math.round((outstanding - paid) * 100) / 100,
+      paymentsToday,
+      transactions,
     }));
   } catch (err) {
     console.error('getFinanceSnapshot Error:', err);
@@ -423,6 +766,8 @@ async function getSyllabusProgress(req, res) {
 
 module.exports = {
   getFinanceStats, getFinanceFees, recordExpense, getExpenses,
+  getFeeCategories, createFeeCategory, assignFees,
+  recordPayment, getPayments, getStudentFees,
   getFinanceUsers, createFinanceUser, updateFinanceUser,
   getOverview, listGradeApprovals, reviewGradeChange,
   listReportCards, publishReportCard, commentReportCard,

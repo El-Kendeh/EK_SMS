@@ -43,7 +43,7 @@ const {
   // Exam officers
   getExamOfficers, assignExamOfficer,
   // Messages
-  getMessages, sendMessage,
+  getMessages, sendMessage, recordClassAttendance,
   // Parent
   createParent,
   // Timetable
@@ -257,6 +257,7 @@ router.post('/school/exam-officers/', applyAuth, assignExamOfficer);
 // ==================== MESSAGES ====================
 router.get('/school/messages/', applyAuth, getMessages);
 router.post('/school/messages/', applyAuth, sendMessage);
+router.post('/school/attendance/class/', applyAuth, recordClassAttendance);
 
 // ==================== PARENTS ====================
 router.post('/school/parents/', applyAuth, createParent);

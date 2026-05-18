@@ -8,6 +8,9 @@ const {
   getFinanceSnapshot, getSchoolCommandDashboard, getClassPerformance,
   getTeacherInsights, getActivityFeed, getSyllabusProgress,
   getFinanceUsers, createFinanceUser, updateFinanceUser,
+  getFinanceStats, getFinanceFees, recordExpense, getExpenses,
+  getFeeCategories, createFeeCategory, assignFees,
+  recordPayment, getPayments, getStudentFees,
 } = require('../controllers/financeController');
 
 router.use(authenticateToken);
@@ -29,5 +32,16 @@ router.get('/syllabus-progress/', getSyllabusProgress);
 router.get('/finance-users/', getFinanceUsers);
 router.post('/finance-users/', createFinanceUser);
 router.put('/finance-users/:id/', updateFinanceUser);
+
+router.get('/stats/', getFinanceStats);
+router.get('/fees/', getFinanceFees);
+router.get('/fee-categories/', getFeeCategories);
+router.post('/fee-categories/', createFeeCategory);
+router.post('/fees/assign/', assignFees);
+router.post('/payments/', recordPayment);
+router.get('/payments/', getPayments);
+router.get('/students/:student_id/fees/', getStudentFees);
+router.post('/expenses/', recordExpense);
+router.get('/expenses/', getExpenses);
 
 module.exports = router;

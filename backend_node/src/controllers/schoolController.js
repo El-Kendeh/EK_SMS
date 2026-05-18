@@ -1827,9 +1827,90 @@ async function sendMessage(req, res) {
   try {
     const school = await getSchoolFromUser(req);
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
-    return res.json(successResponse({ message: {} }, 'Message sent'));
+
+    const { title, message, type, audience, user_ids, role } = req.body;
+    if (!title || !message) return res.status(400).json(errorResponse('Title and message are required'));
+
+    let count = 0;
+
+    if (audience === 'all' || audience === 'school') {
+      await Notification.create({
+        school_id: school.id,
+        title,
+        message,
+        type: type || 'info',
+        is_read: false,
+      });
+      count = 1;
+    } else if (role) {
+      const roleUsers = await User.findAll({
+        include: [{ model: Role, as: 'role', where: { code: role }, attributes: [] }],
+      });
+      for (const u of roleUsers) {
+        await Notification.create({
+          school_id: school.id,
+          user_id: u.id,
+          title,
+          message,
+          type: type || 'info',
+          is_read: false,
+        });
+        count++;
+      }
+    } else if (user_ids && user_ids.length) {
+      for (const uid of user_ids) {
+        await Notification.create({
+          school_id: school.id,
+          user_id: uid,
+          title,
+          message,
+          type: type || 'info',
+          is_read: false,
+        });
+        count++;
+      }
+    }
+
+    return res.json(successResponse({ count }, `Notification sent to ${count} recipient(s)`));
   } catch (err) {
-    return res.status(500).json(errorResponse('Failed to send message'));
+    console.error('sendMessage Error:', err);
+    return res.status(500).json(errorResponse(`Failed to send message: ${err.message}`));
+  }
+}
+
+async function recordClassAttendance(req, res) {
+  const transaction = await sequelize.transaction();
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+
+    const { class_id, date, records } = req.body;
+    if (!class_id || !date || !records || !records.length) {
+      return res.status(400).json(errorResponse('class_id, date, and records are required'));
+    }
+
+    let count = 0;
+    for (const r of records) {
+      await Attendance.upsert({
+        school_id: school.id,
+        student_id: r.student_id,
+        classroom_id: class_id,
+        date,
+        status: r.status || 'present',
+        remarks: r.remarks || null,
+      }, {
+        conflictFields: ['school_id', 'student_id', 'date'],
+        transaction,
+      });
+      count++;
+    }
+
+    await transaction.commit();
+    return res.json(successResponse({ count }, `Attendance recorded for ${count} student(s)`));
+  } catch (err) {
+    await transaction.rollback();
+    console.error('recordClassAttendance Error:', err);
+    return res.status(500).json(errorResponse(`Failed to record attendance: ${err.message}`));
   }
 }
 
@@ -2083,7 +2164,7 @@ module.exports = {
   getFinanceStats, getFinanceFees, recordExpense, getExpenses,
   getTeacherAssignments, createTeacherAssignment,
   getExamOfficers, assignExamOfficer,
-  getMessages, sendMessage,
+  getMessages, sendMessage, recordClassAttendance,
   createParent,
   generateTimetable, deleteTimetable,
   reviewModificationRequest,
