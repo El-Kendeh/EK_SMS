@@ -1,6 +1,17 @@
 const Teacher = require('../models/Teacher');
 const User = require('../models/User');
 const School = require('../models/School');
+const Class = require('../models/Class');
+const Student = require('../models/Student');
+const ClassSubject = require('../models/ClassSubject');
+const Subject = require('../models/Subject');
+const Grade = require('../models/Grade');
+const Term = require('../models/Term');
+const GradingScheme = require('../models/GradingScheme');
+const Notification = require('../models/Notification');
+const ForensicEvent = require('../models/ForensicEvent');
+const { Op } = require('sequelize');
+const sequelize = require('../config/db');
 
 const successResponse = (data = {}, message = "Success") => ({ success: true, message, ...data });
 const errorResponse = (message = "Error", status = 400) => ({ success: false, message, status });
@@ -122,19 +133,173 @@ async function getTeacherClasses(req, res) {
 }
 
 async function getTeacherStudents(req, res) {
-  return res.json(successResponse({ students: [] }));
+  try {
+    const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
+    if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
+
+    const { class_id } = req.query;
+    if (!class_id) return res.status(400).json(errorResponse('class_id is required'));
+
+    const students = await Student.findAll({
+      where: { classroom_id: class_id, school_id: teacher.school_id, status: 'active' },
+      include: [{ model: User, attributes: ['id', 'first_name', 'last_name', 'email'] }],
+      order: [[sequelize.fn('lower', sequelize.col('User.first_name')), 'ASC']],
+    });
+
+    const formatted = students.map(s => ({
+      id: s.id,
+      admission_number: s.admission_number,
+      first_name: s.User?.first_name || '',
+      last_name: s.User?.last_name || '',
+      full_name: `${s.User?.first_name || ''} ${s.User?.last_name || ''}`.trim(),
+      email: s.User?.email || '',
+      gender: s.gender,
+      status: s.status,
+    }));
+
+    return res.json(successResponse({ students: formatted }));
+  } catch (err) {
+    console.error('getTeacherStudents Error:', err);
+    return res.status(500).json(errorResponse('Failed to fetch students'));
+  }
 }
 
 async function getTeacherGradebook(req, res) {
-  return res.json(successResponse({ grades: [] }));
+  try {
+    const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
+    if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
+
+    const { class_id, subject_id, term_id } = req.query;
+    if (!class_id || !subject_id || !term_id) {
+      return res.status(400).json(errorResponse('class_id, subject_id, and term_id are required'));
+    }
+
+    const students = await Student.findAll({
+      where: { classroom_id: class_id, school_id: teacher.school_id, status: 'active' },
+      include: [{ model: User, attributes: ['id', 'first_name', 'last_name'] }],
+    });
+
+    const grades = await Grade.findAll({
+      where: {
+        school_id: teacher.school_id,
+        classroom_id: class_id,
+        subject_id,
+        term_id,
+        student_id: { [Op.in]: students.map(s => s.id) },
+      },
+    });
+
+    const gradeMap = {};
+    grades.forEach(g => { gradeMap[g.student_id] = g; });
+
+    const gradebook = students.map(s => {
+      const g = gradeMap[s.id];
+      return {
+        student_id: s.id,
+        admission_number: s.admission_number,
+        full_name: `${s.User?.first_name || ''} ${s.User?.last_name || ''}`.trim(),
+        ca: g?.ca || null,
+        midterm: g?.midterm || null,
+        final: g?.final || null,
+        total: g?.total || null,
+        grade_letter: g?.grade_letter || null,
+        remarks: g?.remarks || null,
+        existing_grade_id: g?.id || null,
+      };
+    });
+
+    return res.json(successResponse({ gradebook }));
+  } catch (err) {
+    console.error('getTeacherGradebook Error:', err);
+    return res.status(500).json(errorResponse('Failed to fetch gradebook'));
+  }
 }
 
 async function saveGradeDraft(req, res) {
-  return res.json(successResponse({}, "Grade draft saved"));
+  try {
+    const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
+    if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
+
+    const { classId, studentId, field, value } = req.body;
+    if (!studentId || !field) return res.status(400).json(errorResponse('studentId and field are required'));
+
+    return res.json(successResponse({}, 'Draft saved locally'));
+  } catch (err) {
+    console.error('saveGradeDraft Error:', err);
+    return res.status(500).json(errorResponse('Failed to save draft'));
+  }
 }
 
 async function submitGradesForLocking(req, res) {
-  return res.json(successResponse({}, "Grades submitted for locking"));
+  const transaction = await sequelize.transaction();
+  try {
+    const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
+    if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
+
+    const { student_ids, subject_id, term_id, grades } = req.body;
+    if (!student_ids || !subject_id || !term_id) {
+      return res.status(400).json(errorResponse('student_ids, subject_id, and term_id are required'));
+    }
+
+    const term = await Term.findByPk(term_id);
+    if (!term) return res.status(404).json(errorResponse('Term not found'));
+
+    const gradingScheme = await GradingScheme.findOne({ where: { school_id: teacher.school_id } });
+    const boundaries = gradingScheme ? JSON.parse(gradingScheme.boundaries || '{}') : {};
+
+    let count = 0;
+    for (const sid of student_ids) {
+      const gradeData = (grades || []).find(g => g.studentId === sid) || {};
+      const score = parseFloat(gradeData.score || gradeData.total);
+      if (isNaN(score)) continue;
+
+      let gradeLetter = '';
+      for (const [letter, boundary] of Object.entries(boundaries)) {
+        if (score >= (boundary.min || 0) && score <= (boundary.max || 100)) {
+          gradeLetter = letter;
+          break;
+        }
+      }
+
+      const ca = parseFloat(gradeData.ca) || 0;
+      const midterm = parseFloat(gradeData.midterm) || 0;
+      const finalExam = parseFloat(gradeData.final) || score;
+
+      await Grade.upsert({
+        school_id: teacher.school_id,
+        student_id: sid,
+        subject_id,
+        term_id,
+        classroom_id: gradeData.classroom_id || null,
+        ca,
+        midterm,
+        final: finalExam,
+        total: score,
+        grade_letter: gradeLetter,
+        remarks: gradeData.remarks || '',
+      }, {
+        conflictFields: ['school_id', 'student_id', 'subject_id', 'term_id'],
+        transaction,
+      });
+
+      count++;
+    }
+
+    await Notification.create({
+      school_id: teacher.school_id,
+      title: 'Grades Submitted',
+      message: `Teacher has submitted ${count} grade(s) for review.`,
+      type: 'info',
+      is_read: false,
+    }, { transaction });
+
+    await transaction.commit();
+    return res.json(successResponse({ count }, `${count} grade(s) submitted successfully`));
+  } catch (err) {
+    await transaction.rollback();
+    console.error('submitGradesForLocking Error:', err);
+    return res.status(500).json(errorResponse(`Failed to submit grades: ${err.message}`));
+  }
 }
 
 async function getGradeHistory(req, res) {
@@ -343,11 +508,34 @@ async function getTeacherStudentActivity(req, res) {
 
 async function getTeacherNotifications(req, res) {
   try {
-    return res.json(successResponse({ notifications: [] }));
+    const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
+    if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
+
+    const { limit } = req.query;
+    const query = {
+      where: { school_id: teacher.school_id },
+      order: [['created_at', 'DESC']],
+    };
+    if (limit) query.limit = parseInt(limit);
+
+    const notifications = await Notification.findAll(query);
+    const unread = await Notification.count({ where: { school_id: teacher.school_id, is_read: false } });
+
+    const formatted = notifications.map(n => ({
+      id: n.id,
+      title: n.title,
+      message: n.message,
+      type: n.type,
+      is_read: n.is_read,
+      created_at: n.created_at,
+    }));
+
+    return res.json(successResponse({ notifications: formatted, unread }));
   } catch (err) {
     console.error('getTeacherNotifications Error:', err);
-    return res.json(successResponse({ notifications: [] }));
+    return res.status(500).json(errorResponse('Failed to fetch notifications'));
   }
+}
 }
 
 async function getFeedbackStudents(req, res) {
