@@ -25,9 +25,4 @@ const Teacher = sequelize.define('Teacher', {
   timestamps: false,
 });
 
-const User = require('./User');
-Teacher.belongsTo(User, { foreignKey: 'user_id' });
-const School = require('./School');
-Teacher.belongsTo(School, { foreignKey: 'school_id' });
-
 module.exports = Teacher;

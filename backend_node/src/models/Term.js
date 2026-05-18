@@ -16,6 +16,4 @@ const Term = sequelize.define('Term', {
   timestamps: false,
 });
 
-Term.belongsTo(AcademicYear, { foreignKey: 'academic_year_id', as: 'academicYear' });
-
 module.exports = Term;

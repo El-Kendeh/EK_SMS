@@ -17,7 +17,4 @@ const ClassSubject = sequelize.define('ClassSubject', {
   ],
 });
 
-ClassSubject.belongsTo(Subject, { foreignKey: 'subject_id', as: 'subject' });
-ClassSubject.belongsTo(Teacher, { foreignKey: 'teacher_id', as: 'teacher' });
-
 module.exports = ClassSubject;

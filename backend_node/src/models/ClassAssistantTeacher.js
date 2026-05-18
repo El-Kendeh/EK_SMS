@@ -16,7 +16,4 @@ const ClassAssistantTeacher = sequelize.define('ClassAssistantTeacher', {
   ],
 });
 
-ClassAssistantTeacher.belongsTo(Teacher, { foreignKey: 'teacher_id' });
-Teacher.belongsTo(User, { foreignKey: 'user_id' });
-
 module.exports = ClassAssistantTeacher;

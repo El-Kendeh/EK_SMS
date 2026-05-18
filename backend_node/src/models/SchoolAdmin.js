@@ -19,10 +19,4 @@ const SchoolAdmin = sequelize.define('SchoolAdmin', {
   timestamps: false,
 });
 
-User.hasOne(SchoolAdmin, { foreignKey: 'user_id' });
-SchoolAdmin.belongsTo(User, { foreignKey: 'user_id' });
-
-School.hasMany(SchoolAdmin, { foreignKey: 'school_id' });
-SchoolAdmin.belongsTo(School, { foreignKey: 'school_id' });
-
 module.exports = SchoolAdmin;
