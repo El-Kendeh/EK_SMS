@@ -1,7 +1,14 @@
 import { useNotifications } from '../../context/NotificationContext';
 import { useStudentProfile } from '../../hooks/useStudentProfile';
+import { useSchoolContext } from '../../hooks/useSchoolContext';
 import { getInitials, getAvatarColor } from '../../utils/studentUtils';
 import './StudentHeader.css';
+
+const POSITION_META = {
+  prefit: { label: 'START', color: '#10B981' },
+  mid:    { label: 'MID',   color: '#F59E0B' },
+  end:    { label: 'END',   color: '#EF4444' },
+};
 
 const SECTION_LABELS = {
   home:           'Dashboard',
@@ -21,11 +28,13 @@ const SECTION_LABELS = {
 export default function StudentHeader({ onMenuToggle, activeSection, navigateTo, isSidebarOpen }) {
   const { unreadCount } = useNotifications();
   const { profile } = useStudentProfile();
+  const { academicYear, term } = useSchoolContext();
 
   const fullName   = profile?.fullName || 'Student';
   const studentNum = profile?.studentNumber || '';
   const className  = profile?.currentClass?.name || '';
-  const term       = profile?.academicYear ? `${profile.academicYear} · ${profile?.currentClass?.name || ''}` : '';
+  const ctxLabel = academicYear ? `${academicYear.name}${term ? ` · ${term.name}` : ''}` : '';
+  const posMeta = term?.position ? POSITION_META[term.position] : null;
   const initials   = getInitials(fullName);
   const avatarColor = getAvatarColor(fullName);
 
@@ -44,7 +53,15 @@ export default function StudentHeader({ onMenuToggle, activeSection, navigateTo,
         </button>
 
         <div className="stu-header__context">
-          {term && <span className="stu-header__term">{term}</span>}
+          {ctxLabel && <span className="stu-header__term">{ctxLabel}</span>}
+          {posMeta && (
+            <span style={{
+              fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 8,
+              background: posMeta.color + '18', color: posMeta.color,
+            }}>
+              {posMeta.label}
+            </span>
+          )}
           <span className="stu-header__section-label">
             {SECTION_LABELS[activeSection] || 'Dashboard'}
           </span>

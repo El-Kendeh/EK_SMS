@@ -1214,6 +1214,73 @@ async function deleteTerm(req, res) {
   }
 }
 
+function calcTermPosition(startDate, endDate) {
+  if (!startDate) return 'prefit';
+  const now = new Date();
+  const start = new Date(startDate);
+  const end = endDate ? new Date(endDate) : null;
+
+  if (now < start) return 'prefit';
+
+  if (!end) return 'mid';
+
+  if (now > end) return 'end';
+
+  const total = end.getTime() - start.getTime();
+  const elapsed = now.getTime() - start.getTime();
+  const ratio = elapsed / total;
+
+  if (ratio < 0.33) return 'prefit';
+  if (ratio < 0.66) return 'mid';
+  return 'end';
+}
+
+async function getSchoolContext(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+
+    const activeYear = await AcademicYear.findOne({
+      where: { school_id: school.id, is_active: true },
+    });
+
+    const activeTerm = await Term.findOne({
+      where: { school_id: school.id, is_active: true },
+      include: [{ model: AcademicYear, as: 'academicYear', attributes: ['id', 'name', 'start_date', 'end_date'] }],
+    });
+
+    const allTerms = await Term.findAll({
+      where: { school_id: school.id },
+      include: [{ model: AcademicYear, as: 'academicYear', attributes: ['id', 'name'] }],
+      order: [['created_at', 'ASC']],
+    });
+
+    const termPosition = activeTerm ? calcTermPosition(activeTerm.start_date, activeTerm.end_date) : null;
+
+    return res.json(successResponse({
+      school: { id: school.id, name: school.name },
+      academic_year: activeYear ? { id: activeYear.id, name: activeYear.name, start_date: activeYear.start_date, end_date: activeYear.end_date } : null,
+      term: activeTerm ? {
+        id: activeTerm.id,
+        name: activeTerm.name,
+        start_date: activeTerm.start_date,
+        end_date: activeTerm.end_date,
+        position: termPosition,
+        academic_year: activeTerm.academicYear ? { id: activeTerm.academicYear.id, name: activeTerm.academicYear.name } : null,
+      } : null,
+      terms: allTerms.map(t => ({
+        id: t.id,
+        name: t.name,
+        is_active: t.is_active,
+        academic_year: t.academicYear ? { id: t.academicYear.id, name: t.academicYear.name } : null,
+      })),
+    }));
+  } catch (err) {
+    console.error('getSchoolContext Error:', err);
+    return res.status(500).json(errorResponse(`Failed to fetch school context: ${err.message}`));
+  }
+}
+
 async function getAcademicYears(req, res) {
   try {
     const school = await getSchoolFromUser(req);
@@ -1966,7 +2033,7 @@ module.exports = {
   assignStudentsToClass, assignSubjectsToClass,
   getSubjects, createSubject, updateSubject, deleteSubject,
   assignClassesToSubject, assignTeachersToSubject,
-  getAcademicYears, createAcademicYear, getTerms, createTerm, updateTerm, deleteTerm,
+  getAcademicYears, createAcademicYear, getTerms, createTerm, updateTerm, deleteTerm, getSchoolContext,
   getGrades, saveGrades,
   recordAttendance,
   getGradingScheme, setGradingScheme,

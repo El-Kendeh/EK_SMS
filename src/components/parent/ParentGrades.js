@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useParentChildren } from '../../hooks/useParentChildren';
 import { useChildGrades } from '../../hooks/useChildGrades';
+import { useSchoolContext } from '../../hooks/useSchoolContext';
 import { getChildColors, getGradeLetterColor, getStatusMeta, calcOverallAverage } from '../../utils/parentUtils';
 import { fetchChildGradeHistory } from '../../api/parentApi';
 import './ParentGrades.css';
@@ -178,18 +179,21 @@ function GradeRow({ grade, idx, onViewHistory }) {
 
 export default function ParentGrades({ children }) {
   const [selectedChildId, setSelectedChildId] = useState(null);
-  const [activeTerm, setActiveTerm] = useState('First Term');
+  const [activeTermId, setActiveTermId] = useState(null);
   const [historyGrade, setHistoryGrade] = useState(null);
   const { children: loadedChildren } = useParentChildren();
+  const { terms, term: activeTerm } = useSchoolContext();
   const resolvedChildren = children?.length ? children : loadedChildren;
 
+  useEffect(() => {
+    if (activeTerm?.id && !activeTermId) setActiveTermId(activeTerm.id);
+  }, [activeTerm?.id]);
+
   const activeChild = resolvedChildren.find((c) => c.id === selectedChildId) || resolvedChildren[0];
-  const { grades, loading } = useChildGrades(activeChild?.id || null);
+  const { grades, loading } = useChildGrades(activeChild?.id || null, activeTermId);
 
   const overallAverage = calcOverallAverage(grades);
   const passed = grades.filter((g) => g.score >= 50).length;
-
-  const terms = ['First Term', 'Second Term', 'Third Term'];
 
   return (
     <div className="par-grades">
@@ -250,17 +254,22 @@ export default function ParentGrades({ children }) {
       {/* Grades table */}
       <div className="par-card par-grades__table-card">
         {/* Term tabs */}
-        <div className="par-grades__term-tabs">
-          {terms.map((t) => (
-            <button
-              key={t}
-              className={`par-grades__term-tab ${activeTerm === t ? 'par-grades__term-tab--active' : ''}`}
-              onClick={() => setActiveTerm(t)}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
+        {terms.length > 0 && (
+          <div className="par-grades__term-tabs">
+            {terms.map((t) => (
+              <button
+                key={t.id}
+                className={`par-grades__term-tab ${activeTermId === t.id ? 'par-grades__term-tab--active' : ''}`}
+                onClick={() => setActiveTermId(t.id)}
+              >
+                {t.name}
+                {t.is_active && (
+                  <span style={{ marginLeft: 4, fontSize: 10, color: '#10B981', fontWeight: 700 }}>●</span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Table header */}
         <div className="par-grades__table-head">

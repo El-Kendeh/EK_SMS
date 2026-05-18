@@ -4,6 +4,8 @@ import { useTheme } from '../../context/ThemeContext';
 import { I18nProvider } from '../../context/I18nContext';
 import { ChildProvider, useActiveChild } from '../../context/ChildContext';
 import { ParentNotificationProvider, useParentNotifyCtx } from '../../context/ParentNotificationContext';
+import { useSchoolContext } from '../../hooks/useSchoolContext';
+import SchoolContextBanner from '../common/SchoolContextBanner';
 
 import ParentHome from './ParentHome';
 import ParentChildren from './ParentChildren';
@@ -241,6 +243,7 @@ function ParentInner({ onNavigate }) {
           </div>
 
           <div className="par-header__right">
+            <SchoolContextBanner variant="compact" />
             <button className="par-header__theme-btn" onClick={toggleTheme} title="Toggle theme">
               <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
                 {theme === 'dark' ? 'light_mode' : 'dark_mode'}

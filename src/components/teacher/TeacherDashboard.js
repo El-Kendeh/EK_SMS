@@ -6,6 +6,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { I18nProvider } from '../../context/I18nContext';
 import { useTeacherClasses } from '../../hooks/useTeacherClasses';
 import { useTeacherProfile } from '../../hooks/useTeacherProfile';
+import { useSchoolContext } from '../../hooks/useSchoolContext';
 
 // Existing sections
 import TeacherHome from './TeacherHome';
@@ -177,6 +178,7 @@ function TeacherDashboardInner({ onNavigate }) {
   const { theme, toggleTheme } = useTheme();
   const { unreadCount } = useTeacherNotifyCtx();
   const { pendingCounts, selectedClass, currentTerm } = useTeacher();
+  const { academicYear, term: schoolTerm } = useSchoolContext();
   const { profile, loading: profileLoading, error: profileError } = useTeacherProfile();
 
   useTeacherClasses();
@@ -377,17 +379,32 @@ function TeacherDashboardInner({ onNavigate }) {
         {/* Persistent context strip — active class + term + tamper status */}
         <div className="tch-context-strip">
           <div className="tch-context-strip__left">
+            {academicYear && (
+              <span className="tch-context-strip__pill tch-context-strip__pill--class">
+                <span className="material-symbols-outlined">calendar_month</span>
+                {academicYear.name}
+              </span>
+            )}
+            {(schoolTerm || currentTerm) && (
+              <span className="tch-context-strip__pill">
+                <span className="material-symbols-outlined">event_note</span>
+                {schoolTerm?.name || currentTerm?.name || 'Term'}
+                {schoolTerm?.position && (
+                  <span style={{
+                    marginLeft: 4, padding: '1px 6px', borderRadius: 8, fontSize: 10, fontWeight: 700,
+                    background: schoolTerm.position === 'prefit' ? 'rgba(16,185,129,0.15)' : schoolTerm.position === 'mid' ? 'rgba(245,158,11,0.15)' : 'rgba(239,68,68,0.15)',
+                    color: schoolTerm.position === 'prefit' ? '#10B981' : schoolTerm.position === 'mid' ? '#F59E0B' : '#EF4444',
+                  }}>
+                    {schoolTerm.position.toUpperCase()}
+                  </span>
+                )}
+              </span>
+            )}
             {selectedClass && (
-              <>
-                <span className="tch-context-strip__pill tch-context-strip__pill--class">
-                  <span className="material-symbols-outlined">school</span>
-                  {selectedClass.name || selectedClass.id}
-                </span>
-                <span className="tch-context-strip__pill">
-                  <span className="material-symbols-outlined">calendar_month</span>
-                  {currentTerm?.name || 'Term'}
-                </span>
-              </>
+              <span className="tch-context-strip__pill tch-context-strip__pill--class">
+                <span className="material-symbols-outlined">school</span>
+                {selectedClass.name || selectedClass.id}
+              </span>
             )}
             {gradeBadgeCount > 0 && (
               <span className="tch-context-strip__pill tch-context-strip__pill--warn">

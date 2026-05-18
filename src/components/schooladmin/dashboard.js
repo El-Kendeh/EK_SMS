@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import './SchoolAdmin.css';
 import SECURITY_CONFIG from '../../config/security';
 import ApiClient from '../../api/client';
+import SchoolContextBanner from '../common/SchoolContextBanner';
 import {
   GradesPage, AttendancePage, FinancePage,
   ReportsPage, MessagesPage, SettingsPage,
@@ -266,6 +267,8 @@ function Topbar({ school, admin, onMenuToggle, onLogout, onNav }) {
             {schoolName}
           </span>
         </div>
+
+        <SchoolContextBanner variant="compact" />
 
         <div className="ska-topbar-divider" />
 

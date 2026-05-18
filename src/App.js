@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import { ThemeProvider } from './context/ThemeContext';
+import { SchoolContextProvider } from './hooks/useSchoolContext';
 import Login from './components/login';
 import SuperadminDashboard from './components/superadmin/SuperadminDashboard';
 import ParentDashboard from './components/parent/ParentDashboard';
@@ -251,11 +252,13 @@ function App() {
         {currentPage === 'login' && <Login onNavigate={setCurrentPage} />}
         {currentPage === 'force-change-password' && <ForceChangePassword onNavigate={setCurrentPage} />}
         {currentPage === 'superadmindashboard' && <SuperadminDashboard onNavigate={setCurrentPage} />}
-        {currentPage === 'sa-dashboard' && <SchoolAdminDashboard onNavigate={setCurrentPage} />}
-        {currentPage === 'teacher-dashboard' && <TeacherDashboard onNavigate={setCurrentPage} />}
-        {currentPage === 'student-dashboard' && <StudentDashboard onNavigate={setCurrentPage} />}
-        {currentPage === 'parentdashboard' && <ParentDashboard onNavigate={setCurrentPage} />}
-        {currentPage === 'principal-dashboard' && <PrincipalDashboard onNavigate={setCurrentPage} />}
+        <SchoolContextProvider>
+          {currentPage === 'sa-dashboard' && <SchoolAdminDashboard onNavigate={setCurrentPage} />}
+          {currentPage === 'teacher-dashboard' && <TeacherDashboard onNavigate={setCurrentPage} />}
+          {currentPage === 'student-dashboard' && <StudentDashboard onNavigate={setCurrentPage} />}
+          {currentPage === 'parentdashboard' && <ParentDashboard onNavigate={setCurrentPage} />}
+          {currentPage === 'principal-dashboard' && <PrincipalDashboard onNavigate={setCurrentPage} />}
+        </SchoolContextProvider>
         {(currentPage === 'home' || currentPage === 'landing') && <Landing onNavigate={setCurrentPage} />}
         {currentPage === 'register' && <Register onNavigate={setCurrentPage} />}
 

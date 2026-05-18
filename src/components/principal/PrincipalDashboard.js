@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { principalApi } from '../../api/adminApi';
+import { useSchoolContext } from '../../hooks/useSchoolContext';
 import './PrincipalDashboard.css';
 
 /* Material Symbol shortcut */
@@ -35,6 +36,7 @@ function getInitialSection() {
 function PrincipalOverview({ onJump }) {
   const [data, setData] = useState(null);
   const [err, setErr]   = useState(null);
+  const { academicYear, term } = useSchoolContext();
 
   useEffect(() => {
     principalApi.overview().then((d) => {
@@ -47,6 +49,8 @@ function PrincipalOverview({ onJump }) {
   if (!data) return <div className="pri-skel">Loading metrics…</div>;
 
   const m = data.metrics;
+  const posLabel = term?.position ? ` · ${term.position.toUpperCase()}` : '';
+  const termLabel = term ? `${term.name} (${academicYear?.name || ''})${posLabel}` : (m.active_term || 'No active term');
   const cards = [
     { k: 'students_total',         label: 'Active Students',  icon: 'group' },
     { k: 'teachers_total',         label: 'Active Teachers',  icon: 'school' },
@@ -64,7 +68,7 @@ function PrincipalOverview({ onJump }) {
         <div>
           <h1 className="pri-h__title">{data.school?.name || 'School'} — Principal</h1>
           <p className="pri-h__sub">
-            {m.active_term ? `${m.active_term} active` : 'No active term'} · live snapshot
+            {termLabel} · live snapshot
           </p>
         </div>
       </header>
