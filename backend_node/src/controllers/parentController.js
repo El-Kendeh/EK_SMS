@@ -11,6 +11,9 @@ const Teacher = require('../models/Teacher');
 const Notification = require('../models/Notification');
 const SecurityAuditLog = require('../models/SecurityAuditLog');
 const ForensicEvent = require('../models/ForensicEvent');
+const Fee = require('../models/Fee');
+const Payment = require('../models/Payment');
+const FeeCategory = require('../models/FeeCategory');
 
 const successResponse = (data = {}, message = 'Success') => ({ success: true, message, ...data });
 const errorResponse = (message) => ({ success: false, message });
@@ -311,9 +314,48 @@ async function getChildBehavior(req, res) {
 
 async function getChildFees(req, res) {
   try {
+    const { childId } = req.params;
+
+    const fees = await Fee.findAll({
+      where: { student_id: childId },
+      include: [{ model: FeeCategory, attributes: ['id', 'name', 'frequency'] }, { model: Term, attributes: ['id', 'name'] }],
+      order: [['created_at', 'DESC']],
+    });
+
+    const payments = await Payment.findAll({
+      where: { student_id: childId },
+      order: [['paid_at', 'DESC']],
+    });
+
+    const totalFees = fees.reduce((sum, f) => sum + (f.amount_due || 0), 0);
+    const totalPaid = fees.reduce((sum, f) => sum + (f.amount_paid || 0), 0);
+
+    const formattedFees = fees.map(f => ({
+      id: f.id,
+      category: f.FeeCategory?.name || '',
+      term: f.Term?.name || '',
+      amount: f.amount,
+      discount: f.discount,
+      amount_due: f.amount_due,
+      amount_paid: f.amount_paid,
+      balance: f.amount_due - f.amount_paid,
+      status: f.status,
+      due_date: f.due_date,
+    }));
+
+    const formattedPayments = payments.map(p => ({
+      id: p.id,
+      amount: p.amount,
+      method: p.payment_method,
+      receipt_number: p.receipt_number,
+      paid_at: p.paid_at,
+      notes: p.notes,
+    }));
+
     return res.json(successResponse({
-      summary: { total_fees: 0, paid: 0, balance: 0, sibling_discount: 0 },
-      transactions: [],
+      summary: { total_fees: totalFees, paid: totalPaid, balance: totalFees - totalPaid, sibling_discount: 0 },
+      transactions: formattedFees,
+      payments: formattedPayments,
     }));
   } catch (err) {
     console.error('getChildFees Error:', err);
@@ -339,7 +381,46 @@ async function getPaymentChannels(req, res) {
 
 async function startPayment(req, res) {
   try {
-    return res.json(successResponse({ receipt: null, redirectUrl: null }, 'Payment initiated'));
+    const { child_id, transaction_id, amount, channel_id, instalments } = req.body;
+    if (!child_id || !amount) return res.status(400).json(errorResponse('child_id and amount are required'));
+
+    const receiptNumber = `RCP-${Date.now().toString(36).toUpperCase()}`;
+    const paymentHash = `${child_id}-${transaction_id || 'none'}-${amount}-${Date.now()}`.replace(/[^a-zA-Z0-9-]/g, '');
+
+    const payment = await Payment.create({
+      school_id: req.user.school_id || 0,
+      student_id: child_id,
+      fee_id: transaction_id || null,
+      amount,
+      payment_method: channel_id || 'cash',
+      receipt_number: receiptNumber,
+      payment_hash: paymentHash,
+      status: 'completed',
+      paid_by: req.user.username || 'parent',
+    });
+
+    if (transaction_id) {
+      const fee = await Fee.findByPk(transaction_id);
+      if (fee) {
+        const newPaid = (fee.amount_paid || 0) + amount;
+        await fee.update({
+          amount_paid: newPaid,
+          status: newPaid >= fee.amount_due ? 'paid' : 'partial',
+        });
+      }
+    }
+
+    return res.json(successResponse({
+      receipt: {
+        id: payment.id,
+        receipt_number: payment.receipt_number,
+        amount: payment.amount,
+        method: payment.payment_method,
+        paid_at: payment.paid_at,
+        verification_hash: payment.payment_hash,
+      },
+      redirectUrl: null,
+    }, 'Payment recorded'));
   } catch (err) {
     console.error('startPayment Error:', err);
     return res.status(500).json(errorResponse(`Failed to start payment: ${err.message}`));
@@ -348,7 +429,42 @@ async function startPayment(req, res) {
 
 async function getReceipts(req, res) {
   try {
-    return res.json(successResponse({ receipts: [] }));
+    const { child } = req.query;
+    const where = {};
+    if (child) where.student_id = child;
+
+    const students = await Student.findAll({
+      where: {
+        [Op.or]: [
+          { user_id: req.user.id },
+          { father_phone: req.user.phone },
+          { mother_phone: req.user.phone },
+          { emergency_phone: req.user.phone },
+        ],
+      },
+      attributes: ['id'],
+    });
+
+    where.student_id = { [Op.in]: students.map(s => s.id) };
+
+    const payments = await Payment.findAll({
+      where,
+      order: [['paid_at', 'DESC']],
+      limit: 100,
+    });
+
+    const formatted = payments.map(p => ({
+      id: p.id,
+      student_id: p.student_id,
+      amount: p.amount,
+      method: p.payment_method,
+      receipt_number: p.receipt_number,
+      verification_hash: p.payment_hash,
+      paid_at: p.paid_at,
+      notes: p.notes,
+    }));
+
+    return res.json(successResponse({ receipts: formatted }));
   } catch (err) {
     console.error('getReceipts Error:', err);
     return res.status(500).json(errorResponse(`Failed to fetch receipts: ${err.message}`));

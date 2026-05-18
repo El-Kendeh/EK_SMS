@@ -8,6 +8,14 @@ const Attendance = require('../models/Attendance');
 const Term = require('../models/Term');
 const AcademicYear = require('../models/AcademicYear');
 const Subject = require('../models/Subject');
+const Teacher = require('../models/Teacher');
+const Notification = require('../models/Notification');
+const ClassSubject = require('../models/ClassSubject');
+const ForensicEvent = require('../models/ForensicEvent');
+const SecurityAuditLog = require('../models/SecurityAuditLog');
+const Fee = require('../models/Fee');
+const Payment = require('../models/Payment');
+const FeeCategory = require('../models/FeeCategory');
 const Notification = require('../models/Notification');
 const Teacher = require('../models/Teacher');
 const ClassSubject = require('../models/ClassSubject');
@@ -438,9 +446,44 @@ async function getFinancials(req, res) {
     const student = await getStudentFromUser(req);
     if (!student) return res.status(404).json(errorResponse('Student not found'));
 
+    const fees = await Fee.findAll({
+      where: { student_id: student.id },
+      include: [{ model: FeeCategory, attributes: ['id', 'name'] }, { model: Term, attributes: ['id', 'name'] }],
+      order: [['created_at', 'DESC']],
+    });
+
+    const payments = await Payment.findAll({
+      where: { student_id: student.id },
+      order: [['paid_at', 'DESC']],
+    });
+
+    const totalFees = fees.reduce((sum, f) => sum + (f.amount_due || 0), 0);
+    const paidToDate = fees.reduce((sum, f) => sum + (f.amount_paid || 0), 0);
+
+    const transactions = fees.map(f => ({
+      id: f.id,
+      type: 'fee',
+      category: f.FeeCategory?.name || '',
+      term: f.Term?.name || '',
+      amount: f.amount_due,
+      paid: f.amount_paid,
+      balance: f.amount_due - f.amount_paid,
+      status: f.status,
+      due_date: f.due_date,
+    }));
+
+    const paymentRecords = payments.map(p => ({
+      id: p.id,
+      type: 'payment',
+      amount: p.amount,
+      method: p.payment_method,
+      receipt_number: p.receipt_number,
+      paid_at: p.paid_at,
+    }));
+
     return res.json(successResponse({
-      summary: { totalFees: 0, paidToDate: 0, outstanding: 0, dueDate: null },
-      transactions: [],
+      summary: { totalFees, paidToDate, outstanding: totalFees - paidToDate, dueDate: null },
+      transactions: [...transactions, ...paymentRecords],
     }));
   } catch (err) {
     console.error('getFinancials Error:', err);

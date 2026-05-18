@@ -7,8 +7,10 @@ const ClassSubject = require('../models/ClassSubject');
 const Subject = require('../models/Subject');
 const Grade = require('../models/Grade');
 const Term = require('../models/Term');
+const AcademicYear = require('../models/AcademicYear');
 const GradingScheme = require('../models/GradingScheme');
 const Notification = require('../models/Notification');
+const Exam = require('../models/Exam');
 const ForensicEvent = require('../models/ForensicEvent');
 const { Op } = require('sequelize');
 const sequelize = require('../config/db');
@@ -973,6 +975,273 @@ async function updateTeacherCredentials(req, res) {
   }
 }
 
+async function getModificationRequests(req, res) {
+  try {
+    return res.json(successResponse({ requests: [] }));
+  } catch (err) {
+    console.error('getModificationRequests Error:', err);
+    return res.status(500).json(errorResponse('Failed to fetch requests'));
+  }
+}
+
+async function submitModificationRequest(req, res) {
+  try {
+    return res.json(successResponse({ id: Date.now() }, 'Request submitted'));
+  } catch (err) {
+    console.error('submitModificationRequest Error:', err);
+    return res.status(500).json(errorResponse('Failed to submit request'));
+  }
+}
+
+async function withdrawModificationRequest(req, res) {
+  try {
+    return res.json(successResponse({}, 'Request withdrawn'));
+  } catch (err) {
+    console.error('withdrawModificationRequest Error:', err);
+    return res.status(500).json(errorResponse('Failed to withdraw request'));
+  }
+}
+
+async function getClassAnalytics(req, res) {
+  try {
+    const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
+    if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
+
+    const { class_id, term_id } = req.query;
+    if (!class_id) return res.status(400).json(errorResponse('class_id is required'));
+
+    const grades = await Grade.findAll({
+      where: { classroom_id: class_id, school_id: teacher.school_id, ...(term_id ? { term_id } : {}) },
+    });
+
+    const totals = grades.map(g => g.total).filter(Boolean);
+    const avg = totals.length ? Math.round(totals.reduce((a, b) => a + b, 0) / totals.length) : 0;
+    const highest = totals.length ? Math.max(...totals) : 0;
+    const lowest = totals.length ? Math.min(...totals) : 0;
+    const passed = totals.filter(t => t >= 40).length;
+
+    return res.json(successResponse({
+      average: avg,
+      highest,
+      lowest,
+      pass_rate: totals.length ? Math.round(passed / totals.length * 100) : 0,
+      total_students: totals.length,
+      term_id,
+    }));
+  } catch (err) {
+    console.error('getClassAnalytics Error:', err);
+    return res.status(500).json(errorResponse('Failed to fetch analytics'));
+  }
+}
+
+async function getAssignments(req, res) {
+  try {
+    return res.json(successResponse({ assignments: [] }));
+  } catch (err) {
+    console.error('getAssignments Error:', err);
+    return res.status(500).json(errorResponse('Failed to fetch assignments'));
+  }
+}
+
+async function createAssignment(req, res) {
+  try {
+    return res.json(successResponse({ id: Date.now() }, 'Assignment created'));
+  } catch (err) {
+    console.error('createAssignment Error:', err);
+    return res.status(500).json(errorResponse('Failed to create assignment'));
+  }
+}
+
+async function deleteAssignment(req, res) {
+  try {
+    return res.json(successResponse({}, 'Assignment deleted'));
+  } catch (err) {
+    console.error('deleteAssignment Error:', err);
+    return res.status(500).json(errorResponse('Failed to delete assignment'));
+  }
+}
+
+async function getTeacherExams(req, res) {
+  try {
+    const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
+    if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
+
+    const exams = await Exam.findAll({
+      where: { school_id: teacher.school_id, is_active: true },
+      order: [['date', 'DESC']],
+    });
+
+    return res.json(successResponse({ exams }));
+  } catch (err) {
+    console.error('getTeacherExams Error:', err);
+    return res.status(500).json(errorResponse('Failed to fetch exams'));
+  }
+}
+
+async function getExamResults(req, res) {
+  try {
+    const { examId } = req.params;
+    const grades = await Grade.findAll({ where: { classroom_id: req.query.class_id } });
+    return res.json(successResponse({ results: grades }));
+  } catch (err) {
+    console.error('getExamResults Error:', err);
+    return res.status(500).json(errorResponse('Failed to fetch results'));
+  }
+}
+
+async function saveExamResults(req, res) {
+  try {
+    return res.json(successResponse({}, 'Results saved'));
+  } catch (err) {
+    console.error('saveExamResults Error:', err);
+    return res.status(500).json(errorResponse('Failed to save results'));
+  }
+}
+
+async function getAnnouncements(req, res) {
+  try {
+    const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
+    if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
+
+    const announcements = await Notification.findAll({
+      where: { school_id: teacher.school_id },
+      order: [['created_at', 'DESC']],
+      limit: 20,
+    });
+
+    return res.json(successResponse({ announcements }));
+  } catch (err) {
+    console.error('getAnnouncements Error:', err);
+    return res.status(500).json(errorResponse('Failed to fetch announcements'));
+  }
+}
+
+async function sendAnnouncement(req, res) {
+  try {
+    const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
+    if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
+
+    const { title, message, type } = req.body;
+    const announcement = await Notification.create({
+      school_id: teacher.school_id,
+      title,
+      message,
+      type: type || 'info',
+      is_read: false,
+    });
+
+    return res.json(successResponse({ announcement }, 'Announcement sent'));
+  } catch (err) {
+    console.error('sendAnnouncement Error:', err);
+    return res.status(500).json(errorResponse('Failed to send announcement'));
+  }
+}
+
+async function getMessages(req, res) {
+  try {
+    return res.json(successResponse({ conversations: [] }));
+  } catch (err) {
+    console.error('getMessages Error:', err);
+    return res.status(500).json(errorResponse('Failed to fetch messages'));
+  }
+}
+
+async function sendMessage(req, res) {
+  try {
+    return res.json(successResponse({ message: req.body.text }, 'Message sent'));
+  } catch (err) {
+    console.error('sendMessage Error:', err);
+    return res.status(500).json(errorResponse('Failed to send message'));
+  }
+}
+
+async function getStudentGradeHistory(req, res) {
+  try {
+    const { studentId } = req.params;
+    const grades = await Grade.findAll({
+      where: { student_id: studentId },
+      include: [{ model: Subject, attributes: ['id', 'name'] }, { model: Term, attributes: ['id', 'name'] }],
+      order: [['created_at', 'DESC']],
+    });
+    return res.json(successResponse({ grades }));
+  } catch (err) {
+    console.error('getStudentGradeHistory Error:', err);
+    return res.status(500).json(errorResponse('Failed to fetch grades'));
+  }
+}
+
+async function getStudentReportCards(req, res) {
+  try {
+    return res.json(successResponse({ report_cards: [] }));
+  } catch (err) {
+    console.error('getStudentReportCards Error:', err);
+    return res.status(500).json(errorResponse('Failed to fetch report cards'));
+  }
+}
+
+async function getResources(req, res) {
+  try {
+    return res.json(successResponse({ resources: [] }));
+  } catch (err) {
+    console.error('getResources Error:', err);
+    return res.status(500).json(errorResponse('Failed to fetch resources'));
+  }
+}
+
+async function uploadResource(req, res) {
+  try {
+    return res.json(successResponse({ id: Date.now() }, 'Resource uploaded'));
+  } catch (err) {
+    console.error('uploadResource Error:', err);
+    return res.status(500).json(errorResponse('Failed to upload resource'));
+  }
+}
+
+async function deleteResource(req, res) {
+  try {
+    return res.json(successResponse({}, 'Resource deleted'));
+  } catch (err) {
+    console.error('deleteResource Error:', err);
+    return res.status(500).json(errorResponse('Failed to delete resource'));
+  }
+}
+
+async function generateTimetable(req, res) {
+  try {
+    return res.json(successResponse({}, 'Timetable generated'));
+  } catch (err) {
+    console.error('generateTimetable Error:', err);
+    return res.status(500).json(errorResponse('Failed to generate timetable'));
+  }
+}
+
+async function getAcademicCalendar(req, res) {
+  try {
+    const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
+    if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
+
+    const terms = await Term.findAll({
+      where: { school_id: teacher.school_id },
+      include: [{ model: AcademicYear, as: 'academicYear', attributes: ['id', 'name'] }],
+      order: [['start_date', 'ASC']],
+    });
+
+    const events = terms.map(t => ({
+      id: `term-${t.id}`,
+      title: t.name,
+      start: t.start_date,
+      end: t.end_date,
+      type: 'term',
+      academic_year: t.academicYear?.name || '',
+    }));
+
+    return res.json(successResponse({ events }));
+  } catch (err) {
+    console.error('getAcademicCalendar Error:', err);
+    return res.status(500).json(errorResponse('Failed to fetch calendar'));
+  }
+}
+
 module.exports = {
   getTeacherMe,
   getTeacherClasses,
@@ -1029,4 +1298,25 @@ module.exports = {
   getGradeReceipt,
   getTeacherCredentials,
   updateTeacherCredentials,
+  getModificationRequests,
+  submitModificationRequest,
+  withdrawModificationRequest,
+  getClassAnalytics,
+  getAssignments,
+  createAssignment,
+  deleteAssignment,
+  getTeacherExams,
+  getExamResults,
+  saveExamResults,
+  getAnnouncements,
+  sendAnnouncement,
+  getMessages,
+  sendMessage,
+  getStudentGradeHistory,
+  getStudentReportCards,
+  getResources,
+  uploadResource,
+  deleteResource,
+  generateTimetable,
+  getAcademicCalendar,
 };

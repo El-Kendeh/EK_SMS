@@ -16,6 +16,8 @@ const superadminRouter = require('./routes/superadmin');
 const principalRouter = require('./routes/principal');
 const financeRouter = require('./routes/finance');
 const parentRouter = require('./routes/parent');
+const whistleblowerRouter = require('./routes/whistleblower');
+const liveClassesRouter = require('./routes/live-classes');
 const { logFrontendEvent } = require('./controllers/loggingController');
 const { testEmail } = require('./controllers/testController');
 
@@ -130,6 +132,8 @@ app.use('/api/student', studentRouter);
 app.use('/api/principal', principalRouter);
 app.use('/api/finance', financeRouter);
 app.use('/api/parent', parentRouter);
+app.use('/api/whistleblower', whistleblowerRouter);
+app.use('/api/live-classes', liveClassesRouter);
 app.use('/api', schoolRouter);
 app.use('/api', superadminRouter);
 

@@ -58,6 +58,27 @@ const {
   getGradeReceipt,
   getTeacherCredentials,
   updateTeacherCredentials,
+  getModificationRequests,
+  submitModificationRequest,
+  withdrawModificationRequest,
+  getClassAnalytics,
+  getAssignments,
+  createAssignment,
+  deleteAssignment,
+  getTeacherExams,
+  getExamResults,
+  saveExamResults,
+  getAnnouncements,
+  sendAnnouncement,
+  getMessages,
+  sendMessage,
+  getStudentGradeHistory,
+  getStudentReportCards,
+  getResources,
+  uploadResource,
+  deleteResource,
+  generateTimetable,
+  getAcademicCalendar,
 } = require('../controllers/teacherController');
 
 router.use(authenticateToken);
@@ -107,10 +128,43 @@ router.get('/exam-duties/', getTeacherExamDuties);
 // Attendance & Analytics
 router.get('/attendance/status/', getTeacherAttendanceStatus);
 router.get('/at-risk-students/', getTeacherAtRiskStudents);
+router.get('/analytics/', getClassAnalytics);
 router.get('/modification-requests/summary/', getTeacherModificationSummary);
-router.get('/academic-calendar/', getTeacherAcademicCalendar);
+router.get('/academic-calendar/', getAcademicCalendar);
 router.get('/student-activity/', getTeacherStudentActivity);
 router.get('/notifications/', getTeacherNotifications);
+
+// Modification Requests
+router.get('/modification-requests/', getModificationRequests);
+router.post('/modification-requests/', submitModificationRequest);
+router.post('/modification-requests/withdraw/', withdrawModificationRequest);
+
+// Assignments
+router.get('/assignments/', getAssignments);
+router.post('/assignments/', createAssignment);
+router.delete('/assignments/:id/', deleteAssignment);
+
+// Exams
+router.get('/exam-list/', getTeacherExams);
+router.get('/exams/:examId/results/', getExamResults);
+router.post('/exams/:examId/results/', saveExamResults);
+
+// Announcements
+router.get('/announcements/', getAnnouncements);
+router.post('/announcements/', sendAnnouncement);
+
+// Messages
+router.get('/messages/', getMessages);
+router.post('/messages/', sendMessage);
+
+// Student Details
+router.get('/students/:studentId/grades/', getStudentGradeHistory);
+router.get('/students/:studentId/report-cards/', getStudentReportCards);
+
+// Resources
+router.get('/resources/', getResources);
+router.post('/resources/', uploadResource);
+router.delete('/resources/:id/', deleteResource);
 
 // Feedback
 router.get('/feedback/students/', getFeedbackStudents);
@@ -181,9 +235,8 @@ router.get('/grade-receipts/:receiptId/', getGradeReceipt);
 router.get('/credentials/', getTeacherCredentials);
 router.patch('/credentials/', updateTeacherCredentials);
 
-module.exports = router;
-
-// Grading scheme (read-only for teachers)
+// Timetable generation
+router.post('/timetable/generate/', generateTimetable);
 
 // Grading scheme (read-only for teachers)
 const { getGradingScheme } = require('../controllers/schoolController');
