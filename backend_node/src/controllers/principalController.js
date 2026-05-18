@@ -181,8 +181,47 @@ async function listReportCards(req, res) {
       where: { school_id: school.id, term_id: activeTerm?.id || null },
     });
 
+    const grades = await Grade.findAll({
+      where: { school_id: school.id, term_id: activeTerm?.id || null },
+      include: [
+        { model: Student, include: [{ model: User, attributes: ['first_name', 'last_name'] }] },
+        { model: Subject, attributes: ['id', 'name', 'code'] },
+      ],
+      order: [['created_at', 'DESC']],
+      limit: 500,
+    });
+
+    const studentMap = {};
+    for (const g of grades) {
+      const sid = g.student_id;
+      if (!studentMap[sid]) {
+        studentMap[sid] = {
+          student_id: sid,
+          student_name: g.Student ? `${g.Student.User?.first_name} ${g.Student.User?.last_name}`.trim() : '',
+          admission_number: g.Student?.admission_number || '',
+          subjects: [],
+          approved: true,
+        };
+      }
+      studentMap[sid].subjects.push({
+        subject_name: g.Subject?.name || '',
+        subject_code: g.Subject?.code || '',
+        ca: g.ca,
+        midterm: g.midterm,
+        final: g.final,
+        total: g.total,
+        grade_letter: g.grade_letter,
+        remarks: g.remarks,
+      });
+      if (g.approval_status !== 'approved') {
+        studentMap[sid].approved = false;
+      }
+    }
+
+    const reportCards = Object.values(studentMap);
+
     return res.json(successResponse({
-      report_cards: [],
+      report_cards: reportCards,
       term: activeTerm?.name || null,
       term_id: activeTerm?.id || null,
       approved_count: approvedGrades,
@@ -202,15 +241,24 @@ async function publishReportCard(req, res) {
     const { student_ids, term_id } = req.body;
     if (!term_id) return res.status(400).json(errorResponse('term_id is required'));
 
+    const term = await Term.findByPk(term_id);
+
+    const ids = student_ids && student_ids.length ? student_ids : null;
+    const where = { school_id: school.id, term_id, approval_status: 'approved' };
+    if (ids) where.student_id = { [Op.in]: ids };
+
+    const grades = await Grade.findAll({ where });
+    const publishedStudents = new Set(grades.map(g => g.student_id));
+
     await Notification.create({
       school_id: school.id,
       title: 'Report Cards Published',
-      message: `Report cards for term have been published and are now available.`,
+      message: `Report cards for ${term?.name || 'the selected term'} have been published and are now available.`,
       type: 'alert',
       is_read: false,
     });
 
-    return res.json(successResponse({}, 'Report cards published'));
+    return res.json(successResponse({ published_count: publishedStudents.size }, 'Report cards published'));
   } catch (err) {
     console.error('publishReportCard Error:', err);
     return res.status(500).json(errorResponse(`Failed to publish: ${err.message}`));
@@ -219,7 +267,23 @@ async function publishReportCard(req, res) {
 
 async function commentReportCard(req, res) {
   try {
-    return res.json(successResponse({}, 'Comment saved'));
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+
+    const { grade_id, comment } = req.body;
+    if (!grade_id || !comment) return res.status(400).json(errorResponse('grade_id and comment are required'));
+
+    const grade = await Grade.findOne({ where: { id: grade_id, school_id: school.id } });
+    if (!grade) return res.status(404).json(errorResponse('Grade not found'));
+
+    const existingRemarks = grade.remarks || '';
+    const timestamp = new Date().toISOString();
+    const newRemark = `[${timestamp}] ${comment}`;
+    const updatedRemarks = existingRemarks ? `${existingRemarks}\n${newRemark}` : newRemark;
+
+    await grade.update({ remarks: updatedRemarks });
+
+    return res.json(successResponse({ grade_id: grade.id }, 'Comment saved'));
   } catch (err) {
     console.error('commentReportCard Error:', err);
     return res.status(500).json(errorResponse(`Failed to save comment: ${err.message}`));
@@ -470,13 +534,26 @@ async function getSyllabusProgress(req, res) {
     const school = await getSchoolFromUser(req);
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
+    const SyllabusTopic = require('../models/SyllabusTopic');
+
     const subjects = await Subject.findAll({ where: { school_id: school.id } });
 
-    const progress = subjects.map(s => ({
-      name: s.name,
-      pct: 0,
-      pending: '',
-    }));
+    const progress = [];
+    for (const s of subjects) {
+      const topics = await SyllabusTopic.findAll({ where: { school_id: school.id, subject_id: s.id } });
+      const total = topics.length;
+      const covered = topics.filter(t => t.status === 'completed' || t.date_covered).length;
+      const pct = total > 0 ? Math.round((covered / total) * 100) : 0;
+      const pending = topics.filter(t => t.status === 'not_started' || !t.date_covered).length;
+      progress.push({
+        name: s.name,
+        code: s.code,
+        pct,
+        pending: `${pending} topic(s) pending`,
+        total_topics: total,
+        covered_topics: covered,
+      });
+    }
 
     return res.json(successResponse({ subjects: progress }));
   } catch (err) {

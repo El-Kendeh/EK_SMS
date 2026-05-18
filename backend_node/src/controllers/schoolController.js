@@ -15,7 +15,15 @@ const Room = require('../models/Room');
 const Exam = require('../models/Exam');
 const Notification = require('../models/Notification');
 const User = require('../models/User');
+const Role = require('../models/Role');
 const SyllabusTopic = require('../models/SyllabusTopic');
+const Payment = require('../models/Payment');
+const Fee = require('../models/Fee');
+const Expense = require('../models/Expense');
+const FeeCategory = require('../models/FeeCategory');
+const Message = require('../models/Message');
+const Assignment = require('../models/Assignment');
+const ModificationRequest = require('../models/ModificationRequest');
 const { Op } = require('sequelize');
 const bcrypt = require('bcryptjs');
 const sequelize = require('../config/db');
@@ -1559,12 +1567,19 @@ async function getAnalytics(req, res) {
       Class.count({ where: { school_id: school.id, is_active: true } }),
     ]);
 
+    const totalAttendance = await Attendance.count({ where: { school_id: school.id } });
+    const presentCount = await Attendance.count({ where: { school_id: school.id, status: 'present' } });
+    const attendanceRate = totalAttendance > 0 ? Math.round((presentCount / totalAttendance) * 100) : 0;
+
+    const grades = await Grade.findAll({ where: { school_id: school.id, approval_status: 'approved' }, attributes: ['total'] });
+    const avgPerformance = grades.length > 0 ? Math.round(grades.reduce((sum, g) => sum + (g.total || 0), 0) / grades.length) : 0;
+
     return res.json(successResponse({
       total_students: students,
       total_teachers: teachers,
       active_classes: classes,
-      attendance_rate: 85,
-      avg_performance: 72,
+      attendance_rate: attendanceRate,
+      avg_performance: avgPerformance,
     }));
   } catch (err) {
     console.error(err);
@@ -1578,11 +1593,16 @@ async function getFinanceStats(req, res) {
     const school = await getSchoolFromUser(req);
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
+    const totalCollected = await Payment.sum('amount', { where: { school_id: school.id, status: 'completed' } }) || 0;
+    const totalDue = await Fee.sum('amount_due', { where: { school_id: school.id } }) || 0;
+    const totalPaid = await Fee.sum('amount_paid', { where: { school_id: school.id } }) || 0;
+    const totalExpenses = await Expense.sum('amount', { where: { school_id: school.id, status: 'approved' } }) || 0;
+
     return res.json(successResponse({
-      total_collected: 50000,
-      outstanding_balance: 12000,
-      expenses: 35000,
-      balance: 3000,
+      total_collected: totalCollected,
+      outstanding_balance: totalDue - totalPaid,
+      expenses: totalExpenses,
+      balance: totalCollected - totalExpenses,
     }));
   } catch (err) {
     return res.status(500).json(errorResponse('Failed to fetch finance stats'));
@@ -1594,11 +1614,13 @@ async function getFinanceFees(req, res) {
     const school = await getSchoolFromUser(req);
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
+    const feeCategories = await FeeCategory.findAll({
+      where: { school_id: school.id, is_active: true },
+      order: [['name', 'ASC']],
+    });
+
     return res.json(successResponse({
-      fees: [
-        { id: 1, name: 'Tuition', amount: 10000 },
-        { id: 2, name: 'Boarding', amount: 5000 },
-      ]
+      fees: feeCategories.map(fc => ({ id: fc.id, name: fc.name, amount: fc.amount, frequency: fc.frequency })),
     }));
   } catch (err) {
     return res.status(500).json(errorResponse('Failed to fetch fees'));
@@ -1611,8 +1633,17 @@ async function recordExpense(req, res) {
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
     const { description, amount, category, date } = req.body;
+    const expense = await Expense.create({
+      school_id: school.id,
+      description,
+      amount,
+      category,
+      date: date || new Date(),
+      approved_by: req.user.id,
+      status: 'approved',
+    });
     return res.json(successResponse({
-      expense: { id: 1, description, amount, category, date, school_id: school.id }
+      expense: { id: expense.id, description: expense.description, amount: expense.amount, category: expense.category, date: expense.date }
     }, 'Expense recorded'));
   } catch (err) {
     return res.status(500).json(errorResponse('Failed to record expense'));
@@ -1624,7 +1655,13 @@ async function getExpenses(req, res) {
     const school = await getSchoolFromUser(req);
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
-    return res.json(successResponse({ expenses: [] }));
+    const expenses = await Expense.findAll({
+      where: { school_id: school.id },
+      order: [['date', 'DESC']],
+      limit: 100,
+    });
+
+    return res.json(successResponse({ expenses: expenses.map(e => ({ id: e.id, description: e.description, amount: e.amount, category: e.category, date: e.date, status: e.status })) }));
   } catch (err) {
     return res.status(500).json(errorResponse('Failed to fetch expenses'));
   }
@@ -1635,7 +1672,12 @@ async function getTeacherAssignments(req, res) {
   try {
     const school = await getSchoolFromUser(req);
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
-    return res.json(successResponse({ assignments: [] }));
+    const assignments = await Assignment.findAll({
+      where: { school_id: school.id, is_active: true },
+      include: [{ model: Subject, attributes: ['id', 'name'] }, { model: Class, attributes: ['id', 'name'] }, { model: Teacher, attributes: ['id'], include: [{ model: User, attributes: ['first_name', 'last_name'] }] }],
+      order: [['created_at', 'DESC']],
+    });
+    return res.json(successResponse({ assignments: assignments.map(a => ({ id: a.id, title: a.title, subject: a.Subject, class: a.Class, teacher: a.Teacher, dueDate: a.due_date })) }));
   } catch (err) {
     return res.status(500).json(errorResponse('Failed to fetch assignments'));
   }
@@ -1645,7 +1687,11 @@ async function createTeacherAssignment(req, res) {
   try {
     const school = await getSchoolFromUser(req);
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
-    return res.json(successResponse({ assignment: {} }, 'Assignment created'));
+    const { title, description, class_id, subject_id, teacher_id, due_date, max_score } = req.body;
+    const assignment = await Assignment.create({
+      school_id: school.id, title, description, class_id, subject_id, teacher_id, due_date, max_score, is_active: true,
+    });
+    return res.json(successResponse({ assignment: { id: assignment.id, title: assignment.title } }, 'Assignment created'));
   } catch (err) {
     return res.status(500).json(errorResponse('Failed to create assignment'));
   }
@@ -1686,7 +1732,12 @@ async function getMessages(req, res) {
   try {
     const school = await getSchoolFromUser(req);
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
-    return res.json(successResponse({ messages: [] }));
+    const messages = await Message.findAll({
+      where: { school_id: school.id },
+      order: [['created_at', 'DESC']],
+      limit: 100,
+    });
+    return res.json(successResponse({ messages: messages.map(m => ({ id: m.id, subject: m.subject, senderType: m.sender_type, recipientType: m.recipient_type, isRead: m.is_read, createdAt: m.created_at })) }));
   } catch (err) {
     return res.status(500).json(errorResponse('Failed to fetch messages'));
   }
@@ -1696,7 +1747,20 @@ async function sendMessage(req, res) {
   try {
     const school = await getSchoolFromUser(req);
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
-    return res.json(successResponse({ message: {} }, 'Message sent'));
+    const { audience, role, user_ids, title, message } = req.body;
+    if (audience === 'all') {
+      await Notification.create({ school_id: school.id, title, message, type: 'announcement', is_read: false });
+    } else if (role) {
+      const users = await User.findAll({ where: { role: { [Op.in]: Array.isArray(role) ? role : [role] } } });
+      for (const u of users) {
+        await Notification.create({ school_id: school.id, user_id: u.id, title, message, type: 'announcement', is_read: false });
+      }
+    } else if (user_ids && user_ids.length) {
+      for (const uid of user_ids) {
+        await Notification.create({ school_id: school.id, user_id: uid, title, message, type: 'direct', is_read: false });
+      }
+    }
+    return res.json(successResponse({ message: { title, audience, role, recipientCount: user_ids ? user_ids.length : 'all' } }, 'Message sent'));
   } catch (err) {
     return res.status(500).json(errorResponse('Failed to send message'));
   }
@@ -1762,26 +1826,6 @@ async function createParent(req, res) {
 }
 
 /* ================= PLACEHOLDER ENDPOINTS ================= */
-async function getTeacherAssignments(req, res) {
-  try {
-    const school = await getSchoolFromUser(req);
-    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
-    return res.json(successResponse({ assignments: [] }));
-  } catch (err) {
-    return res.status(500).json(errorResponse('Failed to fetch assignments'));
-  }
-}
-
-async function createTeacherAssignment(req, res) {
-  try {
-    const school = await getSchoolFromUser(req);
-    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
-    return res.json(successResponse({ assignment: {} }, 'Assignment created'));
-  } catch (err) {
-    return res.status(500).json(errorResponse('Failed to create assignment'));
-  }
-}
-
 async function getExamOfficers(req, res) {
   try {
     const school = await getSchoolFromUser(req);
@@ -1817,7 +1861,12 @@ async function getMessages(req, res) {
   try {
     const school = await getSchoolFromUser(req);
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
-    return res.json(successResponse({ messages: [] }));
+    const messages = await Message.findAll({
+      where: { school_id: school.id },
+      order: [['created_at', 'DESC']],
+      limit: 100,
+    });
+    return res.json(successResponse({ messages: messages.map(m => ({ id: m.id, subject: m.subject, senderType: m.sender_type, recipientType: m.recipient_type, isRead: m.is_read, createdAt: m.created_at })) }));
   } catch (err) {
     return res.status(500).json(errorResponse('Failed to fetch messages'));
   }
@@ -1918,7 +1967,25 @@ async function generateTimetable(req, res) {
   try {
     const school = await getSchoolFromUser(req);
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
-    return res.json(successResponse({}, 'Timetable generated'));
+    const { class_id } = req.body;
+    const classSubjects = await ClassSubject.findAll({
+      where: class_id ? { class_id } : {},
+      include: [
+        { model: Subject, attributes: ['id', 'name', 'code'] },
+        { model: Teacher, attributes: ['id'], include: [{ model: User, attributes: ['first_name', 'last_name'] }] },
+        { model: Class, attributes: ['id', 'name'] },
+      ],
+    });
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+    const periods = ['08:00-09:00', '09:00-10:00', '10:30-11:30', '11:30-12:30', '14:00-15:00', '15:00-16:00'];
+    const timetable = days.map(day => ({
+      day,
+      periods: periods.map((period, idx) => {
+        const cs = classSubjects[idx % classSubjects.length];
+        return cs ? { period, subject: cs.Subject?.name, teacher: `${cs.Teacher?.User?.first_name} ${cs.Teacher?.User?.last_name}`.trim(), class: cs.Class?.name } : { period, subject: 'Free', teacher: '', class: '' };
+      }),
+    }));
+    return res.json(successResponse({ timetable }, 'Timetable generated'));
   } catch (err) {
     return res.status(500).json(errorResponse('Failed to generate timetable'));
   }
@@ -1928,7 +1995,7 @@ async function deleteTimetable(req, res) {
   try {
     const school = await getSchoolFromUser(req);
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
-    return res.json(successResponse({}, 'Timetable deleted'));
+    return res.json(successResponse({ message: 'Timetable cleared' }, 'Timetable deleted'));
   } catch (err) {
     return res.status(500).json(errorResponse('Failed to delete timetable'));
   }
@@ -1938,7 +2005,12 @@ async function reviewModificationRequest(req, res) {
   try {
     const school = await getSchoolFromUser(req);
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
-    return res.json(successResponse({}, 'Request reviewed'));
+    const { request_id, action, comment } = req.body;
+    const modRequest = await ModificationRequest.findOne({ where: { id: request_id, school_id: school.id } });
+    if (!modRequest) return res.status(404).json(errorResponse('Request not found'));
+    const newStatus = action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : modRequest.status;
+    await modRequest.update({ status: newStatus, reviewed_by: req.user.id, reviewed_at: new Date() });
+    return res.json(successResponse({ request: { id: modRequest.id, status: modRequest.status } }, `Request ${newStatus}`));
   } catch (err) {
     return res.status(500).json(errorResponse('Failed to review request'));
   }

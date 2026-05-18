@@ -15,6 +15,7 @@ const FeeCategory = require('../models/FeeCategory');
 const Fee = require('../models/Fee');
 const Payment = require('../models/Payment');
 const Expense = require('../models/Expense');
+const Subject = require('../models/Subject');
 
 const successResponse = (data = {}, message = 'Success') => ({ success: true, message, ...data });
 const errorResponse = (message) => ({ success: false, message });
@@ -517,7 +518,60 @@ async function getOverview(req, res) {
 
 async function listGradeApprovals(req, res) {
   try {
-    return res.json(successResponse({ requests: [] }));
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+
+    const { status, class_id, term_id } = req.query;
+    const where = { school_id: school.id };
+    if (status) where.approval_status = status;
+    else where.approval_status = { [Op.in]: ['pending', 'rejected'] };
+    if (class_id) where.classroom_id = class_id;
+    if (term_id) where.term_id = term_id;
+
+    const grades = await Grade.findAll({
+      where,
+      include: [
+        { model: Student, include: [{ model: User, attributes: ['first_name', 'last_name'] }] },
+        { model: Subject, attributes: ['id', 'name', 'code'] },
+        { model: Term, attributes: ['id', 'name'] },
+        { model: Class, as: 'classroom', attributes: ['id', 'name'] },
+      ],
+      order: [['created_at', 'DESC']],
+      limit: 200,
+    });
+
+    const formatted = grades.map(g => ({
+      id: g.id,
+      student_id: g.student_id,
+      student_name: g.Student ? `${g.Student.User?.first_name} ${g.Student.User?.last_name}`.trim() : '',
+      admission_number: g.Student?.admission_number || '',
+      subject_id: g.subject_id,
+      subject_name: g.Subject?.name || '',
+      subject_code: g.Subject?.code || '',
+      term_id: g.term_id,
+      term_name: g.Term?.name || '',
+      class_id: g.classroom_id,
+      class_name: g.classroom?.name || '',
+      ca: g.ca,
+      midterm: g.midterm,
+      final: g.final,
+      total: g.total,
+      grade_letter: g.grade_letter,
+      remarks: g.remarks,
+      approval_status: g.approval_status,
+      approved_by: g.approved_by,
+      approved_at: g.approved_at,
+      created_at: g.created_at,
+    }));
+
+    const pending = await Grade.count({ where: { school_id: school.id, approval_status: 'pending' } });
+    const approved = await Grade.count({ where: { school_id: school.id, approval_status: 'approved' } });
+    const rejected = await Grade.count({ where: { school_id: school.id, approval_status: 'rejected' } });
+
+    return res.json(successResponse({
+      requests: formatted,
+      counts: { pending, approved, rejected },
+    }));
   } catch (err) {
     console.error('listGradeApprovals Error:', err);
     return res.status(500).json(errorResponse(`Failed to fetch approvals: ${err.message}`));
@@ -526,8 +580,37 @@ async function listGradeApprovals(req, res) {
 
 async function reviewGradeChange(req, res) {
   try {
-    const { mod_id, action, comment } = req.body;
-    return res.json(successResponse({}, `Grade ${action}`));
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+
+    const { grade_ids, action, comment } = req.body;
+    if (!grade_ids || !grade_ids.length) return res.status(400).json(errorResponse('grade_ids are required'));
+    if (!['approve', 'reject'].includes(action)) return res.status(400).json(errorResponse('Action must be approve or reject'));
+
+    const ids = Array.isArray(grade_ids) ? grade_ids : [grade_ids];
+    const grades = await Grade.findAll({
+      where: { id: ids, school_id: school.id, approval_status: 'pending' },
+    });
+
+    let count = 0;
+    for (const g of grades) {
+      await g.update({
+        approval_status: action === 'approve' ? 'approved' : 'rejected',
+        approved_by: req.user?.id || null,
+        approved_at: new Date(),
+      });
+
+      if (comment) {
+        const existingRemarks = g.remarks || '';
+        const timestamp = new Date().toISOString();
+        const newRemark = `[${timestamp}] ${action === 'approve' ? 'Approved' : 'Rejected'}: ${comment}`;
+        await g.update({ remarks: existingRemarks ? `${existingRemarks}\n${newRemark}` : newRemark });
+      }
+
+      count++;
+    }
+
+    return res.json(successResponse({ count }, `${count} grade(s) ${action}d`));
   } catch (err) {
     console.error('reviewGradeChange Error:', err);
     return res.status(500).json(errorResponse(`Failed to review: ${err.message}`));
@@ -553,7 +636,30 @@ async function listReportCards(req, res) {
 
 async function publishReportCard(req, res) {
   try {
-    return res.json(successResponse({}, 'Report card published'));
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+
+    const { student_ids, term_id } = req.body;
+    if (!term_id) return res.status(400).json(errorResponse('term_id is required'));
+
+    const term = await Term.findByPk(term_id);
+
+    const ids = student_ids && student_ids.length ? student_ids : null;
+    const where = { school_id: school.id, term_id, approval_status: 'approved' };
+    if (ids) where.student_id = { [Op.in]: ids };
+
+    const grades = await Grade.findAll({ where });
+    const publishedStudents = new Set(grades.map(g => g.student_id));
+
+    await Notification.create({
+      school_id: school.id,
+      title: 'Report Cards Published',
+      message: `Report cards for ${term?.name || 'the selected term'} have been published and are now available.`,
+      type: 'alert',
+      is_read: false,
+    });
+
+    return res.json(successResponse({ published_count: publishedStudents.size }, 'Report card published'));
   } catch (err) {
     console.error('publishReportCard Error:', err);
     return res.status(500).json(errorResponse(`Failed to publish: ${err.message}`));
@@ -562,7 +668,23 @@ async function publishReportCard(req, res) {
 
 async function commentReportCard(req, res) {
   try {
-    return res.json(successResponse({}, 'Comment saved'));
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+
+    const { grade_id, comment } = req.body;
+    if (!grade_id || !comment) return res.status(400).json(errorResponse('grade_id and comment are required'));
+
+    const grade = await Grade.findOne({ where: { id: grade_id, school_id: school.id } });
+    if (!grade) return res.status(404).json(errorResponse('Grade not found'));
+
+    const existingRemarks = grade.remarks || '';
+    const timestamp = new Date().toISOString();
+    const newRemark = `[${timestamp}] ${comment}`;
+    const updatedRemarks = existingRemarks ? `${existingRemarks}\n${newRemark}` : newRemark;
+
+    await grade.update({ remarks: updatedRemarks });
+
+    return res.json(successResponse({ grade_id: grade.id }, 'Comment saved'));
   } catch (err) {
     console.error('commentReportCard Error:', err);
     return res.status(500).json(errorResponse(`Failed to save comment: ${err.message}`));
@@ -757,7 +879,31 @@ async function getActivityFeed(req, res) {
 
 async function getSyllabusProgress(req, res) {
   try {
-    return res.json(successResponse({ subjects: [] }));
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+
+    const SyllabusTopic = require('../models/SyllabusTopic');
+
+    const subjects = await Subject.findAll({ where: { school_id: school.id } });
+
+    const progress = [];
+    for (const s of subjects) {
+      const topics = await SyllabusTopic.findAll({ where: { school_id: school.id, subject_id: s.id } });
+      const total = topics.length;
+      const covered = topics.filter(t => t.status === 'completed' || t.date_covered).length;
+      const pct = total > 0 ? Math.round((covered / total) * 100) : 0;
+      const pending = topics.filter(t => t.status === 'not_started' || !t.date_covered).length;
+      progress.push({
+        name: s.name,
+        code: s.code,
+        pct,
+        pending: `${pending} topic(s) pending`,
+        total_topics: total,
+        covered_topics: covered,
+      });
+    }
+
+    return res.json(successResponse({ subjects: progress }));
   } catch (err) {
     console.error('getSyllabusProgress Error:', err);
     return res.status(500).json(errorResponse(`Failed to fetch syllabus: ${err.message}`));

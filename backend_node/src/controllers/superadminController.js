@@ -7,6 +7,7 @@ const SystemOpsAlert = require('../models/SystemOpsAlert');
 const sequelize = require('../config/db');
 const { Op } = require('sequelize');
 const bcrypt = require('bcryptjs');
+const os = require('os');
 const { generateToken } = require('../utils/jwt');
 const { sendSchoolApprovedEmail, sendPasswordResetEmail } = require('../utils/email');
 const { appendSecurityAuditLog } = require('../utils/auditLog');
@@ -236,14 +237,23 @@ async function getGradeAlerts(req, res) {
       if (s === 'acknowledged' || s === 'resolved') return 'Approved';
       return 'Flagged';
     };
-    const alerts = rows.map((r) => ({
-      id: r.id,
-      status: mapStatus(r.status),
-      school: '',
-      student: '',
-      subject: (r.body || '').slice(0, 120),
-      requester: { name: r.title || 'System' },
-    }));
+
+    const alerts = rows.map((r) => {
+      const bodyText = r.body || '';
+      const titleText = r.title || '';
+      const schoolMatch = bodyText.match(/school[:\s]+([^,\n]+)/i);
+      const studentMatch = bodyText.match(/student[:\s]+([^,\n]+)/i);
+
+      return {
+        id: r.id,
+        status: mapStatus(r.status),
+        school: schoolMatch ? schoolMatch[1].trim() : '',
+        student: studentMatch ? studentMatch[1].trim() : '',
+        subject: bodyText.slice(0, 120),
+        requester: { name: titleText || 'System' },
+      };
+    });
+
     return res.json(successResponse({ alerts }));
   } catch (e) {
     console.error(e);
@@ -270,10 +280,34 @@ async function getSystemHealth(req, res) {
   const mem = process.memoryUsage();
   const memoryUsagePct = Math.round((mem.heapUsed / mem.heapTotal) * 100);
 
+  const cpus = os.cpus();
+  let cpuLoad = 0;
+  if (cpus.length > 0) {
+    const totalIdle = cpus.reduce((sum, cpu) => sum + cpu.times.idle, 0);
+    const totalTicks = cpus.reduce((sum, cpu) => sum + Object.values(cpu.times).reduce((a, b) => a + b, 0), 0);
+    cpuLoad = totalTicks > 0 ? Math.round(((totalTicks - totalIdle) / totalTicks) * 100) : 0;
+  }
+
+  const totalMem = os.totalmem();
+  const freeMem = os.freemem();
+  const sysMemPct = Math.round(((totalMem - freeMem) / totalMem) * 100);
+
+  const networkInterfaces = os.networkInterfaces();
+  let netIngress = 0;
+  for (const iface of Object.values(networkInterfaces)) {
+    for (const details of iface) {
+      if (details.bytesReceived) {
+        netIngress += details.bytesReceived;
+      }
+    }
+  }
+  const netIngressMB = Math.round((netIngress / (1024 * 1024)) * 100) / 100;
+
   const resources = [
-    { label: 'CPU Load', value: 12, unit: '%' },
-    { label: 'Memory Usage', value: memoryUsagePct, unit: '%' },
-    { label: 'Network Ingress', value: 4.2, unit: ' MB/s' },
+    { label: 'CPU Load', value: cpuLoad, unit: '%' },
+    { label: 'Memory Usage', value: sysMemPct, unit: '%' },
+    { label: 'Node Heap', value: memoryUsagePct, unit: '%' },
+    { label: 'Network Ingress', value: netIngressMB, unit: ' MB' },
   ];
 
   return res.json(successResponse({
