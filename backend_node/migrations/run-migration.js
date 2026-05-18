@@ -1,4 +1,4 @@
-const sequelize = require('../config/db');
+const sequelize = require('../src/config/db');
 
 async function migrate() {
   console.log('Running migration: finance tables + grade approvals + notification user_id');
