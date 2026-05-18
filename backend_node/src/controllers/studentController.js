@@ -2172,13 +2172,6 @@ async function deleteLiveClass(req, res) {
   }
 }
 
-    return res.json(successResponse({ liveClasses: formatted }));
-  } catch (err) {
-    console.error('listLiveClasses Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch live classes: ${err.message}`));
-  }
-}
-
 async function downloadReceipt(req, res) {
   try {
     const student = await getStudentFromUser(req);
