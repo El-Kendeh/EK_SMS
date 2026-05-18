@@ -187,7 +187,7 @@ export default function ParentGrades({ children }) {
 
   useEffect(() => {
     if (activeTerm?.id && !activeTermId) setActiveTermId(activeTerm.id);
-  }, [activeTerm?.id]);
+  }, [activeTerm?.id, activeTermId]);
 
   const activeChild = resolvedChildren.find((c) => c.id === selectedChildId) || resolvedChildren[0];
   const { grades, loading } = useChildGrades(activeChild?.id || null, activeTermId);

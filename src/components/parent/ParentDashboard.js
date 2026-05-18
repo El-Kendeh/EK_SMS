@@ -4,7 +4,6 @@ import { useTheme } from '../../context/ThemeContext';
 import { I18nProvider } from '../../context/I18nContext';
 import { ChildProvider, useActiveChild } from '../../context/ChildContext';
 import { ParentNotificationProvider, useParentNotifyCtx } from '../../context/ParentNotificationContext';
-import { useSchoolContext } from '../../hooks/useSchoolContext';
 import SchoolContextBanner from '../common/SchoolContextBanner';
 
 import ParentHome from './ParentHome';
