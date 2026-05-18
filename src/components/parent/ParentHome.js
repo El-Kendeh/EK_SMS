@@ -1,14 +1,7 @@
 import { motion } from 'framer-motion';
 import { useParentChildren } from '../../hooks/useParentChildren';
-import { getChildColors, formatParentRelativeTime } from '../../utils/parentUtils';
-import { mockRecentActivity } from '../../mock/parentMockData';
+import { getChildColors } from '../../utils/parentUtils';
 import './ParentHome.css';
-
-const activityColorMap = {
-  success:  { bg: 'rgba(16,185,129,0.15)', icon: '#10B981' },
-  info:     { bg: 'rgba(59,130,246,0.15)',  icon: '#3B82F6' },
-  critical: { bg: 'rgba(239,68,68,0.15)',   icon: '#EF4444' },
-};
 
 export default function ParentHome({ navigateTo, parent }) {
   const { children, loading } = useParentChildren();
@@ -77,26 +70,7 @@ export default function ParentHome({ navigateTo, parent }) {
           <div className="par-card par-card--pad par-home__activity">
             <p className="par-home__section-label">Recent Activity</p>
             <div className="par-home__activity-list">
-              {mockRecentActivity.map((item, idx) => {
-                const c = activityColorMap[item.color] || activityColorMap.info;
-                return (
-                  <div key={item.id} className="par-home__activity-item">
-                    <div className="par-home__activity-line">
-                      <div className="par-home__activity-dot" style={{ background: c.icon }}>
-                        <span className="material-symbols-outlined"
-                          style={{ fontSize: 10, color: 'white', fontVariationSettings: "'FILL' 1" }}>
-                          {item.icon}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="par-home__activity-body">
-                      <p className="par-home__activity-title">{item.title}</p>
-                      <p className="par-home__activity-desc">{item.description}</p>
-                      <span className="par-home__activity-time">{formatParentRelativeTime(item.time)}</span>
-                    </div>
-                  </div>
-                );
-              })}
+              <p style={{ color: 'var(--par-text-secondary)', fontSize: 13, padding: '8px 0' }}>No recent activity to display.</p>
             </div>
           </div>
         </div>

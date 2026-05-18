@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useParentChildren } from '../../hooks/useParentChildren';
 import { getChildColors } from '../../utils/parentUtils';
-import { mockBehaviorByChild } from '../../mock/parentMockData';
+import { fetchChildBehavior } from '../../api/parentApi';
 import './ParentBehavior.css';
 
 const TYPE_META = {
@@ -14,9 +14,22 @@ const TYPE_META = {
 export default function ParentBehavior() {
   const { children } = useParentChildren();
   const [selectedChildId, setSelectedChildId] = useState(null);
+  const [entries, setEntries] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   const activeChild = children.find((c) => c.id === selectedChildId) || children[0];
-  const entries = mockBehaviorByChild[activeChild?.id] || [];
+
+  useEffect(() => {
+    if (!activeChild?.id) return;
+    let cancelled = false;
+    setLoading(true);
+    fetchChildBehavior(activeChild.id)
+      .then(res => { if (!cancelled) setEntries(res.entries || []); })
+      .catch(() => { if (!cancelled) setEntries([]); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [activeChild?.id]);
+
   const commendations = entries.filter((e) => e.type === 'commendation').length;
   const violations = entries.filter((e) => e.type !== 'commendation').length;
 
@@ -62,7 +75,13 @@ export default function ParentBehavior() {
       {/* Timeline */}
       <div className="par-behavior__timeline">
         <div className="par-behavior__timeline-line" />
-        {entries.length === 0 ? (
+        {loading ? (
+          <div style={{ padding: 24 }}>
+            {[0,1,2].map((i) => (
+              <div key={i} className="par-skeleton" style={{ height: 120, marginBottom: 16 }} />
+            ))}
+          </div>
+        ) : entries.length === 0 ? (
           <div className="par-empty">
             <span className="material-symbols-outlined">gavel</span>
             <p>No behavioural records for this term.</p>

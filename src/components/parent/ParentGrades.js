@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useParentChildren } from '../../hooks/useParentChildren';
 import { useChildGrades } from '../../hooks/useChildGrades';
 import { getChildColors, getGradeLetterColor, getStatusMeta, calcOverallAverage } from '../../utils/parentUtils';
-import { mockGradeHistoryBySubject } from '../../mock/parentMockData';
+import { fetchChildGradeHistory } from '../../api/parentApi';
 import './ParentGrades.css';
 
 const HISTORY_TYPE_META = {
@@ -13,8 +13,20 @@ const HISTORY_TYPE_META = {
   ca:     { icon: 'assignment',color: 'var(--par-info)',    label: 'DRAFT',     bg: 'var(--par-info-bg)' },
 };
 
-function GradeHistoryDrawer({ grade, onClose }) {
-  const history = mockGradeHistoryBySubject[grade.id] || [];
+function GradeHistoryDrawer({ childId, grade, onClose }) {
+  const [history, setHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!grade?.id || !childId) return;
+    let cancelled = false;
+    setLoading(true);
+    fetchChildGradeHistory(childId, grade.id)
+      .then(res => { if (!cancelled) setHistory(res.history || []); })
+      .catch(() => { if (!cancelled) setHistory([]); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [grade?.id, childId]);
 
   return (
     <>
@@ -37,11 +49,13 @@ function GradeHistoryDrawer({ grade, onClose }) {
         </div>
 
         <div className="par-drawer__timeline">
-          {history.length === 0 ? (
+          {loading ? (
+            <p style={{ color: 'var(--par-text-secondary)', fontSize: 13 }}>Loading history...</p>
+          ) : history.length === 0 ? (
             <p style={{ color: 'var(--par-text-secondary)', fontSize: 13 }}>No history available.</p>
           ) : history.map((entry, i) => {
             const meta = HISTORY_TYPE_META[entry.type] || HISTORY_TYPE_META.draft;
-            const date = new Date(entry.date);
+            const date = new Date(entry.created_at || entry.date);
             const dateStr = date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).toUpperCase();
             const timeStr = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
             return (
@@ -55,9 +69,9 @@ function GradeHistoryDrawer({ grade, onClose }) {
                       {meta.label}
                     </span>
                   </div>
-                  <h4 className="par-drawer__entry-title">{entry.event}</h4>
-                  <p className="par-drawer__entry-score">{entry.score} <span>Score</span></p>
-                  <p className="par-drawer__entry-by">By {entry.by}</p>
+                  <h4 className="par-drawer__entry-title">{entry.event || entry.action || 'Record updated'}</h4>
+                  <p className="par-drawer__entry-score">{entry.score ?? entry.value ?? '—'} <span>Score</span></p>
+                  <p className="par-drawer__entry-by">By {entry.by || entry.user || 'System'}</p>
                 </div>
               </div>
             );
@@ -282,7 +296,7 @@ export default function ParentGrades({ children }) {
       {/* Grade history drawer */}
       <AnimatePresence>
         {historyGrade && (
-          <GradeHistoryDrawer grade={historyGrade} onClose={() => setHistoryGrade(null)} />
+          <GradeHistoryDrawer childId={activeChild?.id} grade={historyGrade} onClose={() => setHistoryGrade(null)} />
         )}
       </AnimatePresence>
     </div>

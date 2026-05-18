@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useParentChildren } from '../../hooks/useParentChildren';
 import { getChildColors, formatDate } from '../../utils/parentUtils';
-import { mockAttendanceByChild } from '../../mock/parentMockData';
+import { fetchChildAttendance } from '../../api/parentApi';
 import './ParentAttendance.css';
 
 const STATUS_META = {
@@ -14,9 +14,29 @@ const STATUS_META = {
 export default function ParentAttendance() {
   const { children } = useParentChildren();
   const [selectedChildId, setSelectedChildId] = useState(null);
+  const [attendanceData, setAttendanceData] = useState({ stats: { total: 0, present: 0, absent: 0, late: 0, rate: 0 }, calendar: [], logs: [] });
 
   const activeChild = children.find((c) => c.id === selectedChildId) || children[0];
-  const data = mockAttendanceByChild[activeChild?.id] || { rate: 0, days: [], logs: [], present: 0, late: 0, absent: 0, total: 0 };
+
+  useEffect(() => {
+    if (!activeChild?.id) return;
+    let cancelled = false;
+    fetchChildAttendance(activeChild.id)
+      .then(res => { if (!cancelled) setAttendanceData(res); })
+      .catch(() => { if (!cancelled) setAttendanceData({ stats: { total: 0, present: 0, absent: 0, late: 0, rate: 0 }, calendar: [], logs: [] }); });
+    return () => { cancelled = true; };
+  }, [activeChild?.id]);
+
+  const data = {
+    rate: attendanceData.stats?.rate || 0,
+    days: attendanceData.calendar || [],
+    logs: attendanceData.logs || [],
+    present: attendanceData.stats?.present || 0,
+    late: attendanceData.stats?.late || 0,
+    absent: attendanceData.stats?.absent || 0,
+    total: attendanceData.stats?.total || 0,
+    month: 'Attendance',
+  };
 
   const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
