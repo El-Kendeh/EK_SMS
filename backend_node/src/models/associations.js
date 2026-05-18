@@ -73,6 +73,9 @@ School.hasMany(Term, { foreignKey: 'school_id', as: 'terms' });
 School.hasMany(Class, { foreignKey: 'school_id', as: 'classes' });
 School.hasMany(Subject, { foreignKey: 'school_id', as: 'subjects' });
 School.hasMany(Student, { foreignKey: 'school_id', as: 'students' });
+School.hasMany(SchoolAdmin, { foreignKey: 'school_id', as: 'schoolAdmins' });
+SchoolAdmin.belongsTo(School, { foreignKey: 'school_id', as: 'school' });
+
 School.hasMany(Teacher, { foreignKey: 'school_id', as: 'teachers' });
 School.hasMany(FeeCategory, { foreignKey: 'school_id', as: 'feeCategories' });
 School.hasMany(Fee, { foreignKey: 'school_id', as: 'fees' });
