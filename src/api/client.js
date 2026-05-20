@@ -70,6 +70,12 @@ class ApiClient {
             this.refreshCSRFToken();
           }
 
+          if (response.status === 401) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.dispatchEvent(new Event('storage'));
+          }
+
           let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
           let errorData = null;
           try {
