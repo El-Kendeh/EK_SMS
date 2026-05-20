@@ -40,11 +40,12 @@ async function getParentStudentIds(req) {
   });
   const guardianStudentIds = coGuardians.map(cg => cg.student_id);
 
-    const studentIds = await getParentStudentIds(req);
-    if (!studentIds.length) return res.json(successResponse({ children: [] }));
-
-    const students = await Student.findAll({
-      where: { id: { [Op.in]: studentIds } },
+  const students = await Student.findAll({
+    where: {
+      [Op.or]: [
+        { user_id: req.user.id },
+        ...(guardianStudentIds.length ? [{ id: { [Op.in]: guardianStudentIds } }] : []),
+        { father_phone: req.user.phone },
         { mother_phone: req.user.phone },
         { emergency_phone: req.user.phone },
       ],
