@@ -1305,14 +1305,6 @@ export default function SchoolAdminDashboard({ onNavigate }) {
     }
   }, [school?.brand_colors]);
 
-  /* ── Logout ── */
-  const handleLogout = useCallback(() => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    window.dispatchEvent(new Event('storage'));
-    if (onNavigate) onNavigate('login');
-  }, [onNavigate]);
-
   /* Show pending page if not approved */
   if (isApproved === false) {
     return <PendingApprovalPage school={school} onLogout={handleLogout} />;
