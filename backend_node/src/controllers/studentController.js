@@ -186,17 +186,18 @@ async function getGrades(req, res) {
     if (!student) return res.status(404).json(errorResponse('Student not found'));
 
     const { term_id } = req.query;
-    const where = { student_id: student.id };
+    const where = { student_id: student.id, approval_status: 'approved' };
     if (term_id) where.term_id = term_id;
 
     const grades = await Grade.findAll({
-      where,
+      where: { student_id: student.id, approval_status: 'approved' },
       include: [
         { model: Subject, as: 'subject', attributes: ['id', 'name', 'code'] },
         { model: Term, as: 'term', attributes: ['id', 'name'] },
       ],
-      order: [['created_at', 'DESC']],
+      order: [['term_id', 'ASC']],
     });
+
 
     const formatted = grades.map(g => ({
       id: g.id,
@@ -226,7 +227,7 @@ async function getGradesSummary(req, res) {
     if (!student) return res.status(404).json(errorResponse('Student not found'));
 
     const { term_id } = req.query;
-    const where = { student_id: student.id };
+    const where = { student_id: student.id, approval_status: 'approved' };
     if (term_id) where.term_id = term_id;
 
     const grades = await Grade.findAll({ where });
@@ -359,7 +360,7 @@ async function getRemedialPlan(req, res) {
     if (!student) return res.status(404).json(errorResponse('Student not found'));
 
     const grades = await Grade.findAll({
-      where: { student_id: student.id },
+      where: { student_id: student.id, approval_status: 'approved' },
       include: [{ model: Subject, as: 'subject', attributes: ['id', 'name', 'code'] }],
     });
 
@@ -834,7 +835,7 @@ async function getGradeInsights(req, res) {
     if (!student) return res.status(404).json(errorResponse('Student not found'));
 
     const grades = await Grade.findAll({
-      where: { student_id: student.id },
+      where: { student_id: student.id, approval_status: 'approved' },
       include: [{ model: Subject, as: 'subject', attributes: ['id', 'name', 'code'] }],
     });
 
@@ -968,7 +969,7 @@ async function getReportCards(req, res) {
     if (!student) return res.status(404).json(errorResponse('Student not found'));
 
     const grades = await Grade.findAll({
-      where: { student_id: student.id },
+      where: { student_id: student.id, approval_status: 'approved' },
       include: [
         { model: Subject, as: 'subject', attributes: ['id', 'name', 'code'] },
         { model: Term, as: 'term', attributes: ['id', 'name'] },
@@ -1014,7 +1015,7 @@ async function downloadReportCard(req, res) {
     if (!student) return res.status(404).json(errorResponse('Student not found'));
 
     const { term_id } = req.params;
-    const where = { student_id: student.id };
+    const where = { student_id: student.id, approval_status: 'approved' };
     if (term_id) where.term_id = term_id;
 
     const grades = await Grade.findAll({
@@ -1091,7 +1092,7 @@ async function downloadTranscript(req, res) {
     if (!student) return res.status(404).json(errorResponse('Student not found'));
 
     const grades = await Grade.findAll({
-      where: { student_id: student.id },
+      where: { student_id: student.id, approval_status: 'approved' },
       include: [
         { model: Subject, as: 'subject', attributes: ['id', 'name', 'code'] },
         { model: Term, as: 'term', attributes: ['id', 'name'] },
@@ -2017,7 +2018,7 @@ async function getVoiceSummary(req, res) {
     if (!student) return res.status(404).json(errorResponse('Student not found'));
 
     const grades = await Grade.findAll({
-      where: { student_id: student.id },
+      where: { student_id: student.id, approval_status: 'approved' },
       include: [{ model: Subject, as: 'subject', attributes: ['id', 'name'] }],
     });
 

@@ -329,6 +329,8 @@ async function createPrincipalUser(req, res) {
 
     const bcrypt = require('bcryptjs');
     const hashedPassword = await bcrypt.hash(password || 'Principal@123', 10);
+    const { requireRoleId } = require('../utils/roleIds');
+    const principalRoleId = await requireRoleId('principal');
 
     const user = await User.create({
       username: username || email,
@@ -337,6 +339,7 @@ async function createPrincipalUser(req, res) {
       password: hashedPassword,
       first_name: full_name?.split(' ')[0] || '',
       last_name: full_name?.split(' ').slice(1).join(' ') || '',
+      role_id: principalRoleId,
     });
 
     const admin = await SchoolAdmin.create({

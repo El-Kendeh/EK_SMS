@@ -436,6 +436,8 @@ async function createFinanceUser(req, res) {
     const { full_name, email, phone, username, password, role, access_level } = req.body;
     const bcrypt = require('bcryptjs');
     const hashedPassword = await bcrypt.hash(password || 'Finance@123', 10);
+    const { requireRoleId } = require('../utils/roleIds');
+    const bursarRoleId = await requireRoleId('bursar');
 
     const user = await User.create({
       username: username || email,
@@ -444,6 +446,7 @@ async function createFinanceUser(req, res) {
       password: hashedPassword,
       first_name: full_name?.split(' ')[0] || '',
       last_name: full_name?.split(' ').slice(1).join(' ') || '',
+      role_id: bursarRoleId,
     });
 
     const admin = await SchoolAdmin.create({

@@ -33,11 +33,18 @@ const successResponse = (data = {}, message = 'Success') => ({ success: true, me
 const errorResponse = (message) => ({ success: false, message });
 
 async function getParentStudentIds(req) {
-  const students = await Student.findAll({
-    where: {
-      [Op.or]: [
-        { user_id: req.user.id },
-        { father_phone: req.user.phone },
+  const CoGuardian = require('../models/CoGuardian');
+  const coGuardians = await CoGuardian.findAll({
+    where: { guardian_user_id: req.user.id, is_active: true },
+    attributes: ['student_id'],
+  });
+  const guardianStudentIds = coGuardians.map(cg => cg.student_id);
+
+    const studentIds = await getParentStudentIds(req);
+    if (!studentIds.length) return res.json(successResponse({ children: [] }));
+
+    const students = await Student.findAll({
+      where: { id: { [Op.in]: studentIds } },
         { mother_phone: req.user.phone },
         { emergency_phone: req.user.phone },
       ],
@@ -45,23 +52,18 @@ async function getParentStudentIds(req) {
     },
     attributes: ['id'],
   });
-  return students.map(s => s.id);
+  return [...new Set(students.map(s => s.id))];
 }
 
 async function getChildren(req, res) {
   try {
     if (!req.user) return res.status(401).json(errorResponse('Not authenticated'));
 
+    const studentIds = await getParentStudentIds(req);
+    if (!studentIds.length) return res.json(successResponse({ children: [] }));
+
     const students = await Student.findAll({
-      where: {
-        [Op.or]: [
-          { user_id: req.user.id },
-          { father_phone: req.user.phone },
-          { mother_phone: req.user.phone },
-          { emergency_phone: req.user.phone },
-        ],
-        status: 'active',
-      },
+      where: { id: { [Op.in]: studentIds } },
       include: [
         { model: User, as: 'user', attributes: ['id', 'username', 'first_name', 'last_name', 'email', 'phone'] },
         { model: Class, as: 'classroom', attributes: ['id', 'name'] },
@@ -100,7 +102,7 @@ async function getChildGrades(req, res) {
     const { childId } = req.params;
     const { term_id } = req.query;
 
-    const where = { student_id: childId };
+    const where = { student_id: childId, approval_status: 'approved' };
     if (term_id) where.term_id = term_id;
 
     const grades = await Grade.findAll({
@@ -160,7 +162,7 @@ async function getChildReportCards(req, res) {
       return res.status(403).json(errorResponse('Access denied'));
     }
 
-    const where = { student_id: childId };
+    const where = { student_id: childId, approval_status: 'approved' };
     if (term_id) where.term_id = term_id;
 
     const grades = await Grade.findAll({
@@ -221,7 +223,7 @@ async function downloadChildReportCard(req, res) {
       return res.status(403).json(errorResponse('Access denied'));
     }
 
-    const where = { student_id: childId };
+    const where = { student_id: childId, approval_status: 'approved' };
     if (term_id) where.term_id = term_id;
 
     const grades = await Grade.findAll({
@@ -1576,7 +1578,7 @@ async function getEndOfTermPack(req, res) {
     }
 
     const grades = await Grade.findAll({
-      where: { student_id: targetStudentId },
+      where: { student_id: targetStudentId, approval_status: 'approved' },
       include: [
         { model: Subject, as: 'subject', attributes: ['name', 'code'] },
         { model: Term, as: 'term', attributes: ['name'] },
@@ -1646,6 +1648,7 @@ async function getWeeklyDigest(req, res) {
     const grades = await Grade.findAll({
       where: {
         student_id: { [Op.in]: studentIds },
+        approval_status: 'approved',
         created_at: { [Op.gte]: weekAgo },
       },
       include: [{ model: Subject, as: 'subject', attributes: ['name'] }],
@@ -1711,6 +1714,7 @@ async function getVoiceDigest(req, res) {
     const grades = await Grade.findAll({
       where: {
         student_id: { [Op.in]: studentIds },
+        approval_status: 'approved',
         created_at: { [Op.gte]: weekAgo },
       },
       include: [{ model: Subject, as: 'subject', attributes: ['name'] }],

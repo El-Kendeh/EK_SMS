@@ -1794,6 +1794,7 @@ async function createParent(req, res) {
     }, { transaction });
 
     if (student_ids && student_ids.length) {
+      const CoGuardian = require('../models/CoGuardian');
       for (const sid of student_ids) {
         const updateFields = {};
         if (relationship === 'father') {
@@ -1809,6 +1810,13 @@ async function createParent(req, res) {
           updateFields.emergency_name = `${first_name} ${last_name}`.trim();
         }
         await Student.update(updateFields, { where: { id: sid, school_id: school.id }, transaction });
+        await CoGuardian.create({
+          school_id: school.id,
+          student_id: sid,
+          guardian_user_id: user.id,
+          relationship: relationship || 'guardian',
+          is_active: true,
+        }, { transaction });
       }
     }
 
