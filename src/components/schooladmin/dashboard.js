@@ -1298,12 +1298,12 @@ export default function SchoolAdminDashboard({ onNavigate }) {
   }, [school?.brand_colors]);
 
   /* ── Logout ── */
-  function handleLogout() {
+  const handleLogout = useCallback(() => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     window.dispatchEvent(new Event('storage'));
     if (onNavigate) onNavigate('login');
-  }
+  }, [onNavigate]);
 
   /* Show pending page if not approved */
   if (isApproved === false) {
