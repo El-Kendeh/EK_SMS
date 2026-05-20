@@ -1306,9 +1306,7 @@ export default function SchoolAdminDashboard({ onNavigate }) {
   }, [school?.brand_colors]);
 
   /* Show pending page if not approved */
-  if (isApproved === false) {
-    return <PendingApprovalPage school={school} onLogout={handleLogout} />;
-  }
+ 
 
   /* Loading state — only shown briefly before localStorage resolves */
   if (isApproved === null) {
