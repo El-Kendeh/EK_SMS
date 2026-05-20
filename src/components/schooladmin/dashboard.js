@@ -1133,9 +1133,7 @@ function ProfilePage({ admin, school, onProfileUpdate }) {
   );
 }
 
-/* ============================================================
-   PENDING APPROVAL STATE (school not yet approved)
-   ============================================================ */
+
 function PendingApprovalPage({ school, onLogout }) {
   return (
     <div style={{
@@ -1306,7 +1304,9 @@ export default function SchoolAdminDashboard({ onNavigate }) {
   }, [school?.brand_colors]);
 
   /* Show pending page if not approved */
- 
+  if (isApproved === false) {
+    return <PendingApprovalPage school={school} onLogout={logout} />;
+  }
 
   /* Loading state — only shown briefly before localStorage resolves */
   if (isApproved === null) {
