@@ -37,8 +37,15 @@ class ApiClient {
     // Add Authorization header if token exists
     const token = localStorage.getItem('token');
     if (token) {
+      // Backend accepts both `Bearer <jwt>` and `Token <token>`.
+      // Use Bearer for JWT.
       headers['Authorization'] = `Bearer ${token}`;
+    } else {
+      // Keep this quiet in production, but it’s useful when debugging 401s.
+      // eslint-disable-next-line no-console
+      console.warn('[ApiClient] 401 likely: no token found in localStorage under key "token"');
     }
+
 
     let body = options.body;
     if (body && !(body instanceof FormData)) {
