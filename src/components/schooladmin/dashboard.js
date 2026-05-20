@@ -1221,7 +1221,7 @@ export default function SchoolAdminDashboard({ onNavigate }) {
   }, []);
 
   /* ── Logout ── */
-  const handleLogout = useCallback(() => {
+  const logout = useCallback(() => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     window.dispatchEvent(new Event('storage'));
@@ -1254,7 +1254,7 @@ export default function SchoolAdminDashboard({ onNavigate }) {
       });
     } catch (err) {
       if (err && err.status === 401) {
-        handleLogout();
+        logout();
         return;
       }
       /* API not yet available — localStorage data is already set above */
@@ -1266,7 +1266,7 @@ export default function SchoolAdminDashboard({ onNavigate }) {
         setIsApproved(true);
       }
     }
-  }, [handleLogout, isApproved]);
+  }, [logout, isApproved]);
 
   useEffect(() => { fetchSchool(); }, [fetchSchool]);
   
@@ -1383,7 +1383,7 @@ export default function SchoolAdminDashboard({ onNavigate }) {
         admin={admin}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        onLogout={handleLogout}
+        onLogout={logout}
       />
 
       {/* Main */}
@@ -1393,7 +1393,7 @@ export default function SchoolAdminDashboard({ onNavigate }) {
           school={school}
           admin={admin}
           onMenuToggle={() => setSidebarOpen(o => !o)}
-          onLogout={handleLogout}
+          onLogout={logout}
           onNav={setActivePage}
         />
 
