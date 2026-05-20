@@ -1220,6 +1220,14 @@ export default function SchoolAdminDashboard({ onNavigate }) {
     } catch { /* ignore */ }
   }, []);
 
+  /* ── Logout ── */
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.dispatchEvent(new Event('storage'));
+    if (onNavigate) onNavigate('login');
+  }, [onNavigate]);
+
   /* ── Fetch live school info (enriches localStorage data) ── */
   const fetchSchool = useCallback(async () => {
     try {
