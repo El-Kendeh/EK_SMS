@@ -1244,7 +1244,11 @@ export default function SchoolAdminDashboard({ onNavigate }) {
         feesCollected:   data.fees_collected   ?? 0,
         feesOutstanding: data.fees_outstanding ?? 0,
       });
-    } catch {
+    } catch (err) {
+      if (err && err.status === 401) {
+        handleLogout();
+        return;
+      }
       /* API not yet available — localStorage data is already set above */
       const u = JSON.parse(localStorage.getItem('user') || '{}');
       if (u.school) {
@@ -1254,7 +1258,7 @@ export default function SchoolAdminDashboard({ onNavigate }) {
         setIsApproved(true);
       }
     }
-  }, [isApproved]);
+  }, [handleLogout, isApproved]);
 
   useEffect(() => { fetchSchool(); }, [fetchSchool]);
   

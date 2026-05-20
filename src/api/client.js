@@ -80,7 +80,8 @@ class ApiClient {
           if (response.status === 401) {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
-            window.dispatchEvent(new Event('storage'));
+              window.dispatchEvent(new Event('storage'));
+              window.dispatchEvent(new Event('ek-sms-auth-changed'));
           }
 
           let errorMessage = `HTTP ${response.status}: ${response.statusText}`;

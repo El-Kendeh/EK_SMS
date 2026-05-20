@@ -213,8 +213,20 @@ function App() {
       }
     };
 
+    const handleAuthChanged = () => {
+      const token = localStorage.getItem('token');
+      const userStr = localStorage.getItem('user');
+      if (!token || !userStr) {
+        setCurrentPage('login');
+      }
+    };
+
     window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    window.addEventListener('ek-sms-auth-changed', handleAuthChanged);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('ek-sms-auth-changed', handleAuthChanged);
+    };
   }, []);
 
   const isImpersonating = !!sessionStorage.getItem('ek-sms-impersonating');
