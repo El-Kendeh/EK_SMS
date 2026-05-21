@@ -182,6 +182,7 @@ async function login(req, res) {
         phone: user.phone,
         is_staff: user.get('is_staff'),
         is_superuser: isPortalSuper,
+        is_active: user.is_active,
         role,
         school_id: schoolId,
         must_change_password,

@@ -216,7 +216,8 @@ async function impersonate(req, res) {
         id: user.id,
         username: user.username, 
         email: user.email,
-        role: 'school_admin'
+        role: 'school_admin',
+        is_active: user.is_active
       } 
     }));
   } catch (err) {
