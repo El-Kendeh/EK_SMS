@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import './Register.css';
 import ApiClient from '../api/client';
 import PruhLogo from './PruhLogo';
@@ -41,9 +41,9 @@ function SchoolRegistration({ onNavigate }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [otp, setOtp] = useState('');
-  const [otpSent, setOtpSent] = useState(false);
+  const [otpSent, setOtpSent] = useState(false); // eslint-disable-line no-unused-vars
   const [otpError, setOtpError] = useState('');
-  const [registrationData, setRegistrationData] = useState(null);
+  const [registrationData, setRegistrationData] = useState(null); // eslint-disable-line no-unused-vars
   const [showSuccess, setShowSuccess] = useState(false);
 
   // Handle form field changes

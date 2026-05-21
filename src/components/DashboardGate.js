@@ -10,7 +10,6 @@ import ApprovalStatusModal from './ApprovalStatusModal';
 function DashboardGate({ children }) {
   const [status, setStatus] = useState('loading'); // 'loading', 'approved', 'pending', 'rejected'
   const [statusData, setStatusData] = useState(null);
-  const [error, setError] = useState(null);
 
   useEffect(() => {
     checkApprovalStatus();
