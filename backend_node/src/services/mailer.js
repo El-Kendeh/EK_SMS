@@ -20,10 +20,66 @@ function publicAppUrl() {
   return String(raw).replace(/\/$/, '');
 }
 
+function escapeHtml(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 /**
- * Notify school admin that their institution was approved (Resend).
+ * Send registration confirmation email
  */
-async function sendSchoolApprovedEmail({ toEmail, schoolName, adminUsername }) {
+async function sendRegistrationConfirmationEmail({ toEmail, schoolName, adminName }) {
+  if (!toEmail || !String(toEmail).trim()) {
+    console.warn('[mailer] No recipient email; skipping registration confirmation');
+    return { skipped: true, reason: 'no_email' };
+  }
+
+  const resend = getResend();
+  const base = publicAppUrl();
+
+  const html = `
+  <div style="font-family:system-ui,-apple-system,sans-serif;max-width:560px;margin:0 auto;padding:24px;border:1px solid #e5e7eb;border-radius:12px;background:#fafafa;">
+    <h1 style="color:#1B3FAF;font-size:1.25rem;margin:0 0 12px;">Registration Received</h1>
+    <p style="color:#374151;line-height:1.6;margin:0 0 16px;">
+      Hi ${escapeHtml(adminName)},
+      <br><br>
+      Thank you for registering <strong>${escapeHtml(schoolName)}</strong> on <strong>PruhSMS</strong>. Your application has been received and is currently under review by our team.
+    </p>
+    <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:16px;margin:16px 0;">
+      <p style="margin:0;color:#78350f;font-weight:600;">⏳ Status: Awaiting Admin Approval</p>
+      <p style="margin:8px 0 0;font-size:0.875rem;color:#92400e;">You will receive an email once our team has reviewed and approved your school registration.</p>
+    </div>
+    <p style="color:#374151;font-size:0.875rem;margin:16px 0;">
+      If you have any questions, please contact our support team at <a href="mailto:support@pruhsms.africa">support@pruhsms.africa</a>
+    </p>
+  </div>`;
+
+  if (!resend) {
+    console.warn('[mailer] RESEND_API_KEY missing; registration email not sent to', toEmail);
+    return { skipped: true, reason: 'no_resend' };
+  }
+
+  const { error } = await resend.emails.send({
+    from: fromAddress(),
+    to: [String(toEmail).trim()],
+    subject: `Registration Received: ${schoolName}`,
+    html,
+  });
+
+  if (error) {
+    console.error('[mailer] Resend send error:', error);
+    throw new Error(typeof error === 'string' ? error : error.message || 'Email send failed');
+  }
+  return { sent: true };
+}
+
+/**
+ * Send school approval notification
+ */
+async function sendSchoolApprovedEmail({ toEmail, schoolName, adminName }) {
   if (!toEmail || !String(toEmail).trim()) {
     console.warn('[mailer] No recipient email; skipping approval notice');
     return { skipped: true, reason: 'no_email' };
@@ -35,20 +91,24 @@ async function sendSchoolApprovedEmail({ toEmail, schoolName, adminUsername }) {
 
   const html = `
   <div style="font-family:system-ui,-apple-system,sans-serif;max-width:560px;margin:0 auto;padding:24px;border:1px solid #e5e7eb;border-radius:12px;background:#fafafa;">
-    <h1 style="color:#1B3FAF;font-size:1.25rem;margin:0 0 12px;">Your school is approved</h1>
-    <p style="color:#374151;line-height:1.6;margin:0 0 16px;">
-      <strong>${escapeHtml(schoolName)}</strong> has been approved on <strong>PruhSMS</strong>. You can now sign in and use the <strong>School Administrator</strong> dashboard.
+    <div style="width:60px;height:60px;background:#dcfce7;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:32px;">✅</div>
+    <h1 style="color:#1B3FAF;font-size:1.25rem;margin:0 0 12px;text-align:center;">School Approved!</h1>
+    <p style="color:#374151;line-height:1.6;margin:0 0 16px;text-align:center;">
+      Hi ${escapeHtml(adminName)},
+      <br><br>
+      Congratulations! <strong>${escapeHtml(schoolName)}</strong> has been approved and is now live on <strong>PruhSMS</strong>. You can now sign in and access your school's dashboard.
     </p>
-    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin:16px 0;">
-      <p style="margin:0 0 8px;font-size:0.875rem;color:#6b7280;">Your access</p>
-      <p style="margin:4px 0;"><strong>Role:</strong> School Administrator</p>
-      <p style="margin:4px 0;"><strong>Username:</strong> <code style="background:#f3f4f6;padding:2px 6px;border-radius:4px;">${escapeHtml(adminUsername)}</code></p>
-      <p style="margin:4px 0;"><strong>Password:</strong> Use the same password you chose when you registered this institution.</p>
+    <div style="background:#f0f9ff;border:1px solid #bfdbfe;border-radius:8px;padding:16px;margin:16px 0;">
+      <p style="margin:0 0 8px;font-size:0.875rem;color:#1e40af;font-weight:600;">Your login details:</p>
+      <p style="margin:4px 0;color:#1e40af;"><strong>Role:</strong> School Administrator</p>
+      <p style="margin:4px 0;color:#1e40af;"><strong>Username:</strong> <code style="background:#e0e7ff;padding:2px 6px;border-radius:4px;">${escapeHtml(adminName)}</code></p>
     </div>
-    <p style="margin:16px 0;">
-      <a href="${loginUrl}" style="display:inline-block;background:#1B3FAF;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:600;">Open PruhSMS sign-in</a>
+    <p style="margin:20px 0;text-align:center;">
+      <a href="${loginUrl}" style="display:inline-block;background:#1B3FAF;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;">Sign In to Dashboard</a>
     </p>
-    <p style="font-size:0.8125rem;color:#6b7280;margin:16px 0 0;">Sign-in page: <a href="${loginUrl}">${escapeHtml(loginUrl)}</a></p>
+    <p style="font-size:0.8125rem;color:#6b7280;margin:16px 0 0;text-align:center;">
+      Dashboard: <a href="${loginUrl}">${escapeHtml(loginUrl)}</a>
+    </p>
   </div>`;
 
   if (!resend) {
@@ -59,7 +119,7 @@ async function sendSchoolApprovedEmail({ toEmail, schoolName, adminUsername }) {
   const { error } = await resend.emails.send({
     from: fromAddress(),
     to: [String(toEmail).trim()],
-    subject: `Approved: ${schoolName} — PruhSMS access ready`,
+    subject: `✅ Approved: ${schoolName} — PruhSMS Access Ready`,
     html,
   });
 
@@ -70,12 +130,61 @@ async function sendSchoolApprovedEmail({ toEmail, schoolName, adminUsername }) {
   return { sent: true };
 }
 
-function escapeHtml(s) {
-  return String(s ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+/**
+ * Send school rejection notification with reason
+ */
+async function sendSchoolRejectedEmail({ toEmail, schoolName, adminName, reason }) {
+  if (!toEmail || !String(toEmail).trim()) {
+    console.warn('[mailer] No recipient email; skipping rejection notice');
+    return { skipped: true, reason: 'no_email' };
+  }
+
+  const resend = getResend();
+  const supportEmail = 'support@pruhsms.africa';
+
+  const html = `
+  <div style="font-family:system-ui,-apple-system,sans-serif;max-width:560px;margin:0 auto;padding:24px;border:1px solid #e5e7eb;border-radius:12px;background:#fafafa;">
+    <div style="width:60px;height:60px;background:#fee2e2;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:32px;">⚠️</div>
+    <h1 style="color:#dc2626;font-size:1.25rem;margin:0 0 12px;text-align:center;">Registration Not Approved</h1>
+    <p style="color:#374151;line-height:1.6;margin:0 0 16px;">
+      Hi ${escapeHtml(adminName)},
+      <br><br>
+      After reviewing your application, we regret to inform you that <strong>${escapeHtml(schoolName)}</strong> registration was not approved at this time.
+    </p>
+    <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:16px;margin:16px 0;">
+      <p style="margin:0 0 8px;font-size:0.875rem;color:#7f1d1d;font-weight:600;">Reason:</p>
+      <p style="margin:0;color:#7f1d1d;">${escapeHtml(reason)}</p>
+    </div>
+    <p style="color:#374151;line-height:1.6;margin:16px 0;">
+      If you believe this was sent in error or have questions about the decision, please contact our support team at <a href="mailto:${supportEmail}">${supportEmail}</a>. We're here to help.
+    </p>
+    <p style="font-size:0.8125rem;color:#6b7280;margin:16px 0 0;">
+      Support contact: <a href="mailto:${supportEmail}">${supportEmail}</a>
+    </p>
+  </div>`;
+
+  if (!resend) {
+    console.warn('[mailer] RESEND_API_KEY missing; rejection email not sent to', toEmail);
+    return { skipped: true, reason: 'no_resend' };
+  }
+
+  const { error } = await resend.emails.send({
+    from: fromAddress(),
+    to: [String(toEmail).trim()],
+    subject: `Registration Update: ${schoolName}`,
+    html,
+  });
+
+  if (error) {
+    console.error('[mailer] Resend send error:', error);
+    throw new Error(typeof error === 'string' ? error : error.message || 'Email send failed');
+  }
+  return { sent: true };
 }
 
-module.exports = { sendSchoolApprovedEmail, publicAppUrl };
+module.exports = {
+  sendRegistrationConfirmationEmail,
+  sendSchoolApprovedEmail,
+  sendSchoolRejectedEmail,
+  publicAppUrl,
+};

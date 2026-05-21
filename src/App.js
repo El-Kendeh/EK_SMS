@@ -6,13 +6,14 @@ import Login from './components/login';
 import SuperadminDashboard from './components/superadmin/SuperadminDashboard';
 import ParentDashboard from './components/parent/ParentDashboard';
 import Landing from './components/Landing';
-import Register from './components/Register';
+import SchoolRegistration from './components/SchoolRegistration';
 import SchoolAdminDashboard from './components/schooladmin/dashboard';
 import TeacherDashboard from './components/teacher/TeacherDashboard';
 import StudentDashboard from './components/student/StudentDashboard';
 import PrincipalDashboard from './components/principal/PrincipalDashboard';
 import VerifyPage from './components/student/VerifyPage';
 import ForceChangePassword from './components/ForceChangePassword';
+import DashboardGate from './components/DashboardGate';
 
 /* ── Impersonation banner (shown when a superadmin is viewing as a school admin) ── */
 function ImpersonationBanner() {
@@ -265,14 +266,18 @@ function App() {
         {currentPage === 'force-change-password' && <ForceChangePassword onNavigate={setCurrentPage} />}
         {currentPage === 'superadmindashboard' && <SuperadminDashboard onNavigate={setCurrentPage} />}
         <SchoolContextProvider>
-          {currentPage === 'sa-dashboard' && <SchoolAdminDashboard onNavigate={setCurrentPage} />}
+          {currentPage === 'sa-dashboard' && (
+            <DashboardGate>
+              <SchoolAdminDashboard onNavigate={setCurrentPage} />
+            </DashboardGate>
+          )}
           {currentPage === 'teacher-dashboard' && <TeacherDashboard onNavigate={setCurrentPage} />}
           {currentPage === 'student-dashboard' && <StudentDashboard onNavigate={setCurrentPage} />}
           {currentPage === 'parentdashboard' && <ParentDashboard onNavigate={setCurrentPage} />}
           {currentPage === 'principal-dashboard' && <PrincipalDashboard onNavigate={setCurrentPage} />}
         </SchoolContextProvider>
         {(currentPage === 'home' || currentPage === 'landing') && <Landing onNavigate={setCurrentPage} />}
-        {currentPage === 'register' && <Register onNavigate={setCurrentPage} />}
+        {currentPage === 'register' && <SchoolRegistration onNavigate={setCurrentPage} />}
 
         {/* Fallback for unknown pages */}
         {!['login', 'force-change-password', 'superadmindashboard', 'sa-dashboard', 'teacher-dashboard', 'student-dashboard', 'parentdashboard', 'principal-dashboard', 'home', 'landing', 'register'].includes(currentPage) && (

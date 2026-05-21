@@ -9,6 +9,8 @@ const db = require('./config/db');
 require('./models');
 
 const authRouter = require('./routes/auth');
+const registrationRouter = require('./routes/registration');
+const approvalRouter = require('./routes/approval');
 const schoolRouter = require('./routes/school');
 const teacherRouter = require('./routes/teacher');
 const studentRouter = require('./routes/student');
@@ -127,6 +129,8 @@ app.post('/api/test-email/', testEmail);
 
 // Mount routers - SPECIFIC paths BEFORE catch-all /api routers
 app.use('/api', authRouter);
+app.use('/api/registration', registrationRouter);
+app.use('/api/approval', approvalRouter);
 app.use('/api/teacher', teacherRouter);
 app.use('/api/student', studentRouter);
 app.use('/api/principal', principalRouter);
