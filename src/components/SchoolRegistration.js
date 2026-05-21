@@ -124,7 +124,7 @@ function SchoolRegistration({ onNavigate }) {
     setIsLoading(true);
     setOtpError('');
     try {
-      await ApiClient.post('/auth/send-otp/', { email: formData.adminEmail });
+      await ApiClient.post('/api/send-otp/', { email: formData.adminEmail });
       setOtpSent(true);
       setStep(3);
     } catch (err) {
@@ -146,7 +146,7 @@ function SchoolRegistration({ onNavigate }) {
     
     try {
       // Verify OTP first
-      await ApiClient.post('/auth/verify-otp/', {
+      await ApiClient.post('/api/verify-otp/', {
         email: formData.adminEmail,
         code: otp,
       });
@@ -177,12 +177,11 @@ function SchoolRegistration({ onNavigate }) {
       }
 
       const response = await ApiClient.post(
-        '/registration/register-school-admin',
-        formDataObj,
-        { headers: { 'Content-Type': 'multipart/form-data' } }
+        '/api/registration/register-school-admin',
+        formDataObj
       );
 
-      setRegistrationData(response.data);
+      setRegistrationData(response);
       setShowSuccess(true);
       setStep(4);
     } catch (err) {

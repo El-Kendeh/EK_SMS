@@ -17,21 +17,26 @@ function DashboardGate({ children }) {
 
   const checkApprovalStatus = async () => {
     try {
-      const response = await ApiClient.get('/registration/check-status');
-      const { approval_status, school_name, submitted_at, rejection_reason } = response.data;
+      const response = await ApiClient.get('/api/registration/check-status');
+      const {
+        status: approvalStatus,
+        school_name,
+        submitted_at,
+        rejection_reason,
+      } = response;
 
       setStatusData({
-        status: approval_status,
+        status: approvalStatus,
         schoolName: school_name,
         submittedAt: submitted_at,
         rejectionReason: rejection_reason,
       });
 
-      if (approval_status === 'approved') {
+      if (approvalStatus === 'approved') {
         setStatus('approved');
-      } else if (approval_status === 'pending') {
+      } else if (approvalStatus === 'pending') {
         setStatus('pending');
-      } else if (approval_status === 'rejected') {
+      } else if (approvalStatus === 'rejected') {
         setStatus('rejected');
       }
     } catch (err) {
