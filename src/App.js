@@ -6,7 +6,7 @@ import Login from './components/login';
 import SuperadminDashboard from './components/superadmin/SuperadminDashboard';
 import ParentDashboard from './components/parent/ParentDashboard';
 import Landing from './components/Landing';
-import SchoolRegistration from './components/SchoolRegistration';
+import Register from './components/Register';
 import SchoolAdminDashboard from './components/schooladmin/dashboard';
 import TeacherDashboard from './components/teacher/TeacherDashboard';
 import StudentDashboard from './components/student/StudentDashboard';
@@ -277,7 +277,7 @@ function App() {
           {currentPage === 'principal-dashboard' && <PrincipalDashboard onNavigate={setCurrentPage} />}
         </SchoolContextProvider>
         {(currentPage === 'home' || currentPage === 'landing') && <Landing onNavigate={setCurrentPage} />}
-        {currentPage === 'register' && <SchoolRegistration onNavigate={setCurrentPage} />}
+        {currentPage === 'register' && <Register onNavigate={setCurrentPage} />}
 
         {/* Fallback for unknown pages */}
         {!['login', 'force-change-password', 'superadmindashboard', 'sa-dashboard', 'teacher-dashboard', 'student-dashboard', 'parentdashboard', 'principal-dashboard', 'home', 'landing', 'register'].includes(currentPage) && (
