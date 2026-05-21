@@ -1270,7 +1270,7 @@ export default function SchoolAdminDashboard({ onNavigate }) {
         setIsApproved(u.is_active === true);
       }
     }
-  }, [logout, isApproved]);
+  }, [logout, isApproved, admin]);
 
   useEffect(() => { fetchSchool(); }, [fetchSchool]);
   
