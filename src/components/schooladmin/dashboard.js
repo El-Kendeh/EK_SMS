@@ -1213,7 +1213,11 @@ export default function SchoolAdminDashboard({ onNavigate }) {
       setAdmin(u);
       if (u.school) {
         setSchool(u.school);
-        setIsApproved(u.school.is_approved === true);
+        // If the user record itself is active (approved) treat the school as approved for UI access
+        setIsApproved(u.is_active === true || u.school.is_approved === true);
+      } else {
+        // If there's no school in storage but user is active, allow access
+        if (u.is_active === true) setIsApproved(true);
       }
     } catch { /* ignore */ }
   }, []);
@@ -1231,7 +1235,8 @@ export default function SchoolAdminDashboard({ onNavigate }) {
     try {
       const data = await ApiClient.get('/api/school/info/');
       setSchool(data);
-      setIsApproved(data.is_approved === true);
+      // If backend reports school approved or the user is active, allow access immediately
+      setIsApproved(data.is_approved === true || (admin && admin.is_active === true));
       /* Keep localStorage in sync so next load skips the pending-page flash */
       try {
         const stored = JSON.parse(localStorage.getItem('user') || '{}');
@@ -1259,9 +1264,10 @@ export default function SchoolAdminDashboard({ onNavigate }) {
       const u = JSON.parse(localStorage.getItem('user') || '{}');
       if (u.school) {
         setSchool(u.school);
-        setIsApproved(u.school.is_approved === true);
+        setIsApproved(u.is_active === true || u.school.is_approved === true);
       } else if (isApproved === null) {
-        setIsApproved(true);
+        // If we can't determine, allow access only when user is active
+        setIsApproved(u.is_active === true);
       }
     }
   }, [logout, isApproved]);
