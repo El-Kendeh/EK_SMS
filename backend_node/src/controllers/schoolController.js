@@ -1271,7 +1271,15 @@ function calcTermPosition(startDate, endDate) {
 async function getSchoolContext(req, res) {
   try {
     const school = await getSchoolFromUser(req);
-    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+    if (!school) {
+      return res.json(successResponse({
+        school: null,
+        academic_year: null,
+        term: null,
+        terms: [],
+        has_school: false,
+      }, 'No school context available for this user.'));
+    }
 
     const activeYear = await AcademicYear.findOne({
       where: { school_id: school.id, is_active: true },
