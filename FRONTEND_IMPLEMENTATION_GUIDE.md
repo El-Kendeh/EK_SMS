@@ -120,7 +120,7 @@ Location: `src/components/DashboardGate.js`
 useEffect(() => {
   const checkApprovalStatus = async () => {
     try {
-      const response = await ApiClient.get('/registration/check-status');
+      const response = await ApiClient.get('/api/registration/check-status');
       const { status, is_approved, can_access_dashboard, rejection_reason } = response;
       
       setApprovalStatus(status);

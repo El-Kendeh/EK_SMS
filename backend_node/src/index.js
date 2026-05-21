@@ -129,7 +129,7 @@ app.post('/api/test-email/', testEmail);
 
 // Mount routers - SPECIFIC paths BEFORE catch-all /api routers
 app.use('/api', authRouter);
-app.use('/api/registration', registrationRouter);
+app.use(['/api/registration', '/registration'], registrationRouter);
 app.use('/api/approval', approvalRouter);
 app.use('/api/teacher', teacherRouter);
 app.use('/api/student', studentRouter);

@@ -66,7 +66,15 @@ class ApiClient {
   }
 
   async request(endpoint, options = {}) {
-    const url = `${this.baseURL}${endpoint}`;
+    const base = this.baseURL.replace(/\/+$/, '');
+    let path = endpoint || '';
+    if (!path.startsWith('/')) {
+      path = `/${path}`;
+    }
+    if (base.endsWith('/api') && path.startsWith('/api/')) {
+      path = path.replace(/^\/api/, '');
+    }
+    const url = `${base}${path}`;
     const headers = this.buildHeaders(options);
 
     let body = options.body;
