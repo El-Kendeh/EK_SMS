@@ -5,18 +5,6 @@ import PruhLogo from './PruhLogo';
 import ErrorModal from './ErrorModal';
 import SuccessModal from './SuccessModal';
 
-const MOCK_MODE = true;
-
-const MOCK_ROLES = [
-  { value: 'superadmin', label: 'Super Admin', desc: 'Full system access' },
-  { value: 'school_admin', label: 'School Admin', desc: 'Manage school' },
-  { value: 'principal', label: 'Principal', desc: 'Oversee academics' },
-  { value: 'teacher', label: 'Teacher', desc: 'Manage classes & grades' },
-  { value: 'student', label: 'Student', desc: 'View grades & assignments' },
-  { value: 'parent', label: 'Parent', desc: 'Monitor children' },
-  { value: 'finance', label: 'Finance', desc: 'Manage school finances' },
-];
-
 /* ---- Icons ---- */
 const SparkleIcon = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -108,7 +96,6 @@ function Login({ onNavigate }) {
   const [goingHome, setGoingHome] = useState(false);
   const [showUnderReview, setShowUnderReview] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
-  const [mockRole, setMockRole] = useState(localStorage.getItem('mock_role') || 'school_admin');
 
   // Auto-redirect if already logged in
   useEffect(() => {
@@ -126,7 +113,7 @@ function Login({ onNavigate }) {
         const isSuper = user.is_superuser || user.role === 'superadmin' || user.role === 'admin' || user.role === 'superuser';
         if (isSuper) {
           onNavigate('superadmindashboard');
-        } else if (user.role === 'school_admin' || user.role === 'finance' || user.role === 'bursar') {
+        } else if (user.role === 'school_admin') {
           onNavigate('sa-dashboard');
         } else if (user.role === 'teacher') {
           onNavigate('teacher-dashboard');
@@ -134,8 +121,6 @@ function Login({ onNavigate }) {
           onNavigate('student-dashboard');
         } else if (user.role === 'parent') {
           onNavigate('parentdashboard');
-        } else if (user.role === 'principal') {
-          onNavigate('principal-dashboard');
         } else {
           onNavigate('home');
         }
@@ -164,12 +149,10 @@ function Login({ onNavigate }) {
     }
 
     setIsLoading(true);
-    localStorage.setItem('mock_role', mockRole);
     try {
       const data = await ApiClient.post('/api/login/', {
         username: identifier.trim(),
-        password,
-        role: MOCK_MODE ? mockRole : undefined,
+        password
       });
 
       if (!data.success) {
@@ -194,7 +177,7 @@ function Login({ onNavigate }) {
           const isSuper = user.is_superuser || user.role === 'superadmin' || user.role === 'admin' || user.role === 'superuser';
           if (isSuper) {
             onNavigate('superadmindashboard');
-          } else if (user.role === 'school_admin' || user.role === 'finance' || user.role === 'bursar') {
+          } else if (user.role === 'school_admin') {
             onNavigate('sa-dashboard');
           } else if (user.role === 'teacher') {
             onNavigate('teacher-dashboard');
@@ -202,8 +185,6 @@ function Login({ onNavigate }) {
             onNavigate('student-dashboard');
           } else if (user.role === 'parent') {
             onNavigate('parentdashboard');
-          } else if (user.role === 'principal') {
-            onNavigate('principal-dashboard');
           } else {
             onNavigate('home');
           }
@@ -385,35 +366,6 @@ function Login({ onNavigate }) {
               Forgot Password?
             </button>
           </div>
-
-          {/* Mock Role Selector */}
-          {MOCK_MODE && (
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#6b7280', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                Demo Role
-              </label>
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                {MOCK_ROLES.map(r => (
-                  <button
-                    key={r.value}
-                    type="button"
-                    onClick={() => setMockRole(r.value)}
-                    style={{
-                      padding: '6px 12px', borderRadius: '8px', border: '1px solid',
-                      borderColor: mockRole === r.value ? '#6366f1' : '#e5e7eb',
-                      background: mockRole === r.value ? '#eef2ff' : '#fff',
-                      color: mockRole === r.value ? '#4338ca' : '#374151',
-                      fontSize: '12px', fontWeight: mockRole === r.value ? 700 : 500,
-                      cursor: 'pointer', transition: 'all 0.15s',
-                    }}
-                    title={r.desc}
-                  >
-                    {r.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* Login button — pill + gradient + arrow */}
           <button type="submit" className="btn-login" disabled={isLoading}>
