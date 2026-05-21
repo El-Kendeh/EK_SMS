@@ -6,7 +6,7 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const { registerSchoolAdmin, getRegistrationStatus, checkMySchoolStatus } = require('../controllers/registrationController');
-const { authenticate } = require('../middleware/auth');
+const authenticateToken = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -40,6 +40,6 @@ router.get('/status/:schoolId', getRegistrationStatus);
  * GET /api/registration/check-status
  * Get current user's school approval status (requires auth)
  */
-router.get('/check-status', authenticate, checkMySchoolStatus);
+router.get('/check-status', authenticateToken, checkMySchoolStatus);
 
 module.exports = router;

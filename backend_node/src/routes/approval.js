@@ -4,7 +4,7 @@
  */
 
 const express = require('express');
-const { authenticate, requireRole } = require('../middleware/auth');
+const authenticateToken = require('../middleware/auth');
 const {
   getPendingSchools,
   getSchoolForReview,
@@ -15,9 +15,17 @@ const {
 
 const router = express.Router();
 
+function isSuperadmin(req, res, next) {
+  if (req.user && (req.user.is_superuser || req.user.role === 'superadmin' || req.user.role === 'admin')) {
+    next();
+  } else {
+    return res.status(403).json({ success: false, message: 'Access denied. Superadmin only.' });
+  }
+}
+
 // All routes require superadmin authentication
-router.use(authenticate);
-router.use(requireRole('superadmin'));
+router.use(authenticateToken);
+router.use(isSuperadmin);
 
 /**
  * GET /api/approval/pending-schools
