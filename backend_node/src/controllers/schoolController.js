@@ -54,10 +54,35 @@ async function getSchoolFromUser(req) {
       where: { user_id: req.user.id },
       include: [{ model: School, as: 'school' }],
     });
-    if (!link) {
-      console.warn(`getSchoolFromUser: No SchoolAdmin link found for user_id ${req.user.id}`);
+    if (link?.School) {
+      return link.School;
     }
-    return link?.School || null;
+
+    if (req.user.school_id) {
+      const fallbackSchool = await School.findByPk(req.user.school_id);
+      if (fallbackSchool) {
+        return fallbackSchool;
+      }
+    }
+
+    const teacherLink = await Teacher.findOne({
+      where: { user_id: req.user.id },
+      include: [{ model: School, as: 'school' }],
+    });
+    if (teacherLink?.School) {
+      return teacherLink.School;
+    }
+
+    const studentLink = await Student.findOne({
+      where: { user_id: req.user.id },
+      include: [{ model: School, as: 'school' }],
+    });
+    if (studentLink?.School) {
+      return studentLink.School;
+    }
+
+    console.warn(`getSchoolFromUser: No school link found for user_id ${req.user.id} and fallback school_id ${req.user.school_id}`);
+    return null;
   } catch (err) {
     console.error('getSchoolFromUser Error:', err);
     throw err; // Re-throw to be caught by the calling controller's catch block

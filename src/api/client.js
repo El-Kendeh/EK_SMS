@@ -55,9 +55,11 @@ class ApiClient {
 
   isAuthError(response, errorData) {
     if (!response) return false;
-    if (response.status === 401) return true;
+    const message = (errorData?.message || response.statusText || '').toString();
+    if (response.status === 401) {
+      return /csrf|auth|token|expired|invalid|access denied|no token/i.test(message);
+    }
     if (response.status === 403) {
-      const message = errorData?.message || response.statusText || '';
       return /csrf|auth|token|expired|invalid/i.test(message);
     }
     return false;
