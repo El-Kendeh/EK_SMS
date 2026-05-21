@@ -4,12 +4,12 @@ const API_BASE = SECURITY_CONFIG.API_URL;
 
 function authHeaders() {
   const token = localStorage.getItem('token');
-  return { 'Content-Type': 'application/json', Authorization: `Token ${token}` };
+  return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
 }
 
 function authHeadersNoContent() {
   const token = localStorage.getItem('token');
-  return { Authorization: `Token ${token}` };
+  return { Authorization: `Bearer ${token}` };
 }
 
 export const teacherApi = {
@@ -337,7 +337,7 @@ export const teacherApi = {
     const token = localStorage.getItem('token');
     const res = await fetch('/api/teacher/resources/', {
       method: 'POST',
-      headers: { Authorization: `Token ${token}` },
+      headers: { Authorization: `Bearer ${token}` },
       body: formData,
     });
     return res.json();

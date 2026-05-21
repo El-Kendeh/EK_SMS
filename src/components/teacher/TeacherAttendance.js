@@ -104,7 +104,7 @@ export default function TeacherAttendance() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Token ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
         body: JSON.stringify({
           classroom_id: selectedClassId,

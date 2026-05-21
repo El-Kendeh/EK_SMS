@@ -70,7 +70,7 @@ export default function TeacherSettings({ onLogout }) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Token ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
         body: JSON.stringify({
           current_password: passwordFields.current,

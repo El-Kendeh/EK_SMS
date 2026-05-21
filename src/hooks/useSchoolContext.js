@@ -35,6 +35,9 @@ export function SchoolContextProvider({ children }) {
       cache.fetchedAt = Date.now();
       setContext(data);
     } catch (err) {
+      if (err?.status === 401 || /invalid|expired|not authenticated/i.test(err.message || '')) {
+        apiClient.clearAuth();
+      }
       setError(err.message || 'Failed to fetch school context');
     } finally {
       setLoading(false);

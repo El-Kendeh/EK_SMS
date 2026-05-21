@@ -12,37 +12,60 @@ class ApiClient {
     this.retryAttempts = 3;
   }
 
-  /**
-   * Make a secure API request
-   */
-  async request(endpoint, options = {}) {
-    const url = `${this.baseURL}${endpoint}`;
-    const csrfToken = getCSRFToken();
+  getToken() {
+    try {
+      const token = localStorage.getItem('token');
+      return token && typeof token === 'string' && token.trim() ? token.trim() : null;
+    } catch (error) {
+      return null;
+    }
+  }
 
+  clearAuth() {
+    const hadToken = !!this.getToken();
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    if (hadToken) {
+      window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new Event('ek-sms-auth-changed'));
+    }
+  }
+
+  buildHeaders(options = {}) {
     const headers = {
       'X-Requested-With': 'XMLHttpRequest',
       ...options.headers,
     };
 
-    // Add CSRF token for state-changing requests
-    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(options.method?.toUpperCase())) {
-      if (csrfToken) {
-        headers['X-CSRFToken'] = csrfToken;
-      }
+    const csrfToken = getCSRFToken();
+    const method = options.method?.toUpperCase();
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method) && csrfToken) {
+      headers['X-CSRFToken'] = csrfToken;
     }
 
-    // Add security headers
     Object.assign(headers, SECURITY_CONFIG.SECURE_HEADERS);
 
-    // Add Authorization header if token exists
-    const token = localStorage.getItem('token');
-    const hadToken = !!token;
+    const token = this.getToken();
     if (token) {
-      // Backend accepts both `Bearer <jwt>` and `Token <token>`.
-      // Use Bearer for JWT.
       headers['Authorization'] = `Bearer ${token}`;
     }
 
+    return headers;
+  }
+
+  isAuthError(response, errorData) {
+    if (!response) return false;
+    if (response.status === 401) return true;
+    if (response.status === 403) {
+      const message = errorData?.message || response.statusText || '';
+      return /csrf|auth|token|expired|invalid/i.test(message);
+    }
+    return false;
+  }
+
+  async request(endpoint, options = {}) {
+    const url = `${this.baseURL}${endpoint}`;
+    const headers = this.buildHeaders(options);
 
     let body = options.body;
     if (body && !(body instanceof FormData)) {
@@ -58,46 +81,43 @@ class ApiClient {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
+        const { headers: _headers, body: _body, ...fetchOptions } = options;
         const response = await fetch(url, {
-          credentials: 'include', // Include cookies for CORS
-          ...options,
+          credentials: 'include',
+          ...fetchOptions,
+          method: options.method,
           headers,
-          body, // Pass the processed body
+          body,
           signal: controller.signal,
         });
 
         clearTimeout(timeoutId);
 
         if (!response.ok) {
-          if (response.status === 403) {
-            // CSRF token might be invalid
-            this.refreshCSRFToken();
-          }
-
-          if (response.status === 401 && hadToken) {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            window.dispatchEvent(new Event('storage'));
-            window.dispatchEvent(new Event('ek-sms-auth-changed'));
-          }
-
-          let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
           let errorData = null;
+          let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+
           try {
             errorData = await response.clone().json();
             if (errorData && errorData.message) {
               errorMessage = errorData.message;
             }
-          } catch (e) {
-            // ignore non-json errors
+          } catch (ignored) {
+            // ignore non-json responses
           }
 
-          throw new ApiError(
-            errorMessage,
-            response.status,
-            response,
-            errorData
-          );
+          if (response.status === 403) {
+            this.refreshCSRFToken();
+          }
+
+          if (this.isAuthError(response, errorData)) {
+            this.clearAuth();
+            if (!errorMessage || response.status === 401) {
+              errorMessage = 'Authentication failed. Please log in again.';
+            }
+          }
+
+          throw new ApiError(errorMessage, response.status, response, errorData);
         }
 
         return response;
@@ -108,22 +128,21 @@ class ApiClient {
           throw error;
         }
 
-        // Retry on network errors (but not on last attempt)
-        if (error.name !== 'AbortError' && attempt === this.retryAttempts - 1) {
-          throw new ApiError(error.message, 0, null);
+        if (error.name === 'AbortError') {
+          lastError = new ApiError('Request timeout', 0, null);
         }
 
-        // Wait before retrying
-        await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+        if (attempt === this.retryAttempts - 1) {
+          throw lastError instanceof ApiError ? lastError : new ApiError(error.message, 0, null);
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
       }
     }
 
     throw lastError;
   }
 
-  /**
-   * GET request
-   */
   async get(endpoint, options = {}) {
     const response = await this.request(endpoint, {
       ...options,
@@ -132,9 +151,6 @@ class ApiClient {
     return response.json();
   }
 
-  /**
-   * POST request
-   */
   async post(endpoint, data, options = {}) {
     const response = await this.request(endpoint, {
       ...options,
@@ -144,9 +160,6 @@ class ApiClient {
     return response.json();
   }
 
-  /**
-   * PUT request
-   */
   async put(endpoint, data, options = {}) {
     const response = await this.request(endpoint, {
       ...options,
@@ -156,9 +169,6 @@ class ApiClient {
     return response.json();
   }
 
-  /**
-   * PATCH request
-   */
   async patch(endpoint, data, options = {}) {
     const response = await this.request(endpoint, {
       ...options,
@@ -168,26 +178,17 @@ class ApiClient {
     return response.json();
   }
 
-  /**
-   * DELETE request
-   */
   async delete(endpoint, options = {}) {
     const response = await this.request(endpoint, {
       ...options,
       method: 'DELETE',
     });
-    
-    // DELETE might not have a body
     if (response.status === 204) {
       return null;
     }
-    
     return response.json();
   }
 
-  /**
-   * Refresh CSRF token
-   */
   async refreshCSRFToken() {
     try {
       await this.get(SECURITY_CONFIG.CORS.routes.csrf);
