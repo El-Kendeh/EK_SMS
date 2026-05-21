@@ -20,7 +20,7 @@ export function SchoolContextProvider({ children }) {
     setLoading(true);
     setError(null);
     try {
-      const res = await apiClient.request('/api/school/context/');
+      const res = await apiClient.get('/api/school/context/');
       const data = res.academic_year
         ? { academicYear: res.academic_year, term: res.term, terms: res.terms, school: res.school }
         : { academicYear: null, term: null, terms: res.terms || [], school: res.school };
@@ -74,7 +74,7 @@ export function useSchoolContextStandalone() {
     setLoading(true);
     setError(null);
     try {
-      const res = await apiClient.request('/api/school/context/');
+      const res = await apiClient.get('/api/school/context/');
       const data = {
         academicYear: res.academic_year || null,
         term: res.term || null,
