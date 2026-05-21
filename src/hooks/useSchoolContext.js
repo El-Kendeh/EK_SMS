@@ -12,6 +12,13 @@ export function SchoolContextProvider({ children }) {
   const [error, setError] = useState(null);
 
   const fetchContext = useCallback(async (force = false) => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setError('Not authenticated');
+      setLoading(false);
+      return;
+    }
+
     if (!force && cache.data && Date.now() - cache.fetchedAt < CACHE_DURATION) {
       setContext(cache.data);
       setLoading(false);
@@ -40,7 +47,11 @@ export function SchoolContextProvider({ children }) {
   }, [fetchContext]);
 
   useEffect(() => {
-    fetchContext();
+    if (localStorage.getItem('token')) {
+      fetchContext();
+    } else {
+      setLoading(false);
+    }
   }, [fetchContext]);
 
   const value = { ...context, loading, error, refresh };

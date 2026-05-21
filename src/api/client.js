@@ -36,14 +36,11 @@ class ApiClient {
 
     // Add Authorization header if token exists
     const token = localStorage.getItem('token');
+    const hadToken = !!token;
     if (token) {
       // Backend accepts both `Bearer <jwt>` and `Token <token>`.
       // Use Bearer for JWT.
       headers['Authorization'] = `Bearer ${token}`;
-    } else {
-      // Keep this quiet in production, but it’s useful when debugging 401s.
-      // eslint-disable-next-line no-console
-      console.warn('[ApiClient] 401 likely: no token found in localStorage under key "token"');
     }
 
 
@@ -77,11 +74,11 @@ class ApiClient {
             this.refreshCSRFToken();
           }
 
-          if (response.status === 401) {
+          if (response.status === 401 && hadToken) {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
-              window.dispatchEvent(new Event('storage'));
-              window.dispatchEvent(new Event('ek-sms-auth-changed'));
+            window.dispatchEvent(new Event('storage'));
+            window.dispatchEvent(new Event('ek-sms-auth-changed'));
           }
 
           let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
