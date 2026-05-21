@@ -4,6 +4,15 @@
 
 import { getCSRFToken } from '../utils/security';
 import SECURITY_CONFIG from '../config/security';
+import { mockFetch, setRole } from '../mock/mockHandlers';
+
+const MOCK_MODE = true;
+
+if (MOCK_MODE) {
+  const role = localStorage.getItem('mock_role') || 'school_admin';
+  setRole(role);
+  window.fetch = mockFetch;
+}
 
 class ApiClient {
   constructor() {

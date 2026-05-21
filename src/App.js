@@ -150,7 +150,7 @@ function App() {
 
         if (isSuper) {
           setCurrentPage('superadmindashboard');
-        } else if (user.role === 'school_admin') {
+        } else if (user.role === 'school_admin' || user.role === 'finance' || user.role === 'bursar') {
           setCurrentPage('sa-dashboard');
         } else if (user.role === 'teacher') {
           setCurrentPage('teacher-dashboard');
@@ -195,7 +195,7 @@ function App() {
           const isSuper = user.is_superuser || user.role === 'superadmin' || user.role === 'admin' || user.role === 'superuser';
           if (isSuper) {
             setCurrentPage('superadmindashboard');
-          } else if (user.role === 'school_admin') {
+          } else if (user.role === 'school_admin' || user.role === 'finance' || user.role === 'bursar') {
             setCurrentPage('sa-dashboard');
           } else if (user.role === 'teacher') {
             setCurrentPage('teacher-dashboard');
