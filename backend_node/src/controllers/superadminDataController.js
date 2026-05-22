@@ -9,6 +9,7 @@ const BroadcastAlert = require('../models/BroadcastAlert');
 const SystemOpsAlert = require('../models/SystemOpsAlert');
 const ForensicEvent = require('../models/ForensicEvent');
 const SystemAcademicYear = require('../models/SystemAcademicYear');
+const SystemTerm = require('../models/SystemTerm');
 const { appendSecurityAuditLog } = require('../utils/auditLog');
 const { requireRoleId, mapInviteLabelToCode } = require('../utils/roleIds');
 
@@ -735,6 +736,157 @@ async function toggleAcademicYearStatus(req, res) {
   }
 }
 
+async function rolloutAcademicYear(req, res) {
+  try {
+    const { id } = req.params;
+    const row = await SystemAcademicYear.findByPk(id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    await SystemAcademicYear.update({ is_active: false, updated_at: new Date() }, { where: { is_active: true } });
+    row.is_active = true;
+    row.updated_at = new Date();
+    await row.save();
+    await appendSecurityAuditLog({
+      type: 'config_change',
+      severity: 'medium',
+      actor: req.user.username,
+      ip: clientIp(req),
+      action: `Rolled out academic year: ${row.name}`,
+      metadata: { id: row.id, model: 'SystemAcademicYear', rolled_out: true },
+    });
+    return res.json(successResponse({ id: row.id, name: row.name, is_active: true }, 'Academic year rolled out'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+/* ---------- System Terms CRUD ---------- */
+async function getSystemTerms(req, res) {
+  try {
+    const where = {};
+    if (req.query.academic_year_id) where.system_academic_year_id = req.query.academic_year_id;
+    const rows = await SystemTerm.findAll({ where, order: [['created_at', 'DESC']] });
+    const terms = rows.map(r => ({
+      id: r.id,
+      system_academic_year_id: r.system_academic_year_id,
+      name: r.name,
+      start_date: r.start_date,
+      end_date: r.end_date,
+      is_active: Boolean(r.is_active),
+      created_at: r.created_at,
+      updated_at: r.updated_at,
+    }));
+    return res.json(successResponse({ terms }));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function createSystemTerm(req, res) {
+  try {
+    const { system_academic_year_id, name, start_date, end_date } = req.body;
+    if (!system_academic_year_id || !name) return res.status(400).json(errorResponse('academic_year_id and name are required'));
+    const year = await SystemAcademicYear.findByPk(system_academic_year_id);
+    if (!year) return res.status(400).json(errorResponse('Academic year not found'));
+    const row = await SystemTerm.create({
+      system_academic_year_id,
+      name: String(name).slice(0, 100),
+      start_date: start_date || null,
+      end_date: end_date || null,
+    });
+    await appendSecurityAuditLog({
+      type: 'config_change',
+      severity: 'medium',
+      actor: req.user.username,
+      ip: clientIp(req),
+      action: `Created term: ${name} for academic year ${year.name}`,
+      metadata: { id: row.id, model: 'SystemTerm' },
+    });
+    return res.json(successResponse({ id: row.id }, 'Term created'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function updateSystemTerm(req, res) {
+  try {
+    const { id } = req.params;
+    const { name, start_date, end_date, system_academic_year_id } = req.body;
+    const row = await SystemTerm.findByPk(id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    if (name !== undefined) row.name = String(name).slice(0, 100);
+    if (start_date !== undefined) row.start_date = start_date || null;
+    if (end_date !== undefined) row.end_date = end_date || null;
+    if (system_academic_year_id !== undefined) {
+      const year = await SystemAcademicYear.findByPk(system_academic_year_id);
+      if (!year) return res.status(400).json(errorResponse('Academic year not found'));
+      row.system_academic_year_id = system_academic_year_id;
+    }
+    row.updated_at = new Date();
+    await row.save();
+    return res.json(successResponse({}, 'Term updated'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function deleteSystemTerm(req, res) {
+  try {
+    const { id } = req.params;
+    const row = await SystemTerm.findByPk(id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    await row.destroy();
+    return res.json(successResponse({}, 'Term deleted'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function toggleSystemTermStatus(req, res) {
+  try {
+    const { id } = req.params;
+    const row = await SystemTerm.findByPk(id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    row.is_active = !row.is_active;
+    row.updated_at = new Date();
+    await row.save();
+    return res.json(successResponse({ is_active: row.is_active }, `Status changed to ${row.is_active ? 'active' : 'inactive'}`));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function rolloutTerm(req, res) {
+  try {
+    const { id } = req.params;
+    const row = await SystemTerm.findByPk(id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    await SystemTerm.update({ is_active: false, updated_at: new Date() }, {
+      where: { system_academic_year_id: row.system_academic_year_id, is_active: true },
+    });
+    row.is_active = true;
+    row.updated_at = new Date();
+    await row.save();
+    await appendSecurityAuditLog({
+      type: 'config_change',
+      severity: 'medium',
+      actor: req.user.username,
+      ip: clientIp(req),
+      action: `Rolled out term: ${row.name}`,
+      metadata: { id: row.id, model: 'SystemTerm', rolled_out: true },
+    });
+    return res.json(successResponse({ id: row.id, name: row.name, is_active: true }, 'Term rolled out'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
 module.exports = {
   getSecurityLogs,
   getSecurityCounters,
@@ -765,4 +917,11 @@ module.exports = {
   updateAcademicYear,
   deleteAcademicYear,
   toggleAcademicYearStatus,
+  rolloutAcademicYear,
+  getSystemTerms,
+  createSystemTerm,
+  updateSystemTerm,
+  deleteSystemTerm,
+  toggleSystemTermStatus,
+  rolloutTerm,
 };

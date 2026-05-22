@@ -64,6 +64,7 @@ require('./PeerReview');
 require('./SpotlightStudent');
 
 require('./SystemAcademicYear');
+require('./SystemTerm');
 
 // Load all cross-model associations
 require('./associations');

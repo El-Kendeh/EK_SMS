@@ -85,5 +85,14 @@ router.post('/academic-years/', data.createAcademicYear);
 router.put('/academic-years/:id/', data.updateAcademicYear);
 router.delete('/academic-years/:id/', data.deleteAcademicYear);
 router.patch('/academic-years/:id/toggle/', data.toggleAcademicYearStatus);
+router.post('/academic-years/:id/rollout/', data.rolloutAcademicYear);
+
+/* System terms CRUD */
+router.get('/system-terms/', data.getSystemTerms);
+router.post('/system-terms/', data.createSystemTerm);
+router.put('/system-terms/:id/', data.updateSystemTerm);
+router.delete('/system-terms/:id/', data.deleteSystemTerm);
+router.patch('/system-terms/:id/toggle/', data.toggleSystemTermStatus);
+router.post('/system-terms/:id/rollout/', data.rolloutTerm);
 
 module.exports = router;

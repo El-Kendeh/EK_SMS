@@ -485,3 +485,16 @@ CREATE TABLE IF NOT EXISTS `pruh_system_academicyear` (
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
     `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 32. pruh_system_term
+CREATE TABLE IF NOT EXISTS `pruh_system_term` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `system_academic_year_id` BIGINT NOT NULL,
+    `name` VARCHAR(100) NOT NULL,
+    `start_date` DATE,
+    `end_date` DATE,
+    `is_active` TINYINT(1) DEFAULT 0,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX `idx_term_academic_year` (`system_academic_year_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
