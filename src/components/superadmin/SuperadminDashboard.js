@@ -38,6 +38,7 @@ import SAStudents         from './SAStudents';
 import SAParents          from './SAParents';
 import SAClasses          from './SAClasses';
 import SASubjects         from './SASubjects';
+import SAAcademicSystem   from './SAAcademicSystem';
 
 
 
@@ -219,6 +220,7 @@ function getTitle(page, school) {
     'school-type':         'School Type',
     'syllabus-type':       'Syllabus Type',
     'class-subtype':       'Class Subtype',
+    'academic-system':     'Academic System',
     'classes':             'Classes',
     'subjects':            'Subjects',
     'principal':           'Principal',
@@ -473,6 +475,7 @@ export default function Dashboard({ onNavigate }) {
     { key: 'school-type',         label: 'School Type',       icon: <IcGen />, badge: 0, section: 'Academics' },
     { key: 'syllabus-type',       label: 'Syllabus Type',     icon: <IcGen />, badge: 0, section: 'Academics' },
     { key: 'class-subtype',       label: 'Class Subtype',     icon: <IcGen />, badge: 0, section: 'Academics' },
+    { key: 'academic-system',     label: 'Academic System',   icon: <IcGen />, badge: 0, section: 'Academics' },
     { key: 'classes',             label: 'Classes',           icon: <IcGen />, badge: 0, section: 'Academics' },
     { key: 'subjects',            label: 'Subjects',          icon: <IcGen />, badge: 0, section: 'Academics' },
     { key: 'principal',           label: 'Principal',         icon: <IcGen />, badge: 0, section: 'Academics' },
@@ -933,6 +936,8 @@ export default function Dashboard({ onNavigate }) {
             />
           )}
 
+          {activePage === 'academic-system' && <SAAcademicSystem />}
+
           {activePage === 'classes' && <SAClasses />}
 
           {activePage === 'subjects' && <SASubjects />}
@@ -947,7 +952,7 @@ export default function Dashboard({ onNavigate }) {
 
           {activePage === 'account-parents' && <SAParents />}
 
-          {!['overview','applications','review','app-history','version-compare','rejected','rejection-audit','grade-report','grade-requests','grade-audit','security-logs','forensics','alert-broadcast','change-alerts','system-health','schools','analytics','benchmarks','onboarding','governance','users','notifications','settings','profile','academic-terms','academic-year','institution-type','school-capacity','countries','regions','cities','school-type','syllabus-type','class-subtype','classes','subjects','principal','bursar','account-teachers','account-students','account-parents'].includes(activePage) && (
+          {!['overview','applications','review','app-history','version-compare','rejected','rejection-audit','grade-report','grade-requests','grade-audit','security-logs','forensics','alert-broadcast','change-alerts','system-health','schools','analytics','benchmarks','onboarding','governance','users','notifications','settings','profile','academic-terms','academic-year','institution-type','school-capacity','countries','regions','cities','school-type','syllabus-type','class-subtype','academic-system','classes','subjects','principal','bursar','account-teachers','account-students','account-parents'].includes(activePage) && (
             <StubPage title={getTitle(activePage, selectedSchool)} />
           )}
 

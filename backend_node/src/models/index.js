@@ -74,6 +74,7 @@ require('./City');
 require('./SchoolType');
 require('./SyllabusType');
 require('./ClassSubtype');
+require('./AcademicSystem');
 require('./Principal');
 require('./Bursar');
 require('./Parent');

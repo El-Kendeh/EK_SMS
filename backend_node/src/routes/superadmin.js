@@ -203,6 +203,13 @@ router.put('/class-subtypes/:id/', data.updateClassSubtype);
 router.delete('/class-subtypes/:id/', data.deleteClassSubtype);
 router.patch('/class-subtypes/:id/toggle/', data.toggleClassSubtypeStatus);
 
+/* Academic System CRUD */
+router.get('/academic-systems/', data.getAcademicSystems);
+router.post('/academic-systems/', data.createAcademicSystem);
+router.put('/academic-systems/:id/', data.updateAcademicSystem);
+router.delete('/academic-systems/:id/', data.deleteAcademicSystem);
+router.patch('/academic-systems/:id/toggle/', data.toggleAcademicSystemStatus);
+
 /* Classes CRUD */
 router.get('/classes/', data.getSuperClasses);
 router.post('/classes/', data.createSuperClass);
