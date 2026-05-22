@@ -79,4 +79,11 @@ router.get('/sa/custom-roles/', data.getSaCustomRoles);
 router.post('/sa/custom-roles/', data.postSaCustomRoles);
 router.get('/sa/export/', data.getSaExport);
 
+/* Academic years CRUD */
+router.get('/academic-years/', data.getAcademicYears);
+router.post('/academic-years/', data.createAcademicYear);
+router.put('/academic-years/:id/', data.updateAcademicYear);
+router.delete('/academic-years/:id/', data.deleteAcademicYear);
+router.patch('/academic-years/:id/toggle/', data.toggleAcademicYearStatus);
+
 module.exports = router;

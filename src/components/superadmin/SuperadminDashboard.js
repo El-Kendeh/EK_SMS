@@ -227,6 +227,7 @@ function getTitle(page, school) {
     'fees-structure':      'Fees Structure',
     'fees-payment':        'Fees Payment',
     'receipt-generator':   'Receipt Generator',
+    'school-financial-report': 'School Financial Report',
     'grades-approval':     'Grades Approval',
     'report-card-generator': 'Report Card Generator',
     'report-card-approval':  'Report Card Approval',
@@ -488,6 +489,7 @@ export default function Dashboard({ onNavigate }) {
     { key: 'fees-structure',    label: 'Fees Structure',  icon: <IcGen />, badge: 0, section: 'Fees' },
     { key: 'fees-payment',      label: 'Fees Payment',    icon: <IcGen />, badge: 0, section: 'Fees' },
     { key: 'receipt-generator', label: 'Receipt Generator',icon: <IcGen />, badge: 0, section: 'Fees' },
+    { key: 'school-financial-report', label: 'School Financial Report', icon: <IcGen />, badge: 0, section: 'Fees' },
 
     /* Grades Approval (no section) */
     { key: 'grades-approval',   label: 'Grades Approval', icon: <IcGen />, badge: 0, section: null },

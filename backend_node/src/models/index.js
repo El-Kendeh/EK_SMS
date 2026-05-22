@@ -63,5 +63,7 @@ require('./LiveClass');
 require('./PeerReview');
 require('./SpotlightStudent');
 
+require('./SystemAcademicYear');
+
 // Load all cross-model associations
 require('./associations');

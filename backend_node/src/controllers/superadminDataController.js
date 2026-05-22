@@ -8,6 +8,7 @@ const SuperadminSettings = require('../models/SuperadminSettings');
 const BroadcastAlert = require('../models/BroadcastAlert');
 const SystemOpsAlert = require('../models/SystemOpsAlert');
 const ForensicEvent = require('../models/ForensicEvent');
+const SystemAcademicYear = require('../models/SystemAcademicYear');
 const { appendSecurityAuditLog } = require('../utils/auditLog');
 const { requireRoleId, mapInviteLabelToCode } = require('../utils/roleIds');
 
@@ -644,6 +645,96 @@ async function getSaExport(req, res) {
   }
 }
 
+/* ---------- System Academic Years CRUD ---------- */
+async function getAcademicYears(req, res) {
+  try {
+    const rows = await SystemAcademicYear.findAll({ order: [['created_at', 'DESC']] });
+    const years = rows.map(r => ({
+      id: r.id,
+      name: r.name,
+      start_date: r.start_date,
+      end_date: r.end_date,
+      is_active: Boolean(r.is_active),
+      created_at: r.created_at,
+      updated_at: r.updated_at,
+    }));
+    return res.json(successResponse({ years }));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function createAcademicYear(req, res) {
+  try {
+    const { name, start_date, end_date } = req.body;
+    if (!name) return res.status(400).json(errorResponse('Name is required'));
+    const row = await SystemAcademicYear.create({
+      name: String(name).slice(0, 100),
+      start_date: start_date || null,
+      end_date: end_date || null,
+    });
+    await appendSecurityAuditLog({
+      type: 'config_change',
+      severity: 'medium',
+      actor: req.user.username,
+      ip: clientIp(req),
+      action: `Created academic year: ${name}`,
+      metadata: { id: row.id, model: 'SystemAcademicYear' },
+    });
+    return res.json(successResponse({ id: row.id }, 'Academic year created'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function updateAcademicYear(req, res) {
+  try {
+    const { id } = req.params;
+    const { name, start_date, end_date } = req.body;
+    const row = await SystemAcademicYear.findByPk(id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    if (name !== undefined) row.name = String(name).slice(0, 100);
+    if (start_date !== undefined) row.start_date = start_date || null;
+    if (end_date !== undefined) row.end_date = end_date || null;
+    row.updated_at = new Date();
+    await row.save();
+    return res.json(successResponse({}, 'Academic year updated'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function deleteAcademicYear(req, res) {
+  try {
+    const { id } = req.params;
+    const row = await SystemAcademicYear.findByPk(id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    await row.destroy();
+    return res.json(successResponse({}, 'Academic year deleted'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function toggleAcademicYearStatus(req, res) {
+  try {
+    const { id } = req.params;
+    const row = await SystemAcademicYear.findByPk(id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    row.is_active = !row.is_active;
+    row.updated_at = new Date();
+    await row.save();
+    return res.json(successResponse({ is_active: row.is_active }, `Status changed to ${row.is_active ? 'active' : 'inactive'}`));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
 module.exports = {
   getSecurityLogs,
   getSecurityCounters,
@@ -669,4 +760,9 @@ module.exports = {
   getSaCustomRoles,
   postSaCustomRoles,
   getSaExport,
+  getAcademicYears,
+  createAcademicYear,
+  updateAcademicYear,
+  deleteAcademicYear,
+  toggleAcademicYearStatus,
 };

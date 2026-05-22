@@ -424,6 +424,18 @@ async function migrate() {
         \`week_end\` DATE,
         \`created_at\` DATETIME DEFAULT CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+    },
+    {
+      name: 'pruh_system_academicyear',
+      sql: `CREATE TABLE IF NOT EXISTS \`pruh_system_academicyear\` (
+        \`id\` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        \`name\` VARCHAR(100) NOT NULL,
+        \`start_date\` DATE,
+        \`end_date\` DATE,
+        \`is_active\` TINYINT(1) DEFAULT 0,
+        \`created_at\` DATETIME DEFAULT CURRENT_TIMESTAMP,
+        \`updated_at\` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
     }
   ];
 
@@ -491,7 +503,7 @@ async function migrate() {
       }
     }
 
-    console.log('\n✅ Migration completed successfully! 30 tables + 45 indexes created.');
+    console.log('\n✅ Migration completed successfully! 31 tables + 45 indexes created.');
     process.exit(0);
   } catch (err) {
     console.error('❌ Migration failed:', err.message);
