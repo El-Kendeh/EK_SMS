@@ -1,19 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import { ThemeProvider } from './context/ThemeContext';
-import { SchoolContextProvider } from './hooks/useSchoolContext';
 import Login from './components/login';
 import SuperadminDashboard from './components/superadmin/SuperadminDashboard';
-import ParentDashboard from './components/parent/ParentDashboard';
-import Landing from './components/Landing';
-import Register from './components/Register';
-import SchoolAdminDashboard from './components/schooladmin/dashboard';
-import TeacherDashboard from './components/teacher/TeacherDashboard';
-import StudentDashboard from './components/student/StudentDashboard';
-import PrincipalDashboard from './components/principal/PrincipalDashboard';
-import VerifyPage from './components/student/VerifyPage';
 import ForceChangePassword from './components/ForceChangePassword';
-import DashboardGate from './components/DashboardGate';
 
 /* ── Impersonation banner (shown when a superadmin is viewing as a school admin) ── */
 function ImpersonationBanner() {
@@ -60,53 +50,6 @@ function ImpersonationBanner() {
   );
 }
 
-const PAGE_TO_PATH = {
-  login:                '/login',
-  home:                 '/',
-  landing:              '/',
-  register:             '/register',
-  superadmindashboard:  '/superadmin',
-  'sa-dashboard':       '/dashboard/school-admin',
-  'teacher-dashboard':  '/dashboard/teacher',
-  'student-dashboard':  '/dashboard/student',
-  'principal-dashboard':'/principal',
-  parentdashboard:      '/parent',
-};
-
-const PATH_TO_PAGE = {
-  '/':            'login',
-  '/login':       'login',
-  '/register':    'register',
-  '/superadmin':  'superadmindashboard',
-  '/dashboard/school-admin': 'sa-dashboard',
-  '/dashboard/teacher':      'teacher-dashboard',
-  '/teacher/dashboard':      'teacher-dashboard',
-  '/dashboard/student':      'student-dashboard',
-  '/parent':                 'parentdashboard',
-  '/parent/children':        'parentdashboard',
-  '/parent/grades':          'parentdashboard',
-  '/parent/report-cards':    'parentdashboard',
-  '/parent/notifications':   'parentdashboard',
-  '/parent/profile':         'parentdashboard',
-  '/parent/attendance':      'parentdashboard',
-  '/parent/behavior':        'parentdashboard',
-  '/parent/fees':            'parentdashboard',
-  '/parent/verification':    'parentdashboard',
-  '/teacher/classes':        'teacher-dashboard',
-  '/teacher/grade-entry':    'teacher-dashboard',
-  '/teacher/grade-history':  'teacher-dashboard',
-  '/teacher/students':       'teacher-dashboard',
-  '/teacher/timetable':      'teacher-dashboard',
-  '/teacher/notifications':  'teacher-dashboard',
-  '/teacher/profile':        'teacher-dashboard',
-  '/teacher/attendance':     'teacher-dashboard',
-  '/teacher/analytics':      'teacher-dashboard',
-  '/teacher/settings':       'teacher-dashboard',
-  '/principal':              'principal-dashboard',
-  '/principal/approvals':    'principal-dashboard',
-  '/principal/reports':      'principal-dashboard',
-  '/principal/activity':     'principal-dashboard',
-};
 
 function App() {
   const [currentPage, setCurrentPage] = useState('login');
