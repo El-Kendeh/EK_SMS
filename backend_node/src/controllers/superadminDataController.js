@@ -10,6 +10,9 @@ const SystemOpsAlert = require('../models/SystemOpsAlert');
 const ForensicEvent = require('../models/ForensicEvent');
 const SystemAcademicYear = require('../models/SystemAcademicYear');
 const SystemTerm = require('../models/SystemTerm');
+const InstitutionType = require('../models/InstitutionType');
+const CapacityCategory = require('../models/CapacityCategory');
+const SchoolCapacity = require('../models/SchoolCapacity');
 const { appendSecurityAuditLog } = require('../utils/auditLog');
 const { requireRoleId, mapInviteLabelToCode } = require('../utils/roleIds');
 
@@ -887,6 +890,236 @@ async function rolloutTerm(req, res) {
   }
 }
 
+/* ---------- Institution Types CRUD ---------- */
+async function getInstitutionTypes(req, res) {
+  try {
+    const rows = await InstitutionType.findAll({ order: [['created_at', 'DESC']] });
+    const types = rows.map(r => ({ id: r.id, name: r.name, is_active: Boolean(r.is_active), created_at: r.created_at, updated_at: r.updated_at }));
+    return res.json(successResponse({ types }));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function createInstitutionType(req, res) {
+  try {
+    const { name } = req.body;
+    if (!name) return res.status(400).json(errorResponse('Name is required'));
+    const row = await InstitutionType.create({ name: String(name).slice(0, 100) });
+    return res.json(successResponse({ id: row.id }, 'Institution type created'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function updateInstitutionType(req, res) {
+  try {
+    const { id } = req.params;
+    const { name } = req.body;
+    const row = await InstitutionType.findByPk(id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    if (name !== undefined) row.name = String(name).slice(0, 100);
+    row.updated_at = new Date();
+    await row.save();
+    return res.json(successResponse({}, 'Institution type updated'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function deleteInstitutionType(req, res) {
+  try {
+    const { id } = req.params;
+    const row = await InstitutionType.findByPk(id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    await row.destroy();
+    return res.json(successResponse({}, 'Institution type deleted'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function toggleInstitutionTypeStatus(req, res) {
+  try {
+    const { id } = req.params;
+    const row = await InstitutionType.findByPk(id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    row.is_active = !row.is_active;
+    row.updated_at = new Date();
+    await row.save();
+    return res.json(successResponse({ is_active: row.is_active }, `Status changed to ${row.is_active ? 'active' : 'inactive'}`));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+/* ---------- Capacity Categories CRUD ---------- */
+async function getCapacityCategories(req, res) {
+  try {
+    const rows = await CapacityCategory.findAll({ order: [['created_at', 'DESC']] });
+    const categories = rows.map(r => ({ id: r.id, name: r.name, is_active: Boolean(r.is_active), created_at: r.created_at, updated_at: r.updated_at }));
+    return res.json(successResponse({ categories }));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function createCapacityCategory(req, res) {
+  try {
+    const { name } = req.body;
+    if (!name) return res.status(400).json(errorResponse('Name is required'));
+    const row = await CapacityCategory.create({ name: String(name).slice(0, 100) });
+    return res.json(successResponse({ id: row.id }, 'Capacity category created'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function updateCapacityCategory(req, res) {
+  try {
+    const { id } = req.params;
+    const { name } = req.body;
+    const row = await CapacityCategory.findByPk(id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    if (name !== undefined) row.name = String(name).slice(0, 100);
+    row.updated_at = new Date();
+    await row.save();
+    return res.json(successResponse({}, 'Capacity category updated'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function deleteCapacityCategory(req, res) {
+  try {
+    const { id } = req.params;
+    const row = await CapacityCategory.findByPk(id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    await row.destroy();
+    return res.json(successResponse({}, 'Capacity category deleted'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function toggleCapacityCategoryStatus(req, res) {
+  try {
+    const { id } = req.params;
+    const row = await CapacityCategory.findByPk(id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    row.is_active = !row.is_active;
+    row.updated_at = new Date();
+    await row.save();
+    return res.json(successResponse({ is_active: row.is_active }, `Status changed to ${row.is_active ? 'active' : 'inactive'}`));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+/* ---------- School Capacity CRUD ---------- */
+async function getSchoolCapacities(req, res) {
+  try {
+    const rows = await SchoolCapacity.findAll({ order: [['created_at', 'DESC']] });
+    const capacities = await Promise.all(rows.map(async r => {
+      let categoryName = null;
+      try {
+        const cat = await CapacityCategory.findByPk(r.capacity_category_id);
+        if (cat) categoryName = cat.name;
+      } catch {}
+      return {
+        id: r.id,
+        capacity_category_id: r.capacity_category_id,
+        capacity_category_name: categoryName,
+        capacity_amount: r.capacity_amount,
+        is_active: Boolean(r.is_active),
+        created_at: r.created_at,
+        updated_at: r.updated_at,
+      };
+    }));
+    return res.json(successResponse({ capacities }));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function createSchoolCapacity(req, res) {
+  try {
+    const { capacity_category_id, capacity_amount } = req.body;
+    if (!capacity_category_id || capacity_amount === undefined) return res.status(400).json(errorResponse('capacity_category_id and capacity_amount are required'));
+    const cat = await CapacityCategory.findByPk(capacity_category_id);
+    if (!cat) return res.status(400).json(errorResponse('Capacity category not found'));
+    if (typeof capacity_amount !== 'number' || capacity_amount < 0) return res.status(400).json(errorResponse('capacity_amount must be a positive number'));
+    const row = await SchoolCapacity.create({ capacity_category_id, capacity_amount });
+    return res.json(successResponse({ id: row.id }, 'School capacity created'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function updateSchoolCapacity(req, res) {
+  try {
+    const { id } = req.params;
+    const { capacity_category_id, capacity_amount } = req.body;
+    const row = await SchoolCapacity.findByPk(id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    if (capacity_category_id !== undefined) {
+      const cat = await CapacityCategory.findByPk(capacity_category_id);
+      if (!cat) return res.status(400).json(errorResponse('Capacity category not found'));
+      row.capacity_category_id = capacity_category_id;
+    }
+    if (capacity_amount !== undefined) {
+      if (typeof capacity_amount !== 'number' || capacity_amount < 0) return res.status(400).json(errorResponse('capacity_amount must be a positive number'));
+      row.capacity_amount = capacity_amount;
+    }
+    row.updated_at = new Date();
+    await row.save();
+    return res.json(successResponse({}, 'School capacity updated'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function deleteSchoolCapacity(req, res) {
+  try {
+    const { id } = req.params;
+    const row = await SchoolCapacity.findByPk(id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    await row.destroy();
+    return res.json(successResponse({}, 'School capacity deleted'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function toggleSchoolCapacityStatus(req, res) {
+  try {
+    const { id } = req.params;
+    const row = await SchoolCapacity.findByPk(id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    row.is_active = !row.is_active;
+    row.updated_at = new Date();
+    await row.save();
+    return res.json(successResponse({ is_active: row.is_active }, `Status changed to ${row.is_active ? 'active' : 'inactive'}`));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
 module.exports = {
   getSecurityLogs,
   getSecurityCounters,
@@ -924,4 +1157,19 @@ module.exports = {
   deleteSystemTerm,
   toggleSystemTermStatus,
   rolloutTerm,
+  getInstitutionTypes,
+  createInstitutionType,
+  updateInstitutionType,
+  deleteInstitutionType,
+  toggleInstitutionTypeStatus,
+  getCapacityCategories,
+  createCapacityCategory,
+  updateCapacityCategory,
+  deleteCapacityCategory,
+  toggleCapacityCategoryStatus,
+  getSchoolCapacities,
+  createSchoolCapacity,
+  updateSchoolCapacity,
+  deleteSchoolCapacity,
+  toggleSchoolCapacityStatus,
 };

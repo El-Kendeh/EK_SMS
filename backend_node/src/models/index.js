@@ -65,6 +65,9 @@ require('./SpotlightStudent');
 
 require('./SystemAcademicYear');
 require('./SystemTerm');
+require('./InstitutionType');
+require('./CapacityCategory');
+require('./SchoolCapacity');
 
 // Load all cross-model associations
 require('./associations');

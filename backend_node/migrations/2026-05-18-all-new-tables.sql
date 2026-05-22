@@ -486,15 +486,31 @@ CREATE TABLE IF NOT EXISTS `pruh_system_academicyear` (
     `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 32. pruh_system_term
-CREATE TABLE IF NOT EXISTS `pruh_system_term` (
+-- 34. pruh_system_capacitycategory
+CREATE TABLE IF NOT EXISTS `pruh_system_capacitycategory` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
-    `system_academic_year_id` BIGINT NOT NULL,
     `name` VARCHAR(100) NOT NULL,
-    `start_date` DATE,
-    `end_date` DATE,
+    `is_active` TINYINT(1) DEFAULT 0,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 35. pruh_system_schoolcapacity
+CREATE TABLE IF NOT EXISTS `pruh_system_schoolcapacity` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `capacity_category_id` BIGINT NOT NULL,
+    `capacity_amount` INT NOT NULL,
     `is_active` TINYINT(1) DEFAULT 0,
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
     `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX `idx_term_academic_year` (`system_academic_year_id`)
+    INDEX `idx_schoolcapacity_category` (`capacity_category_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 33. pruh_system_institutiontype
+CREATE TABLE IF NOT EXISTS `pruh_system_institutiontype` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `name` VARCHAR(100) NOT NULL,
+    `is_active` TINYINT(1) DEFAULT 0,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

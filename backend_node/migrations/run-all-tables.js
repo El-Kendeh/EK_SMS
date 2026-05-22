@@ -450,6 +450,37 @@ async function migrate() {
         \`updated_at\` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX \`idx_term_academic_year\` (\`system_academic_year_id\`)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+    },
+    {
+      name: 'pruh_system_institutiontype',
+      sql: `CREATE TABLE IF NOT EXISTS \`pruh_system_institutiontype\` (
+        \`id\` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        \`name\` VARCHAR(100) NOT NULL,
+        \`is_active\` TINYINT(1) DEFAULT 0,
+        \`created_at\` DATETIME DEFAULT CURRENT_TIMESTAMP,
+        \`updated_at\` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+    },
+    {
+      name: 'pruh_system_capacitycategory',
+      sql: `CREATE TABLE IF NOT EXISTS \`pruh_system_capacitycategory\` (
+        \`id\` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        \`name\` VARCHAR(100) NOT NULL,
+        \`is_active\` TINYINT(1) DEFAULT 0,
+        \`created_at\` DATETIME DEFAULT CURRENT_TIMESTAMP,
+        \`updated_at\` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+    },
+    {
+      name: 'pruh_system_schoolcapacity',
+      sql: `CREATE TABLE IF NOT EXISTS \`pruh_system_schoolcapacity\` (
+        \`id\` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        \`capacity_category_id\` BIGINT NOT NULL,
+        \`capacity_amount\` INT NOT NULL,
+        \`is_active\` TINYINT(1) DEFAULT 0,
+        \`created_at\` DATETIME DEFAULT CURRENT_TIMESTAMP,
+        \`updated_at\` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
     }
   ];
 
@@ -506,6 +537,7 @@ async function migrate() {
       ['idx_pr_reviewer', 'pruh_core_peer_review', 'reviewer_id'],
       ['idx_ss_teacher', 'pruh_core_spotlight_student', 'teacher_id'],
       ['idx_ss_student', 'pruh_core_spotlight_student', 'student_id'],
+      ['idx_sc_cat', 'pruh_system_schoolcapacity', 'capacity_category_id'],
     ];
 
     for (const [name, table, column] of indexes) {
@@ -517,7 +549,7 @@ async function migrate() {
       }
     }
 
-    console.log('\n✅ Migration completed successfully! 32 tables + 46 indexes created.');
+    console.log('\n✅ Migration completed successfully! 35 tables + 47 indexes created.');
     process.exit(0);
   } catch (err) {
     console.error('❌ Migration failed:', err.message);

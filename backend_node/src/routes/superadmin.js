@@ -95,4 +95,25 @@ router.delete('/system-terms/:id/', data.deleteSystemTerm);
 router.patch('/system-terms/:id/toggle/', data.toggleSystemTermStatus);
 router.post('/system-terms/:id/rollout/', data.rolloutTerm);
 
+/* Institution types CRUD */
+router.get('/institution-types/', data.getInstitutionTypes);
+router.post('/institution-types/', data.createInstitutionType);
+router.put('/institution-types/:id/', data.updateInstitutionType);
+router.delete('/institution-types/:id/', data.deleteInstitutionType);
+router.patch('/institution-types/:id/toggle/', data.toggleInstitutionTypeStatus);
+
+/* Capacity categories CRUD */
+router.get('/capacity-categories/', data.getCapacityCategories);
+router.post('/capacity-categories/', data.createCapacityCategory);
+router.put('/capacity-categories/:id/', data.updateCapacityCategory);
+router.delete('/capacity-categories/:id/', data.deleteCapacityCategory);
+router.patch('/capacity-categories/:id/toggle/', data.toggleCapacityCategoryStatus);
+
+/* School capacity CRUD */
+router.get('/school-capacities/', data.getSchoolCapacities);
+router.post('/school-capacities/', data.createSchoolCapacity);
+router.put('/school-capacities/:id/', data.updateSchoolCapacity);
+router.delete('/school-capacities/:id/', data.deleteSchoolCapacity);
+router.patch('/school-capacities/:id/toggle/', data.toggleSchoolCapacityStatus);
+
 module.exports = router;
