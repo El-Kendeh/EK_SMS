@@ -99,12 +99,13 @@ function App() {
       return;
     }
 
+    const API_BASE = process.env.REACT_APP_API_URL || process.env.REACT_APP_API_BASE_URL || 'https://backend.pruhsms.africa';
     const abort = new AbortController();
     setFetchError(null);
 
     (async () => {
       try {
-        const res = await fetch((process.env.REACT_APP_API_BASE_URL || '') + '/api/superadmin/dashboard', {
+        const res = await fetch(`${API_BASE}/api/superadmin/dashboard`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
