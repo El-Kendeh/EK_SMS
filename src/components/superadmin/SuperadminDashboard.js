@@ -814,7 +814,7 @@ export default function Dashboard({ onNavigate }) {
             <SARefDataManager
               title="Academic Years"
               subtitle="Define system-wide academic years. Roll out a year to activate it across all schools."
-              endpoint="/api/superadmin/academic-years/"
+              endpoint="/api/academic-years/"
               listKey="years"
               itemLabel="academic year"
               hasRollout={true}
@@ -830,7 +830,7 @@ export default function Dashboard({ onNavigate }) {
             <SARefDataManager
               title="Institution Types"
               subtitle="Types of institutions that can register on the platform, e.g. Primary School, University."
-              endpoint="/api/superadmin/institution-types/"
+              endpoint="/api/institution-types/"
               listKey="types"
               itemLabel="institution type"
               fields={[
@@ -845,7 +845,7 @@ export default function Dashboard({ onNavigate }) {
             <SARefDataManager
               title="Countries"
               subtitle="Countries where schools can be located. Used to populate geography dropdowns during registration."
-              endpoint="/api/superadmin/countries/"
+              endpoint="/api/countries/"
               listKey="countries"
               itemLabel="country"
               fields={[
@@ -858,11 +858,11 @@ export default function Dashboard({ onNavigate }) {
             <SARefDataManager
               title="Regions"
               subtitle="Regions or provinces within a country. Select the parent country first."
-              endpoint="/api/superadmin/regions/"
+              endpoint="/api/regions/"
               listKey="regions"
               itemLabel="region"
               fields={[
-                { key: 'country_id', label: 'Country', type: 'select', required: true, loadFrom: '/api/superadmin/countries/', optionsKey: 'countries', labelKey: 'name' },
+                { key: 'country_id', label: 'Country', type: 'select', required: true, loadFrom: '/api/countries/', optionsKey: 'countries', labelKey: 'name' },
                 { key: 'name',       label: 'Region Name', type: 'text', required: true, placeholder: 'e.g. Western Area' },
               ]}
             />
@@ -872,12 +872,12 @@ export default function Dashboard({ onNavigate }) {
             <SARefDataManager
               title="Cities"
               subtitle="Cities or towns within a region. Select country, then region, then enter the city name."
-              endpoint="/api/superadmin/cities/"
+              endpoint="/api/cities/"
               listKey="cities"
               itemLabel="city"
               fields={[
-                { key: 'country_id', label: 'Country', type: 'select', required: true, loadFrom: '/api/superadmin/countries/', optionsKey: 'countries', labelKey: 'name' },
-                { key: 'region_id',  label: 'Region',  type: 'select', required: true, loadFrom: '/api/superadmin/regions/',   optionsKey: 'regions',   labelKey: 'name', dependsOn: 'country_id', dependsOnKey: 'country_id' },
+                { key: 'country_id', label: 'Country', type: 'select', required: true, loadFrom: '/api/countries/', optionsKey: 'countries', labelKey: 'name' },
+                { key: 'region_id',  label: 'Region',  type: 'select', required: true, loadFrom: '/api/regions/',   optionsKey: 'regions',   labelKey: 'name', dependsOn: 'country_id', dependsOnKey: 'country_id' },
                 { key: 'name',       label: 'City Name', type: 'text', required: true, placeholder: 'e.g. Freetown' },
               ]}
             />
@@ -887,7 +887,7 @@ export default function Dashboard({ onNavigate }) {
             <SARefDataManager
               title="School Types"
               subtitle="Classification of schools by type, e.g. Government, Private, Mission."
-              endpoint="/api/superadmin/school-types/"
+              endpoint="/api/school-types/"
               listKey="schooltypes"
               itemLabel="school type"
               fields={[
@@ -900,7 +900,7 @@ export default function Dashboard({ onNavigate }) {
             <SARefDataManager
               title="Syllabus Types"
               subtitle="Curriculum frameworks used by schools, e.g. WAEC, Cambridge, National."
-              endpoint="/api/superadmin/syllabus-types/"
+              endpoint="/api/syllabus-types/"
               listKey="syllabustypes"
               itemLabel="syllabus type"
               fields={[
@@ -909,7 +909,46 @@ export default function Dashboard({ onNavigate }) {
             />
           )}
 
-          {!['overview','applications','review','app-history','version-compare','rejected','rejection-audit','grade-report','grade-requests','grade-audit','security-logs','forensics','alert-broadcast','change-alerts','system-health','schools','analytics','benchmarks','onboarding','governance','users','notifications','settings','profile','academic-terms','academic-year','institution-type','school-capacity','countries','regions','cities','school-type','syllabus-type'].includes(activePage) && (
+          {activePage === 'class-subtype' && (
+            <SARefDataManager
+              title="Class Subtypes"
+              subtitle="Sub-classifications of classroom types, e.g. Science, Arts, Commercial."
+              endpoint="/api/class-subtypes/"
+              listKey="classsubtypes"
+              itemLabel="class subtype"
+              fields={[
+                { key: 'name', label: 'Name', type: 'text', required: true, placeholder: 'e.g. Science' },
+              ]}
+            />
+          )}
+
+          {activePage === 'principal' && (
+            <SARefDataManager
+              title="Principals"
+              subtitle="Principal designations or titles available for assignment to schools."
+              endpoint="/api/principals/"
+              listKey="principals"
+              itemLabel="principal"
+              fields={[
+                { key: 'name', label: 'Name', type: 'text', required: true, placeholder: 'e.g. Head Principal' },
+              ]}
+            />
+          )}
+
+          {activePage === 'bursar' && (
+            <SARefDataManager
+              title="Bursars"
+              subtitle="Bursar designations or titles available for assignment to schools."
+              endpoint="/api/bursars/"
+              listKey="bursars"
+              itemLabel="bursar"
+              fields={[
+                { key: 'name', label: 'Name', type: 'text', required: true, placeholder: 'e.g. Senior Bursar' },
+              ]}
+            />
+          )}
+
+          {!['overview','applications','review','app-history','version-compare','rejected','rejection-audit','grade-report','grade-requests','grade-audit','security-logs','forensics','alert-broadcast','change-alerts','system-health','schools','analytics','benchmarks','onboarding','governance','users','notifications','settings','profile','academic-terms','academic-year','institution-type','school-capacity','countries','regions','cities','school-type','syllabus-type','class-subtype','principal','bursar'].includes(activePage) && (
             <StubPage title={getTitle(activePage, selectedSchool)} />
           )}
 

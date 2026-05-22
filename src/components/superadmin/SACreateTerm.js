@@ -122,7 +122,7 @@ export default function SACreateTerm({ onSave }) {
 
   /* ---- load years on mount ---- */
   useEffect(() => {
-    nodeGet('/api/superadmin/academic-years/')
+    nodeGet('/api/academic-years/')
       .then(data => {
         if (data.success) setYears(data.years || []);
         else setYearsError(data.message || 'Failed to load academic years.');
@@ -142,7 +142,7 @@ export default function SACreateTerm({ onSave }) {
     setSelectedYear(years.find(y => String(y.id) === String(id)) || null);
     setTermsLoading(true);
     try {
-      const data = await nodeGet(`/api/superadmin/system-terms/?academic_year_id=${id}`);
+      const data = await nodeGet(`/api/system-terms/?academic_year_id=${id}`);
       if (data.success) setExistingTerms(data.terms || []);
     } catch { /* ignore — existing terms is informational */ }
     finally { setTermsLoading(false); }
@@ -174,12 +174,12 @@ export default function SACreateTerm({ onSave }) {
     setRollingOutTermId(termId);
     setRolloutMsg({ type: '', text: '' });
     try {
-      const data = await nodePost(`/api/superadmin/system-terms/${termId}/rollout/`, {});
+      const data = await nodePost(`/api/system-terms/${termId}/rollout/`, {});
       if (!data.success) {
         setRolloutMsg({ type: 'error', text: data.message || 'Failed to roll out term.' });
         return;
       }
-      const refreshed = await nodeGet(`/api/superadmin/system-terms/?academic_year_id=${yearId}`);
+      const refreshed = await nodeGet(`/api/system-terms/?academic_year_id=${yearId}`);
       if (refreshed.success) setExistingTerms(refreshed.terms || []);
       setRolloutMsg({ type: 'success', text: 'Term rolled out — it is now the active term.' });
     } catch (err) {
@@ -194,12 +194,12 @@ export default function SACreateTerm({ onSave }) {
     setYearRollingOut(true);
     setRolloutMsg({ type: '', text: '' });
     try {
-      const data = await nodePost(`/api/superadmin/academic-years/${yearId}/rollout/`, {});
+      const data = await nodePost(`/api/academic-years/${yearId}/rollout/`, {});
       if (!data.success) {
         setRolloutMsg({ type: 'error', text: data.message || 'Failed to roll out academic year.' });
         return;
       }
-      const refreshed = await nodeGet('/api/superadmin/academic-years/');
+      const refreshed = await nodeGet('/api/academic-years/');
       if (refreshed.success) {
         const updatedYears = refreshed.years || [];
         setYears(updatedYears);
@@ -228,10 +228,10 @@ export default function SACreateTerm({ onSave }) {
         ...(endDate     && { end_date: endDate }),
         ...(description.trim() && { description: description.trim() }),
       };
-      const data = await nodePost('/api/superadmin/system-terms/', payload);
+      const data = await nodePost('/api/system-terms/', payload);
       if (!data.success) { setSaveError(data.message || 'Failed to save term.'); return; }
       if (setAsActive && data.id) {
-        await nodePost(`/api/superadmin/system-terms/${data.id}/rollout/`, {}).catch(() => {});
+        await nodePost(`/api/system-terms/${data.id}/rollout/`, {}).catch(() => {});
       }
       onSave && onSave(data);
       handleReset();

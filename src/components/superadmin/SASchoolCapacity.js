@@ -18,7 +18,7 @@ const SCHOOL_CAPACITY_FIELDS = [
     label: 'Capacity Category',
     type: 'select',
     required: true,
-    loadFrom: '/api/superadmin/capacity-categories/',
+    loadFrom: '/api/capacity-categories/',
     optionsKey: 'categories',
     labelKey: 'name',
   },
@@ -63,7 +63,7 @@ export default function SASchoolCapacity() {
         <SARefDataManager
           title="Capacity Categories"
           subtitle="Labels used to classify school size — create these before adding school capacities."
-          endpoint="/api/superadmin/capacity-categories/"
+          endpoint="/api/capacity-categories/"
           listKey="categories"
           itemLabel="category"
           fields={CAPACITY_CATEGORY_FIELDS}
@@ -74,7 +74,7 @@ export default function SASchoolCapacity() {
         <SARefDataManager
           title="School Capacities"
           subtitle="Assign a numerical capacity to each category."
-          endpoint="/api/superadmin/school-capacities/"
+          endpoint="/api/school-capacities/"
           listKey="capacities"
           itemLabel="capacity"
           fields={SCHOOL_CAPACITY_FIELDS}
