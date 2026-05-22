@@ -285,6 +285,52 @@
   flex-shrink: 0;
 }
 
+/* ---- Roll Out button (inline in term rows / year row) ---- */
+.sact-btn-rollout {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 11px;
+  background: none;
+  border: 1px solid var(--sa-accent);
+  border-radius: 999px;
+  font-size: 0.69rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--sa-accent);
+  cursor: pointer;
+  font-family: var(--sa-font);
+  flex-shrink: 0;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, opacity 0.15s;
+}
+
+.sact-btn-rollout:hover:not(:disabled) {
+  background: var(--sa-accent);
+  color: #fff;
+}
+
+.sact-btn-rollout:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ---- Year rollout row ---- */
+.sact-year-rollout-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+/* ---- Success banner variant ---- */
+.sact-banner--success {
+  background: var(--sa-green-dim);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.sact-banner--success .sact-banner-icon { color: var(--sa-green); }
+
 /* ---- Name preview pill ---- */
 .sact-preview-row {
   display: flex;

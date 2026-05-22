@@ -87,3 +87,4 @@ public/stitch_ek_sms_parent_dashboard/
 
 # ── package-lock.json (noisy in collaborative repo) ───────────────
 package-lock.json
+.vercel
