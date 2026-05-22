@@ -209,6 +209,8 @@ function getTitle(page, school) {
     'school-type':         'School Type',
     'syllabus-type':       'Syllabus Type',
     'class-subtype':       'Class Subtype',
+    'account-teachers':    'Teachers',
+    'account-students':    'Students',
     'grade-integrity':     'Grade Integrity',
     'grades-accumulation': 'Grades Accumulation',
     test:                  'Test',
@@ -455,6 +457,10 @@ export default function Dashboard({ onNavigate }) {
     { key: 'school-type',         label: 'School Type',       icon: <IcGen />, badge: 0, section: 'Academics' },
     { key: 'syllabus-type',       label: 'Syllabus Type',     icon: <IcGen />, badge: 0, section: 'Academics' },
     { key: 'class-subtype',       label: 'Class Subtype',     icon: <IcGen />, badge: 0, section: 'Academics' },
+
+    /* Accounts (under Academics) */
+    { key: 'account-teachers',  label: 'Teachers', icon: <IcGen />, badge: 0, section: 'Academics' },
+    { key: 'account-students',  label: 'Students', icon: <IcGen />, badge: 0, section: 'Academics' },
 
     /* Grades */
     { key: 'grade-integrity',     label: 'Grade Integrity',    icon: <IcGen />, badge: 0, section: 'Grades' },
