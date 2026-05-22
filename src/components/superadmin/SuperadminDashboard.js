@@ -28,9 +28,14 @@ import SAUsers           from './SAUsers';
 import SANotifications, { INITIAL_UNREAD_COUNT } from './SANotifications';
 import SAProfile         from './SAProfile';
 import SAChangeAlerts    from './SAChangeAlerts';
-import SACreateTerm      from './SACreateTerm';
-import SARefDataManager  from './SARefDataManager';
-import SASchoolCapacity  from './SASchoolCapacity';
+import SACreateTerm       from './SACreateTerm';
+import SARefDataManager   from './SARefDataManager';
+import SASchoolCapacity   from './SASchoolCapacity';
+import SAPrincipal        from './SAPrincipal';
+import SABursar           from './SABursar';
+import SATeachers         from './SATeachers';
+import SAStudents         from './SAStudents';
+import SAParents          from './SAParents';
 
 
 
@@ -922,33 +927,17 @@ export default function Dashboard({ onNavigate }) {
             />
           )}
 
-          {activePage === 'principal' && (
-            <SARefDataManager
-              title="Principals"
-              subtitle="Principal designations or titles available for assignment to schools."
-              endpoint="/api/principals/"
-              listKey="principals"
-              itemLabel="principal"
-              fields={[
-                { key: 'name', label: 'Name', type: 'text', required: true, placeholder: 'e.g. Head Principal' },
-              ]}
-            />
-          )}
+          {activePage === 'principal' && <SAPrincipal />}
 
-          {activePage === 'bursar' && (
-            <SARefDataManager
-              title="Bursars"
-              subtitle="Bursar designations or titles available for assignment to schools."
-              endpoint="/api/bursars/"
-              listKey="bursars"
-              itemLabel="bursar"
-              fields={[
-                { key: 'name', label: 'Name', type: 'text', required: true, placeholder: 'e.g. Senior Bursar' },
-              ]}
-            />
-          )}
+          {activePage === 'bursar' && <SABursar />}
 
-          {!['overview','applications','review','app-history','version-compare','rejected','rejection-audit','grade-report','grade-requests','grade-audit','security-logs','forensics','alert-broadcast','change-alerts','system-health','schools','analytics','benchmarks','onboarding','governance','users','notifications','settings','profile','academic-terms','academic-year','institution-type','school-capacity','countries','regions','cities','school-type','syllabus-type','class-subtype','principal','bursar'].includes(activePage) && (
+          {activePage === 'account-teachers' && <SATeachers />}
+
+          {activePage === 'account-students' && <SAStudents />}
+
+          {activePage === 'account-parents' && <SAParents />}
+
+          {!['overview','applications','review','app-history','version-compare','rejected','rejection-audit','grade-report','grade-requests','grade-audit','security-logs','forensics','alert-broadcast','change-alerts','system-health','schools','analytics','benchmarks','onboarding','governance','users','notifications','settings','profile','academic-terms','academic-year','institution-type','school-capacity','countries','regions','cities','school-type','syllabus-type','class-subtype','principal','bursar','account-teachers','account-students','account-parents'].includes(activePage) && (
             <StubPage title={getTitle(activePage, selectedSchool)} />
           )}
 
