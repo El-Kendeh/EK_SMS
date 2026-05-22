@@ -7,6 +7,23 @@ import Register from './components/Register';
 import SuperadminDashboard from './components/superadmin/SuperadminDashboard';
 import ForceChangePassword from './components/ForceChangePassword';
 
+const PAGE_TO_PATH = {
+  home: '/',
+  landing: '/',
+  login: '/login',
+  register: '/register',
+  'force-change-password': '/force-password',
+  superadmindashboard: '/superadmin',
+};
+
+const PATH_TO_PAGE = {
+  '/': 'home',
+  '/login': 'login',
+  '/register': 'register',
+  '/force-password': 'force-change-password',
+  '/superadmin': 'superadmindashboard',
+};
+
 /* ── Impersonation banner (shown when a superadmin is viewing as a school admin) ── */
 function ImpersonationBanner() {
   const raw = sessionStorage.getItem('ek-sms-impersonating');
@@ -54,10 +71,26 @@ function ImpersonationBanner() {
 
 
 function App() {
-  const [currentPage, setCurrentPage] = useState('home');
+  const [currentPage, setCurrentPage] = useState(() => PATH_TO_PAGE[window.location.pathname] || 'home');
   const [isLoading, setIsLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
   const [fetchError, setFetchError] = useState(null);
+
+  useEffect(() => {
+    const path = PAGE_TO_PATH[currentPage] || '/';
+    if (window.location.pathname !== path) {
+      window.history.pushState(null, '', path);
+    }
+  }, [currentPage]);
+
+  useEffect(() => {
+    const onPop = () => {
+      const page = PATH_TO_PAGE[window.location.pathname] || 'home';
+      setCurrentPage(page);
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
