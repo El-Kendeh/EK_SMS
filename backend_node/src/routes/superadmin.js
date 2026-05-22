@@ -210,6 +210,13 @@ router.put('/academic-systems/:id/', data.updateAcademicSystem);
 router.delete('/academic-systems/:id/', data.deleteAcademicSystem);
 router.patch('/academic-systems/:id/toggle/', data.toggleAcademicSystemStatus);
 
+/* Grading System CRUD */
+router.get('/grading-systems/', data.getGradingSystems);
+router.post('/grading-systems/', data.createGradingSystem);
+router.put('/grading-systems/:id/', data.updateGradingSystem);
+router.delete('/grading-systems/:id/', data.deleteGradingSystem);
+router.patch('/grading-systems/:id/toggle/', data.toggleGradingSystemStatus);
+
 /* Classes CRUD */
 router.get('/classes/', data.getSuperClasses);
 router.post('/classes/', data.createSuperClass);

@@ -20,6 +20,7 @@ const SchoolType = require('../models/SchoolType');
 const SyllabusType = require('../models/SyllabusType');
 const ClassSubtype = require('../models/ClassSubtype');
 const AcademicSystem = require('../models/AcademicSystem');
+const GradingSystem = require('../models/GradingSystem');
 const Principal = require('../models/Principal');
 const Bursar = require('../models/Bursar');
 const Student = require('../models/Student');
@@ -1738,6 +1739,51 @@ async function toggleAcademicSystemStatus(req, res) {
   } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
 }
 
+/* ---------- Grading System CRUD ---------- */
+async function getGradingSystems(req, res) {
+  try {
+    const rows = await GradingSystem.findAll({ order: [['created_at', 'DESC']] });
+    return res.json(successResponse({ gradingsystems: rows.map(r => ({ id: r.id, name: r.name, is_active: Boolean(r.is_active), created_at: r.created_at, updated_at: r.updated_at })) }));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+async function createGradingSystem(req, res) {
+  try {
+    const { name } = req.body;
+    if (!name) return res.status(400).json(errorResponse('name is required'));
+    const row = await GradingSystem.create({ name: String(name).slice(0, 150) });
+    return res.json(successResponse({ id: row.id }, 'Grading system created'));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+async function updateGradingSystem(req, res) {
+  try {
+    const row = await GradingSystem.findByPk(req.params.id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    const { name } = req.body;
+    if (name !== undefined) row.name = String(name).slice(0, 150);
+    row.updated_at = new Date();
+    await row.save();
+    return res.json(successResponse({}, 'Grading system updated'));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+async function deleteGradingSystem(req, res) {
+  try {
+    const row = await GradingSystem.findByPk(req.params.id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    await row.destroy();
+    return res.json(successResponse({}, 'Grading system deleted'));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+async function toggleGradingSystemStatus(req, res) {
+  try {
+    const row = await GradingSystem.findByPk(req.params.id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    row.is_active = !row.is_active;
+    row.updated_at = new Date();
+    await row.save();
+    return res.json(successResponse({ is_active: row.is_active }, `Status changed to ${row.is_active ? 'active' : 'inactive'}`));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+
 /* ---------- Class Assignment Functions (superadmin) ---------- */
 async function getClassStudents(req, res) {
   try {
@@ -2949,6 +2995,8 @@ module.exports = {
   toggleClassSubtypeStatus,
   /* Academic Systems */
   getAcademicSystems, createAcademicSystem, updateAcademicSystem, deleteAcademicSystem, toggleAcademicSystemStatus,
+  /* Grading Systems */
+  getGradingSystems, createGradingSystem, updateGradingSystem, deleteGradingSystem, toggleGradingSystemStatus,
   /* Classes */
   getSuperClasses, createSuperClass, updateSuperClass, deleteSuperClass, toggleSuperClassStatus,
   /* Subjects */

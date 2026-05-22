@@ -158,13 +158,6 @@ const STEPS = [
   { key: 'review',   label: 'Review' },
 ];
 
-const GRADING_SYSTEMS = [
-  { value: 'percentage', label: 'Percentage (0–100%)' },
-  { value: 'letter',     label: 'Letter Grades (A–F)' },
-  { value: 'gpa',        label: 'GPA Scale (0–4.0)' },
-  { value: 'custom',     label: 'Custom System' },
-];
-
 const LANGUAGES = [
   'English', 'French', 'Arabic', 'Spanish', 'Portuguese',
   'Swahili', 'Hausa', 'Mandarin', 'Hindi', 'Other',
@@ -832,6 +825,7 @@ function Register({ onNavigate }) {
   const [institutionTypes, setInstitutionTypes] = useState([]);
   const [countries, setCountries]               = useState([]);
   const [academicSystems, setAcademicSystems]   = useState([]);
+  const [gradingSystems, setGradingSystems]     = useState([]);
 
   const set    = (field) => (e) => setForm((p) => ({ ...p, [field]: e.target.value }));
   const setChk = (field) => (e) => setForm((p) => ({ ...p, [field]: e.target.checked }));
@@ -887,17 +881,19 @@ function Register({ onNavigate }) {
   useEffect(() => {
     const fetchRefData = async () => {
       try {
-        const [instRes, countriesRes, acadRes] = await Promise.all([
+        const [instRes, countriesRes, acadRes, gradRes] = await Promise.all([
           ApiClient.get('/api/institution-types/'),
           ApiClient.get('/api/countries/'),
           ApiClient.get('/api/academic-systems/'),
+          ApiClient.get('/api/grading-systems/'),
         ]);
-        if (instRes.success) setInstitutionTypes(instRes.data.map((i) => i.name));
+        if (instRes.success) setInstitutionTypes((instRes.types || []).filter(t => t.is_active).map((i) => i.name));
         if (countriesRes.success) {
-          const names = countriesRes.data.map((c) => c.name);
+          const names = (countriesRes.countries || []).filter(c => c.is_active).map((c) => c.name);
           setCountries(names);
         }
-        if (acadRes.success) setAcademicSystems(acadRes.data.map((s) => ({ value: s.name, label: s.name })));
+        if (acadRes.success) setAcademicSystems((acadRes.academicsystems || []).filter(s => s.is_active).map((s) => ({ value: s.name, label: s.name })));
+        if (gradRes.success) setGradingSystems((gradRes.gradingsystems || []).filter(g => g.is_active).map((g) => ({ value: g.name, label: g.name })));
       } catch (e) {
         console.error('Failed to fetch reference data for registration:', e);
       }
@@ -1568,7 +1564,7 @@ function Register({ onNavigate }) {
             <Field id="gradingSystem" label="Grading System">
               <select id="gradingSystem" className="reg-select"
                 value={form.gradingSystem} onChange={set('gradingSystem')}>
-                {GRADING_SYSTEMS.map((g) => <option key={g.value} value={g.value}>{g.label}</option>)}
+                {gradingSystems.map((g) => <option key={g.value} value={g.value}>{g.label}</option>)}
               </select>
             </Field>
             <Field id="language" label="Primary Language of Instruction">
@@ -1808,7 +1804,7 @@ function Register({ onNavigate }) {
             <ReviewSection title="School Settings" icon={<SettingsIcon />}>
               <ReviewRow label="Capacity"       value={`${form.capacity} students`} />
               <ReviewRow label="Academic System" value={academicSystems.find(s => s.value === form.academicSystem)?.label} />
-              <ReviewRow label="Grading"        value={GRADING_SYSTEMS.find(g => g.value === form.gradingSystem)?.label} />
+              <ReviewRow label="Grading"        value={gradingSystems.find(g => g.value === form.gradingSystem)?.label} />
               <ReviewRow label="Language"       value={form.language} />
             </ReviewSection>
 
