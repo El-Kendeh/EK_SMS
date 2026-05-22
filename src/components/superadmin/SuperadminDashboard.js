@@ -211,6 +211,7 @@ function getTitle(page, school) {
     'class-subtype':       'Class Subtype',
     'account-teachers':    'Teachers',
     'account-students':    'Students',
+    'account-parents':     'Parent',
     'grade-integrity':     'Grade Integrity',
     'grades-accumulation': 'Grades Accumulation',
     test:                  'Test',
@@ -461,6 +462,7 @@ export default function Dashboard({ onNavigate }) {
     /* Accounts (under Academics) */
     { key: 'account-teachers',  label: 'Teachers', icon: <IcGen />, badge: 0, section: 'Academics' },
     { key: 'account-students',  label: 'Students', icon: <IcGen />, badge: 0, section: 'Academics' },
+    { key: 'account-parents',   label: 'Parent',   icon: <IcGen />, badge: 0, section: 'Academics' },
 
     /* Grades */
     { key: 'grade-integrity',     label: 'Grade Integrity',    icon: <IcGen />, badge: 0, section: 'Grades' },
