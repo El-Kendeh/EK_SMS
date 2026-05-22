@@ -116,4 +116,39 @@ router.put('/school-capacities/:id/', data.updateSchoolCapacity);
 router.delete('/school-capacities/:id/', data.deleteSchoolCapacity);
 router.patch('/school-capacities/:id/toggle/', data.toggleSchoolCapacityStatus);
 
+/* Countries CRUD */
+router.get('/countries/', data.getCountries);
+router.post('/countries/', data.createCountry);
+router.put('/countries/:id/', data.updateCountry);
+router.delete('/countries/:id/', data.deleteCountry);
+router.patch('/countries/:id/toggle/', data.toggleCountryStatus);
+
+/* Regions CRUD */
+router.get('/regions/', data.getRegions);
+router.post('/regions/', data.createRegion);
+router.put('/regions/:id/', data.updateRegion);
+router.delete('/regions/:id/', data.deleteRegion);
+router.patch('/regions/:id/toggle/', data.toggleRegionStatus);
+
+/* Cities CRUD */
+router.get('/cities/', data.getCities);
+router.post('/cities/', data.createCity);
+router.put('/cities/:id/', data.updateCity);
+router.delete('/cities/:id/', data.deleteCity);
+router.patch('/cities/:id/toggle/', data.toggleCityStatus);
+
+/* School Types CRUD */
+router.get('/school-types/', data.getSchoolTypes);
+router.post('/school-types/', data.createSchoolType);
+router.put('/school-types/:id/', data.updateSchoolType);
+router.delete('/school-types/:id/', data.deleteSchoolType);
+router.patch('/school-types/:id/toggle/', data.toggleSchoolTypeStatus);
+
+/* Syllabus Types CRUD */
+router.get('/syllabus-types/', data.getSyllabusTypes);
+router.post('/syllabus-types/', data.createSyllabusType);
+router.put('/syllabus-types/:id/', data.updateSyllabusType);
+router.delete('/syllabus-types/:id/', data.deleteSyllabusType);
+router.patch('/syllabus-types/:id/toggle/', data.toggleSyllabusTypeStatus);
+
 module.exports = router;

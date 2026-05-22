@@ -13,6 +13,11 @@ const SystemTerm = require('../models/SystemTerm');
 const InstitutionType = require('../models/InstitutionType');
 const CapacityCategory = require('../models/CapacityCategory');
 const SchoolCapacity = require('../models/SchoolCapacity');
+const Country = require('../models/Country');
+const Region = require('../models/Region');
+const City = require('../models/City');
+const SchoolType = require('../models/SchoolType');
+const SyllabusType = require('../models/SyllabusType');
 const { appendSecurityAuditLog } = require('../utils/auditLog');
 const { requireRoleId, mapInviteLabelToCode } = require('../utils/roleIds');
 
@@ -1120,6 +1125,394 @@ async function toggleSchoolCapacityStatus(req, res) {
   }
 }
 
+/* ---------- Countries CRUD ---------- */
+async function getCountries(req, res) {
+  try {
+    const rows = await Country.findAll({ order: [['created_at', 'DESC']] });
+    const countries = rows.map(r => ({ id: r.id, name: r.name, is_active: Boolean(r.is_active), created_at: r.created_at, updated_at: r.updated_at }));
+    return res.json(successResponse({ countries }));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function createCountry(req, res) {
+  try {
+    const { name } = req.body;
+    if (!name) return res.status(400).json(errorResponse('Name is required'));
+    const row = await Country.create({ name: String(name).slice(0, 100) });
+    return res.json(successResponse({ id: row.id }, 'Country created'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function updateCountry(req, res) {
+  try {
+    const { id } = req.params;
+    const { name } = req.body;
+    const row = await Country.findByPk(id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    if (name !== undefined) row.name = String(name).slice(0, 100);
+    row.updated_at = new Date();
+    await row.save();
+    return res.json(successResponse({}, 'Country updated'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function deleteCountry(req, res) {
+  try {
+    const { id } = req.params;
+    const row = await Country.findByPk(id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    await row.destroy();
+    return res.json(successResponse({}, 'Country deleted'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function toggleCountryStatus(req, res) {
+  try {
+    const { id } = req.params;
+    const row = await Country.findByPk(id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    row.is_active = !row.is_active;
+    row.updated_at = new Date();
+    await row.save();
+    return res.json(successResponse({ is_active: row.is_active }, `Status changed to ${row.is_active ? 'active' : 'inactive'}`));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+/* ---------- Regions CRUD ---------- */
+async function getRegions(req, res) {
+  try {
+    const { country_id } = req.query;
+    const where = {};
+    if (country_id) where.country_id = country_id;
+    const rows = await Region.findAll({ where, order: [['created_at', 'DESC']] });
+    const regions = await Promise.all(rows.map(async r => {
+      let countryName = null;
+      try {
+        const c = await Country.findByPk(r.country_id);
+        if (c) countryName = c.name;
+      } catch {}
+      return { id: r.id, country_id: r.country_id, country_name: countryName, name: r.name, is_active: Boolean(r.is_active), created_at: r.created_at, updated_at: r.updated_at };
+    }));
+    return res.json(successResponse({ regions }));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function createRegion(req, res) {
+  try {
+    const { country_id, name } = req.body;
+    if (!country_id || !name) return res.status(400).json(errorResponse('country_id and name are required'));
+    const country = await Country.findByPk(country_id);
+    if (!country) return res.status(400).json(errorResponse('Country not found'));
+    const row = await Region.create({ country_id, name: String(name).slice(0, 100) });
+    return res.json(successResponse({ id: row.id }, 'Region created'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function updateRegion(req, res) {
+  try {
+    const { id } = req.params;
+    const { country_id, name } = req.body;
+    const row = await Region.findByPk(id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    if (country_id !== undefined) {
+      const country = await Country.findByPk(country_id);
+      if (!country) return res.status(400).json(errorResponse('Country not found'));
+      row.country_id = country_id;
+    }
+    if (name !== undefined) row.name = String(name).slice(0, 100);
+    row.updated_at = new Date();
+    await row.save();
+    return res.json(successResponse({}, 'Region updated'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function deleteRegion(req, res) {
+  try {
+    const { id } = req.params;
+    const row = await Region.findByPk(id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    await row.destroy();
+    return res.json(successResponse({}, 'Region deleted'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function toggleRegionStatus(req, res) {
+  try {
+    const { id } = req.params;
+    const row = await Region.findByPk(id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    row.is_active = !row.is_active;
+    row.updated_at = new Date();
+    await row.save();
+    return res.json(successResponse({ is_active: row.is_active }, `Status changed to ${row.is_active ? 'active' : 'inactive'}`));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+/* ---------- Cities CRUD ---------- */
+async function getCities(req, res) {
+  try {
+    const { country_id } = req.query;
+    const where = {};
+    if (country_id) where.country_id = country_id;
+    const rows = await City.findAll({ where, order: [['created_at', 'DESC']] });
+    const cities = await Promise.all(rows.map(async r => {
+      let countryName = null, regionName = null;
+      try {
+        const c = await Country.findByPk(r.country_id);
+        if (c) countryName = c.name;
+      } catch {}
+      try {
+        const reg = await Region.findByPk(r.region_id);
+        if (reg) regionName = reg.name;
+      } catch {}
+      return { id: r.id, country_id: r.country_id, country_name: countryName, region_id: r.region_id, region_name: regionName, name: r.name, is_active: Boolean(r.is_active), created_at: r.created_at, updated_at: r.updated_at };
+    }));
+    return res.json(successResponse({ cities }));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function createCity(req, res) {
+  try {
+    const { country_id, region_id, name } = req.body;
+    if (!country_id || !region_id || !name) return res.status(400).json(errorResponse('country_id, region_id and name are required'));
+    const country = await Country.findByPk(country_id);
+    if (!country) return res.status(400).json(errorResponse('Country not found'));
+    const region = await Region.findByPk(region_id);
+    if (!region) return res.status(400).json(errorResponse('Region not found'));
+    if (Number(region.country_id) !== Number(country_id)) return res.status(400).json(errorResponse('Region does not belong to selected country'));
+    const row = await City.create({ country_id, region_id, name: String(name).slice(0, 100) });
+    return res.json(successResponse({ id: row.id }, 'City created'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function updateCity(req, res) {
+  try {
+    const { id } = req.params;
+    const { country_id, region_id, name } = req.body;
+    const row = await City.findByPk(id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    if (country_id !== undefined) {
+      const country = await Country.findByPk(country_id);
+      if (!country) return res.status(400).json(errorResponse('Country not found'));
+      row.country_id = country_id;
+    }
+    if (region_id !== undefined) {
+      const region = await Region.findByPk(region_id);
+      if (!region) return res.status(400).json(errorResponse('Region not found'));
+      const cid = country_id !== undefined ? country_id : row.country_id;
+      if (Number(region.country_id) !== Number(cid)) return res.status(400).json(errorResponse('Region does not belong to selected country'));
+      row.region_id = region_id;
+    }
+    if (name !== undefined) row.name = String(name).slice(0, 100);
+    row.updated_at = new Date();
+    await row.save();
+    return res.json(successResponse({}, 'City updated'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function deleteCity(req, res) {
+  try {
+    const { id } = req.params;
+    const row = await City.findByPk(id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    await row.destroy();
+    return res.json(successResponse({}, 'City deleted'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function toggleCityStatus(req, res) {
+  try {
+    const { id } = req.params;
+    const row = await City.findByPk(id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    row.is_active = !row.is_active;
+    row.updated_at = new Date();
+    await row.save();
+    return res.json(successResponse({ is_active: row.is_active }, `Status changed to ${row.is_active ? 'active' : 'inactive'}`));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+/* ---------- School Types CRUD ---------- */
+async function getSchoolTypes(req, res) {
+  try {
+    const rows = await SchoolType.findAll({ order: [['created_at', 'DESC']] });
+    const schooltypes = rows.map(r => ({ id: r.id, name: r.name, is_active: Boolean(r.is_active), created_at: r.created_at, updated_at: r.updated_at }));
+    return res.json(successResponse({ schooltypes }));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function createSchoolType(req, res) {
+  try {
+    const { name } = req.body;
+    if (!name) return res.status(400).json(errorResponse('name is required'));
+    const row = await SchoolType.create({ name: String(name).slice(0, 100) });
+    return res.json(successResponse({ id: row.id }, 'School type created'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function updateSchoolType(req, res) {
+  try {
+    const { id } = req.params;
+    const { name } = req.body;
+    const row = await SchoolType.findByPk(id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    if (name !== undefined) row.name = String(name).slice(0, 100);
+    row.updated_at = new Date();
+    await row.save();
+    return res.json(successResponse({}, 'School type updated'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function deleteSchoolType(req, res) {
+  try {
+    const { id } = req.params;
+    const row = await SchoolType.findByPk(id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    await row.destroy();
+    return res.json(successResponse({}, 'School type deleted'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function toggleSchoolTypeStatus(req, res) {
+  try {
+    const { id } = req.params;
+    const row = await SchoolType.findByPk(id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    row.is_active = !row.is_active;
+    row.updated_at = new Date();
+    await row.save();
+    return res.json(successResponse({ is_active: row.is_active }, `Status changed to ${row.is_active ? 'active' : 'inactive'}`));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+/* ---------- Syllabus Types CRUD ---------- */
+async function getSyllabusTypes(req, res) {
+  try {
+    const rows = await SyllabusType.findAll({ order: [['created_at', 'DESC']] });
+    const syllabustypes = rows.map(r => ({ id: r.id, name: r.name, is_active: Boolean(r.is_active), created_at: r.created_at, updated_at: r.updated_at }));
+    return res.json(successResponse({ syllabustypes }));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function createSyllabusType(req, res) {
+  try {
+    const { name } = req.body;
+    if (!name) return res.status(400).json(errorResponse('name is required'));
+    const row = await SyllabusType.create({ name: String(name).slice(0, 100) });
+    return res.json(successResponse({ id: row.id }, 'Syllabus type created'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function updateSyllabusType(req, res) {
+  try {
+    const { id } = req.params;
+    const { name } = req.body;
+    const row = await SyllabusType.findByPk(id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    if (name !== undefined) row.name = String(name).slice(0, 100);
+    row.updated_at = new Date();
+    await row.save();
+    return res.json(successResponse({}, 'Syllabus type updated'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function deleteSyllabusType(req, res) {
+  try {
+    const { id } = req.params;
+    const row = await SyllabusType.findByPk(id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    await row.destroy();
+    return res.json(successResponse({}, 'Syllabus type deleted'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function toggleSyllabusTypeStatus(req, res) {
+  try {
+    const { id } = req.params;
+    const row = await SyllabusType.findByPk(id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    row.is_active = !row.is_active;
+    row.updated_at = new Date();
+    await row.save();
+    return res.json(successResponse({ is_active: row.is_active }, `Status changed to ${row.is_active ? 'active' : 'inactive'}`));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
 module.exports = {
   getSecurityLogs,
   getSecurityCounters,
@@ -1172,4 +1565,29 @@ module.exports = {
   updateSchoolCapacity,
   deleteSchoolCapacity,
   toggleSchoolCapacityStatus,
+  getCountries,
+  createCountry,
+  updateCountry,
+  deleteCountry,
+  toggleCountryStatus,
+  getRegions,
+  createRegion,
+  updateRegion,
+  deleteRegion,
+  toggleRegionStatus,
+  getCities,
+  createCity,
+  updateCity,
+  deleteCity,
+  toggleCityStatus,
+  getSchoolTypes,
+  createSchoolType,
+  updateSchoolType,
+  deleteSchoolType,
+  toggleSchoolTypeStatus,
+  getSyllabusTypes,
+  createSyllabusType,
+  updateSyllabusType,
+  deleteSyllabusType,
+  toggleSyllabusTypeStatus,
 };

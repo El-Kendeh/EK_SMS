@@ -514,3 +514,54 @@ CREATE TABLE IF NOT EXISTS `pruh_system_institutiontype` (
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
     `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 36. pruh_system_country
+CREATE TABLE IF NOT EXISTS `pruh_system_country` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `name` VARCHAR(100) NOT NULL,
+    `is_active` TINYINT(1) DEFAULT 0,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 37. pruh_system_region
+CREATE TABLE IF NOT EXISTS `pruh_system_region` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `country_id` BIGINT NOT NULL,
+    `name` VARCHAR(100) NOT NULL,
+    `is_active` TINYINT(1) DEFAULT 0,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX `idx_region_country` (`country_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 38. pruh_system_city
+CREATE TABLE IF NOT EXISTS `pruh_system_city` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `country_id` BIGINT NOT NULL,
+    `region_id` BIGINT NOT NULL,
+    `name` VARCHAR(100) NOT NULL,
+    `is_active` TINYINT(1) DEFAULT 0,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX `idx_city_country` (`country_id`),
+    INDEX `idx_city_region` (`region_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 39. pruh_system_schooltype
+CREATE TABLE IF NOT EXISTS `pruh_system_schooltype` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `name` VARCHAR(100) NOT NULL,
+    `is_active` TINYINT(1) DEFAULT 0,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 40. pruh_system_syllabustype
+CREATE TABLE IF NOT EXISTS `pruh_system_syllabustype` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `name` VARCHAR(100) NOT NULL,
+    `is_active` TINYINT(1) DEFAULT 0,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

@@ -481,6 +481,59 @@ async function migrate() {
         \`created_at\` DATETIME DEFAULT CURRENT_TIMESTAMP,
         \`updated_at\` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+    },
+    {
+      name: 'pruh_system_country',
+      sql: `CREATE TABLE IF NOT EXISTS \`pruh_system_country\` (
+        \`id\` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        \`name\` VARCHAR(100) NOT NULL,
+        \`is_active\` TINYINT(1) DEFAULT 0,
+        \`created_at\` DATETIME DEFAULT CURRENT_TIMESTAMP,
+        \`updated_at\` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+    },
+    {
+      name: 'pruh_system_region',
+      sql: `CREATE TABLE IF NOT EXISTS \`pruh_system_region\` (
+        \`id\` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        \`country_id\` BIGINT NOT NULL,
+        \`name\` VARCHAR(100) NOT NULL,
+        \`is_active\` TINYINT(1) DEFAULT 0,
+        \`created_at\` DATETIME DEFAULT CURRENT_TIMESTAMP,
+        \`updated_at\` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+    },
+    {
+      name: 'pruh_system_city',
+      sql: `CREATE TABLE IF NOT EXISTS \`pruh_system_city\` (
+        \`id\` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        \`country_id\` BIGINT NOT NULL,
+        \`region_id\` BIGINT NOT NULL,
+        \`name\` VARCHAR(100) NOT NULL,
+        \`is_active\` TINYINT(1) DEFAULT 0,
+        \`created_at\` DATETIME DEFAULT CURRENT_TIMESTAMP,
+        \`updated_at\` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+    },
+    {
+      name: 'pruh_system_schooltype',
+      sql: `CREATE TABLE IF NOT EXISTS \`pruh_system_schooltype\` (
+        \`id\` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        \`name\` VARCHAR(100) NOT NULL,
+        \`is_active\` TINYINT(1) DEFAULT 0,
+        \`created_at\` DATETIME DEFAULT CURRENT_TIMESTAMP,
+        \`updated_at\` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+    },
+    {
+      name: 'pruh_system_syllabustype',
+      sql: `CREATE TABLE IF NOT EXISTS \`pruh_system_syllabustype\` (
+        \`id\` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        \`name\` VARCHAR(100) NOT NULL,
+        \`is_active\` TINYINT(1) DEFAULT 0,
+        \`created_at\` DATETIME DEFAULT CURRENT_TIMESTAMP,
+        \`updated_at\` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
     }
   ];
 
@@ -538,6 +591,9 @@ async function migrate() {
       ['idx_ss_teacher', 'pruh_core_spotlight_student', 'teacher_id'],
       ['idx_ss_student', 'pruh_core_spotlight_student', 'student_id'],
       ['idx_sc_cat', 'pruh_system_schoolcapacity', 'capacity_category_id'],
+      ['idx_region_country', 'pruh_system_region', 'country_id'],
+      ['idx_city_country', 'pruh_system_city', 'country_id'],
+      ['idx_city_region', 'pruh_system_city', 'region_id'],
     ];
 
     for (const [name, table, column] of indexes) {
@@ -549,7 +605,7 @@ async function migrate() {
       }
     }
 
-    console.log('\n✅ Migration completed successfully! 35 tables + 47 indexes created.');
+    console.log(`\n✅ Migration completed successfully! 39 tables + ${indexes.length} indexes created.`);
     process.exit(0);
   } catch (err) {
     console.error('❌ Migration failed:', err.message);

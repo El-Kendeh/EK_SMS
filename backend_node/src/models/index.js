@@ -68,6 +68,11 @@ require('./SystemTerm');
 require('./InstitutionType');
 require('./CapacityCategory');
 require('./SchoolCapacity');
+require('./Country');
+require('./Region');
+require('./City');
+require('./SchoolType');
+require('./SyllabusType');
 
 // Load all cross-model associations
 require('./associations');
