@@ -591,6 +591,82 @@ async function migrate() {
         \`relationship\` VARCHAR(50) NULL,
         PRIMARY KEY (\`student_id\`, \`parent_id\`)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+    },
+    {
+      name: 'pruh_core_bursar',
+      sql: `CREATE TABLE IF NOT EXISTS \`pruh_core_bursar\` (
+        \`id\` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        \`school_id\` BIGINT NULL,
+        \`user_id\` BIGINT NOT NULL UNIQUE,
+        \`employee_id\` VARCHAR(50) NOT NULL,
+        \`date_of_birth\` DATE NULL,
+        \`gender\` VARCHAR(10) NULL,
+        \`marital_status\` VARCHAR(20) NULL,
+        \`nationality\` VARCHAR(100) NULL,
+        \`state_of_origin\` VARCHAR(100) NULL,
+        \`lga\` VARCHAR(100) NULL,
+        \`religion\` VARCHAR(100) NULL,
+        \`address\` TEXT NULL,
+        \`city\` VARCHAR(100) NULL,
+        \`phone_number\` VARCHAR(20) NULL,
+        \`qualification\` VARCHAR(255) NULL,
+        \`years_experience\` INT DEFAULT 0,
+        \`hire_date\` DATE NULL,
+        \`contract_type\` VARCHAR(50) NULL,
+        \`salary_grade\` VARCHAR(50) NULL,
+        \`national_id_number\` VARCHAR(50) NULL,
+        \`bank_name\` VARCHAR(100) NULL,
+        \`bank_account_number\` VARCHAR(30) NULL,
+        \`bank_account_name\` VARCHAR(100) NULL,
+        \`emergency_contact_name\` VARCHAR(100) NULL,
+        \`emergency_contact_phone\` VARCHAR(20) NULL,
+        \`emergency_contact_relationship\` VARCHAR(50) NULL,
+        \`profile_picture\` VARCHAR(255) NULL,
+        \`bio\` TEXT NULL,
+        \`must_change_password\` TINYINT(1) DEFAULT 0,
+        \`status\` VARCHAR(20) DEFAULT 'active',
+        \`is_active\` TINYINT(1) DEFAULT 1,
+        \`created_at\` DATETIME DEFAULT CURRENT_TIMESTAMP,
+        \`updated_at\` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+    },
+    {
+      name: 'pruh_core_principal',
+      sql: `CREATE TABLE IF NOT EXISTS \`pruh_core_principal\` (
+        \`id\` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        \`school_id\` BIGINT NULL,
+        \`user_id\` BIGINT NOT NULL UNIQUE,
+        \`employee_id\` VARCHAR(50) NOT NULL,
+        \`date_of_birth\` DATE NULL,
+        \`gender\` VARCHAR(10) NULL,
+        \`marital_status\` VARCHAR(20) NULL,
+        \`nationality\` VARCHAR(100) NULL,
+        \`state_of_origin\` VARCHAR(100) NULL,
+        \`lga\` VARCHAR(100) NULL,
+        \`religion\` VARCHAR(100) NULL,
+        \`address\` TEXT NULL,
+        \`city\` VARCHAR(100) NULL,
+        \`phone_number\` VARCHAR(20) NULL,
+        \`qualification\` VARCHAR(255) NULL,
+        \`years_experience\` INT DEFAULT 0,
+        \`hire_date\` DATE NULL,
+        \`contract_type\` VARCHAR(50) NULL,
+        \`salary_grade\` VARCHAR(50) NULL,
+        \`national_id_number\` VARCHAR(50) NULL,
+        \`bank_name\` VARCHAR(100) NULL,
+        \`bank_account_number\` VARCHAR(30) NULL,
+        \`bank_account_name\` VARCHAR(100) NULL,
+        \`emergency_contact_name\` VARCHAR(100) NULL,
+        \`emergency_contact_phone\` VARCHAR(20) NULL,
+        \`emergency_contact_relationship\` VARCHAR(50) NULL,
+        \`profile_picture\` VARCHAR(255) NULL,
+        \`bio\` TEXT NULL,
+        \`must_change_password\` TINYINT(1) DEFAULT 0,
+        \`status\` VARCHAR(20) DEFAULT 'active',
+        \`is_active\` TINYINT(1) DEFAULT 1,
+        \`created_at\` DATETIME DEFAULT CURRENT_TIMESTAMP,
+        \`updated_at\` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
     }
   ];
 
@@ -653,6 +729,10 @@ async function migrate() {
       ['idx_city_region', 'pruh_system_city', 'region_id'],
       ['idx_parent_user', 'pruh_core_parent', 'user_id'],
       ['idx_sp_parent', 'pruh_core_student_parent', 'parent_id'],
+      ['idx_bursar_user', 'pruh_core_bursar', 'user_id'],
+      ['idx_bursar_school', 'pruh_core_bursar', 'school_id'],
+      ['idx_principal_user', 'pruh_core_principal', 'user_id'],
+      ['idx_principal_school', 'pruh_core_principal', 'school_id'],
     ];
 
     for (const [name, table, column] of indexes) {
@@ -664,7 +744,7 @@ async function migrate() {
       }
     }
 
-    console.log(`\n✅ Migration completed successfully! 45 tables + ${indexes.length} indexes created.`);
+    console.log(`\n✅ Migration completed successfully! 47 tables + ${indexes.length} indexes created.`);
     process.exit(0);
   } catch (err) {
     console.error('❌ Migration failed:', err.message);

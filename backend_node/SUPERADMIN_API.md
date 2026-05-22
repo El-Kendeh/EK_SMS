@@ -269,6 +269,71 @@ The `SuperadminDashboard.js` sidebar navItems use these keys. Each matches the r
 | 44 | `pruh_core_parent` | `Parent.js` | id, user_id (FK→users), first_name, last_name, email, phone, passport_photo, address, occupation, status, is_active, timestamps |
 | 45 | `pruh_core_student_parent` | `StudentParent.js` | student_id (FK→student), parent_id (FK→parent), relationship |
 
+### Teacher — Full Registration
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/teachers/` | List all teachers (`?school_id=X&status=active&page=1&limit=100`) |
+| POST | `/api/teachers/` | Create teacher + User account (multipart: `profile_picture`) |
+| PUT | `/api/teachers/:id/` | Update teacher + User (multipart: `profile_picture`) |
+| DELETE | `/api/teachers/:id/` | Delete teacher + linked User |
+| PATCH | `/api/teachers/:id/toggle/` | Toggle `is_active` |
+| PATCH | `/api/teachers/:id/block/` | Toggle blocked/unblocked |
+
+**POST /api/teachers/ — all fields:**
+
+| Field | Type | Notes |
+|---|---|---|
+| `first_name`, `last_name` | string | **required** |
+| `employee_id` | string | **required** |
+| `email`, `username`, `password` | string | auto-generated if omitted |
+| `school_id` | number | optional |
+| **Personal** | | |
+| `date_of_birth` | date | |
+| `gender`, `marital_status` | string | |
+| `nationality`, `state_of_origin`, `lga` | string | |
+| `religion`, `address`, `city` | string | |
+| `phone_number` | string | |
+| **Professional** | | |
+| `qualification` | string | |
+| `years_experience` | number | |
+| `subjects_specialization` | text | comma-separated or list |
+| `hire_date` | date | |
+| `contract_type` | string | full-time, part-time, contract |
+| `salary_grade` | string | |
+| `is_examination_officer` | boolean | |
+| **Identification** | | |
+| `national_id_number` | string | SSN/NIN |
+| `passport_number` | string | |
+| **Bank** | | |
+| `bank_name`, `bank_account_number`, `bank_account_name` | string | |
+| **Emergency Contact** | | |
+| `emergency_contact_name`, `emergency_contact_phone` | string | |
+| `emergency_contact_relationship` | string | |
+| **Next of Kin** | | |
+| `next_of_kin_name`, `next_of_kin_phone` | string | |
+| `next_of_kin_relationship`, `next_of_kin_address` | string | |
+| **Other** | | |
+| `bio` | text | |
+| `linkedin_url` | string | |
+| `degrees` | JSON | `[{"title":"B.Ed","institution":"Uni","year":2020}]` |
+| `certifications` | JSON | same format |
+| `must_change_password` | boolean | |
+| `profile_picture` | file | multipart upload |
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1, "user_id": 2,
+    "username": "teacher.john.doe_123",
+    "password": "Teacher@123"
+  },
+  "message": "Teacher created"
+}
+```
+
 ### Auth Flow
 - Student users get `role_id` for role `student` and can log into the student dashboard
 - Parent users get `role_id` for role `parent` and can log into the parent dashboard

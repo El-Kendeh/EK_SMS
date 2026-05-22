@@ -78,6 +78,8 @@ require('./Principal');
 require('./Bursar');
 require('./Parent');
 require('./StudentParent');
+require('./CoreBursar');
+require('./CorePrincipal');
 
 // Load all cross-model associations
 require('./associations');

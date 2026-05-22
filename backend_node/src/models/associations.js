@@ -12,6 +12,8 @@ const Teacher = require('./Teacher');
 const Student = require('./Student');
 const Parent = require('./Parent');
 const StudentParent = require('./StudentParent');
+const CoreBursar = require('./CoreBursar');
+const CorePrincipal = require('./CorePrincipal');
 const Class = require('./Class');
 const Subject = require('./Subject');
 const ClassSubject = require('./ClassSubject');
@@ -398,5 +400,9 @@ Student.belongsToMany(Parent, { through: StudentParent, foreignKey: 'student_id'
 Parent.belongsToMany(Student, { through: StudentParent, foreignKey: 'parent_id', otherKey: 'student_id', as: 'students' });
 Parent.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 User.hasOne(Parent, { foreignKey: 'user_id', as: 'parentProfile' });
+CoreBursar.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+User.hasOne(CoreBursar, { foreignKey: 'user_id', as: 'bursarProfile' });
+CorePrincipal.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+User.hasOne(CorePrincipal, { foreignKey: 'user_id', as: 'principalProfile' });
 
 console.log('✅ All model associations loaded');

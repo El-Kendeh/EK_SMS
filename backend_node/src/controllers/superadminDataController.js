@@ -25,6 +25,9 @@ const Student = require('../models/Student');
 const Parent = require('../models/Parent');
 const StudentParent = require('../models/StudentParent');
 const Document = require('../models/Document');
+const Teacher = require('../models/Teacher');
+const CoreBursar = require('../models/CoreBursar');
+const CorePrincipal = require('../models/CorePrincipal');
 const { appendSecurityAuditLog } = require('../utils/auditLog');
 const { requireRoleId, mapInviteLabelToCode } = require('../utils/roleIds');
 
@@ -2090,6 +2093,433 @@ async function deleteStudentDocument(req, res) {
   } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
 }
 
+/* ---------- Teacher CRUD (superadmin) ---------- */
+async function getSuperTeachers(req, res) {
+  try {
+    const { school_id, status, page = 1, limit = 100 } = req.query;
+    const where = {};
+    if (school_id) where.school_id = school_id;
+    if (status) where.status = status;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const { rows, count } = await Teacher.findAndCountAll({
+      where, order: [['id', 'DESC']], offset, limit: parseInt(limit),
+    });
+    const teachers = await Promise.all(rows.map(async t => {
+      let user = null;
+      try { user = await User.findByPk(t.user_id); } catch {}
+      return {
+        id: t.id, school_id: t.school_id, user_id: t.user_id,
+        employee_id: t.employee_id,
+        first_name: user?.first_name || '', last_name: user?.last_name || '',
+        email: user?.email || '', username: user?.username || '',
+        date_of_birth: t.date_of_birth, gender: t.gender,
+        marital_status: t.marital_status,
+        nationality: t.nationality, state_of_origin: t.state_of_origin,
+        lga: t.lga, religion: t.religion,
+        address: t.address, city: t.city,
+        phone_number: t.phone_number,
+        qualification: t.qualification, years_experience: t.years_experience,
+        subjects_specialization: t.subjects_specialization,
+        hire_date: t.hire_date, contract_type: t.contract_type,
+        salary_grade: t.salary_grade,
+        is_examination_officer: t.is_examination_officer,
+        national_id_number: t.national_id_number,
+        passport_number: t.passport_number,
+        bank_name: t.bank_name, bank_account_number: t.bank_account_number,
+        bank_account_name: t.bank_account_name,
+        emergency_contact_name: t.emergency_contact_name,
+        emergency_contact_phone: t.emergency_contact_phone,
+        emergency_contact_relationship: t.emergency_contact_relationship,
+        next_of_kin_name: t.next_of_kin_name,
+        next_of_kin_phone: t.next_of_kin_phone,
+        next_of_kin_relationship: t.next_of_kin_relationship,
+        next_of_kin_address: t.next_of_kin_address,
+        profile_picture: t.profile_picture,
+        bio: t.bio, linkedin_url: t.linkedin_url,
+        degrees: t.degrees, certifications: t.certifications,
+        must_change_password: t.must_change_password,
+        status: t.status, is_active: t.is_active,
+        created_at: t.created_at,
+      };
+    }));
+    return res.json(successResponse({ teachers, total: count, page: parseInt(page), limit: parseInt(limit) }));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+
+async function createSuperTeacher(req, res) {
+  try {
+    const data = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    if (!data.first_name || !data.last_name) return res.status(400).json(errorResponse('first_name and last_name are required'));
+    if (!data.employee_id) return res.status(400).json(errorResponse('employee_id is required'));
+
+    const username = data.username || `teacher.${data.first_name.toLowerCase()}.${data.last_name.toLowerCase()}_${Date.now()}`;
+    const teacherPw = data.password || 'Teacher@123';
+    const hashedPassword = await bcrypt.hash(teacherPw, 10);
+    const teacherRoleId = await requireRoleId('teacher');
+    const user = await User.create({
+      username, password: hashedPassword,
+      email: data.email || null,
+      first_name: data.first_name, last_name: data.last_name,
+      is_active: true, role_id: teacherRoleId,
+    });
+
+    const picPath = req.file ? `/uploads/teachers/${req.file.filename}` : null;
+    const teacher = await Teacher.create({
+      school_id: data.school_id || null, user_id: user.id,
+      employee_id: data.employee_id,
+      date_of_birth: data.date_of_birth, gender: data.gender,
+      marital_status: data.marital_status,
+      nationality: data.nationality, state_of_origin: data.state_of_origin,
+      lga: data.lga, religion: data.religion,
+      address: data.address, city: data.city,
+      phone_number: data.phone_number,
+      qualification: data.qualification, years_experience: data.years_experience,
+      subjects_specialization: data.subjects_specialization,
+      hire_date: data.hire_date, contract_type: data.contract_type,
+      salary_grade: data.salary_grade,
+      is_examination_officer: data.is_examination_officer,
+      national_id_number: data.national_id_number,
+      passport_number: data.passport_number,
+      bank_name: data.bank_name, bank_account_number: data.bank_account_number,
+      bank_account_name: data.bank_account_name,
+      emergency_contact_name: data.emergency_contact_name,
+      emergency_contact_phone: data.emergency_contact_phone,
+      emergency_contact_relationship: data.emergency_contact_relationship,
+      next_of_kin_name: data.next_of_kin_name,
+      next_of_kin_phone: data.next_of_kin_phone,
+      next_of_kin_relationship: data.next_of_kin_relationship,
+      next_of_kin_address: data.next_of_kin_address,
+      profile_picture: picPath,
+      bio: data.bio, linkedin_url: data.linkedin_url,
+      degrees: data.degrees || [], certifications: data.certifications || [],
+      must_change_password: data.must_change_password,
+      status: 'active', is_active: true,
+    });
+
+    return res.json(successResponse({
+      id: teacher.id, user_id: user.id, username, password: teacherPw,
+    }, 'Teacher created'));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse(err.message)); }
+}
+
+async function updateSuperTeacher(req, res) {
+  try {
+    const teacher = await Teacher.findByPk(req.params.id);
+    if (!teacher) return res.status(404).json(errorResponse('Not found', 404));
+    const data = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    const user = await User.findByPk(teacher.user_id);
+    if (user) {
+      if (data.first_name) user.first_name = data.first_name;
+      if (data.last_name) user.last_name = data.last_name;
+      if (data.email) user.email = data.email;
+      if (data.password) user.password = await bcrypt.hash(data.password, 10);
+      await user.save();
+    }
+    const fields = ['employee_id','date_of_birth','gender','marital_status',
+      'nationality','state_of_origin','lga','religion','address','city',
+      'phone_number','qualification','years_experience','subjects_specialization',
+      'hire_date','contract_type','salary_grade','is_examination_officer',
+      'national_id_number','passport_number','bank_name','bank_account_number',
+      'bank_account_name','emergency_contact_name','emergency_contact_phone',
+      'emergency_contact_relationship','next_of_kin_name','next_of_kin_phone',
+      'next_of_kin_relationship','next_of_kin_address','bio','linkedin_url',
+      'degrees','certifications','must_change_password',
+    ];
+    const upd = {};
+    fields.forEach(k => { if (data[k] !== undefined) upd[k] = data[k]; });
+    if (req.file) upd.profile_picture = `/uploads/teachers/${req.file.filename}`;
+    await Teacher.update(upd, { where: { id: teacher.id } });
+    return res.json(successResponse({}, 'Teacher updated'));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse(err.message)); }
+}
+
+async function deleteSuperTeacher(req, res) {
+  try {
+    const teacher = await Teacher.findByPk(req.params.id);
+    if (!teacher) return res.status(404).json(errorResponse('Not found', 404));
+    await Teacher.destroy({ where: { id: teacher.id } });
+    await User.destroy({ where: { id: teacher.user_id } });
+    return res.json(successResponse({}, 'Teacher deleted'));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+
+async function toggleSuperTeacherStatus(req, res) {
+  try {
+    const teacher = await Teacher.findByPk(req.params.id);
+    if (!teacher) return res.status(404).json(errorResponse('Not found', 404));
+    teacher.is_active = !teacher.is_active;
+    await teacher.save();
+    return res.json(successResponse({ is_active: teacher.is_active }, `Status changed to ${teacher.is_active ? 'active' : 'inactive'}`));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+
+async function blockSuperTeacher(req, res) {
+  try {
+    const teacher = await Teacher.findByPk(req.params.id);
+    if (!teacher) return res.status(404).json(errorResponse('Not found', 404));
+    teacher.status = teacher.status === 'blocked' ? 'active' : 'blocked';
+    await teacher.save();
+    return res.json(successResponse({ status: teacher.status }, `Teacher ${teacher.status === 'blocked' ? 'blocked' : 'unblocked'}`));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+
+/* ---------- Bursar CRUD (superadmin) ---------- */
+async function getSuperBursars(req, res) {
+  try {
+    const { school_id, status, page = 1, limit = 100 } = req.query;
+    const where = {};
+    if (school_id) where.school_id = school_id;
+    if (status) where.status = status;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const { rows, count } = await CoreBursar.findAndCountAll({ where, order: [['id', 'DESC']], offset, limit: parseInt(limit) });
+    const bursars = await Promise.all(rows.map(async b => {
+      let user = null;
+      try { user = await User.findByPk(b.user_id); } catch {}
+      return {
+        id: b.id, school_id: b.school_id, user_id: b.user_id,
+        employee_id: b.employee_id,
+        first_name: user?.first_name || '', last_name: user?.last_name || '',
+        email: user?.email || '', username: user?.username || '',
+        date_of_birth: b.date_of_birth, gender: b.gender,
+        marital_status: b.marital_status,
+        nationality: b.nationality, state_of_origin: b.state_of_origin,
+        lga: b.lga, religion: b.religion, address: b.address, city: b.city,
+        phone_number: b.phone_number,
+        qualification: b.qualification, years_experience: b.years_experience,
+        hire_date: b.hire_date, contract_type: b.contract_type,
+        salary_grade: b.salary_grade,
+        national_id_number: b.national_id_number,
+        bank_name: b.bank_name, bank_account_number: b.bank_account_number,
+        bank_account_name: b.bank_account_name,
+        emergency_contact_name: b.emergency_contact_name,
+        emergency_contact_phone: b.emergency_contact_phone,
+        emergency_contact_relationship: b.emergency_contact_relationship,
+        profile_picture: b.profile_picture, bio: b.bio,
+        must_change_password: b.must_change_password,
+        status: b.status, is_active: b.is_active,
+        created_at: b.created_at,
+      };
+    }));
+    return res.json(successResponse({ bursars, total: count, page: parseInt(page), limit: parseInt(limit) }));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+
+async function createSuperBursar(req, res) {
+  try {
+    const data = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    if (!data.first_name || !data.last_name) return res.status(400).json(errorResponse('first_name and last_name are required'));
+    if (!data.employee_id) return res.status(400).json(errorResponse('employee_id is required'));
+    const username = data.username || `bursar.${data.first_name.toLowerCase()}.${data.last_name.toLowerCase()}_${Date.now()}`;
+    const pw = data.password || 'Bursar@123';
+    const hashedPassword = await bcrypt.hash(pw, 10);
+    const bursarRoleId = await requireRoleId('bursar');
+    const user = await User.create({
+      username, password: hashedPassword, email: data.email || null,
+      first_name: data.first_name, last_name: data.last_name,
+      is_active: true, role_id: bursarRoleId,
+    });
+    const picPath = req.file ? `/uploads/bursars/${req.file.filename}` : null;
+    const bursar = await CoreBursar.create({
+      school_id: data.school_id || null, user_id: user.id,
+      employee_id: data.employee_id,
+      date_of_birth: data.date_of_birth, gender: data.gender,
+      marital_status: data.marital_status,
+      nationality: data.nationality, state_of_origin: data.state_of_origin,
+      lga: data.lga, religion: data.religion, address: data.address, city: data.city,
+      phone_number: data.phone_number,
+      qualification: data.qualification, years_experience: data.years_experience,
+      hire_date: data.hire_date, contract_type: data.contract_type,
+      salary_grade: data.salary_grade,
+      national_id_number: data.national_id_number,
+      bank_name: data.bank_name, bank_account_number: data.bank_account_number,
+      bank_account_name: data.bank_account_name,
+      emergency_contact_name: data.emergency_contact_name,
+      emergency_contact_phone: data.emergency_contact_phone,
+      emergency_contact_relationship: data.emergency_contact_relationship,
+      profile_picture: picPath, bio: data.bio,
+      must_change_password: data.must_change_password,
+      status: 'active', is_active: true,
+    });
+    return res.json(successResponse({ id: bursar.id, user_id: user.id, username, password: pw }, 'Bursar created'));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse(err.message)); }
+}
+
+async function updateSuperBursar(req, res) {
+  try {
+    const bursar = await CoreBursar.findByPk(req.params.id);
+    if (!bursar) return res.status(404).json(errorResponse('Not found', 404));
+    const data = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    const user = await User.findByPk(bursar.user_id);
+    if (user) {
+      if (data.first_name) user.first_name = data.first_name;
+      if (data.last_name) user.last_name = data.last_name;
+      if (data.email) user.email = data.email;
+      if (data.password) user.password = await bcrypt.hash(data.password, 10);
+      await user.save();
+    }
+    const fields = ['employee_id','date_of_birth','gender','marital_status',
+      'nationality','state_of_origin','lga','religion','address','city',
+      'phone_number','qualification','years_experience','hire_date','contract_type',
+      'salary_grade','national_id_number','bank_name','bank_account_number',
+      'bank_account_name','emergency_contact_name','emergency_contact_phone',
+      'emergency_contact_relationship','bio','must_change_password',
+    ];
+    const upd = {};
+    fields.forEach(k => { if (data[k] !== undefined) upd[k] = data[k]; });
+    if (req.file) upd.profile_picture = `/uploads/bursars/${req.file.filename}`;
+    await CoreBursar.update(upd, { where: { id: bursar.id } });
+    return res.json(successResponse({}, 'Bursar updated'));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse(err.message)); }
+}
+
+async function deleteSuperBursar(req, res) {
+  try {
+    const bursar = await CoreBursar.findByPk(req.params.id);
+    if (!bursar) return res.status(404).json(errorResponse('Not found', 404));
+    await CoreBursar.destroy({ where: { id: bursar.id } });
+    await User.destroy({ where: { id: bursar.user_id } });
+    return res.json(successResponse({}, 'Bursar deleted'));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+
+async function toggleSuperBursarStatus(req, res) {
+  try {
+    const bursar = await CoreBursar.findByPk(req.params.id);
+    if (!bursar) return res.status(404).json(errorResponse('Not found', 404));
+    bursar.is_active = !bursar.is_active; await bursar.save();
+    return res.json(successResponse({ is_active: bursar.is_active }, `Status changed to ${bursar.is_active ? 'active' : 'inactive'}`));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+
+async function blockSuperBursar(req, res) {
+  try {
+    const bursar = await CoreBursar.findByPk(req.params.id);
+    if (!bursar) return res.status(404).json(errorResponse('Not found', 404));
+    bursar.status = bursar.status === 'blocked' ? 'active' : 'blocked'; await bursar.save();
+    return res.json(successResponse({ status: bursar.status }, `Bursar ${bursar.status === 'blocked' ? 'blocked' : 'unblocked'}`));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+
+/* ---------- Principal CRUD (superadmin) ---------- */
+async function getSuperPrincipals(req, res) {
+  try {
+    const { school_id, status, page = 1, limit = 100 } = req.query;
+    const where = {};
+    if (school_id) where.school_id = school_id;
+    if (status) where.status = status;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const { rows, count } = await CorePrincipal.findAndCountAll({ where, order: [['id', 'DESC']], offset, limit: parseInt(limit) });
+    const principals = await Promise.all(rows.map(async p => {
+      let user = null;
+      try { user = await User.findByPk(p.user_id); } catch {}
+      return {
+        id: p.id, school_id: p.school_id, user_id: p.user_id, employee_id: p.employee_id,
+        first_name: user?.first_name || '', last_name: user?.last_name || '',
+        email: user?.email || '', username: user?.username || '',
+        date_of_birth: p.date_of_birth, gender: p.gender, marital_status: p.marital_status,
+        nationality: p.nationality, state_of_origin: p.state_of_origin, lga: p.lga,
+        religion: p.religion, address: p.address, city: p.city, phone_number: p.phone_number,
+        qualification: p.qualification, years_experience: p.years_experience,
+        hire_date: p.hire_date, contract_type: p.contract_type, salary_grade: p.salary_grade,
+        national_id_number: p.national_id_number,
+        bank_name: p.bank_name, bank_account_number: p.bank_account_number, bank_account_name: p.bank_account_name,
+        emergency_contact_name: p.emergency_contact_name, emergency_contact_phone: p.emergency_contact_phone,
+        emergency_contact_relationship: p.emergency_contact_relationship,
+        profile_picture: p.profile_picture, bio: p.bio,
+        must_change_password: p.must_change_password,
+        status: p.status, is_active: p.is_active, created_at: p.created_at,
+      };
+    }));
+    return res.json(successResponse({ principals, total: count, page: parseInt(page), limit: parseInt(limit) }));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+
+async function createSuperPrincipal(req, res) {
+  try {
+    const data = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    if (!data.first_name || !data.last_name) return res.status(400).json(errorResponse('first_name and last_name are required'));
+    if (!data.employee_id) return res.status(400).json(errorResponse('employee_id is required'));
+    const username = data.username || `principal.${data.first_name.toLowerCase()}.${data.last_name.toLowerCase()}_${Date.now()}`;
+    const pw = data.password || 'Principal@123';
+    const user = await User.create({
+      username, password: await bcrypt.hash(pw, 10), email: data.email || null,
+      first_name: data.first_name, last_name: data.last_name,
+      is_active: true, role_id: await requireRoleId('principal'),
+    });
+    const picPath = req.file ? `/uploads/principals/${req.file.filename}` : null;
+    const principal = await CorePrincipal.create({
+      school_id: data.school_id || null, user_id: user.id, employee_id: data.employee_id,
+      date_of_birth: data.date_of_birth, gender: data.gender, marital_status: data.marital_status,
+      nationality: data.nationality, state_of_origin: data.state_of_origin, lga: data.lga,
+      religion: data.religion, address: data.address, city: data.city, phone_number: data.phone_number,
+      qualification: data.qualification, years_experience: data.years_experience,
+      hire_date: data.hire_date, contract_type: data.contract_type, salary_grade: data.salary_grade,
+      national_id_number: data.national_id_number,
+      bank_name: data.bank_name, bank_account_number: data.bank_account_number, bank_account_name: data.bank_account_name,
+      emergency_contact_name: data.emergency_contact_name, emergency_contact_phone: data.emergency_contact_phone,
+      emergency_contact_relationship: data.emergency_contact_relationship,
+      profile_picture: picPath, bio: data.bio, must_change_password: data.must_change_password,
+      status: 'active', is_active: true,
+    });
+    return res.json(successResponse({ id: principal.id, user_id: user.id, username, password: pw }, 'Principal created'));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse(err.message)); }
+}
+
+async function updateSuperPrincipal(req, res) {
+  try {
+    const principal = await CorePrincipal.findByPk(req.params.id);
+    if (!principal) return res.status(404).json(errorResponse('Not found', 404));
+    const data = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    const user = await User.findByPk(principal.user_id);
+    if (user) {
+      if (data.first_name) user.first_name = data.first_name;
+      if (data.last_name) user.last_name = data.last_name;
+      if (data.email) user.email = data.email;
+      if (data.password) user.password = await bcrypt.hash(data.password, 10);
+      await user.save();
+    }
+    const fields = ['employee_id','date_of_birth','gender','marital_status','nationality',
+      'state_of_origin','lga','religion','address','city','phone_number','qualification',
+      'years_experience','hire_date','contract_type','salary_grade','national_id_number',
+      'bank_name','bank_account_number','bank_account_name','emergency_contact_name',
+      'emergency_contact_phone','emergency_contact_relationship','bio','must_change_password',
+    ];
+    const upd = {};
+    fields.forEach(k => { if (data[k] !== undefined) upd[k] = data[k]; });
+    if (req.file) upd.profile_picture = `/uploads/principals/${req.file.filename}`;
+    await CorePrincipal.update(upd, { where: { id: principal.id } });
+    return res.json(successResponse({}, 'Principal updated'));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse(err.message)); }
+}
+
+async function deleteSuperPrincipal(req, res) {
+  try {
+    const principal = await CorePrincipal.findByPk(req.params.id);
+    if (!principal) return res.status(404).json(errorResponse('Not found', 404));
+    await CorePrincipal.destroy({ where: { id: principal.id } });
+    await User.destroy({ where: { id: principal.user_id } });
+    return res.json(successResponse({}, 'Principal deleted'));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+
+async function toggleSuperPrincipalStatus(req, res) {
+  try {
+    const principal = await CorePrincipal.findByPk(req.params.id);
+    if (!principal) return res.status(404).json(errorResponse('Not found', 404));
+    principal.is_active = !principal.is_active; await principal.save();
+    return res.json(successResponse({ is_active: principal.is_active }, `Status changed to ${principal.is_active ? 'active' : 'inactive'}`));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+
+async function blockSuperPrincipal(req, res) {
+  try {
+    const principal = await CorePrincipal.findByPk(req.params.id);
+    if (!principal) return res.status(404).json(errorResponse('Not found', 404));
+    principal.status = principal.status === 'blocked' ? 'active' : 'blocked'; await principal.save();
+    return res.json(successResponse({ status: principal.status }, `Principal ${principal.status === 'blocked' ? 'blocked' : 'unblocked'}`));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+
 module.exports = {
   getSecurityLogs,
   getSecurityCounters,
@@ -2184,4 +2614,13 @@ module.exports = {
   linkParentToStudent, unlinkParentFromStudent, getStudentParents,
   /* Documents */
   uploadStudentDocument, getStudentDocuments, deleteStudentDocument,
+  /* Teachers */
+  getSuperTeachers, createSuperTeacher, updateSuperTeacher, deleteSuperTeacher,
+  toggleSuperTeacherStatus, blockSuperTeacher,
+  /* Bursars */
+  getSuperBursars, createSuperBursar, updateSuperBursar, deleteSuperBursar,
+  toggleSuperBursarStatus, blockSuperBursar,
+  /* Principals */
+  getSuperPrincipals, createSuperPrincipal, updateSuperPrincipal, deleteSuperPrincipal,
+  toggleSuperPrincipalStatus, blockSuperPrincipal,
 };

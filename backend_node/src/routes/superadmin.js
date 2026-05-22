@@ -67,6 +67,18 @@ const studentUpload = multer({ storage: studentStorage, limits: { fileSize: 5 * 
 const parentUpload = multer({ storage: parentStorage, limits: { fileSize: 5 * 1024 * 1024 } });
 const docUpload = multer({ storage: docStorage, limits: { fileSize: 10 * 1024 * 1024 } });
 
+/* Teacher upload directory */
+const teacherDir = path.join(__dirname, '../../uploads/teachers');
+try { fs.mkdirSync(teacherDir, { recursive: true }); } catch {}
+const teacherStorage = multer.diskStorage({
+  destination: (req, file, cb) => { cb(null, teacherDir); },
+  filename: (req, file, cb) => {
+    const safe = (file.originalname || 'file').replace(/[^a-zA-Z0-9._-]/g, '');
+    cb(null, `${Date.now()}-${safe || 'upload'}`);
+  },
+});
+const teacherUpload = multer({ storage: teacherStorage, limits: { fileSize: 5 * 1024 * 1024 } });
+
 function isSuperadmin(req, res, next) {
   if (req.user && (req.user.is_superuser || req.user.role === 'superadmin' || req.user.role === 'admin')) {
     next();
@@ -191,20 +203,7 @@ router.put('/class-subtypes/:id/', data.updateClassSubtype);
 router.delete('/class-subtypes/:id/', data.deleteClassSubtype);
 router.patch('/class-subtypes/:id/toggle/', data.toggleClassSubtypeStatus);
 
-/* Principals CRUD */
-router.get('/principals/', data.getPrincipals);
-router.post('/principals/', data.createPrincipal);
-router.put('/principals/:id/', data.updatePrincipal);
-router.delete('/principals/:id/', data.deletePrincipal);
-router.patch('/principals/:id/toggle/', data.togglePrincipalStatus);
-
 /* Bursars CRUD */
-router.get('/bursars/', data.getBursars);
-router.post('/bursars/', data.createBursar);
-router.put('/bursars/:id/', data.updateBursar);
-router.delete('/bursars/:id/', data.deleteBursar);
-router.patch('/bursars/:id/toggle/', data.toggleBursarStatus);
-
 /* Student CRUD */
 router.get('/students/', data.getSuperStudents);
 router.post('/students/', studentUpload.single('passport_photo'), data.createSuperStudent);
@@ -230,5 +229,53 @@ router.patch('/parents/:id/block/', data.blockSuperParent);
 /* Student-Parent linking */
 router.post('/link-parent/', data.linkParentToStudent);
 router.post('/unlink-parent/', data.unlinkParentFromStudent);
+
+/* Teacher CRUD */
+router.get('/teachers/', data.getSuperTeachers);
+router.post('/teachers/', teacherUpload.single('profile_picture'), data.createSuperTeacher);
+router.put('/teachers/:id/', teacherUpload.single('profile_picture'), data.updateSuperTeacher);
+router.delete('/teachers/:id/', data.deleteSuperTeacher);
+router.patch('/teachers/:id/toggle/', data.toggleSuperTeacherStatus);
+router.patch('/teachers/:id/block/', data.blockSuperTeacher);
+
+/* Bursar upload directory */
+const bursarDir = path.join(__dirname, '../../uploads/bursars');
+try { fs.mkdirSync(bursarDir, { recursive: true }); } catch {}
+const bursarStorage = multer.diskStorage({
+  destination: (req, file, cb) => { cb(null, bursarDir); },
+  filename: (req, file, cb) => {
+    const safe = (file.originalname || 'file').replace(/[^a-zA-Z0-9._-]/g, '');
+    cb(null, `${Date.now()}-${safe || 'upload'}`);
+  },
+});
+const bursarUpload = multer({ storage: bursarStorage, limits: { fileSize: 5 * 1024 * 1024 } });
+
+/* Bursar CRUD */
+router.get('/bursars/', data.getSuperBursars);
+router.post('/bursars/', bursarUpload.single('profile_picture'), data.createSuperBursar);
+router.put('/bursars/:id/', bursarUpload.single('profile_picture'), data.updateSuperBursar);
+router.delete('/bursars/:id/', data.deleteSuperBursar);
+router.patch('/bursars/:id/toggle/', data.toggleSuperBursarStatus);
+router.patch('/bursars/:id/block/', data.blockSuperBursar);
+
+/* Principal upload directory */
+const principalDir = path.join(__dirname, '../../uploads/principals');
+try { fs.mkdirSync(principalDir, { recursive: true }); } catch {}
+const principalStorage = multer.diskStorage({
+  destination: (req, file, cb) => { cb(null, principalDir); },
+  filename: (req, file, cb) => {
+    const safe = (file.originalname || 'file').replace(/[^a-zA-Z0-9._-]/g, '');
+    cb(null, `${Date.now()}-${safe || 'upload'}`);
+  },
+});
+const principalUpload = multer({ storage: principalStorage, limits: { fileSize: 5 * 1024 * 1024 } });
+
+/* Principal CRUD */
+router.get('/principals/', data.getSuperPrincipals);
+router.post('/principals/', principalUpload.single('profile_picture'), data.createSuperPrincipal);
+router.put('/principals/:id/', principalUpload.single('profile_picture'), data.updateSuperPrincipal);
+router.delete('/principals/:id/', data.deleteSuperPrincipal);
+router.patch('/principals/:id/toggle/', data.toggleSuperPrincipalStatus);
+router.patch('/principals/:id/block/', data.blockSuperPrincipal);
 
 module.exports = router;
