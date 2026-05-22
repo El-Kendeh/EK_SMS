@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './App.css';
 import { ThemeProvider } from './context/ThemeContext';
 import Login from './components/login';
+import Landing from './components/Landing';
 import SuperadminDashboard from './components/superadmin/SuperadminDashboard';
 import ForceChangePassword from './components/ForceChangePassword';
 
@@ -52,13 +53,12 @@ function ImpersonationBanner() {
 
 
 function App() {
-  const [currentPage, setCurrentPage] = useState('login');
+  const [currentPage, setCurrentPage] = useState('home');
   const [isLoading, setIsLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
   const [fetchError, setFetchError] = useState(null);
 
   useEffect(() => {
-    // On app load, determine where to go based on localStorage user/token
     const token = localStorage.getItem('token');
     const userStr = localStorage.getItem('user');
 
@@ -76,14 +76,13 @@ function App() {
         if (isSuper) {
           setCurrentPage('superadmindashboard');
         } else {
-          // Non-superadmins must log in as superadmin to access the app for now
-          setCurrentPage('login');
+          setCurrentPage('home');
         }
       } catch (e) {
-        setCurrentPage('login');
+        setCurrentPage('home');
       }
     } else {
-      setCurrentPage('login');
+      setCurrentPage('home');
     }
 
     setIsLoading(false);
@@ -143,6 +142,7 @@ function App() {
     <ThemeProvider>
       <div className="App">
         <ImpersonationBanner />
+        {(currentPage === 'home' || currentPage === 'landing') && <Landing onNavigate={setCurrentPage} />}
         {currentPage === 'login' && <Login onNavigate={setCurrentPage} />}
         {currentPage === 'force-change-password' && <ForceChangePassword onNavigate={setCurrentPage} />}
         {currentPage === 'superadmindashboard' && (
