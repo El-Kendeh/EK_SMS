@@ -3,6 +3,7 @@ import './App.css';
 import { ThemeProvider } from './context/ThemeContext';
 import Login from './components/login';
 import Landing from './components/Landing';
+import Register from './components/Register';
 import SuperadminDashboard from './components/superadmin/SuperadminDashboard';
 import ForceChangePassword from './components/ForceChangePassword';
 
@@ -143,6 +144,7 @@ function App() {
       <div className="App">
         <ImpersonationBanner />
         {(currentPage === 'home' || currentPage === 'landing') && <Landing onNavigate={setCurrentPage} />}
+        {currentPage === 'register' && <Register onNavigate={setCurrentPage} />}
         {currentPage === 'login' && <Login onNavigate={setCurrentPage} />}
         {currentPage === 'force-change-password' && <ForceChangePassword onNavigate={setCurrentPage} />}
         {currentPage === 'superadmindashboard' && (

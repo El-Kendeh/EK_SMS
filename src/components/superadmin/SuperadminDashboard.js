@@ -59,6 +59,11 @@ const IcSchools = () => (
     <rect x="9" y="13" width="6" height="8" strokeWidth="1.8" rx="1"/>
   </svg>
 );
+const IcGen = () => (
+  <svg viewBox="0 0 24 24" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+  </svg>
+);
 const IcBell = () => (
   <svg viewBox="0 0 24 24"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
 );
@@ -190,30 +195,59 @@ function getTitle(page, school) {
   if ((page === 'review' || page === 'app-history' || page === 'version-compare') && school) return school.name;
   if (page === 'rejection-audit' && school) return school.name;
   const map = {
-    overview:          'Dashboard',
-    applications:      'Applications',
-    rejected:          'Rejected',
-    schools:           'Schools',
-    notifications:     'Notifications',
-    settings:          'Settings',
-    'app-history':     'History',
-    'version-compare': 'Compare',
-    'rejection-audit': 'Audit',
-    'security-logs':   'Audit Logs',
-    'forensics':       'Forensics',
-    'alert-broadcast': 'Broadcast',
-    'system-health':   'System Health',
-    'grade-report':    'Grade Integrity',
-    'grade-requests':  'Mod. Requests',
-    'grade-audit':     'Audit Detail',
-    'governance':      'Role-Based Access',
-    'users':           'Users',
-    'analytics':       'School Directory & Analytics',
-    'benchmarks':      'Academic Benchmarks',
-    'onboarding':      'Onboarding Analytics',
-    'profile':         'My Profile',
+    overview:              'Dashboard',
+    applications:          'Applications',
+    rejected:              'Rejected',
+    schools:               'Schools',
+    'academic-year':       'Year',
+    'academic-terms':      'Terms',
+    'institution-type':    'Institution Type',
+    'school-capacity':     'School Capacity',
+    countries:             'Countries',
+    regions:               'Regions',
+    cities:                'Cities',
+    'school-type':         'School Type',
+    'syllabus-type':       'Syllabus Type',
+    'class-subtype':       'Class Subtype',
+    'grade-integrity':     'Grade Integrity',
+    'grades-accumulation': 'Grades Accumulation',
+    test:                  'Test',
+    assignment:            'Assignment',
+    examination:           'Examination',
+    'attendance-teachers': 'Teachers',
+    'attendance-students': 'Students',
+    'lesson-plan-type':    'Lesson Plan Type',
+    'lesson-plan-generation': 'Lesson Plan Generation',
+    'batch-grades':        'Grades',
+    'batch-students':      'Students',
+    'batch-image-data':    'Image Data Transfer',
+    'fees-structure':      'Fees Structure',
+    'fees-payment':        'Fees Payment',
+    'receipt-generator':   'Receipt Generator',
+    'grades-approval':     'Grades Approval',
+    'report-card-generator': 'Report Card Generator',
+    'report-card-approval':  'Report Card Approval',
+    'live-class':          'Live Class',
+    'vm-parents':          'Parents',
+    'vm-staffs':           'Staffs',
+    'vm-students':         'Students',
+    notifications:         'Notifications',
+    'system-audits':       'System Audits',
+    reports:               'Reports',
+    'system-settings':     'System Settings',
+    profile:               'My Profile',
   };
-  return map[page] || 'Dashboard';
+  return map[page] || page.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function StubPage({ title }) {
+  return (
+    <div style={{ padding: '40px', textAlign: 'center' }}>
+      <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.3 }}>📄</div>
+      <h2 style={{ margin: '0 0 8px', color: 'var(--sa-text-1)' }}>{title}</h2>
+      <p style={{ margin: 0, color: 'var(--sa-text-3)' }}>This section is under development.</p>
+    </div>
+  );
 }
 
 /* ================================================================
@@ -405,10 +439,68 @@ export default function Dashboard({ onNavigate }) {
   const isGradeRelated = GRADE_PAGES.includes(activePage);
 
   const navItems = [
-    { key: 'overview',        label: 'Dashboard',    icon: <IcHome />,         badge: 0,             section: null     },
-    { key: 'applications',    label: 'Applications', icon: <IcApplications />, badge: pendingCount,  section: null     },
-    { key: 'rejected',        label: 'Rejected',     icon: <IcRejected />,     badge: rejectedCount, section: null     },
-    { key: 'schools',         label: 'Schools',      icon: <IcSchools />,      badge: 0,             section: null     },
+    { key: 'overview',        label: 'Dashboard',    icon: <IcHome />,         badge: 0,            section: null },
+    { key: 'applications',    label: 'Applications', icon: <IcApplications />, badge: pendingCount, section: null },
+    { key: 'rejected',        label: 'Rejected',     icon: <IcRejected />,     badge: rejectedCount,section: null },
+    { key: 'schools',         label: 'Schools',      icon: <IcSchools />,      badge: 0,            section: null },
+
+    /* Academics */
+    { key: 'academic-year',       label: 'Year',              icon: <IcGen />, badge: 0, section: 'Academics' },
+    { key: 'academic-terms',      label: 'Terms',             icon: <IcGen />, badge: 0, section: 'Academics' },
+    { key: 'institution-type',    label: 'Institution Type',  icon: <IcGen />, badge: 0, section: 'Academics' },
+    { key: 'school-capacity',     label: 'School Capacity',   icon: <IcGen />, badge: 0, section: 'Academics' },
+    { key: 'countries',           label: 'Countries',         icon: <IcGen />, badge: 0, section: 'Academics' },
+    { key: 'regions',             label: 'Regions',           icon: <IcGen />, badge: 0, section: 'Academics' },
+    { key: 'cities',              label: 'Cities',            icon: <IcGen />, badge: 0, section: 'Academics' },
+    { key: 'school-type',         label: 'School Type',       icon: <IcGen />, badge: 0, section: 'Academics' },
+    { key: 'syllabus-type',       label: 'Syllabus Type',     icon: <IcGen />, badge: 0, section: 'Academics' },
+    { key: 'class-subtype',       label: 'Class Subtype',     icon: <IcGen />, badge: 0, section: 'Academics' },
+
+    /* Grades */
+    { key: 'grade-integrity',     label: 'Grade Integrity',    icon: <IcGen />, badge: 0, section: 'Grades' },
+    { key: 'grades-accumulation', label: 'Grades Accumulation',icon: <IcGen />, badge: 0, section: 'Grades' },
+    { key: 'test',                label: 'Test',               icon: <IcGen />, badge: 0, section: 'Grades' },
+    { key: 'assignment',          label: 'Assignment',         icon: <IcGen />, badge: 0, section: 'Grades' },
+    { key: 'examination',         label: 'Examination',        icon: <IcGen />, badge: 0, section: 'Grades' },
+
+    /* Attendance */
+    { key: 'attendance-teachers', label: 'Teachers', icon: <IcGen />, badge: 0, section: 'Attendance' },
+    { key: 'attendance-students', label: 'Students', icon: <IcGen />, badge: 0, section: 'Attendance' },
+
+    /* Lessons */
+    { key: 'lesson-plan-type',       label: 'Lesson Plan Type',       icon: <IcGen />, badge: 0, section: 'Lessons' },
+    { key: 'lesson-plan-generation', label: 'Lesson Plan Generation', icon: <IcGen />, badge: 0, section: 'Lessons' },
+
+    /* Batch Transfer */
+    { key: 'batch-grades',      label: 'Grades',             icon: <IcGen />, badge: 0, section: 'Batch Transfer' },
+    { key: 'batch-students',    label: 'Students',           icon: <IcGen />, badge: 0, section: 'Batch Transfer' },
+    { key: 'batch-image-data',  label: 'Image Data Transfer',icon: <IcGen />, badge: 0, section: 'Batch Transfer' },
+
+    /* Fees */
+    { key: 'fees-structure',    label: 'Fees Structure',  icon: <IcGen />, badge: 0, section: 'Fees' },
+    { key: 'fees-payment',      label: 'Fees Payment',    icon: <IcGen />, badge: 0, section: 'Fees' },
+    { key: 'receipt-generator', label: 'Receipt Generator',icon: <IcGen />, badge: 0, section: 'Fees' },
+
+    /* Grades Approval (no section) */
+    { key: 'grades-approval',   label: 'Grades Approval', icon: <IcGen />, badge: 0, section: null },
+
+    /* Report Cards */
+    { key: 'report-card-generator', label: 'Report Card Generator', icon: <IcGen />, badge: 0, section: 'Report Cards' },
+    { key: 'report-card-approval',  label: 'Report Card Approval',  icon: <IcGen />, badge: 0, section: 'Report Cards' },
+
+    /* Virtual Class */
+    { key: 'live-class', label: 'Live Class', icon: <IcGen />, badge: 0, section: 'Virtual Class' },
+
+    /* Virtual Meeting */
+    { key: 'vm-parents',  label: 'Parents',  icon: <IcGen />, badge: 0, section: 'Virtual Meeting' },
+    { key: 'vm-staffs',   label: 'Staffs',   icon: <IcGen />, badge: 0, section: 'Virtual Meeting' },
+    { key: 'vm-students', label: 'Students', icon: <IcGen />, badge: 0, section: 'Virtual Meeting' },
+
+    /* Notifications, System Audits, Reports, System Settings */
+    { key: 'notifications',   label: 'Notifications', icon: <IcBell />, badge: 0, section: null },
+    { key: 'system-audits',   label: 'System Audits', icon: <IcGen />, badge: 0, section: null },
+    { key: 'reports',         label: 'Reports',       icon: <IcGen />, badge: 0, section: null },
+    { key: 'system-settings', label: 'System Settings',icon: <IcGen />, badge: 0, section: null },
   ];
 
   return (
@@ -695,6 +787,10 @@ export default function Dashboard({ onNavigate }) {
 
           {activePage === 'profile' && (
             <SAProfile user={user} onBack={() => goTo('overview')} onAvatarChange={setProfileAvatar} />
+          )}
+
+          {!['overview','applications','review','app-history','version-compare','rejected','rejection-audit','grade-report','grade-requests','grade-audit','security-logs','forensics','alert-broadcast','change-alerts','system-health','schools','analytics','benchmarks','onboarding','governance','users','notifications','settings','profile'].includes(activePage) && (
+            <StubPage title={getTitle(activePage, selectedSchool)} />
           )}
 
         </main>
