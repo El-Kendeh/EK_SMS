@@ -111,27 +111,11 @@ const PATH_TO_PAGE = {
 function App() {
   const [currentPage, setCurrentPage] = useState('login');
   const [isLoading, setIsLoading] = useState(true);
-
-  // Sync URL → state when browser back/forward is used
-  useEffect(() => {
-    const onPop = () => {
-      const page = PATH_TO_PAGE[window.location.pathname] || 'login';
-      setCurrentPage(page);
-    };
-    window.addEventListener('popstate', onPop);
-    return () => window.removeEventListener('popstate', onPop);
-  }, []);
-
-  // Sync state → URL whenever currentPage changes
-  useEffect(() => {
-    const path = PAGE_TO_PATH[currentPage] || '/';
-    if (window.location.pathname !== path) {
-      window.history.pushState(null, '', path);
-    }
-  }, [currentPage]);
+  const [dashboardData, setDashboardData] = useState(null);
+  const [fetchError, setFetchError] = useState(null);
 
   useEffect(() => {
-    // Check if user is authenticated on app load
+    // On app load, determine where to go based on localStorage user/token
     const token = localStorage.getItem('token');
     const userStr = localStorage.getItem('user');
 
@@ -139,7 +123,6 @@ function App() {
       try {
         const user = JSON.parse(userStr);
 
-        // Enforce password change if required
         if (user.must_change_password) {
           setCurrentPage('force-change-password');
           setIsLoading(false);
@@ -147,95 +130,62 @@ function App() {
         }
 
         const isSuper = user.is_superuser || user.role === 'superadmin' || user.role === 'admin' || user.role === 'superuser';
-
         if (isSuper) {
           setCurrentPage('superadmindashboard');
-        } else if (user.role === 'school_admin') {
-          setCurrentPage('sa-dashboard');
-        } else if (user.role === 'teacher') {
-          setCurrentPage('teacher-dashboard');
-        } else if (user.role === 'student') {
-          setCurrentPage('student-dashboard');
-        } else if (user.role === 'parent') {
-          setCurrentPage('parentdashboard');
-        } else if (user.role === 'principal' || user.staff_role === 'PRINCIPAL') {
-          setCurrentPage('principal-dashboard');
         } else {
+          // Non-superadmins must log in as superadmin to access the app for now
           setCurrentPage('login');
         }
       } catch (e) {
         setCurrentPage('login');
       }
     } else {
-      // Respect the URL path on fresh load (e.g. /register)
-      const fromPath = PATH_TO_PAGE[window.location.pathname];
-      setCurrentPage(fromPath || 'login');
+      setCurrentPage('login');
     }
+
     setIsLoading(false);
   }, []);
 
-  // Listen for storage changes (login/logout in other tabs)
+  // When superadmin page becomes active, fetch dashboard data from backend
   useEffect(() => {
-    const handleStorageChange = () => {
-      const token = localStorage.getItem('token');
-      const userStr = localStorage.getItem('user');
+    if (currentPage !== 'superadmindashboard') return;
 
-      if (!token || !userStr) {
-        setCurrentPage('login');
-      } else {
-        try {
-          const user = JSON.parse(userStr);
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setFetchError('No auth token');
+      return;
+    }
 
-          // Enforce password change
-          if (user.must_change_password) {
-            setCurrentPage('force-change-password');
-            return;
-          }
+    const abort = new AbortController();
+    setFetchError(null);
 
-          const isSuper = user.is_superuser || user.role === 'superadmin' || user.role === 'admin' || user.role === 'superuser';
-          if (isSuper) {
-            setCurrentPage('superadmindashboard');
-          } else if (user.role === 'school_admin') {
-            setCurrentPage('sa-dashboard');
-          } else if (user.role === 'teacher') {
-            setCurrentPage('teacher-dashboard');
-          } else if (user.role === 'student') {
-            setCurrentPage('student-dashboard');
-          } else if (user.role === 'parent') {
-            setCurrentPage('parentdashboard');
-          } else if (user.role === 'principal' || user.staff_role === 'PRINCIPAL') {
-            setCurrentPage('principal-dashboard');
-          } else {
-            setCurrentPage('home');
-          }
-        } catch (e) {
-          setCurrentPage('login');
+    (async () => {
+      try {
+        const res = await fetch((process.env.REACT_APP_API_BASE_URL || '') + '/api/superadmin/dashboard', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          signal: abort.signal,
+        });
+
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(`Status ${res.status}: ${text}`);
+        }
+
+        const data = await res.json();
+        setDashboardData(data);
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          setFetchError(err.message || 'Fetch error');
         }
       }
-    };
+    })();
 
-    const handleAuthChanged = () => {
-      const token = localStorage.getItem('token');
-      const userStr = localStorage.getItem('user');
-      if (!token || !userStr) {
-        setCurrentPage('login');
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('ek-sms-auth-changed', handleAuthChanged);
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('ek-sms-auth-changed', handleAuthChanged);
-    };
-  }, []);
-
-  const isImpersonating = !!sessionStorage.getItem('ek-sms-impersonating');
-  // Stamp body class so child CSS (e.g. sticky header) can offset itself
-  React.useEffect(() => {
-    document.body.classList.toggle('is-impersonating', isImpersonating);
-    return () => document.body.classList.remove('is-impersonating');
-  }, [isImpersonating]);
+    return () => abort.abort();
+  }, [currentPage]);
 
   if (isLoading) {
     return (
@@ -245,43 +195,18 @@ function App() {
     );
   }
 
-  // Public verification page (scan-from-QR). Reachable at /verify/<hash>.
-  // No auth required; renders before the app shell so it works for non-students too.
-  const verifyMatch = window.location.pathname.match(/^\/verify\/([^/]+)\/?$/);
-  if (verifyMatch) {
-    return (
-      <ThemeProvider>
-        <div className="App">
-          <VerifyPage hash={decodeURIComponent(verifyMatch[1])} />
-        </div>
-      </ThemeProvider>
-    );
-  }
-
   return (
     <ThemeProvider>
-      <div className="App" style={isImpersonating ? { paddingTop: '40px' } : {}}>
+      <div className="App">
         <ImpersonationBanner />
         {currentPage === 'login' && <Login onNavigate={setCurrentPage} />}
         {currentPage === 'force-change-password' && <ForceChangePassword onNavigate={setCurrentPage} />}
-        {currentPage === 'superadmindashboard' && <SuperadminDashboard onNavigate={setCurrentPage} />}
-        <SchoolContextProvider>
-          {currentPage === 'sa-dashboard' && (
-            <DashboardGate>
-              <SchoolAdminDashboard onNavigate={setCurrentPage} />
-            </DashboardGate>
-          )}
-          {currentPage === 'teacher-dashboard' && <TeacherDashboard onNavigate={setCurrentPage} />}
-          {currentPage === 'student-dashboard' && <StudentDashboard onNavigate={setCurrentPage} />}
-          {currentPage === 'parentdashboard' && <ParentDashboard onNavigate={setCurrentPage} />}
-          {currentPage === 'principal-dashboard' && <PrincipalDashboard onNavigate={setCurrentPage} />}
-        </SchoolContextProvider>
-        {(currentPage === 'home' || currentPage === 'landing') && <Landing onNavigate={setCurrentPage} />}
-        {currentPage === 'register' && <Register onNavigate={setCurrentPage} />}
-
-        {/* Fallback for unknown pages */}
-        {!['login', 'force-change-password', 'superadmindashboard', 'sa-dashboard', 'teacher-dashboard', 'student-dashboard', 'parentdashboard', 'principal-dashboard', 'home', 'landing', 'register'].includes(currentPage) && (
-          <Login onNavigate={setCurrentPage} />
+        {currentPage === 'superadmindashboard' && (
+          <SuperadminDashboard
+            onNavigate={setCurrentPage}
+            data={dashboardData}
+            fetchError={fetchError}
+          />
         )}
       </div>
     </ThemeProvider>
