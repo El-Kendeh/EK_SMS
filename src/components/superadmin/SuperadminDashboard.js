@@ -29,6 +29,8 @@ import SANotifications, { INITIAL_UNREAD_COUNT } from './SANotifications';
 import SAProfile         from './SAProfile';
 import SAChangeAlerts    from './SAChangeAlerts';
 import SACreateTerm      from './SACreateTerm';
+import SARefDataManager  from './SARefDataManager';
+import SASchoolCapacity  from './SASchoolCapacity';
 
 
 
@@ -808,7 +810,106 @@ export default function Dashboard({ onNavigate }) {
             <SACreateTerm onSave={(payload) => showToast('Term saved (logic pending)', 'success')} />
           )}
 
-          {!['overview','applications','review','app-history','version-compare','rejected','rejection-audit','grade-report','grade-requests','grade-audit','security-logs','forensics','alert-broadcast','change-alerts','system-health','schools','analytics','benchmarks','onboarding','governance','users','notifications','settings','profile','academic-terms'].includes(activePage) && (
+          {activePage === 'academic-year' && (
+            <SARefDataManager
+              title="Academic Years"
+              subtitle="Define system-wide academic years. Roll out a year to activate it across all schools."
+              endpoint="/api/superadmin/academic-years/"
+              listKey="years"
+              itemLabel="academic year"
+              hasRollout={true}
+              fields={[
+                { key: 'name',       label: 'Name',       type: 'text', required: true, placeholder: 'e.g. 2024/2025' },
+                { key: 'start_date', label: 'Start Date', type: 'date' },
+                { key: 'end_date',   label: 'End Date',   type: 'date' },
+              ]}
+            />
+          )}
+
+          {activePage === 'institution-type' && (
+            <SARefDataManager
+              title="Institution Types"
+              subtitle="Types of institutions that can register on the platform, e.g. Primary School, University."
+              endpoint="/api/superadmin/institution-types/"
+              listKey="types"
+              itemLabel="institution type"
+              fields={[
+                { key: 'name', label: 'Name', type: 'text', required: true, placeholder: 'e.g. Primary School' },
+              ]}
+            />
+          )}
+
+          {activePage === 'school-capacity' && <SASchoolCapacity />}
+
+          {activePage === 'countries' && (
+            <SARefDataManager
+              title="Countries"
+              subtitle="Countries where schools can be located. Used to populate geography dropdowns during registration."
+              endpoint="/api/superadmin/countries/"
+              listKey="countries"
+              itemLabel="country"
+              fields={[
+                { key: 'name', label: 'Country Name', type: 'text', required: true, placeholder: 'e.g. Sierra Leone' },
+              ]}
+            />
+          )}
+
+          {activePage === 'regions' && (
+            <SARefDataManager
+              title="Regions"
+              subtitle="Regions or provinces within a country. Select the parent country first."
+              endpoint="/api/superadmin/regions/"
+              listKey="regions"
+              itemLabel="region"
+              fields={[
+                { key: 'country_id', label: 'Country', type: 'select', required: true, loadFrom: '/api/superadmin/countries/', optionsKey: 'countries', labelKey: 'name' },
+                { key: 'name',       label: 'Region Name', type: 'text', required: true, placeholder: 'e.g. Western Area' },
+              ]}
+            />
+          )}
+
+          {activePage === 'cities' && (
+            <SARefDataManager
+              title="Cities"
+              subtitle="Cities or towns within a region. Select country, then region, then enter the city name."
+              endpoint="/api/superadmin/cities/"
+              listKey="cities"
+              itemLabel="city"
+              fields={[
+                { key: 'country_id', label: 'Country', type: 'select', required: true, loadFrom: '/api/superadmin/countries/', optionsKey: 'countries', labelKey: 'name' },
+                { key: 'region_id',  label: 'Region',  type: 'select', required: true, loadFrom: '/api/superadmin/regions/',   optionsKey: 'regions',   labelKey: 'name', dependsOn: 'country_id', dependsOnKey: 'country_id' },
+                { key: 'name',       label: 'City Name', type: 'text', required: true, placeholder: 'e.g. Freetown' },
+              ]}
+            />
+          )}
+
+          {activePage === 'school-type' && (
+            <SARefDataManager
+              title="School Types"
+              subtitle="Classification of schools by type, e.g. Government, Private, Mission."
+              endpoint="/api/superadmin/school-types/"
+              listKey="schooltypes"
+              itemLabel="school type"
+              fields={[
+                { key: 'name', label: 'Name', type: 'text', required: true, placeholder: 'e.g. Government' },
+              ]}
+            />
+          )}
+
+          {activePage === 'syllabus-type' && (
+            <SARefDataManager
+              title="Syllabus Types"
+              subtitle="Curriculum frameworks used by schools, e.g. WAEC, Cambridge, National."
+              endpoint="/api/superadmin/syllabus-types/"
+              listKey="syllabustypes"
+              itemLabel="syllabus type"
+              fields={[
+                { key: 'name', label: 'Name', type: 'text', required: true, placeholder: 'e.g. WAEC' },
+              ]}
+            />
+          )}
+
+          {!['overview','applications','review','app-history','version-compare','rejected','rejection-audit','grade-report','grade-requests','grade-audit','security-logs','forensics','alert-broadcast','change-alerts','system-health','schools','analytics','benchmarks','onboarding','governance','users','notifications','settings','profile','academic-terms','academic-year','institution-type','school-capacity','countries','regions','cities','school-type','syllabus-type'].includes(activePage) && (
             <StubPage title={getTitle(activePage, selectedSchool)} />
           )}
 

@@ -1,0 +1,589 @@
+/* ============================================================
+   SARefDataManager — config-driven CRUD manager
+   Tokens: --sa-card-bg/bg2, --sa-border/border-hover,
+           --sa-radius/radius-sm, --sa-accent/red/green/amber,
+           --sa-text/2/3, --sa-ghost-bg, --sa-font,
+           --sa-green-dim, --sa-accent-dim, --sa-red-dim
+   ============================================================ */
+
+/* ---- Wrapper ---- */
+.sard-wrap {
+  max-width: 900px;
+  padding-bottom: 80px;
+}
+
+/* ---- Page header ---- */
+.sard-page-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.sard-page-title {
+  margin: 0 0 4px;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--sa-text);
+  letter-spacing: -0.01em;
+}
+
+.sard-page-sub {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--sa-text-2);
+  line-height: 1.5;
+  max-width: 540px;
+}
+
+/* ---- Card ---- */
+.sard-card {
+  background: var(--sa-card-bg);
+  border: 1px solid var(--sa-border);
+  border-radius: var(--sa-radius);
+  overflow: hidden;
+}
+
+.sard-card--form {
+  padding: 20px 24px 24px;
+  margin-bottom: 12px;
+}
+
+/* ---- Section label (inside card) ---- */
+.sard-section-label {
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--sa-text-3);
+  margin: 0 0 16px;
+}
+
+/* ---- State rows (loading / error) ---- */
+.sard-state {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 24px;
+  font-size: 0.875rem;
+  color: var(--sa-text-2);
+}
+
+.sard-state--err {
+  color: var(--sa-red);
+}
+
+.sard-empty {
+  padding: 24px;
+  font-size: 0.875rem;
+  color: var(--sa-text-3);
+  font-style: italic;
+  margin: 0;
+}
+
+/* ---- Table ---- */
+.sard-table {
+  width: 100%;
+}
+
+/* Header + rows share the same grid template via CSS custom property */
+.sard-thead,
+.sard-tr {
+  display: grid;
+  grid-template-columns: repeat(var(--data-cols, 1), 1fr) 80px 96px 180px;
+  align-items: center;
+  gap: 0;
+}
+
+.sard-thead {
+  padding: 0 16px;
+  border-bottom: 1px solid var(--sa-border);
+  height: 36px;
+}
+
+.sard-th {
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--sa-text-3);
+  padding: 0 8px;
+}
+
+.sard-th--date    { text-align: right; }
+.sard-th--actions { text-align: right; }
+
+/* ---- Row ---- */
+.sard-tr {
+  padding: 0 16px;
+  min-height: 48px;
+  border-bottom: 1px solid var(--sa-border);
+  transition: background 0.12s;
+}
+
+.sard-tr:last-child { border-bottom: none; }
+
+.sard-tr:hover:not(.sard-tr--editing) {
+  background: var(--sa-ghost-bg);
+}
+
+.sard-tr--editing {
+  background: var(--sa-card-bg2);
+  display: block;
+  padding: 16px;
+}
+
+.sard-tr-form {
+  width: 100%;
+}
+
+/* ---- Cells ---- */
+.sard-td {
+  padding: 0 8px;
+  font-size: 0.875rem;
+  color: var(--sa-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sard-td--date {
+  font-size: 0.78rem;
+  color: var(--sa-text-3);
+  text-align: right;
+}
+
+.sard-td--actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  flex-wrap: nowrap;
+}
+
+/* ---- Status badge ---- */
+.sard-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  padding: 3px 9px;
+}
+
+.sard-status-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.sard-status--on {
+  color: var(--sa-green);
+  background: var(--sa-green-dim);
+}
+
+.sard-status--on .sard-status-dot { background: var(--sa-green); }
+
+.sard-status--off {
+  color: var(--sa-text-3);
+  background: var(--sa-ghost-bg);
+}
+
+.sard-status--off .sard-status-dot { background: var(--sa-text-3); }
+
+/* ---- Icon buttons ---- */
+.sard-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--sa-radius-sm);
+  border: none;
+  background: none;
+  color: var(--sa-text-2);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  flex-shrink: 0;
+}
+
+.sard-icon-btn:hover:not(:disabled) {
+  background: var(--sa-ghost-bg);
+  color: var(--sa-text);
+}
+
+.sard-icon-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.sard-icon-btn--toggle-on {
+  color: var(--sa-accent);
+}
+
+.sard-icon-btn--toggle-on:hover:not(:disabled) {
+  background: var(--sa-accent-dim);
+  color: var(--sa-accent);
+}
+
+.sard-icon-btn--danger:hover:not(:disabled) {
+  background: var(--sa-red-dim);
+  color: var(--sa-red);
+}
+
+/* ---- Delete confirmation ---- */
+.sard-del-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--sa-red-dim);
+  border-radius: var(--sa-radius-sm);
+  padding: 2px 4px;
+}
+
+.sard-del-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--sa-red);
+  padding: 0 4px;
+  white-space: nowrap;
+}
+
+/* ---- Roll Out button ---- */
+.sard-rollout-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border: 1px solid var(--sa-accent);
+  border-radius: 999px;
+  background: none;
+  font-size: 0.69rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--sa-accent);
+  cursor: pointer;
+  font-family: var(--sa-font);
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+}
+
+.sard-rollout-btn:hover:not(:disabled) {
+  background: var(--sa-accent);
+  color: #fff;
+}
+
+.sard-rollout-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ---- Form ---- */
+.sard-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sard-form-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.sard-form-grid--1 { grid-template-columns: 1fr; }
+.sard-form-grid--2 { grid-template-columns: 1fr 1fr; }
+.sard-form-grid--3 { grid-template-columns: 1fr 1fr 1fr; }
+
+/* ---- Field ---- */
+.sard-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.sard-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sa-text-2);
+}
+
+/* ---- Input ---- */
+.sard-input {
+  width: 100%;
+  background: var(--sa-card-bg2);
+  border: 1px solid var(--sa-border);
+  border-radius: var(--sa-radius-sm);
+  padding: 9px 12px;
+  font-size: 0.9375rem;
+  color: var(--sa-text);
+  font-family: var(--sa-font);
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.sard-input:focus {
+  border-color: var(--sa-accent);
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.12);
+}
+
+.sard-input::placeholder { color: var(--sa-text-3); }
+
+.sard-input--err {
+  border-color: var(--sa-red) !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
+}
+
+/* ---- Select ---- */
+.sard-sel-wrap { position: relative; }
+
+.sard-select {
+  width: 100%;
+  background: var(--sa-card-bg2);
+  border: 1px solid var(--sa-border);
+  border-radius: var(--sa-radius-sm);
+  padding: 9px 36px 9px 12px;
+  font-size: 0.9375rem;
+  color: var(--sa-text);
+  font-family: var(--sa-font);
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.sard-select:focus {
+  border-color: var(--sa-accent);
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.12);
+}
+
+.sard-select:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.sard-select option { background: var(--sa-card-bg2); color: var(--sa-text); }
+
+.sard-sel-chevron {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  color: var(--sa-text-2);
+}
+
+/* ---- Form buttons ---- */
+.sard-form-btns {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* ---- Buttons ---- */
+.sard-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 18px;
+  border: none;
+  border-radius: var(--sa-radius-sm);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  font-family: var(--sa-font);
+  cursor: pointer;
+  transition: opacity 0.15s, background 0.15s;
+  white-space: nowrap;
+}
+
+.sard-btn--primary {
+  background: var(--sa-accent);
+  color: #fff;
+}
+
+.sard-btn--primary:hover { opacity: 0.88; }
+
+.sard-btn--ghost {
+  background: none;
+  color: var(--sa-text-2);
+}
+
+.sard-btn--ghost:hover:not(:disabled) {
+  background: var(--sa-ghost-bg);
+  color: var(--sa-text);
+}
+
+.sard-btn--ghost:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.sard-btn--save {
+  background: var(--sa-accent);
+  color: #fff;
+}
+
+.sard-btn--save:hover:not(.sard-btn--disabled) { opacity: 0.88; }
+
+.sard-btn--disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* ---- Error banner ---- */
+.sard-err-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--sa-red-dim);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: var(--sa-radius-sm);
+  font-size: 0.8125rem;
+  color: var(--sa-red);
+}
+
+/* ---- Count footer ---- */
+.sard-count {
+  margin: 10px 0 0;
+  font-size: 0.75rem;
+  color: var(--sa-text-3);
+}
+
+/* ---- Spinner ---- */
+.sard-spin {
+  animation: sard-rotate 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes sard-rotate {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ================================================================
+   School Capacity page — two-panel tabs
+   ================================================================ */
+.sasc-wrap {
+  max-width: 900px;
+  padding-bottom: 80px;
+}
+
+.sasc-head {
+  margin-bottom: 20px;
+}
+
+.sasc-title {
+  margin: 0 0 4px;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--sa-text);
+  letter-spacing: -0.01em;
+}
+
+.sasc-sub {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--sa-text-2);
+  line-height: 1.5;
+}
+
+.sasc-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  background: var(--sa-card-bg2);
+  border: 1px solid var(--sa-border);
+  border-radius: var(--sa-radius);
+  padding: 4px;
+}
+
+.sasc-tab {
+  flex: 1;
+  padding: 9px 16px;
+  border: none;
+  border-radius: calc(var(--sa-radius) - 2px);
+  background: none;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--sa-text-2);
+  cursor: pointer;
+  font-family: var(--sa-font);
+  transition: background 0.15s, color 0.15s;
+  text-align: center;
+}
+
+.sasc-tab:hover:not(.active) {
+  background: var(--sa-ghost-bg);
+  color: var(--sa-text);
+}
+
+.sasc-tab.active {
+  background: var(--sa-card-bg);
+  color: var(--sa-accent);
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+/* ================================================================
+   Responsive
+   ================================================================ */
+@media (max-width: 600px) {
+  .sard-wrap,
+  .sasc-wrap { padding-bottom: 80px; }
+
+  .sard-page-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .sard-btn--primary { width: 100%; justify-content: center; }
+
+  /* Collapse grid to single column in form */
+  .sard-form-grid--2,
+  .sard-form-grid--3 {
+    grid-template-columns: 1fr;
+  }
+
+  /* Table: hide date column, make actions stack */
+  .sard-thead,
+  .sard-tr {
+    grid-template-columns: repeat(var(--data-cols, 1), 1fr) 72px 150px;
+  }
+
+  .sard-th--date,
+  .sard-td--date { display: none; }
+
+  .sard-card--form { padding: 16px; }
+
+  .sard-form-btns {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .sard-form-btns .sard-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 12px 16px;
+  }
+
+  .sard-rollout-btn span { display: none; }
+
+  .sasc-tabs { gap: 2px; }
+  .sasc-tab  { padding: 8px 10px; font-size: 0.75rem; }
+}
+
+@media (max-width: 400px) {
+  .sard-input,
+  .sard-select { font-size: 0.875rem; padding: 8px 10px; }
+
+  .sard-page-title { font-size: 1.1rem; }
+
+  .sard-thead,
+  .sard-tr {
+    grid-template-columns: 1fr 72px 130px;
+  }
+
+  /* On very small screens, only show first data column */
+  .sard-td:not(:first-child):not(.sard-td--actions):not([class*="sard-td--date"]) {
+    display: none;
+  }
+}
