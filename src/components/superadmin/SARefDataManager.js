@@ -100,6 +100,7 @@ export default function SARefDataManager({
   const [rollingId,  setRollingId]  = useState(null);
 
   const [fkOptions,  setFkOptions]  = useState({});
+  const [actionErr,  setActionErr]  = useState('');
 
   /* ── Load list ── */
   const loadItems = useCallback(async () => {
@@ -177,34 +178,40 @@ export default function SARefDataManager({
 
   /* ── Toggle ── */
   const handleToggle = async (item) => {
-    setTogglingId(item.id);
+    setTogglingId(item.id); setActionErr('');
     try {
       const data = await apiPatch(`${endpoint}${item.id}/toggle/`);
       if (data.success) setItems(prev => prev.map(i => i.id === item.id ? { ...i, is_active: !i.is_active } : i));
-    } catch {}
-    finally { setTogglingId(null); }
+      else setActionErr(data.message || 'Toggle failed.');
+    } catch (err) {
+      setActionErr(err.message || 'Network error.');
+    } finally { setTogglingId(null); }
   };
 
   /* ── Delete ── */
   const handleDelete = async () => {
     if (!deleteId) return;
-    setDeleting(true);
+    setDeleting(true); setActionErr('');
     try {
       await apiDelete(`${endpoint}${deleteId}/`);
       setItems(prev => prev.filter(i => i.id !== deleteId));
       setDeleteId(null);
-    } catch {}
-    finally { setDeleting(false); }
+    } catch (err) {
+      setActionErr(err.message || 'Delete failed.');
+      setDeleteId(null);
+    } finally { setDeleting(false); }
   };
 
   /* ── Roll Out ── */
   const handleRollout = async (item) => {
-    setRollingId(item.id);
+    setRollingId(item.id); setActionErr('');
     try {
       const data = await apiPost(`${endpoint}${item.id}/rollout/`, {});
       if (data.success) await loadItems();
-    } catch {}
-    finally { setRollingId(null); }
+      else setActionErr(data.message || 'Roll out failed.');
+    } catch (err) {
+      setActionErr(err.message || 'Network error.');
+    } finally { setRollingId(null); }
   };
 
   /* ── Options (with cascading filter) ── */
@@ -316,6 +323,18 @@ export default function SARefDataManager({
         <div className="sard-card sard-card--form">
           <p className="sard-section-label">NEW {itemLabel.toUpperCase()}</p>
           {renderForm(false)}
+        </div>
+      )}
+
+      {/* Action error banner */}
+      {actionErr && (
+        <div className="sard-err-banner" style={{ marginBottom: 12 }}>
+          <IcWarn /><span>{actionErr}</span>
+          <button
+            className="sard-icon-btn"
+            style={{ marginLeft: 'auto' }}
+            onClick={() => setActionErr('')}
+          ><IcX /></button>
         </div>
       )}
 
