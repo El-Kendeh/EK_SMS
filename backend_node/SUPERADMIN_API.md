@@ -146,6 +146,137 @@ The `SuperadminDashboard.js` sidebar navItems use these keys. Each matches the r
 
 ---
 
+## Student & Parent Management (Superadmin)
+
+### Students — Full Registration
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/students/` | List all students (`?school_id=X&status=active`) |
+| POST | `/api/students/` | Create student + User account (multipart: `passport_photo`) |
+| PUT | `/api/students/:id/` | Update student + User (multipart: `passport_photo`) |
+| DELETE | `/api/students/:id/` | Delete student + linked User |
+| PATCH | `/api/students/:id/toggle/` | Toggle `is_active` |
+| PATCH | `/api/students/:id/block/` | Toggle blocked/unblocked |
+| GET | `/api/students/:id/parents/` | Get parents linked to student |
+| GET | `/api/students/:id/documents/` | List student documents |
+| POST | `/api/students/:id/documents/` | Upload document (multipart: `file`) |
+| DELETE | `/api/students/:id/documents/:docId/` | Delete document |
+
+**POST /api/students/ — request (multipart/form-data):**  
+**PUT /api/students/:id/ — same fields**
+
+| Field | Type | Notes |
+|---|---|---|
+| `first_name`, `last_name` | string | **required** for create |
+| `school_id` | number | **required** for create |
+| `email`, `username`, `password` | string | auto-generated if omitted |
+| `admission_number` | string | unique |
+| `date_of_birth` | date | YYYY-MM-DD |
+| `gender` | string | M / F / O |
+| `classroom_id`, `academic_year_id` | number | FK references |
+| `admission_date` | date | defaults to now |
+| `student_type` | string | e.g. boarding, day |
+| `fee_category` | string | fee category label |
+| `place_of_birth`, `nationality`, `religion` | string | |
+| `home_language`, `home_address`, `city` | string | |
+| `phone_number` | string | |
+| **Medical** | | |
+| `blood_type`, `allergies`, `medical_notes` | string | |
+| `doctor_name`, `doctor_phone` | string | |
+| `is_critical_medical` | boolean | |
+| `sen_tier`, `sen_notes` | string | SEN / special needs |
+| `sen_iep` | boolean | Individual Education Plan |
+| **Father** | | |
+| `father_name`, `father_phone`, `father_email` | string | |
+| `father_occupation`, `father_address` | string | |
+| `father_whatsapp` | boolean | |
+| **Mother** | | |
+| `mother_name`, `mother_phone`, `mother_email` | string | |
+| `mother_occupation`, `mother_address` | string | |
+| `mother_whatsapp`, `mother_relationship` | string/boolean | |
+| **Emergency** | | |
+| `emergency_name`, `emergency_relationship` | string | |
+| `emergency_phone`, `emergency_address` | string | |
+| **Disciplinary** | | |
+| `disciplinary_history` | boolean | |
+| `disciplinary_notes` | text | |
+| **Document checklist** | | |
+| `documents_birth_certificate` | boolean | |
+| `documents_passport_photo` | boolean | |
+| `documents_previous_school_report` | boolean | |
+| `documents_transfer_letter` | boolean | |
+| `documents_medical_report` | boolean | |
+| `documents_other` | boolean | |
+| `vaccinations` | JSON | `{"BCG": true, "Polio": false}` |
+| `passport_photo` | file | multipart upload |
+| **Parent auto-registration** — when father/mother name is provided, a User + Parent record is created automatically with dashboard login: | | |
+| `father_username`, `father_password` | string | auto-generated if omitted |
+| `mother_username`, `mother_password` | string | auto-generated if omitted |
+
+**Response includes parent credentials:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1, "user_id": 1, "username": "john.doe_123", "password": "Student@123",
+    "parents": [
+      { "id": 10, "user_id": 5, "username": "parent.john.doe_123", "password": "Parent@123", "relationship": "father" },
+      { "id": 11, "user_id": 6, "username": "parent.jane.doe_123", "password": "Parent@123", "relationship": "mother" }
+    ]
+  },
+  "message": "Student and parents registered"
+}
+```
+
+### Parents — Full Registration
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/parents/` | List all parents (`?status=active`) — includes linked students |
+| POST | `/api/parents/` | Create parent + User account (multipart: `passport_photo`) |
+| PUT | `/api/parents/:id/` | Update parent + User (multipart: `passport_photo`) |
+| DELETE | `/api/parents/:id/` | Delete parent + User + links |
+| PATCH | `/api/parents/:id/toggle/` | Toggle `is_active` |
+| PATCH | `/api/parents/:id/block/` | Toggle blocked/unblocked |
+
+**POST /api/parents/ — request (multipart/form-data):**
+
+| Field | Type | Required |
+|---|---|---|
+| `first_name` | string | yes |
+| `last_name` | string | yes |
+| `email` | string | no |
+| `username` | string | auto-generated if omitted |
+| `password` | string | defaults to `Parent@123` |
+| `phone` | string | no |
+| `passport_photo` | file | no (multipart) |
+| `address` | text | no |
+| `occupation` | string | no |
+| `student_ids` | JSON array | no — `[{"student_id": 1, "relationship": "father"}]` |
+
+### Student-Parent Linking
+
+| Method | Path | Body |
+|---|---|---|
+| POST | `/api/link-parent/` | `{ "student_id": 1, "parent_id": 1, "relationship": "father" }` |
+| POST | `/api/unlink-parent/` | `{ "student_id": 1, "parent_id": 1 }` |
+
+### Models
+
+| # | Table | Model File | Fields |
+|---|---|---|---|
+| 44 | `pruh_core_parent` | `Parent.js` | id, user_id (FK→users), first_name, last_name, email, phone, passport_photo, address, occupation, status, is_active, timestamps |
+| 45 | `pruh_core_student_parent` | `StudentParent.js` | student_id (FK→student), parent_id (FK→parent), relationship |
+
+### Auth Flow
+- Student users get `role_id` for role `student` and can log into the student dashboard
+- Parent users get `role_id` for role `parent` and can log into the parent dashboard
+- Default passwords: `Student@123` / `Parent@123`
+- Usernames auto-generated if omitted: `{first}.{last}_{timestamp}`
+
+---
+
 ## Validation Rules
 
 - `name` field: max 100 characters, required for create

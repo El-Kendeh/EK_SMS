@@ -592,3 +592,30 @@ CREATE TABLE IF NOT EXISTS `pruh_system_bursar` (
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
     `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 44. pruh_core_parent
+CREATE TABLE IF NOT EXISTS `pruh_core_parent` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `user_id` BIGINT NOT NULL UNIQUE,
+    `first_name` VARCHAR(100) NOT NULL,
+    `last_name` VARCHAR(100) NOT NULL,
+    `email` VARCHAR(191) NULL UNIQUE,
+    `phone` VARCHAR(20) NULL,
+    `passport_photo` VARCHAR(255) NULL,
+    `address` TEXT NULL,
+    `occupation` VARCHAR(100) NULL,
+    `status` VARCHAR(20) DEFAULT 'active',
+    `is_active` TINYINT(1) DEFAULT 1,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX `idx_parent_user` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 45. pruh_core_student_parent
+CREATE TABLE IF NOT EXISTS `pruh_core_student_parent` (
+    `student_id` BIGINT NOT NULL,
+    `parent_id` BIGINT NOT NULL,
+    `relationship` VARCHAR(50) NULL,
+    PRIMARY KEY (`student_id`, `parent_id`),
+    INDEX `idx_sp_parent` (`parent_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

@@ -34,6 +34,39 @@ const brandingStorage = multer.diskStorage({
 });
 const brandingUpload = multer({ storage: brandingStorage, limits: { fileSize: 2 * 1024 * 1024 } });
 
+/* Student upload directories */
+const studentDir = path.join(__dirname, '../../uploads/students');
+const parentDir = path.join(__dirname, '../../uploads/parents');
+const docDir = path.join(__dirname, '../../uploads/documents');
+try { fs.mkdirSync(studentDir, { recursive: true }); } catch {}
+try { fs.mkdirSync(parentDir, { recursive: true }); } catch {}
+try { fs.mkdirSync(docDir, { recursive: true }); } catch {}
+
+const studentStorage = multer.diskStorage({
+  destination: (req, file, cb) => { cb(null, studentDir); },
+  filename: (req, file, cb) => {
+    const safe = (file.originalname || 'file').replace(/[^a-zA-Z0-9._-]/g, '');
+    cb(null, `${Date.now()}-${safe || 'upload'}`);
+  },
+});
+const parentStorage = multer.diskStorage({
+  destination: (req, file, cb) => { cb(null, parentDir); },
+  filename: (req, file, cb) => {
+    const safe = (file.originalname || 'file').replace(/[^a-zA-Z0-9._-]/g, '');
+    cb(null, `${Date.now()}-${safe || 'upload'}`);
+  },
+});
+const docStorage = multer.diskStorage({
+  destination: (req, file, cb) => { cb(null, docDir); },
+  filename: (req, file, cb) => {
+    const safe = (file.originalname || 'file').replace(/[^a-zA-Z0-9._-]/g, '');
+    cb(null, `${Date.now()}-${safe || 'upload'}`);
+  },
+});
+const studentUpload = multer({ storage: studentStorage, limits: { fileSize: 5 * 1024 * 1024 } });
+const parentUpload = multer({ storage: parentStorage, limits: { fileSize: 5 * 1024 * 1024 } });
+const docUpload = multer({ storage: docStorage, limits: { fileSize: 10 * 1024 * 1024 } });
+
 function isSuperadmin(req, res, next) {
   if (req.user && (req.user.is_superuser || req.user.role === 'superadmin' || req.user.role === 'admin')) {
     next();
@@ -171,5 +204,31 @@ router.post('/bursars/', data.createBursar);
 router.put('/bursars/:id/', data.updateBursar);
 router.delete('/bursars/:id/', data.deleteBursar);
 router.patch('/bursars/:id/toggle/', data.toggleBursarStatus);
+
+/* Student CRUD */
+router.get('/students/', data.getSuperStudents);
+router.post('/students/', studentUpload.single('passport_photo'), data.createSuperStudent);
+router.put('/students/:id/', studentUpload.single('passport_photo'), data.updateSuperStudent);
+router.delete('/students/:id/', data.deleteSuperStudent);
+router.patch('/students/:id/toggle/', data.toggleSuperStudentStatus);
+router.patch('/students/:id/block/', data.blockSuperStudent);
+router.get('/students/:id/parents/', data.getStudentParents);
+
+/* Student documents */
+router.get('/students/:id/documents/', data.getStudentDocuments);
+router.post('/students/:id/documents/', docUpload.single('file'), data.uploadStudentDocument);
+router.delete('/students/:id/documents/:docId/', data.deleteStudentDocument);
+
+/* Parent CRUD */
+router.get('/parents/', data.getSuperParents);
+router.post('/parents/', parentUpload.single('passport_photo'), data.createSuperParent);
+router.put('/parents/:id/', parentUpload.single('passport_photo'), data.updateSuperParent);
+router.delete('/parents/:id/', data.deleteSuperParent);
+router.patch('/parents/:id/toggle/', data.toggleSuperParentStatus);
+router.patch('/parents/:id/block/', data.blockSuperParent);
+
+/* Student-Parent linking */
+router.post('/link-parent/', data.linkParentToStudent);
+router.post('/unlink-parent/', data.unlinkParentFromStudent);
 
 module.exports = router;

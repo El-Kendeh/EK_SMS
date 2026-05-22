@@ -10,6 +10,8 @@ const Role = require('./Role');
 const SchoolAdmin = require('./SchoolAdmin');
 const Teacher = require('./Teacher');
 const Student = require('./Student');
+const Parent = require('./Parent');
+const StudentParent = require('./StudentParent');
 const Class = require('./Class');
 const Subject = require('./Subject');
 const ClassSubject = require('./ClassSubject');
@@ -390,5 +392,11 @@ School.hasMany(SpotlightStudent, { foreignKey: 'school_id', as: 'spotlightStuden
 SpotlightStudent.belongsTo(School, { foreignKey: 'school_id', as: 'school' });
 SpotlightStudent.belongsTo(Teacher, { foreignKey: 'teacher_id', as: 'teacher' });
 SpotlightStudent.belongsTo(Student, { foreignKey: 'student_id', as: 'student' });
+
+// Parent associations
+Student.belongsToMany(Parent, { through: StudentParent, foreignKey: 'student_id', otherKey: 'parent_id', as: 'parents' });
+Parent.belongsToMany(Student, { through: StudentParent, foreignKey: 'parent_id', otherKey: 'student_id', as: 'students' });
+Parent.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+User.hasOne(Parent, { foreignKey: 'user_id', as: 'parentProfile' });
 
 console.log('✅ All model associations loaded');

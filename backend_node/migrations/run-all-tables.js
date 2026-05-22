@@ -564,6 +564,33 @@ async function migrate() {
         \`created_at\` DATETIME DEFAULT CURRENT_TIMESTAMP,
         \`updated_at\` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+    },
+    {
+      name: 'pruh_core_parent',
+      sql: `CREATE TABLE IF NOT EXISTS \`pruh_core_parent\` (
+        \`id\` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        \`user_id\` BIGINT NOT NULL UNIQUE,
+        \`first_name\` VARCHAR(100) NOT NULL,
+        \`last_name\` VARCHAR(100) NOT NULL,
+        \`email\` VARCHAR(191) NULL UNIQUE,
+        \`phone\` VARCHAR(20) NULL,
+        \`passport_photo\` VARCHAR(255) NULL,
+        \`address\` TEXT NULL,
+        \`occupation\` VARCHAR(100) NULL,
+        \`status\` VARCHAR(20) DEFAULT 'active',
+        \`is_active\` TINYINT(1) DEFAULT 1,
+        \`created_at\` DATETIME DEFAULT CURRENT_TIMESTAMP,
+        \`updated_at\` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+    },
+    {
+      name: 'pruh_core_student_parent',
+      sql: `CREATE TABLE IF NOT EXISTS \`pruh_core_student_parent\` (
+        \`student_id\` BIGINT NOT NULL,
+        \`parent_id\` BIGINT NOT NULL,
+        \`relationship\` VARCHAR(50) NULL,
+        PRIMARY KEY (\`student_id\`, \`parent_id\`)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
     }
   ];
 
@@ -624,6 +651,8 @@ async function migrate() {
       ['idx_region_country', 'pruh_system_region', 'country_id'],
       ['idx_city_country', 'pruh_system_city', 'country_id'],
       ['idx_city_region', 'pruh_system_city', 'region_id'],
+      ['idx_parent_user', 'pruh_core_parent', 'user_id'],
+      ['idx_sp_parent', 'pruh_core_student_parent', 'parent_id'],
     ];
 
     for (const [name, table, column] of indexes) {
@@ -635,7 +664,7 @@ async function migrate() {
       }
     }
 
-    console.log(`\n✅ Migration completed successfully! 43 tables + ${indexes.length} indexes created.`);
+    console.log(`\n✅ Migration completed successfully! 45 tables + ${indexes.length} indexes created.`);
     process.exit(0);
   } catch (err) {
     console.error('❌ Migration failed:', err.message);

@@ -76,6 +76,8 @@ require('./SyllabusType');
 require('./ClassSubtype');
 require('./Principal');
 require('./Bursar');
+require('./Parent');
+require('./StudentParent');
 
 // Load all cross-model associations
 require('./associations');

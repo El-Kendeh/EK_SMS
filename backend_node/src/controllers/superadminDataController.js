@@ -21,6 +21,10 @@ const SyllabusType = require('../models/SyllabusType');
 const ClassSubtype = require('../models/ClassSubtype');
 const Principal = require('../models/Principal');
 const Bursar = require('../models/Bursar');
+const Student = require('../models/Student');
+const Parent = require('../models/Parent');
+const StudentParent = require('../models/StudentParent');
+const Document = require('../models/Document');
 const { appendSecurityAuditLog } = require('../utils/auditLog');
 const { requireRoleId, mapInviteLabelToCode } = require('../utils/roleIds');
 
@@ -1637,6 +1641,455 @@ async function toggleBursarStatus(req, res) {
   } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
 }
 
+/* ---------- Student CRUD (superadmin) ---------- */
+async function getSuperStudents(req, res) {
+  try {
+    const { school_id, status, page = 1, limit = 100 } = req.query;
+    const where = {};
+    if (school_id) where.school_id = school_id;
+    if (status) where.status = status;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const { rows, count } = await Student.findAndCountAll({
+      where, order: [['id', 'DESC']], offset, limit: parseInt(limit),
+    });
+    const students = await Promise.all(rows.map(async s => {
+      let user = null;
+      try { user = await User.findByPk(s.user_id); } catch {}
+      return {
+        id: s.id, school_id: s.school_id, user_id: s.user_id,
+        admission_number: s.admission_number,
+        first_name: user?.first_name || '', last_name: user?.last_name || '',
+        email: user?.email || '', username: user?.username || '',
+        date_of_birth: s.date_of_birth, gender: s.gender,
+        classroom_id: s.classroom_id, academic_year_id: s.academic_year_id,
+        admission_date: s.admission_date,
+        student_type: s.student_type, fee_category: s.fee_category,
+        status: s.status, is_active: s.is_active,
+        place_of_birth: s.place_of_birth,
+        nationality: s.nationality, religion: s.religion,
+        home_language: s.home_language,
+        home_address: s.home_address, city: s.city,
+        phone_number: s.phone_number,
+        blood_type: s.blood_type, allergies: s.allergies,
+        medical_notes: s.medical_notes,
+        doctor_name: s.doctor_name, doctor_phone: s.doctor_phone,
+        is_critical_medical: s.is_critical_medical,
+        sen_tier: s.sen_tier, sen_notes: s.sen_notes, sen_iep: s.sen_iep,
+        father_name: s.father_name, father_phone: s.father_phone,
+        father_email: s.father_email, father_occupation: s.father_occupation,
+        father_address: s.father_address, father_whatsapp: s.father_whatsapp,
+        mother_name: s.mother_name, mother_phone: s.mother_phone,
+        mother_email: s.mother_email, mother_occupation: s.mother_occupation,
+        mother_address: s.mother_address, mother_whatsapp: s.mother_whatsapp,
+        mother_relationship: s.mother_relationship,
+        emergency_name: s.emergency_name,
+        emergency_relationship: s.emergency_relationship,
+        emergency_phone: s.emergency_phone,
+        emergency_address: s.emergency_address,
+        disciplinary_history: s.disciplinary_history,
+        disciplinary_notes: s.disciplinary_notes,
+        documents_birth_certificate: s.documents_birth_certificate,
+        documents_passport_photo: s.documents_passport_photo,
+        documents_previous_school_report: s.documents_previous_school_report,
+        documents_transfer_letter: s.documents_transfer_letter,
+        documents_medical_report: s.documents_medical_report,
+        documents_other: s.documents_other,
+        vaccinations: s.vaccinations,
+        passport_picture: s.passport_picture,
+        created_at: s.created_at,
+      };
+    }));
+    return res.json(successResponse({ students, total: count, page: parseInt(page), limit: parseInt(limit) }));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+
+async function createSuperStudent(req, res) {
+  try {
+    const data = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    if (!data.first_name || !data.last_name) return res.status(400).json(errorResponse('first_name and last_name are required'));
+    if (!data.school_id) return res.status(400).json(errorResponse('school_id is required'));
+    const school = await School.findByPk(data.school_id);
+    if (!school) return res.status(400).json(errorResponse('School not found'));
+
+    /* Create student user account */
+    const username = data.username || `${data.first_name.toLowerCase()}.${data.last_name.toLowerCase()}_${Date.now()}`;
+    const studentPw = data.password || 'Student@123';
+    const hashedPassword = await bcrypt.hash(studentPw, 10);
+    const studentRoleId = await requireRoleId('student');
+    const user = await User.create({
+      username, password: hashedPassword,
+      email: data.email || null,
+      first_name: data.first_name, last_name: data.last_name,
+      is_active: true, role_id: studentRoleId,
+    });
+
+    const passportPath = req.file ? `/uploads/students/${req.file.filename}` : null;
+    const student = await Student.create({
+      school_id: data.school_id, user_id: user.id,
+      admission_number: data.admission_number,
+      admission_date: data.admission_date || new Date(),
+      date_of_birth: data.date_of_birth, gender: data.gender,
+      classroom_id: data.classroom_id, academic_year_id: data.academic_year_id,
+      student_type: data.student_type, fee_category: data.fee_category,
+      status: data.status || 'active', is_active: true,
+      place_of_birth: data.place_of_birth,
+      nationality: data.nationality, religion: data.religion,
+      home_language: data.home_language,
+      home_address: data.home_address, city: data.city,
+      phone_number: data.phone_number,
+      blood_type: data.blood_type, allergies: data.allergies,
+      medical_notes: data.medical_notes,
+      doctor_name: data.doctor_name, doctor_phone: data.doctor_phone,
+      is_critical_medical: data.is_critical_medical,
+      sen_tier: data.sen_tier, sen_notes: data.sen_notes,
+      sen_iep: data.sen_iep,
+      father_name: data.father_name, father_phone: data.father_phone,
+      father_email: data.father_email, father_occupation: data.father_occupation,
+      father_address: data.father_address, father_whatsapp: data.father_whatsapp,
+      mother_name: data.mother_name, mother_phone: data.mother_phone,
+      mother_email: data.mother_email, mother_occupation: data.mother_occupation,
+      mother_address: data.mother_address, mother_whatsapp: data.mother_whatsapp,
+      mother_relationship: data.mother_relationship,
+      emergency_name: data.emergency_name,
+      emergency_relationship: data.emergency_relationship,
+      emergency_phone: data.emergency_phone,
+      emergency_address: data.emergency_address,
+      disciplinary_history: data.disciplinary_history,
+      disciplinary_notes: data.disciplinary_notes,
+      documents_birth_certificate: data.documents_birth_certificate,
+      documents_passport_photo: data.documents_passport_photo,
+      documents_previous_school_report: data.documents_previous_school_report,
+      documents_transfer_letter: data.documents_transfer_letter,
+      documents_medical_report: data.documents_medical_report,
+      documents_other: data.documents_other,
+      vaccinations: data.vaccinations || null,
+      passport_picture: passportPath,
+    });
+
+    /* Register parents alongside student */
+    const parentRoleId = await requireRoleId('parent');
+    const registeredParents = [];
+
+    async function registerParent(p) {
+      if (!p.name) return null;
+      const pw = p.password || 'Parent@123';
+      const pUser = await User.create({
+        username: p.username || `parent.${p.name.toLowerCase().replace(/\s+/g,'.')}_${Date.now()}`,
+        password: await bcrypt.hash(pw, 10),
+        email: p.email || null,
+        first_name: p.name,
+        last_name: p.name,
+        is_active: true, role_id: parentRoleId,
+      });
+      const parent = await Parent.create({
+        user_id: pUser.id, first_name: p.name, last_name: p.name,
+        email: p.email || null, phone: p.phone || null,
+        address: p.address || null, occupation: p.occupation || null,
+        status: 'active', is_active: true,
+      });
+      await StudentParent.create({
+        student_id: student.id, parent_id: parent.id,
+        relationship: p.relationship || 'guardian',
+      });
+      return { id: parent.id, user_id: pUser.id, username: pUser.username, password: pw, relationship: p.relationship };
+    }
+
+    if (data.father_name) {
+      const r = await registerParent({
+        name: data.father_name, phone: data.father_phone,
+        email: data.father_email, occupation: data.father_occupation,
+        address: data.father_address, relationship: 'father',
+        password: data.father_password, username: data.father_username,
+      });
+      if (r) registeredParents.push(r);
+    }
+    if (data.mother_name) {
+      const r = await registerParent({
+        name: data.mother_name, phone: data.mother_phone,
+        email: data.mother_email, occupation: data.mother_occupation,
+        address: data.mother_address, relationship: 'mother',
+        password: data.mother_password, username: data.mother_username,
+      });
+      if (r) registeredParents.push(r);
+    }
+
+    return res.json(successResponse({
+      id: student.id, user_id: user.id, username, password: studentPw,
+      parents: registeredParents,
+    }, 'Student and parents registered'));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse(err.message)); }
+}
+
+async function updateSuperStudent(req, res) {
+  try {
+    const student = await Student.findByPk(req.params.id);
+    if (!student) return res.status(404).json(errorResponse('Not found', 404));
+    const data = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    const user = await User.findByPk(student.user_id);
+    if (user) {
+      if (data.first_name) user.first_name = data.first_name;
+      if (data.last_name) user.last_name = data.last_name;
+      if (data.email) user.email = data.email;
+      if (data.password) user.password = await bcrypt.hash(data.password, 10);
+      await user.save();
+    }
+    const fields = ['admission_number','date_of_birth','gender','classroom_id',
+      'academic_year_id','admission_date','student_type','fee_category','status',
+      'place_of_birth','nationality','religion','home_language','home_address',
+      'city','phone_number','blood_type','allergies','medical_notes','doctor_name',
+      'doctor_phone','is_critical_medical','sen_tier','sen_notes','sen_iep',
+      'father_name','father_phone','father_email','father_occupation','father_address',
+      'father_whatsapp','mother_name','mother_phone','mother_email','mother_occupation',
+      'mother_address','mother_whatsapp','mother_relationship','emergency_name',
+      'emergency_relationship','emergency_phone','emergency_address',
+      'disciplinary_history','disciplinary_notes','documents_birth_certificate',
+      'documents_passport_photo','documents_previous_school_report',
+      'documents_transfer_letter','documents_medical_report','documents_other','vaccinations',
+    ];
+    const upd = {};
+    fields.forEach(k => { if (data[k] !== undefined) upd[k] = data[k]; });
+    if (req.file) upd.passport_picture = `/uploads/students/${req.file.filename}`;
+    await Student.update(upd, { where: { id: student.id } });
+    return res.json(successResponse({}, 'Student updated'));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse(err.message)); }
+}
+
+async function deleteSuperStudent(req, res) {
+  const transaction = await require('../config/db').transaction();
+  try {
+    const student = await Student.findByPk(req.params.id);
+    if (!student) return res.status(404).json(errorResponse('Not found', 404));
+    await Student.destroy({ where: { id: student.id }, transaction });
+    await User.destroy({ where: { id: student.user_id }, transaction });
+    await transaction.commit();
+    return res.json(successResponse({}, 'Student deleted'));
+  } catch (err) { await transaction.rollback(); console.error(err); return res.status(500).json(errorResponse(err.message)); }
+}
+
+async function toggleSuperStudentStatus(req, res) {
+  try {
+    const student = await Student.findByPk(req.params.id);
+    if (!student) return res.status(404).json(errorResponse('Not found', 404));
+    student.is_active = !student.is_active;
+    await student.save();
+    return res.json(successResponse({ is_active: student.is_active }, `Status changed to ${student.is_active ? 'active' : 'inactive'}`));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+
+async function blockSuperStudent(req, res) {
+  try {
+    const student = await Student.findByPk(req.params.id);
+    if (!student) return res.status(404).json(errorResponse('Not found', 404));
+    student.status = student.status === 'blocked' ? 'active' : 'blocked';
+    await student.save();
+    return res.json(successResponse({ status: student.status }, `Student ${student.status === 'blocked' ? 'blocked' : 'unblocked'}`));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+
+/* ---------- Parent CRUD (superadmin) ---------- */
+async function getSuperParents(req, res) {
+  try {
+    const { status } = req.query;
+    const where = {};
+    if (status) where.status = status;
+    const rows = await Parent.findAll({ where, order: [['id', 'DESC']], limit: 500 });
+    const parents = await Promise.all(rows.map(async p => {
+      let user = null, linkedStudents = [];
+      try { user = await User.findByPk(p.user_id); } catch {}
+      try {
+        const sp = await StudentParent.findAll({ where: { parent_id: p.id } });
+        linkedStudents = await Promise.all(sp.map(async s => {
+          const stu = await Student.findByPk(s.student_id);
+          const u = stu ? await User.findByPk(stu.user_id) : null;
+          return { student_id: s.student_id, relationship: s.relationship,
+            first_name: u?.first_name || '', last_name: u?.last_name || '',
+            admission_number: stu?.admission_number || '' };
+        }));
+      } catch {}
+      return {
+        id: p.id, user_id: p.user_id,
+        first_name: user?.first_name || p.first_name,
+        last_name: user?.last_name || p.last_name,
+        email: user?.email || p.email,
+        username: user?.username || '',
+        phone: p.phone, passport_photo: p.passport_photo,
+        address: p.address, occupation: p.occupation,
+        status: p.status, is_active: p.is_active,
+        students: linkedStudents,
+        created_at: p.created_at,
+      };
+    }));
+    return res.json(successResponse({ parents }));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+
+async function createSuperParent(req, res) {
+  const transaction = await require('../config/db').transaction();
+  try {
+    const data = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    if (!data.first_name || !data.last_name) return res.status(400).json(errorResponse('first_name and last_name are required'));
+
+    const username = data.username || `parent.${data.first_name.toLowerCase()}.${data.last_name.toLowerCase()}_${Date.now()}`;
+    const hashedPassword = await bcrypt.hash(data.password || 'Parent@123', 10);
+    const parentRoleId = await requireRoleId('parent');
+    const user = await User.create({
+      username, password: hashedPassword,
+      email: data.email || null,
+      first_name: data.first_name, last_name: data.last_name,
+      is_active: true, role_id: parentRoleId,
+    }, { transaction });
+
+    const photoPath = req.file ? `/uploads/parents/${req.file.filename}` : null;
+    const parent = await Parent.create({
+      user_id: user.id, first_name: data.first_name, last_name: data.last_name,
+      email: data.email, phone: data.phone,
+      passport_photo: photoPath, address: data.address,
+      occupation: data.occupation, status: 'active', is_active: true,
+    }, { transaction });
+
+    // Link to students if provided
+    if (data.student_ids && Array.isArray(data.student_ids)) {
+      for (const sid of data.student_ids) {
+        const rel = typeof sid === 'object' ? sid.relationship : 'guardian';
+        const id = typeof sid === 'object' ? sid.student_id : sid;
+        await StudentParent.create({ student_id: id, parent_id: parent.id, relationship: rel }, { transaction });
+      }
+    }
+
+    await transaction.commit();
+    return res.json(successResponse({ id: parent.id, user_id: user.id, username }, 'Parent created'));
+  } catch (err) { await transaction.rollback(); console.error(err); return res.status(500).json(errorResponse(err.message)); }
+}
+
+async function updateSuperParent(req, res) {
+  const transaction = await require('../config/db').transaction();
+  try {
+    const parent = await Parent.findByPk(req.params.id);
+    if (!parent) return res.status(404).json(errorResponse('Not found', 404));
+    const data = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    const user = await User.findByPk(parent.user_id);
+    if (user) {
+      if (data.first_name) user.first_name = data.first_name;
+      if (data.last_name) user.last_name = data.last_name;
+      if (data.email) user.email = data.email;
+      if (data.password) user.password = await bcrypt.hash(data.password, 10);
+      await user.save({ transaction });
+    }
+    const upd = {};
+    ['phone','address','occupation','status'].forEach(k => { if (data[k] !== undefined) upd[k] = data[k]; });
+    if (req.file) upd.passport_photo = `/uploads/parents/${req.file.filename}`;
+    await Parent.update(upd, { where: { id: parent.id }, transaction });
+    await transaction.commit();
+    return res.json(successResponse({}, 'Parent updated'));
+  } catch (err) { await transaction.rollback(); console.error(err); return res.status(500).json(errorResponse(err.message)); }
+}
+
+async function deleteSuperParent(req, res) {
+  const transaction = await require('../config/db').transaction();
+  try {
+    const parent = await Parent.findByPk(req.params.id);
+    if (!parent) return res.status(404).json(errorResponse('Not found', 404));
+    await StudentParent.destroy({ where: { parent_id: parent.id }, transaction });
+    await Parent.destroy({ where: { id: parent.id }, transaction });
+    await User.destroy({ where: { id: parent.user_id }, transaction });
+    await transaction.commit();
+    return res.json(successResponse({}, 'Parent deleted'));
+  } catch (err) { await transaction.rollback(); console.error(err); return res.status(500).json(errorResponse(err.message)); }
+}
+
+async function toggleSuperParentStatus(req, res) {
+  try {
+    const parent = await Parent.findByPk(req.params.id);
+    if (!parent) return res.status(404).json(errorResponse('Not found', 404));
+    parent.is_active = !parent.is_active;
+    await parent.save();
+    return res.json(successResponse({ is_active: parent.is_active }, `Status changed to ${parent.is_active ? 'active' : 'inactive'}`));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+
+async function blockSuperParent(req, res) {
+  try {
+    const parent = await Parent.findByPk(req.params.id);
+    if (!parent) return res.status(404).json(errorResponse('Not found', 404));
+    parent.status = parent.status === 'blocked' ? 'active' : 'blocked';
+    await parent.save();
+    return res.json(successResponse({ status: parent.status }, `Parent ${parent.status === 'blocked' ? 'blocked' : 'unblocked'}`));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+
+/* ---------- Student-Parent Linking ---------- */
+async function linkParentToStudent(req, res) {
+  try {
+    const { student_id, parent_id, relationship } = req.body;
+    if (!student_id || !parent_id) return res.status(400).json(errorResponse('student_id and parent_id are required'));
+    const student = await Student.findByPk(student_id);
+    if (!student) return res.status(404).json(errorResponse('Student not found'));
+    const parent = await Parent.findByPk(parent_id);
+    if (!parent) return res.status(404).json(errorResponse('Parent not found'));
+    const existing = await StudentParent.findOne({ where: { student_id, parent_id } });
+    if (existing) return res.status(400).json(errorResponse('Link already exists'));
+    await StudentParent.create({ student_id, parent_id, relationship: relationship || 'guardian' });
+    return res.json(successResponse({}, 'Parent linked to student'));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+
+async function unlinkParentFromStudent(req, res) {
+  try {
+    const { student_id, parent_id } = req.body;
+    if (!student_id || !parent_id) return res.status(400).json(errorResponse('student_id and parent_id are required'));
+    await StudentParent.destroy({ where: { student_id, parent_id } });
+    return res.json(successResponse({}, 'Parent unlinked from student'));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+
+async function getStudentParents(req, res) {
+  try {
+    const links = await StudentParent.findAll({ where: { student_id: req.params.id } });
+    const parents = await Promise.all(links.map(async l => {
+      const p = await Parent.findByPk(l.parent_id);
+      const u = p ? await User.findByPk(p.user_id) : null;
+      return { parent_id: l.parent_id, relationship: l.relationship,
+        first_name: u?.first_name || p?.first_name || '',
+        last_name: u?.last_name || p?.last_name || '',
+        email: u?.email || p?.email || '', phone: p?.phone || '' };
+    }));
+    return res.json(successResponse({ parents }));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+
+/* ---------- Student Document Upload ---------- */
+async function uploadStudentDocument(req, res) {
+  try {
+    if (!req.file) return res.status(400).json(errorResponse('No file uploaded'));
+    const doc = await Document.create({
+      school_id: req.body.school_id || 0,
+      student_id: req.params.id,
+      title: req.body.title || req.file.originalname,
+      file_path: `/uploads/documents/${req.file.filename}`,
+      file_type: req.file.mimetype,
+      uploaded_by: req.user?.id || null,
+      is_verified: false,
+    });
+    return res.json(successResponse({ id: doc.id, file_path: doc.file_path }, 'Document uploaded'));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+
+async function getStudentDocuments(req, res) {
+  try {
+    const docs = await Document.findAll({ where: { student_id: req.params.id }, order: [['created_at', 'DESC']] });
+    return res.json(successResponse({ documents: docs }));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+
+async function deleteStudentDocument(req, res) {
+  try {
+    const doc = await Document.findByPk(req.params.docId);
+    if (!doc) return res.status(404).json(errorResponse('Document not found'));
+    await doc.destroy();
+    return res.json(successResponse({}, 'Document deleted'));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+
 module.exports = {
   getSecurityLogs,
   getSecurityCounters,
@@ -1721,4 +2174,14 @@ module.exports = {
   toggleClassSubtypeStatus,
   getPrincipals, createPrincipal, updatePrincipal, deletePrincipal, togglePrincipalStatus,
   getBursars, createBursar, updateBursar, deleteBursar, toggleBursarStatus,
+  /* Students */
+  getSuperStudents, createSuperStudent, updateSuperStudent, deleteSuperStudent,
+  toggleSuperStudentStatus, blockSuperStudent,
+  /* Parent */
+  getSuperParents, createSuperParent, updateSuperParent, deleteSuperParent,
+  toggleSuperParentStatus, blockSuperParent,
+  /* Student-Parent linking */
+  linkParentToStudent, unlinkParentFromStudent, getStudentParents,
+  /* Documents */
+  uploadStudentDocument, getStudentDocuments, deleteStudentDocument,
 };
