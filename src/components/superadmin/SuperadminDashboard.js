@@ -494,20 +494,6 @@ export default function Dashboard({ onNavigate }) {
     { key: 'applications',    label: 'Applications', icon: <IcApplications />, badge: pendingCount,  section: null     },
     { key: 'rejected',        label: 'Rejected',     icon: <IcRejected />,     badge: rejectedCount, section: null     },
     { key: 'schools',         label: 'Schools',      icon: <IcSchools />,      badge: 0,             section: null     },
-    { key: 'grade-report',    label: 'Grade Integrity', icon: <IcGrade />,      badge: 0,             section: 'Grade Integrity'  },
-    { key: 'grade-requests',  label: 'Mod. Requests',  icon: <IcRequests />,   badge: pendingGradeCount, section: 'Grade Integrity'  },
-    { key: 'analytics',       label: 'School Directory', icon: <IcAnalytics />,  badge: 0,             section: 'Reports & Analytics' },
-    { key: 'benchmarks',      label: 'Benchmarks',   icon: <IcBenchmarks />,   badge: 0,             section: 'Reports & Analytics' },
-    { key: 'onboarding',      label: 'Onboarding',   icon: <IcOnboarding />,   badge: 0,             section: 'Reports & Analytics' },
-    { key: 'governance',      label: 'RBAC / Roles', icon: <IcGovernance />,   badge: 0,             section: 'Governance'       },
-    { key: 'users',           label: 'Users',        icon: <IcUsers />,        badge: 0,             section: 'Governance'       },
-    { key: 'security-logs',   label: 'Audit Logs',   icon: <IcSecLogs />,      badge: 0,             section: 'Security & Audit' },
-    { key: 'forensics',       label: 'Forensics',    icon: <IcForensics />,    badge: 0,             section: 'Security & Audit' },
-    { key: 'alert-broadcast', label: 'Broadcast',     icon: <IcBroadcast />,     badge: 0,         section: 'Security & Audit' },
-    { key: 'change-alerts',   label: 'Change Alerts', icon: <IcChangeAlert />,   badge: 0,         section: 'Security & Audit' },
-    { key: 'system-health',   label: 'System Health', icon: <IcHealth />,        badge: 0,         section: 'Security & Audit' },
-    { key: 'notifications',   label: 'Notifications',icon: <IcBell />,         badge: 0,             section: null     },
-    { key: 'settings',        label: 'Settings',     icon: <IcSettings />,     badge: 0,             section: null     },
   ];
 
   return (
