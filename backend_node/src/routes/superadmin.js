@@ -203,6 +203,37 @@ router.put('/class-subtypes/:id/', data.updateClassSubtype);
 router.delete('/class-subtypes/:id/', data.deleteClassSubtype);
 router.patch('/class-subtypes/:id/toggle/', data.toggleClassSubtypeStatus);
 
+/* Classes CRUD */
+router.get('/classes/', data.getSuperClasses);
+router.post('/classes/', data.createSuperClass);
+router.put('/classes/:id/', data.updateSuperClass);
+router.delete('/classes/:id/', data.deleteSuperClass);
+router.patch('/classes/:id/toggle/', data.toggleSuperClassStatus);
+
+/* Subjects CRUD */
+router.get('/subjects/', data.getSuperSubjects);
+router.post('/subjects/', data.createSuperSubject);
+router.put('/subjects/:id/', data.updateSuperSubject);
+router.delete('/subjects/:id/', data.deleteSuperSubject);
+router.patch('/subjects/:id/toggle/', data.toggleSuperSubjectStatus);
+
+/* Class Assignment Routes */
+router.get('/classes/:id/students/', data.getClassStudents);
+router.get('/classes/:id/available-students/', data.getAvailableStudents);
+router.post('/classes/:id/assign-students/', data.assignClassStudents);
+router.get('/classes/:id/subjects/', data.getClassAssignedSubjects);
+router.get('/classes/:id/available-subjects/', data.getAvailableSubjectsForClass);
+router.post('/classes/:id/assign-subjects/', data.assignClassSubjects);
+router.post('/classes/:id/assign-teacher/', data.assignClassTeacher);
+router.get('/classes/:id/available-teachers/', data.getAvailableTeachersForClass);
+
+/* Subject Assignment Routes */
+router.get('/subjects/:id/classes/', data.getSubjectAssignedClasses);
+router.get('/subjects/:id/available-classes/', data.getAvailableClassesForSubject);
+router.post('/subjects/:id/assign-classes/', data.assignSubjectClasses);
+router.get('/subjects/:id/teachers/', data.getTeachersForSubject);
+router.post('/subjects/:id/assign-teacher/', data.assignSubjectTeacher);
+
 /* Bursars CRUD */
 /* Student CRUD */
 router.get('/students/', data.getSuperStudents);

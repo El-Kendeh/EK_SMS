@@ -28,6 +28,10 @@ const Document = require('../models/Document');
 const Teacher = require('../models/Teacher');
 const CoreBursar = require('../models/CoreBursar');
 const CorePrincipal = require('../models/CorePrincipal');
+const ClassModel = require('../models/Class');
+const Subject = require('../models/Subject');
+const ClassSubject = require('../models/ClassSubject');
+const ClassAssistantTeacher = require('../models/ClassAssistantTeacher');
 const { appendSecurityAuditLog } = require('../utils/auditLog');
 const { requireRoleId, mapInviteLabelToCode } = require('../utils/roleIds');
 
@@ -1566,6 +1570,301 @@ async function toggleClassSubtypeStatus(req, res) {
   } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
 }
 
+/* ---------- Classes CRUD (superadmin) ---------- */
+async function getSuperClasses(req, res) {
+  try {
+    const { school_id, page = 1, limit = 100 } = req.query;
+    const where = {};
+    if (school_id) where.school_id = school_id;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const { rows, count } = await ClassModel.findAndCountAll({ where, order: [['created_at', 'DESC']], offset, limit: parseInt(limit) });
+    const classes = await Promise.all(rows.map(async r => {
+      let schoolName = '';
+      try { const s = await School.findByPk(r.school_id); schoolName = s?.name || ''; } catch {}
+      return { id: r.id, school_id: r.school_id, school_name: schoolName, name: r.name, code: r.code, form: r.form, form_number: r.form_number, category: r.category, stream: r.stream, class_teacher_id: r.class_teacher_id, capacity: r.capacity, academic_year_id: r.academic_year_id, is_active: Boolean(r.is_active), room: r.room, start_time: r.start_time, end_time: r.end_time, colour_tag: r.colour_tag, education_level: r.education_level, track: r.track, notes: r.notes, auto_promotion_target_id: r.auto_promotion_target_id, created_at: r.created_at };
+    }));
+    return res.json(successResponse({ classes, total: count, page: parseInt(page), limit: parseInt(limit) }));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+async function createSuperClass(req, res) {
+  try {
+    const data = req.body;
+    if (!data.name) return res.status(400).json(errorResponse('name is required'));
+    if (!data.school_id) return res.status(400).json(errorResponse('school_id is required'));
+    const row = await ClassModel.create({
+      school_id: data.school_id, name: data.name, code: data.code || null,
+      form: data.form || null, form_number: data.form_number || null,
+      category: data.category || null, stream: data.stream || null,
+      class_teacher_id: data.class_teacher_id || null,
+      capacity: data.capacity || 50, academic_year_id: data.academic_year_id || null,
+      room: data.room || null, start_time: data.start_time || null,
+      end_time: data.end_time || null, colour_tag: data.colour_tag || '#3B82F6',
+      education_level: data.education_level || null, track: data.track || null,
+      notes: data.notes || null, auto_promotion_target_id: data.auto_promotion_target_id || null,
+    });
+    return res.json(successResponse({ id: row.id }, 'Class created'));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse(err.message)); }
+}
+async function updateSuperClass(req, res) {
+  try {
+    const row = await ClassModel.findByPk(req.params.id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    const data = req.body;
+    ['name','code','form','form_number','category','stream','class_teacher_id','capacity','academic_year_id','room','start_time','end_time','colour_tag','education_level','track','notes','auto_promotion_target_id','school_id'].forEach(k => {
+      if (data[k] !== undefined) row[k] = data[k];
+    });
+    await row.save();
+    return res.json(successResponse({}, 'Class updated'));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse(err.message)); }
+}
+async function deleteSuperClass(req, res) {
+  try {
+    const row = await ClassModel.findByPk(req.params.id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    await row.destroy();
+    return res.json(successResponse({}, 'Class deleted'));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+async function toggleSuperClassStatus(req, res) {
+  try {
+    const row = await ClassModel.findByPk(req.params.id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    row.is_active = !row.is_active; await row.save();
+    return res.json(successResponse({ is_active: row.is_active }, `Status changed to ${row.is_active ? 'active' : 'inactive'}`));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+
+/* ---------- Subjects CRUD (superadmin) ---------- */
+async function getSuperSubjects(req, res) {
+  try {
+    const { school_id, page = 1, limit = 100 } = req.query;
+    const where = {};
+    if (school_id) where.school_id = school_id;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const { rows, count } = await Subject.findAndCountAll({ where, order: [['created_at', 'DESC']], offset, limit: parseInt(limit) });
+    const subjects = await Promise.all(rows.map(async r => {
+      let schoolName = '';
+      try { const s = await School.findByPk(r.school_id); schoolName = s?.name || ''; } catch {}
+      return { id: r.id, school_id: r.school_id, school_name: schoolName, name: r.name, code: r.code, description: r.description, is_active: Boolean(r.is_active), created_at: r.created_at };
+    }));
+    return res.json(successResponse({ subjects, total: count, page: parseInt(page), limit: parseInt(limit) }));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+async function createSuperSubject(req, res) {
+  try {
+    const data = req.body;
+    if (!data.name) return res.status(400).json(errorResponse('name is required'));
+    if (!data.school_id) return res.status(400).json(errorResponse('school_id is required'));
+    const row = await Subject.create({
+      school_id: data.school_id, name: data.name,
+      code: data.code || null, description: data.description || null,
+    });
+    return res.json(successResponse({ id: row.id }, 'Subject created'));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse(err.message)); }
+}
+async function updateSuperSubject(req, res) {
+  try {
+    const row = await Subject.findByPk(req.params.id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    const data = req.body;
+    if (data.name !== undefined) row.name = data.name;
+    if (data.code !== undefined) row.code = data.code;
+    if (data.description !== undefined) row.description = data.description;
+    if (data.school_id !== undefined) row.school_id = data.school_id;
+    await row.save();
+    return res.json(successResponse({}, 'Subject updated'));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse(err.message)); }
+}
+async function deleteSuperSubject(req, res) {
+  try {
+    const row = await Subject.findByPk(req.params.id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    await row.destroy();
+    return res.json(successResponse({}, 'Subject deleted'));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+async function toggleSuperSubjectStatus(req, res) {
+  try {
+    const row = await Subject.findByPk(req.params.id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    row.is_active = !row.is_active; await row.save();
+    return res.json(successResponse({ is_active: row.is_active }, `Status changed to ${row.is_active ? 'active' : 'inactive'}`));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+
+/* ---------- Class Assignment Functions (superadmin) ---------- */
+async function getClassStudents(req, res) {
+  try {
+    const classId = req.params.id;
+    const cls = await ClassModel.findByPk(classId);
+    if (!cls) return res.status(404).json(errorResponse('Class not found', 404));
+    const students = await Student.findAll({ where: { classroom_id: classId }, order: [['id', 'DESC']] });
+    const enriched = await Promise.all(students.map(async s => {
+      let u = null; try { u = await User.findByPk(s.user_id); } catch {}
+      return { id: s.id, user_id: s.user_id, first_name: u?.first_name || '', last_name: u?.last_name || '', admission_number: s.admission_number, gender: s.gender, is_active: s.is_active };
+    }));
+    return res.json(successResponse({ students: enriched }));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+async function getAvailableStudents(req, res) {
+  try {
+    const classId = req.params.id;
+    const cls = await ClassModel.findByPk(classId);
+    if (!cls) return res.status(404).json(errorResponse('Class not found', 404));
+    const schoolId = cls.school_id;
+    const where = { school_id: schoolId };
+    where.classroom_id = { [Op.or]: [null, { [Op.ne]: Number(classId) }] };
+    const students = await Student.findAll({ where, order: [['id', 'DESC']], limit: 500 });
+    const enriched = await Promise.all(students.map(async s => {
+      let u = null; try { u = await User.findByPk(s.user_id); } catch {}
+      return { id: s.id, user_id: s.user_id, first_name: u?.first_name || '', last_name: u?.last_name || '', admission_number: s.admission_number, gender: s.gender, classroom_id: s.classroom_id };
+    }));
+    return res.json(successResponse({ students: enriched }));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+async function assignClassStudents(req, res) {
+  try {
+    const classId = req.params.id;
+    const cls = await ClassModel.findByPk(classId);
+    if (!cls) return res.status(404).json(errorResponse('Class not found', 404));
+    const { student_ids } = req.body;
+    if (!Array.isArray(student_ids)) return res.status(400).json(errorResponse('student_ids must be an array'));
+    await Student.update({ classroom_id: classId }, { where: { id: student_ids, school_id: cls.school_id } });
+    await Student.update({ classroom_id: null }, { where: { school_id: cls.school_id, classroom_id: classId, id: { [Op.notIn]: student_ids } } });
+    return res.json(successResponse({ assigned_count: student_ids.length }, 'Students assigned'));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse(err.message)); }
+}
+async function getClassAssignedSubjects(req, res) {
+  try {
+    const classId = req.params.id;
+    const rows = await ClassSubject.findAll({ where: { class_id: classId } });
+    const enriched = await Promise.all(rows.map(async r => {
+      let sub = null; try { sub = await Subject.findByPk(r.subject_id); } catch {}
+      let teacher = null; if (r.teacher_id) { try { const t = await Teacher.findByPk(r.teacher_id); if (t) { const u = await User.findByPk(t.user_id); teacher = u ? `${u.first_name} ${u.last_name}` : `Teacher #${r.teacher_id}`; } } catch {} }
+      return { id: r.id, subject_id: r.subject_id, subject_name: sub?.name || '', subject_code: sub?.code || '', teacher_id: r.teacher_id, teacher_name: teacher || '' };
+    }));
+    return res.json(successResponse({ subjects: enriched }));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+async function getAvailableSubjectsForClass(req, res) {
+  try {
+    const classId = req.params.id;
+    const cls = await ClassModel.findByPk(classId);
+    if (!cls) return res.status(404).json(errorResponse('Class not found', 404));
+    const assigned = await ClassSubject.findAll({ where: { class_id: classId }, attributes: ['subject_id'] });
+    const assignedIds = assigned.map(a => a.subject_id);
+    const where = { school_id: cls.school_id };
+    if (assignedIds.length > 0) where.id = { [Op.notIn]: assignedIds };
+    const subjects = await Subject.findAll({ where, order: [['name', 'ASC']] });
+    return res.json(successResponse({ subjects: subjects.map(s => ({ id: s.id, name: s.name, code: s.code })) }));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+async function assignClassSubjects(req, res) {
+  try {
+    const classId = req.params.id;
+    const cls = await ClassModel.findByPk(classId);
+    if (!cls) return res.status(404).json(errorResponse('Class not found', 404));
+    const { subject_ids } = req.body;
+    if (!Array.isArray(subject_ids)) return res.status(400).json(errorResponse('subject_ids must be an array'));
+    await ClassSubject.destroy({ where: { class_id: classId } });
+    if (subject_ids.length > 0) {
+      await ClassSubject.bulkCreate(subject_ids.map(sid => ({ class_id: classId, subject_id: sid })), { ignoreDuplicates: true });
+    }
+    return res.json(successResponse({ subject_count: subject_ids.length }, 'Subjects assigned'));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse(err.message)); }
+}
+async function assignClassTeacher(req, res) {
+  try {
+    const classId = req.params.id;
+    const cls = await ClassModel.findByPk(classId);
+    if (!cls) return res.status(404).json(errorResponse('Class not found', 404));
+    const { teacher_id } = req.body;
+    cls.class_teacher_id = teacher_id || null;
+    await cls.save();
+    return res.json(successResponse({ class_teacher_id: cls.class_teacher_id }, 'Class teacher updated'));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse(err.message)); }
+}
+
+/* ---------- Subject Assignment Functions (superadmin) ---------- */
+async function assignSubjectClasses(req, res) {
+  try {
+    const subjectId = req.params.id;
+    const sub = await Subject.findByPk(subjectId);
+    if (!sub) return res.status(404).json(errorResponse('Subject not found', 404));
+    const { class_ids } = req.body;
+    if (!Array.isArray(class_ids)) return res.status(400).json(errorResponse('class_ids must be an array'));
+    await ClassSubject.destroy({ where: { subject_id: subjectId } });
+    if (class_ids.length > 0) {
+      await ClassSubject.bulkCreate(class_ids.map(cid => ({ class_id: cid, subject_id: subjectId })), { ignoreDuplicates: true });
+    }
+    return res.json(successResponse({ class_count: class_ids.length }, 'Classes assigned'));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse(err.message)); }
+}
+async function assignSubjectTeacher(req, res) {
+  try {
+    const subjectId = req.params.id;
+    const sub = await Subject.findByPk(subjectId);
+    if (!sub) return res.status(404).json(errorResponse('Subject not found', 404));
+    const { teacher_id } = req.body;
+    if (teacher_id) {
+      await ClassSubject.update({ teacher_id }, { where: { subject_id: subjectId } });
+    } else {
+      await ClassSubject.update({ teacher_id: null }, { where: { subject_id: subjectId } });
+    }
+    return res.json(successResponse({}, 'Subject teacher updated'));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse(err.message)); }
+}
+async function getSubjectAssignedClasses(req, res) {
+  try {
+    const subjectId = req.params.id;
+    const rows = await ClassSubject.findAll({ where: { subject_id: subjectId } });
+    const enriched = await Promise.all(rows.map(async r => {
+      const c = await ClassModel.findByPk(r.class_id);
+      return { id: r.id, class_id: r.class_id, class_name: c?.name || '', class_code: c?.code || '', teacher_id: r.teacher_id };
+    }));
+    return res.json(successResponse({ classes: enriched }));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+async function getAvailableClassesForSubject(req, res) {
+  try {
+    const subjectId = req.params.id;
+    const sub = await Subject.findByPk(subjectId);
+    if (!sub) return res.status(404).json(errorResponse('Subject not found', 404));
+    const assigned = await ClassSubject.findAll({ where: { subject_id: subjectId }, attributes: ['class_id'] });
+    const assignedIds = assigned.map(a => a.class_id);
+    const where = { school_id: sub.school_id };
+    if (assignedIds.length > 0) where.id = { [Op.notIn]: assignedIds };
+    const classes = await ClassModel.findAll({ where, order: [['name', 'ASC']] });
+    return res.json(successResponse({ classes: classes.map(c => ({ id: c.id, name: c.name, code: c.code })) }));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+async function getTeachersForSubject(req, res) {
+  try {
+    const { id } = req.params;
+    const sub = await Subject.findByPk(id);
+    if (!sub) return res.status(404).json(errorResponse('Subject not found', 404));
+    const teachers = await Teacher.findAll({ where: { school_id: sub.school_id, is_active: true }, order: [['id', 'DESC']], limit: 500 });
+    const enriched = await Promise.all(teachers.map(async t => {
+      let u = null; try { u = await User.findByPk(t.user_id); } catch {}
+      return { id: t.id, user_id: t.user_id, first_name: u?.first_name || '', last_name: u?.last_name || '', employee_id: t.employee_id };
+    }));
+    return res.json(successResponse({ teachers: enriched }));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+async function getAvailableTeachersForClass(req, res) {
+  try {
+    const classId = req.params.id;
+    const cls = await ClassModel.findByPk(classId);
+    if (!cls) return res.status(404).json(errorResponse('Class not found', 404));
+    const teachers = await Teacher.findAll({ where: { school_id: cls.school_id, is_active: true }, order: [['id', 'DESC']], limit: 500 });
+    const enriched = await Promise.all(teachers.map(async t => {
+      let u = null; try { u = await User.findByPk(t.user_id); } catch {}
+      return { id: t.id, user_id: t.user_id, first_name: u?.first_name || '', last_name: u?.last_name || '', employee_id: t.employee_id };
+    }));
+    return res.json(successResponse({ teachers: enriched }));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+
 /* ---------- Principals CRUD ---------- */
 async function getPrincipals(req, res) {
   try {
@@ -2602,6 +2901,16 @@ module.exports = {
   updateClassSubtype,
   deleteClassSubtype,
   toggleClassSubtypeStatus,
+  /* Classes */
+  getSuperClasses, createSuperClass, updateSuperClass, deleteSuperClass, toggleSuperClassStatus,
+  /* Subjects */
+  getSuperSubjects, createSuperSubject, updateSuperSubject, deleteSuperSubject, toggleSuperSubjectStatus,
+  /* Class Assignments */
+  getClassStudents, getAvailableStudents, assignClassStudents,
+  getClassAssignedSubjects, getAvailableSubjectsForClass, assignClassSubjects, assignClassTeacher,
+  getAvailableTeachersForClass,
+  /* Subject Assignments */
+  assignSubjectClasses, assignSubjectTeacher, getSubjectAssignedClasses, getAvailableClassesForSubject, getTeachersForSubject,
   getPrincipals, createPrincipal, updatePrincipal, deletePrincipal, togglePrincipalStatus,
   getBursars, createBursar, updateBursar, deleteBursar, toggleBursarStatus,
   /* Students */
