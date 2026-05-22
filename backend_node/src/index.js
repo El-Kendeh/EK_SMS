@@ -26,6 +26,9 @@ const { testEmail } = require('./controllers/testController');
 const app = express();
 
 const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5000',
+  'http://127.0.0.1:3000',
   'https://backend.pruhsms.africa',
   'https://pruhsms.africa',
   'https://www.pruhsms.africa',

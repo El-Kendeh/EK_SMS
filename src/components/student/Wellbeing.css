@@ -1,0 +1,109 @@
+.wb-room {
+  padding: 22px;
+  max-width: 760px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  color: var(--student-text, #e8eef9);
+  height: calc(100vh - 100px);
+  min-height: 480px;
+}
+
+.wb-room header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  background: rgba(244, 114, 182, 0.08);
+  border: 1px solid rgba(244, 114, 182, 0.24);
+  border-radius: 16px;
+}
+.wb-room__icon {
+  width: 42px; height: 42px; border-radius: 11px;
+  display: grid; place-items: center;
+  background: rgba(244, 114, 182, 0.18);
+  color: #f472b6;
+}
+.wb-room header h2 { margin: 0 0 2px; font-size: 17px; font-weight: 700; }
+.wb-room header p { margin: 0; font-size: 12px; opacity: 0.7; }
+
+.wb-room__thread {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 18px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.wb-msg {
+  max-width: 80%;
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.wb-msg p { margin: 0; }
+.wb-msg small { display: block; margin-top: 4px; font-size: 10px; opacity: 0.55; }
+
+.wb-msg--counsellor { background: rgba(244, 114, 182, 0.10); align-self: flex-start; border-bottom-left-radius: 4px; }
+.wb-msg--student   { background: rgba(91, 140, 255, 0.16);  align-self: flex-end;  border-bottom-right-radius: 4px; }
+.wb-msg--anonymous { background: rgba(168, 85, 247, 0.16);  align-self: flex-end; }
+
+.wb-room__error {
+  padding: 8px 12px;
+  background: rgba(239, 68, 68, 0.10);
+  color: #fca5a5;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.wb-room__footer {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  padding: 12px;
+}
+.wb-room__footer textarea {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  resize: vertical;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.wb-room__send-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  gap: 10px;
+}
+.wb-room__send-row label {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; opacity: 0.7;
+}
+.wb-room__send-row button {
+  padding: 8px 16px;
+  background: var(--student-primary, #5b8cff);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.wb-room__send-row button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+@media (max-width: 600px) {
+  .wb-room { padding: 14px; }
+}

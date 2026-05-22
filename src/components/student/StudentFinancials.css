@@ -1,0 +1,411 @@
+/* ============================================================
+   STUDENT FINANCIALS
+   ============================================================ */
+.sfin {
+  background: var(--student-dark-bg);
+  min-height: calc(100vh - var(--student-header-height));
+  padding: 36px 40px 60px;
+  font-family: 'Inter', sans-serif;
+}
+
+/* Header */
+.sfin__header {
+  margin-bottom: 32px;
+}
+
+.sfin__title {
+  font-family: 'Manrope', sans-serif;
+  font-size: 28px;
+  font-weight: 900;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.sfin__subtitle {
+  font-size: 13px;
+  color: #64748B;
+  font-weight: 600;
+}
+
+.sfin__loading { padding: 8px 0; }
+.sfin__error { color: #F87171; font-size: 14px; padding: 20px 0; }
+
+/* Stats bento */
+.sfin__stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.sfin-stat {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.sfin-stat--paid {
+  border-left: 4px solid var(--student-primary);
+}
+
+.sfin-stat__label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #64748B;
+  margin-bottom: 8px;
+}
+
+.sfin-stat__label--paid { color: var(--student-primary); }
+
+.sfin-stat__value {
+  font-family: 'Manrope', sans-serif;
+  font-size: 26px;
+  font-weight: 900;
+  color: #fff;
+  margin-bottom: 10px;
+  line-height: 1.2;
+}
+
+.sfin-stat__value--paid { color: var(--student-primary); }
+.sfin-stat__value--outstanding { color: #F59E0B; }
+
+.sfin-stat__sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #64748B;
+  font-weight: 600;
+}
+.sfin-stat__sub .material-symbols-outlined { font-size: 14px; }
+.sfin-stat__sub--paid { color: var(--student-primary); }
+
+.sfin-stat__due {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(245,158,11,0.1);
+  color: #F59E0B;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+.sfin-stat__due .material-symbols-outlined { font-size: 13px; }
+
+/* Trust banner */
+.sfin__trust {
+  background: #101C2E;
+  border-radius: 14px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 32px;
+}
+
+.sfin__trust-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sfin__trust-left .material-symbols-outlined {
+  font-size: 24px;
+  color: var(--student-primary);
+  transform: scale(1.1);
+}
+
+.sfin__trust-left p {
+  font-size: 13px;
+  color: rgba(255,255,255,0.85);
+  font-weight: 500;
+}
+
+.sfin__trust-badge {
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: rgba(255,255,255,0.15);
+  white-space: nowrap;
+}
+
+/* Table section */
+.sfin__table-section { margin-bottom: 32px; }
+
+.sfin__table-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.sfin__table-title {
+  font-family: 'Manrope', sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.sfin__table-sub {
+  font-size: 12px;
+  color: #64748B;
+}
+
+.sfin__table-wrap {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 14px;
+  overflow: hidden;
+  overflow-x: auto;
+}
+
+.sfin-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 500px;
+}
+
+.sfin-table thead tr {
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.sfin-table th {
+  padding: 14px 20px;
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #64748B;
+  text-align: left;
+}
+
+.sfin-table th.text-right { text-align: right; }
+.sfin-table th.text-center { text-align: center; }
+
+.sfin-table tbody tr {
+  background: rgba(255,255,255,0.02);
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  transition: background 0.15s;
+}
+.sfin-table tbody tr:last-child { border-bottom: none; }
+.sfin-table tbody tr:hover { background: rgba(255,255,255,0.05); }
+
+.sfin-table td {
+  padding: 16px 20px;
+  font-size: 13px;
+  color: #CBD5E1;
+  vertical-align: middle;
+}
+
+.sfin-table td.text-right { text-align: right; }
+.sfin-table td.text-center { text-align: center; }
+
+.sfin-tx__desc {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sfin-tx__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(16,185,129,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.sfin-tx__icon .material-symbols-outlined { font-size: 18px; color: var(--student-primary); }
+
+.sfin-tx__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #E2E8F0;
+}
+
+.sfin-tx__date { font-size: 12px; color: #64748B; }
+
+.sfin-tx__amount {
+  font-family: 'Manrope', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: #E2E8F0;
+  text-align: right;
+}
+
+.sfin-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.sfin-badge--verified {
+  background: rgba(16,185,129,0.12);
+  color: #10B981;
+}
+.sfin-badge--verified .material-symbols-outlined { font-size: 13px; }
+
+.sfin-badge--pending {
+  background: rgba(245,158,11,0.12);
+  color: #F59E0B;
+}
+.sfin-badge--pending .material-symbols-outlined { font-size: 13px; }
+
+.sfin-dl-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #64748B;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  transition: color 0.15s, background 0.15s;
+}
+.sfin-dl-btn:hover { color: var(--student-primary); background: rgba(16,185,129,0.08); }
+.sfin-dl-btn:disabled { opacity: 0.4; cursor: default; }
+.sfin-dl-btn .material-symbols-outlined { font-size: 20px; }
+
+/* Bottom grid */
+.sfin__bottom {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.sfin__locked {
+  background: rgba(255,255,255,0.03);
+  border: 2px dashed rgba(255,255,255,0.1);
+  border-radius: 16px;
+  min-height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.sfin__locked-overlay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  padding: 24px;
+}
+
+.sfin__locked-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #64748B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sfin__locked-icon .material-symbols-outlined { font-size: 26px; color: #fff; }
+
+.sfin__locked-title {
+  font-family: 'Manrope', sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+
+.sfin__locked-desc {
+  font-size: 12px;
+  color: #64748B;
+  max-width: 220px;
+  line-height: 1.5;
+}
+
+.sfin__scholarship {
+  background: linear-gradient(135deg, var(--student-primary-dark), var(--student-primary));
+  border-radius: 16px;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 8px 32px rgba(16,185,129,0.2);
+}
+
+.sfin__scholarship-title {
+  font-family: 'Manrope', sans-serif;
+  font-size: 20px;
+  font-weight: 900;
+  color: #fff;
+  margin-bottom: 8px;
+  line-height: 1.3;
+}
+
+.sfin__scholarship-desc {
+  font-size: 13px;
+  color: rgba(255,255,255,0.8);
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+.sfin__scholarship-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.sfin__scholarship-btn--primary {
+  background: var(--student-card-bg);
+  color: var(--student-primary);
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.sfin__scholarship-btn--primary:hover { transform: scale(1.04); }
+
+.sfin__scholarship-btn--ghost {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.9);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  border-bottom: 2px solid rgba(255,255,255,0.3);
+  padding-bottom: 2px;
+  transition: border-color 0.15s;
+}
+.sfin__scholarship-btn--ghost:hover { border-color: rgba(255,255,255,0.8); }
+
+@media (max-width: 900px) {
+  .sfin { padding: 24px 20px 60px; }
+  .sfin__stats { grid-template-columns: 1fr; }
+  .sfin__bottom { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 600px) {
+  .sfin__title { font-size: 22px; }
+  .sfin-stat__value { font-size: 20px; }
+  .sfin__trust { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .sfin__trust-badge { display: none; }
+}

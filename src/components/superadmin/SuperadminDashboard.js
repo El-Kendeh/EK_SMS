@@ -28,6 +28,7 @@ import SAUsers           from './SAUsers';
 import SANotifications, { INITIAL_UNREAD_COUNT } from './SANotifications';
 import SAProfile         from './SAProfile';
 import SAChangeAlerts    from './SAChangeAlerts';
+import SACreateTerm      from './SACreateTerm';
 
 
 
@@ -799,7 +800,11 @@ export default function Dashboard({ onNavigate }) {
             <SAProfile user={user} onBack={() => goTo('overview')} onAvatarChange={setProfileAvatar} />
           )}
 
-          {!['overview','applications','review','app-history','version-compare','rejected','rejection-audit','grade-report','grade-requests','grade-audit','security-logs','forensics','alert-broadcast','change-alerts','system-health','schools','analytics','benchmarks','onboarding','governance','users','notifications','settings','profile'].includes(activePage) && (
+          {activePage === 'academic-terms' && (
+            <SACreateTerm onSave={(payload) => showToast('Term saved (logic pending)', 'success')} />
+          )}
+
+          {!['overview','applications','review','app-history','version-compare','rejected','rejection-audit','grade-report','grade-requests','grade-audit','security-logs','forensics','alert-broadcast','change-alerts','system-health','schools','analytics','benchmarks','onboarding','governance','users','notifications','settings','profile','academic-terms'].includes(activePage) && (
             <StubPage title={getTitle(activePage, selectedSchool)} />
           )}
 

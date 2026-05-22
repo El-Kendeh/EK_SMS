@@ -1,0 +1,137 @@
+/* ============================================================
+   STUDENT DASHBOARD — CSS VARIABLES & ROOT
+   ============================================================ */
+:root {
+  --student-primary: #10B981;
+  --student-primary-dark: #059669;
+  --student-primary-dim: #4edea3;
+  --student-danger: #EF4444;
+  --student-danger-bg: rgba(239,68,68,0.12);
+  --student-warning: #F59E0B;
+  --student-warning-bg: rgba(245,158,11,0.12);
+  --student-info: #3B82F6;
+  --student-info-bg: rgba(59,130,246,0.12);
+  --student-sidebar-bg: #0C1829;
+  --student-sidebar-width: 240px;
+  --student-sidebar-collapsed: 64px;
+  --student-header-height: 64px;
+  --student-page-bg: #0D1520;
+  --student-card-bg: #152033;
+  --student-text-primary: #F1F5F9;
+  --student-text-secondary: #94A3B8;
+  --student-border: rgba(255,255,255,0.08);
+  --student-surface-low: #1A2840;
+  --student-surface: #1E2E45;
+  --student-surface-high: #243452;
+  --student-surface-highest: #2A3A58;
+  --student-bg: #0D1520;
+  --student-dark-bg: #0F1B2D;
+  --student-dark-surface: rgba(255,255,255,0.04);
+  --student-dark-border: rgba(255,255,255,0.06);
+  --student-dark-text: #F1F5F9;
+  --student-dark-text-muted: #94A3B8;
+  --student-sidebar-transition: 0.28s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+.student-dashboard *,
+.student-dashboard *::before,
+.student-dashboard *::after {
+  box-sizing: border-box;
+}
+
+.student-dashboard {
+  display: flex;
+  min-height: 100vh;
+  font-family: 'Inter', sans-serif;
+  background: var(--student-page-bg);
+  position: relative;
+}
+
+/* ============================================================
+   MAIN CONTENT AREA
+   ============================================================ */
+.student-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  transition: margin-left var(--student-sidebar-transition);
+}
+
+.student-main.sidebar-open {
+  margin-left: var(--student-sidebar-width);
+}
+
+.student-main.sidebar-closed {
+  margin-left: var(--student-sidebar-collapsed);
+}
+
+.student-content {
+  flex: 1;
+  padding-top: var(--student-header-height);
+  overflow-x: hidden;
+}
+
+/* ============================================================
+   MOBILE OVERLAY
+   ============================================================ */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 49;
+}
+
+/* ============================================================
+   SKELETON LOADER
+   ============================================================ */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.05) 25%,
+    rgba(255,255,255,0.10) 50%,
+    rgba(255,255,255,0.05) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ============================================================
+   RESPONSIVE — MOBILE
+   ============================================================ */
+@media (max-width: 767px) {
+  .student-main.sidebar-open,
+  .student-main.sidebar-closed {
+    margin-left: 0;
+  }
+
+  .sidebar-overlay {
+    display: block;
+  }
+}
+
+
+/* ============================================================
+   LOW-DATA MODE OVERRIDES
+   ============================================================ */
+.student-dashboard.low-data * {
+  animation: none !important;
+  transition: none !important;
+}
+.student-dashboard.low-data .student-main {
+  font-family: system-ui, -apple-system, sans-serif;
+}
+.student-dashboard.low-data .stu-glass-card {
+  background: rgba(255,255,255,0.04) !important;
+  border: 1px solid rgba(255,255,255,0.1);
+}
