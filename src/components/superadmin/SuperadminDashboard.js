@@ -210,6 +210,8 @@ function getTitle(page, school) {
     'school-type':         'School Type',
     'syllabus-type':       'Syllabus Type',
     'class-subtype':       'Class Subtype',
+    'principal':           'Principal',
+    'bursar':              'Bursar',
     'account-teachers':    'Teachers',
     'account-students':    'Students',
     'account-parents':     'Parent',
@@ -460,6 +462,8 @@ export default function Dashboard({ onNavigate }) {
     { key: 'school-type',         label: 'School Type',       icon: <IcGen />, badge: 0, section: 'Academics' },
     { key: 'syllabus-type',       label: 'Syllabus Type',     icon: <IcGen />, badge: 0, section: 'Academics' },
     { key: 'class-subtype',       label: 'Class Subtype',     icon: <IcGen />, badge: 0, section: 'Academics' },
+    { key: 'principal',           label: 'Principal',         icon: <IcGen />, badge: 0, section: 'Academics' },
+    { key: 'bursar',              label: 'Bursar',            icon: <IcGen />, badge: 0, section: 'Academics' },
 
     /* Accounts (under Academics) */
     { key: 'account-teachers',  label: 'Teachers', icon: <IcGen />, badge: 0, section: 'Academics' },

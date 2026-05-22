@@ -73,6 +73,9 @@ require('./Region');
 require('./City');
 require('./SchoolType');
 require('./SyllabusType');
+require('./ClassSubtype');
+require('./Principal');
+require('./Bursar');
 
 // Load all cross-model associations
 require('./associations');

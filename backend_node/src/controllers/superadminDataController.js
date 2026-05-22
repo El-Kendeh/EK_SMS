@@ -18,6 +18,9 @@ const Region = require('../models/Region');
 const City = require('../models/City');
 const SchoolType = require('../models/SchoolType');
 const SyllabusType = require('../models/SyllabusType');
+const ClassSubtype = require('../models/ClassSubtype');
+const Principal = require('../models/Principal');
+const Bursar = require('../models/Bursar');
 const { appendSecurityAuditLog } = require('../utils/auditLog');
 const { requireRoleId, mapInviteLabelToCode } = require('../utils/roleIds');
 
@@ -1513,6 +1516,127 @@ async function toggleSyllabusTypeStatus(req, res) {
   }
 }
 
+/* ---------- Class Subtypes CRUD ---------- */
+async function getClassSubtypes(req, res) {
+  try {
+    const rows = await ClassSubtype.findAll({ order: [['created_at', 'DESC']] });
+    const classsubtypes = rows.map(r => ({ id: r.id, name: r.name, is_active: Boolean(r.is_active), created_at: r.created_at, updated_at: r.updated_at }));
+    return res.json(successResponse({ classsubtypes }));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+async function createClassSubtype(req, res) {
+  try {
+    const { name } = req.body;
+    if (!name) return res.status(400).json(errorResponse('name is required'));
+    const row = await ClassSubtype.create({ name: String(name).slice(0, 100) });
+    return res.json(successResponse({ id: row.id }, 'Class subtype created'));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+async function updateClassSubtype(req, res) {
+  try {
+    const { name } = req.body;
+    const row = await ClassSubtype.findByPk(req.params.id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    if (name !== undefined) row.name = String(name).slice(0, 100);
+    row.updated_at = new Date(); await row.save();
+    return res.json(successResponse({}, 'Class subtype updated'));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+async function deleteClassSubtype(req, res) {
+  try {
+    const row = await ClassSubtype.findByPk(req.params.id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    await row.destroy();
+    return res.json(successResponse({}, 'Class subtype deleted'));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+async function toggleClassSubtypeStatus(req, res) {
+  try {
+    const row = await ClassSubtype.findByPk(req.params.id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    row.is_active = !row.is_active; row.updated_at = new Date(); await row.save();
+    return res.json(successResponse({ is_active: row.is_active }, `Status changed to ${row.is_active ? 'active' : 'inactive'}`));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+
+/* ---------- Principals CRUD ---------- */
+async function getPrincipals(req, res) {
+  try {
+    const rows = await Principal.findAll({ order: [['created_at', 'DESC']] });
+    return res.json(successResponse({ principals: rows.map(r => ({ id: r.id, name: r.name, is_active: Boolean(r.is_active), created_at: r.created_at, updated_at: r.updated_at })) }));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+async function createPrincipal(req, res) {
+  try {
+    if (!req.body.name) return res.status(400).json(errorResponse('name is required'));
+    const row = await Principal.create({ name: String(req.body.name).slice(0, 100) });
+    return res.json(successResponse({ id: row.id }, 'Principal created'));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+async function updatePrincipal(req, res) {
+  try {
+    const row = await Principal.findByPk(req.params.id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    if (req.body.name !== undefined) row.name = String(req.body.name).slice(0, 100);
+    row.updated_at = new Date(); await row.save();
+    return res.json(successResponse({}, 'Principal updated'));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+async function deletePrincipal(req, res) {
+  try {
+    const row = await Principal.findByPk(req.params.id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    await row.destroy(); return res.json(successResponse({}, 'Principal deleted'));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+async function togglePrincipalStatus(req, res) {
+  try {
+    const row = await Principal.findByPk(req.params.id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    row.is_active = !row.is_active; row.updated_at = new Date(); await row.save();
+    return res.json(successResponse({ is_active: row.is_active }, `Status changed to ${row.is_active ? 'active' : 'inactive'}`));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+
+/* ---------- Bursars CRUD ---------- */
+async function getBursars(req, res) {
+  try {
+    const rows = await Bursar.findAll({ order: [['created_at', 'DESC']] });
+    return res.json(successResponse({ bursars: rows.map(r => ({ id: r.id, name: r.name, is_active: Boolean(r.is_active), created_at: r.created_at, updated_at: r.updated_at })) }));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+async function createBursar(req, res) {
+  try {
+    if (!req.body.name) return res.status(400).json(errorResponse('name is required'));
+    const row = await Bursar.create({ name: String(req.body.name).slice(0, 100) });
+    return res.json(successResponse({ id: row.id }, 'Bursar created'));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+async function updateBursar(req, res) {
+  try {
+    const row = await Bursar.findByPk(req.params.id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    if (req.body.name !== undefined) row.name = String(req.body.name).slice(0, 100);
+    row.updated_at = new Date(); await row.save();
+    return res.json(successResponse({}, 'Bursar updated'));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+async function deleteBursar(req, res) {
+  try {
+    const row = await Bursar.findByPk(req.params.id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    await row.destroy(); return res.json(successResponse({}, 'Bursar deleted'));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+async function toggleBursarStatus(req, res) {
+  try {
+    const row = await Bursar.findByPk(req.params.id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    row.is_active = !row.is_active; row.updated_at = new Date(); await row.save();
+    return res.json(successResponse({ is_active: row.is_active }, `Status changed to ${row.is_active ? 'active' : 'inactive'}`));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
+}
+
 module.exports = {
   getSecurityLogs,
   getSecurityCounters,
@@ -1590,4 +1714,11 @@ module.exports = {
   updateSyllabusType,
   deleteSyllabusType,
   toggleSyllabusTypeStatus,
+  getClassSubtypes,
+  createClassSubtype,
+  updateClassSubtype,
+  deleteClassSubtype,
+  toggleClassSubtypeStatus,
+  getPrincipals, createPrincipal, updatePrincipal, deletePrincipal, togglePrincipalStatus,
+  getBursars, createBursar, updateBursar, deleteBursar, toggleBursarStatus,
 };

@@ -534,6 +534,36 @@ async function migrate() {
         \`created_at\` DATETIME DEFAULT CURRENT_TIMESTAMP,
         \`updated_at\` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+    },
+    {
+      name: 'pruh_system_classsubtype',
+      sql: `CREATE TABLE IF NOT EXISTS \`pruh_system_classsubtype\` (
+        \`id\` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        \`name\` VARCHAR(100) NOT NULL,
+        \`is_active\` TINYINT(1) DEFAULT 0,
+        \`created_at\` DATETIME DEFAULT CURRENT_TIMESTAMP,
+        \`updated_at\` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+    },
+    {
+      name: 'pruh_system_principal',
+      sql: `CREATE TABLE IF NOT EXISTS \`pruh_system_principal\` (
+        \`id\` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        \`name\` VARCHAR(100) NOT NULL,
+        \`is_active\` TINYINT(1) DEFAULT 0,
+        \`created_at\` DATETIME DEFAULT CURRENT_TIMESTAMP,
+        \`updated_at\` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+    },
+    {
+      name: 'pruh_system_bursar',
+      sql: `CREATE TABLE IF NOT EXISTS \`pruh_system_bursar\` (
+        \`id\` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        \`name\` VARCHAR(100) NOT NULL,
+        \`is_active\` TINYINT(1) DEFAULT 0,
+        \`created_at\` DATETIME DEFAULT CURRENT_TIMESTAMP,
+        \`updated_at\` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
     }
   ];
 
@@ -605,7 +635,7 @@ async function migrate() {
       }
     }
 
-    console.log(`\n✅ Migration completed successfully! 39 tables + ${indexes.length} indexes created.`);
+    console.log(`\n✅ Migration completed successfully! 43 tables + ${indexes.length} indexes created.`);
     process.exit(0);
   } catch (err) {
     console.error('❌ Migration failed:', err.message);

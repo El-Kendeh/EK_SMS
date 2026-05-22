@@ -151,4 +151,25 @@ router.put('/syllabus-types/:id/', data.updateSyllabusType);
 router.delete('/syllabus-types/:id/', data.deleteSyllabusType);
 router.patch('/syllabus-types/:id/toggle/', data.toggleSyllabusTypeStatus);
 
+/* Class Subtypes CRUD */
+router.get('/class-subtypes/', data.getClassSubtypes);
+router.post('/class-subtypes/', data.createClassSubtype);
+router.put('/class-subtypes/:id/', data.updateClassSubtype);
+router.delete('/class-subtypes/:id/', data.deleteClassSubtype);
+router.patch('/class-subtypes/:id/toggle/', data.toggleClassSubtypeStatus);
+
+/* Principals CRUD */
+router.get('/principals/', data.getPrincipals);
+router.post('/principals/', data.createPrincipal);
+router.put('/principals/:id/', data.updatePrincipal);
+router.delete('/principals/:id/', data.deletePrincipal);
+router.patch('/principals/:id/toggle/', data.togglePrincipalStatus);
+
+/* Bursars CRUD */
+router.get('/bursars/', data.getBursars);
+router.post('/bursars/', data.createBursar);
+router.put('/bursars/:id/', data.updateBursar);
+router.delete('/bursars/:id/', data.deleteBursar);
+router.patch('/bursars/:id/toggle/', data.toggleBursarStatus);
+
 module.exports = router;
