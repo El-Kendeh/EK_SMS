@@ -47,6 +47,7 @@ const IcWarn    = () => <svg viewBox="0 0 24 24" width="16" height="16" fill="no
 const IcCheck   = () => <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>;
 const IcClock   = () => <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
 const IcSpinner = () => <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="sact-spin"><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" opacity=".25"/><path d="M21 12a9 9 0 00-9-9"/></svg>;
+const IcRocket  = () => <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2l.09-.09a2 2 0 00-3-3L4.5 16.5z"/><path d="M12 15l-3-3a22 22 0 012-3.95A12.88 12.88 0 0122 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 01-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>;
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                             */
@@ -114,6 +115,11 @@ export default function SACreateTerm({ onSave }) {
   const [saving,    setSaving]    = useState(false);
   const [saveError, setSaveError] = useState('');
 
+  /* rollout */
+  const [rollingOutTermId, setRollingOutTermId] = useState(null);
+  const [yearRollingOut,   setYearRollingOut]   = useState(false);
+  const [rolloutMsg,       setRolloutMsg]       = useState({ type: '', text: '' });
+
   /* ---- load years on mount ---- */
   useEffect(() => {
     nodeGet('/api/superadmin/academic-years/')
@@ -131,6 +137,7 @@ export default function SACreateTerm({ onSave }) {
     setExistingTerms([]);
     setSelectedYear(null);
     setSaveError('');
+    setRolloutMsg({ type: '', text: '' });
     if (!id) return;
     setSelectedYear(years.find(y => String(y.id) === String(id)) || null);
     setTermsLoading(true);
@@ -160,7 +167,50 @@ export default function SACreateTerm({ onSave }) {
     setYearId(''); setTermOrder(''); setTermName(''); setDescription('');
     setStartDate(''); setEndDate(''); setSetAsActive(false);
     setTouched({}); setExistingTerms([]); setSelectedYear(null);
-    setSaveError('');
+    setSaveError(''); setRolloutMsg({ type: '', text: '' });
+  };
+
+  const handleRolloutTerm = async (termId) => {
+    setRollingOutTermId(termId);
+    setRolloutMsg({ type: '', text: '' });
+    try {
+      const data = await nodePost(`/api/superadmin/system-terms/${termId}/rollout/`, {});
+      if (!data.success) {
+        setRolloutMsg({ type: 'error', text: data.message || 'Failed to roll out term.' });
+        return;
+      }
+      const refreshed = await nodeGet(`/api/superadmin/system-terms/?academic_year_id=${yearId}`);
+      if (refreshed.success) setExistingTerms(refreshed.terms || []);
+      setRolloutMsg({ type: 'success', text: 'Term rolled out — it is now the active term.' });
+    } catch (err) {
+      setRolloutMsg({ type: 'error', text: err.message || 'Network error.' });
+    } finally {
+      setRollingOutTermId(null);
+    }
+  };
+
+  const handleRolloutYear = async () => {
+    if (!yearId) return;
+    setYearRollingOut(true);
+    setRolloutMsg({ type: '', text: '' });
+    try {
+      const data = await nodePost(`/api/superadmin/academic-years/${yearId}/rollout/`, {});
+      if (!data.success) {
+        setRolloutMsg({ type: 'error', text: data.message || 'Failed to roll out academic year.' });
+        return;
+      }
+      const refreshed = await nodeGet('/api/superadmin/academic-years/');
+      if (refreshed.success) {
+        const updatedYears = refreshed.years || [];
+        setYears(updatedYears);
+        setSelectedYear(updatedYears.find(y => String(y.id) === String(yearId)) || selectedYear);
+      }
+      setRolloutMsg({ type: 'success', text: 'Academic year rolled out — it is now the active year.' });
+    } catch (err) {
+      setRolloutMsg({ type: 'error', text: err.message || 'Network error.' });
+    } finally {
+      setYearRollingOut(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -266,6 +316,27 @@ export default function SACreateTerm({ onSave }) {
                 </div>
               </div>
             )}
+
+            {/* Roll Out Year button */}
+            {selectedYear && (
+              <div className="sact-year-rollout-row">
+                {selectedYear.is_active
+                  ? <span className="sact-badge-active" style={{ fontSize: '0.7rem' }}>Year Active</span>
+                  : (
+                    <button
+                      type="button"
+                      className={`sact-btn-rollout${yearRollingOut ? ' loading' : ''}`}
+                      onClick={handleRolloutYear}
+                      disabled={yearRollingOut}
+                      title="Roll out this academic year (set as active)"
+                    >
+                      {yearRollingOut ? <IcSpinner /> : <IcRocket />}
+                      {yearRollingOut ? 'Rolling out…' : 'Roll Out Year'}
+                    </button>
+                  )
+                }
+              </div>
+            )}
           </div>
 
           {/* Existing terms for selected year */}
@@ -287,9 +358,33 @@ export default function SACreateTerm({ onSave }) {
                       <span className="sact-term-dates">
                         {t.start_date ? `${fmtDate(t.start_date)} – ${fmtDate(t.end_date)}` : 'No dates'}
                       </span>
-                      {t.is_active && <span className="sact-badge-active">Active</span>}
+                      {t.is_active
+                        ? <span className="sact-badge-active">Active</span>
+                        : (
+                          <button
+                            type="button"
+                            className={`sact-btn-rollout${rollingOutTermId === t.id ? ' loading' : ''}`}
+                            onClick={() => handleRolloutTerm(t.id)}
+                            disabled={!!rollingOutTermId || yearRollingOut}
+                            title="Roll out this term (set as active)"
+                          >
+                            {rollingOutTermId === t.id ? <IcSpinner /> : <IcRocket />}
+                            {rollingOutTermId === t.id ? 'Rolling…' : 'Roll Out'}
+                          </button>
+                        )
+                      }
                     </div>
                   ))}
+                </div>
+              )}
+
+              {/* Rollout result message */}
+              {rolloutMsg.text && (
+                <div className={`sact-banner sact-banner--${rolloutMsg.type === 'success' ? 'success' : 'error'}`} style={{ marginTop: 10 }}>
+                  <span className="sact-banner-icon">
+                    {rolloutMsg.type === 'success' ? <IcCheck /> : <IcWarn />}
+                  </span>
+                  <p className="sact-banner-body">{rolloutMsg.text}</p>
                 </div>
               )}
             </div>
