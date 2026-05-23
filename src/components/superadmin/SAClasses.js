@@ -234,8 +234,8 @@ function AssignStudentsModal({ classId, onClose, showToast }) {
       req('GET', `/api/classes/${classId}/students/`),
       req('GET', `/api/classes/${classId}/available-students/`),
     ]).then(([a, av]) => {
-      setAssigned(a.data?.students || []);
-      setAvailable(av.data?.students || []);
+      setAssigned(a.students || []);
+      setAvailable(av.students || []);
     }).catch(e => showToast(e.message, 'error')).finally(() => setLoading(false));
   }, [classId, showToast]);
   async function handleAssign() {
@@ -297,8 +297,8 @@ function AssignSubjectsModal({ classId, onClose, showToast }) {
       req('GET', `/api/classes/${classId}/subjects/`),
       req('GET', `/api/classes/${classId}/available-subjects/`),
     ]).then(([a, av]) => {
-      setAssigned(a.data?.subjects || []);
-      setAvailable(av.data?.subjects || []);
+      setAssigned(a.subjects || []);
+      setAvailable(av.subjects || []);
     }).catch(e => showToast(e.message, 'error')).finally(() => setLoading(false));
   }, [classId, showToast]);
   async function handleAssign() {

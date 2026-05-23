@@ -182,8 +182,8 @@ function AssignClassesModal({ subjectId, onClose, showToast }) {
       req('GET', `/api/subjects/${subjectId}/classes/`),
       req('GET', `/api/subjects/${subjectId}/available-classes/`),
     ]).then(([a, av]) => {
-      setAssigned(a.data?.classes || []);
-      setAvailable(av.data?.classes || []);
+      setAssigned(a.classes || []);
+      setAvailable(av.classes || []);
     }).catch(e => showToast(e.message, 'error')).finally(() => setLoading(false));
   }, [subjectId, showToast]);
   async function handleAssign() {

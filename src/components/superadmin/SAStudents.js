@@ -1022,13 +1022,3 @@ export default function SAStudents() {
   );
 }
 
-/* ============================================================
-   SAParents — named export
-   ============================================================ */
-function emptyParentForm() {
-  return {
-    first_name: '', last_name: '', email: '', username: '',
-    password: '', phone: '', address: '', occupation: '',
-  };
-}
-
