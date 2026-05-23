@@ -87,6 +87,12 @@ function isSuperadmin(req, res, next) {
   }
 }
 
+/* Public reference data endpoints (no auth required — used by registration form & other public pages) */
+router.get('/institution-types/', data.getInstitutionTypes);
+router.get('/countries/', data.getCountries);
+router.get('/academic-systems/', data.getAcademicSystems);
+router.get('/grading-systems/', data.getGradingSystems);
+
 router.use(authenticateToken);
 router.use(isSuperadmin);
 
