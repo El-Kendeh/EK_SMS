@@ -38,7 +38,7 @@ export default function SAClasses() {
     try {
       const params = new URLSearchParams({ page, limit });
       const r = await req('GET', `/api/classes/?${params}`);
-      setList(r.data?.classes || []); setTotal(r.data?.total || 0);
+      setList(r.classes || []); setTotal(r.total || 0);
     } catch (e) { showToast(e.message, 'error'); }
     setLoading(false);
   }, [page, showToast]); // eslint-disable-line
@@ -169,7 +169,7 @@ function ClassForm({ editItem, onSave, onClose }) {
   const [subtypes, setSubtypes] = useState([]);
   const [selectedSubtype, setSelectedSubtype] = useState('');
   useEffect(() => {
-    req('GET', '/api/class-subtypes/').then(r => setSubtypes(r.data?.classsubtypes || [])).catch(() => {});
+    req('GET', '/api/class-subtypes/').then(r => setSubtypes(r.classsubtypes || [])).catch(() => {});
     if (editItem) { const f = {}; classFields.forEach(({ key }) => { f[key] = editItem[key] !== undefined && editItem[key] !== null ? String(editItem[key]) : ''; }); setForm(f); }
   }, [editItem]);
   function set(k, v) { setForm(p => ({ ...p, [k]: v })); }
@@ -353,7 +353,7 @@ function AssignTeacherModal({ classId, onClose, showToast }) {
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     req('GET', `/api/classes/${classId}/available-teachers/`)
-      .then(r => setTeachers(r.data?.teachers || []))
+      .then(r => setTeachers(r.teachers || []))
       .catch(e => showToast(e.message, 'error'))
       .finally(() => setLoading(false));
   }, [classId, showToast]);

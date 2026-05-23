@@ -37,8 +37,8 @@ export default function SABursar() {
     try {
       const params = new URLSearchParams({ page, limit });
       const r = await req('GET', `/api/bursars/?${params}`);
-      setList(r.data?.bursars || []);
-      setTotal(r.data?.total || 0);
+      setList(r.bursars || []);
+      setTotal(r.total || 0);
     } catch (e) { showToast(e.message, 'error'); }
     setLoading(false);
   }, [page, showToast]); // eslint-disable-line

@@ -41,8 +41,8 @@ export default function SAPrincipal() {
       const params = new URLSearchParams({ page, limit });
       if (search.trim()) params.set('status', '');
       const r = await req('GET', `/api/principals/?${params}`);
-      setList(r.data?.principals || []);
-      setTotal(r.data?.total || 0);
+      setList(r.principals || []);
+      setTotal(r.total || 0);
     } catch (e) { showToast(e.message, 'error'); }
     setLoading(false);
   }, [page, showToast]); // eslint-disable-line

@@ -37,7 +37,7 @@ export default function SASubjects() {
     try {
       const params = new URLSearchParams({ page, limit });
       const r = await req('GET', `/api/subjects/?${params}`);
-      setList(r.data?.subjects || []); setTotal(r.data?.total || 0);
+      setList(r.subjects || []); setTotal(r.total || 0);
     } catch (e) { showToast(e.message, 'error'); }
     setLoading(false);
   }, [page, showToast]); // eslint-disable-line
@@ -238,7 +238,7 @@ function AssignSubjectTeacherModal({ subjectId, onClose, showToast }) {
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     req('GET', `/api/subjects/${subjectId}/teachers/`)
-      .then(r => setTeachers(r.data?.teachers || []))
+      .then(r => setTeachers(r.teachers || []))
       .catch(e => showToast(e.message, 'error'))
       .finally(() => setLoading(false));
   }, [subjectId, showToast]);
