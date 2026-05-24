@@ -46,7 +46,8 @@ async function registerSchoolAdmin(req, res) {
     const {
       institutionName, institutionType, address, city, country, phone, email,
       firstName, lastName, adminUsername, adminEmail, adminPhone, password, capacity, brandColors,
-      website, region, academicSystem
+      website, region, academicSystem, motto, established, registrationNumber,
+      estimatedTeachers, gradingSystem, language
     } = req.body;
 
     const schoolBadge = req.file ? req.file.path : null;
@@ -116,14 +117,20 @@ async function registerSchoolAdmin(req, res) {
       region,
       phone,
       email: email?.toLowerCase(),
+      website,
       capacity: Number.isFinite(capacityInt) ? capacityInt : null,
+      motto,
+      established,
+      registration_number: registrationNumber,
+      estimated_teachers: estimatedTeachers ? parseInt(estimatedTeachers, 10) : null,
+      academic_system: academicSystem,
+      grading_system: gradingSystem,
+      language,
       brand_colors: brandColorsText,
       badge_path: schoolBadge,
-      website,
-      academic_system: academicSystem,
       is_approved: false,
       approval_status: 'pending',
-      is_active: true, // School record is active, but user.is_active is false
+      is_active: true,
     }, { transaction });
 
     // 3. Link Admin to School

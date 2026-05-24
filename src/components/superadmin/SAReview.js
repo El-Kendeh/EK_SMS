@@ -43,7 +43,6 @@ const IcShield   = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentCol
 const IcPin      = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>;
 const IcPhone    = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.9 13.5a19.79 19.79 0 01-3.07-8.67A2 2 0 012.81 2.84l3-.01a2 2 0 012 1.72c.13 1 .36 1.97.71 2.91a2 2 0 01-.45 2.11L6.91 10.09a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.94.35 1.91.58 2.91.71a2 2 0 011.72 2.03z"/></svg>;
 const IcUser     = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>;
-const IcSettings = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>;
 const IcInfo     = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>;
 
 /* ---- Helpers ---- */
@@ -273,17 +272,20 @@ export default function SAReview({ school, onBack, onApprove, onReject, onReques
 
             {/* Basic Information */}
             <Section icon={<IcInfo />} title="Basic Information">
-              <Field label="Type"            value={school.institution_type} />
-              <Field label="Academic System" value={school.academic_system} />
-              <Field label="Capacity"        value={school.capacity ? `${school.capacity.toLocaleString()} students` : null} />
-              <Field label="Website"         value={school.website} />
-              <Field label="Registered"      value={fmtDate(school.registration_date)} />
-              <Field label="Code"            value={school.code} />
+              <Field label="Type"               value={school.institution_type} />
+              <Field label="Academic System"    value={school.academic_system} />
+              <Field label="Grading System"     value={school.grading_system} />
+              <Field label="Language"           value={school.language} />
+              <Field label="Capacity"           value={school.capacity ? `${school.capacity.toLocaleString()} students` : null} />
+              <Field label="Website"            value={school.website} />
+              <Field label="Established"        value={school.established} />
+              <Field label="Registration No."   value={school.registration_number} />
+              <Field label="Est. Teachers"      value={school.estimated_teachers ? `${school.estimated_teachers}` : null} />
+              <Field label="Motto"              value={school.motto} />
+              <Field label="Registered"         value={fmtDate(school.registration_date)} />
+              <Field label="Code"               value={school.code} />
               {school.brand_colors && (
-                <Field label="Brand Colors"    value={school.brand_colors} />
-              )}
-              {school.motto && (
-                <Field label="Motto"          value={school.motto} />
+                <Field label="Brand Colors"     value={school.brand_colors} />
               )}
             </Section>
 
@@ -297,8 +299,8 @@ export default function SAReview({ school, onBack, onApprove, onReject, onReques
 
             {/* Contact */}
             <Section icon={<IcPhone />} title="Contact">
-              <Field label="Phone"  value={school.phone} />
-              <Field label="Email"  value={school.email} />
+              <Field label="School Phone" value={school.phone} />
+              <Field label="School Email" value={school.email} />
             </Section>
 
           </div>
@@ -320,26 +322,13 @@ export default function SAReview({ school, onBack, onApprove, onReject, onReques
                 </div>
               </div>
               <Field label="Email"    value={adminEmail} />
-              <Field label="Username" value={school.admin_username} />
+              <Field label="Username" value={school.admin_username || school.admin_email?.split('@')[0]} />
               <Field label="Phone"    value={school.admin_phone} />
               <Field
                 label="Email Status"
                 value={adminEmail && adminEmail !== '—' ? 'Verified ✓' : 'Not provided'}
                 chip={adminEmail && adminEmail !== '—' ? 'approved' : 'pending'}
               />
-            </Section>
-
-            {/* Configuration */}
-            <Section icon={<IcSettings />} title="Configuration">
-              <Field label="Capacity"        value={school.capacity ? `${school.capacity} students` : null} />
-              <Field label="Academic System" value={school.academic_system} />
-              <Field label="Institution Type" value={school.institution_type} />
-              {school.region && (
-                <Field label="Region"         value={school.region} />
-              )}
-              {school.website && (
-                <Field label="Website"        value={school.website} />
-              )}
             </Section>
 
             {/* Security & Status */}

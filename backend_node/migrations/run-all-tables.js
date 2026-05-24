@@ -696,6 +696,32 @@ async function migrate() {
       console.log(`✓ Table: ${name}`);
     }
 
+    // Add missing columns to pruh_core_school
+    const schoolColumns = [
+      { name: 'region',             def: 'VARCHAR(255) DEFAULT NULL' },
+      { name: 'website',            def: 'VARCHAR(255) DEFAULT NULL' },
+      { name: 'academic_system',    def: 'VARCHAR(255) DEFAULT NULL' },
+      { name: 'motto',              def: 'VARCHAR(255) DEFAULT NULL' },
+      { name: 'established',        def: 'VARCHAR(10) DEFAULT NULL' },
+      { name: 'registration_number', def: 'VARCHAR(255) DEFAULT NULL' },
+      { name: 'estimated_teachers', def: 'INT DEFAULT NULL' },
+      { name: 'grading_system',     def: 'VARCHAR(255) DEFAULT NULL' },
+      { name: 'language',           def: 'VARCHAR(50) DEFAULT NULL' },
+    ];
+    for (const { name, def } of schoolColumns) {
+      try {
+        await sequelize.query(`ALTER TABLE \`pruh_core_school\` ADD COLUMN \`${name}\` ${def}`);
+        console.log(`✓ Column added: pruh_core_school.${name}`);
+      } catch (e) {
+        // Column may already exist — skip silently
+        if (e.message && e.message.includes('Duplicate column')) {
+          console.log(`  (column ${name} already exists)`);
+        } else {
+          console.log(`  (column ${name}: ${e.message})`);
+        }
+      }
+    }
+
     // Add indexes
     const indexes = [
       ['idx_msg_school', 'pruh_core_message', 'school_id'],
