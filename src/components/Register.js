@@ -880,23 +880,20 @@ function Register({ onNavigate }) {
   /* ---- Fetch reference data on mount ---- */
   useEffect(() => {
     const fetchRefData = async () => {
-      try {
-        const [instRes, countriesRes, acadRes, gradRes] = await Promise.all([
-          ApiClient.get('/api/institution-types/'),
-          ApiClient.get('/api/countries/'),
-          ApiClient.get('/api/academic-systems/'),
-          ApiClient.get('/api/grading-systems/'),
-        ]);
-        if (instRes.success) setInstitutionTypes((instRes.types || []).filter(t => t.is_active).map((i) => i.name));
-        if (countriesRes.success) {
-          const names = (countriesRes.countries || []).filter(c => c.is_active).map((c) => c.name);
-          setCountries(names);
+      const fetchOne = async (url, extract) => {
+        try {
+          const res = await ApiClient.get(url);
+          if (res.success) extract(res);
+        } catch (e) {
+          console.error(`Failed to fetch ${url}:`, e);
         }
-        if (acadRes.success) setAcademicSystems((acadRes.academicsystems || []).filter(s => s.is_active).map((s) => ({ value: s.name, label: s.name })));
-        if (gradRes.success) setGradingSystems((gradRes.gradingsystems || []).filter(g => g.is_active).map((g) => ({ value: g.name, label: g.name })));
-      } catch (e) {
-        console.error('Failed to fetch reference data for registration:', e);
-      }
+      };
+      await Promise.all([
+        fetchOne('/api/institution-types/', (r) => setInstitutionTypes((r.types || []).filter(t => t.is_active).map((i) => i.name))),
+        fetchOne('/api/countries/', (r) => setCountries((r.countries || []).filter(c => c.is_active).map((c) => c.name))),
+        fetchOne('/api/academic-systems/', (r) => setAcademicSystems((r.academicsystems || []).filter(s => s.is_active).map((s) => ({ value: s.name, label: s.name })))),
+        fetchOne('/api/grading-systems/', (r) => setGradingSystems((r.gradingsystems || []).filter(g => g.is_active).map((g) => ({ value: g.name, label: g.name })))),
+      ]);
     };
     fetchRefData();
   }, []);
