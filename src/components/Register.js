@@ -824,6 +824,8 @@ function Register({ onNavigate }) {
   /* API-fetched reference data */
   const [institutionTypes, setInstitutionTypes] = useState([]);
   const [countries, setCountries]               = useState([]);
+  const [regions, setRegions]                   = useState([]);
+  const [cities, setCities]                     = useState([]);
   const [academicSystems, setAcademicSystems]   = useState([]);
   const [gradingSystems, setGradingSystems]     = useState([]);
 
@@ -835,7 +837,7 @@ function Register({ onNavigate }) {
     try {
       const tz       = Intl.DateTimeFormat().resolvedOptions().timeZone;
       const detected = TIMEZONE_TO_COUNTRY[tz];
-      if (detected && countries.includes(detected)) {
+      if (detected && countries.some((c) => c.name === detected)) {
         setAutoDetectedCountry(detected);
         setForm((p) => {
           if (p.country) return p; // user already selected — don't overwrite
@@ -890,13 +892,40 @@ function Register({ onNavigate }) {
       };
       await Promise.all([
         fetchOne('/api/institution-types/', (r) => setInstitutionTypes((r.types || []).filter(t => t.is_active).map((i) => i.name))),
-        fetchOne('/api/countries/', (r) => setCountries((r.countries || []).filter(c => c.is_active).map((c) => c.name))),
+        fetchOne('/api/countries/', (r) => setCountries((r.countries || []).filter(c => c.is_active).map((c) => ({ id: c.id, name: c.name })))),
         fetchOne('/api/academic-systems/', (r) => setAcademicSystems((r.academicsystems || []).filter(s => s.is_active).map((s) => ({ value: s.name, label: s.name })))),
         fetchOne('/api/grading-systems/', (r) => setGradingSystems((r.gradingsystems || []).filter(g => g.is_active).map((g) => ({ value: g.name, label: g.name })))),
       ]);
     };
     fetchRefData();
   }, []);
+
+  /* ---- Fetch regions when country changes ---- */
+  useEffect(() => {
+    const countryObj = countries.find((c) => c.name === form.country);
+    if (!countryObj) { setRegions([]); setCities([]); return; }
+    const fetchRegions = async () => {
+      try {
+        const res = await ApiClient.get(`/api/regions/?country_id=${countryObj.id}`);
+        if (res.success) setRegions((res.regions || []).filter((r) => r.is_active).map((r) => r.name));
+      } catch (e) { console.error('Failed to fetch regions:', e); }
+    };
+    fetchRegions();
+    setCities([]);
+  }, [form.country, countries]);
+
+  /* ---- Fetch cities when region changes ---- */
+  useEffect(() => {
+    const countryObj = countries.find((c) => c.name === form.country);
+    if (!countryObj) { setCities([]); return; }
+    const fetchCities = async () => {
+      try {
+        const res = await ApiClient.get(`/api/cities/?country_id=${countryObj.id}`);
+        if (res.success) setCities((res.cities || []).filter((c) => c.is_active).map((c) => c.name));
+      } catch (e) { console.error('Failed to fetch cities:', e); }
+    };
+    fetchCities();
+  }, [form.country, countries, form.region]);
 
   /* ---- OTP resend countdown ---- */
   useEffect(() => {
@@ -1357,14 +1386,30 @@ function Register({ onNavigate }) {
             </Field>
             <div className="reg-form-grid">
               <Field id="city" label="City / Town" required error={fieldErrors.city}>
-                <input id="city" className={`reg-input${fieldErrors.city ? ' has-error' : ''}`} type="text"
-                  placeholder="e.g. Capital City"
-                  value={form.city} onChange={set('city')} onBlur={blur('city')} />
+                {cities.length > 0 ? (
+                  <select id="city" className={`reg-select${fieldErrors.city ? ' has-error' : ''}`}
+                    value={form.city} onChange={set('city')} onBlur={blur('city')}>
+                    <option value="">Select city / town…</option>
+                    {cities.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                ) : (
+                  <input id="city" className={`reg-input${fieldErrors.city ? ' has-error' : ''}`} type="text"
+                    placeholder="e.g. Capital City"
+                    value={form.city} onChange={set('city')} onBlur={blur('city')} />
+                )}
               </Field>
               <Field id="region" label="Region / State">
-                <input id="region" className="reg-input" type="text"
-                  placeholder="e.g. Central Region"
-                  value={form.region} onChange={set('region')} />
+                {regions.length > 0 ? (
+                  <select id="region" className="reg-select"
+                    value={form.region} onChange={set('region')}>
+                    <option value="">Select region / state…</option>
+                    {regions.map((r) => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                ) : (
+                  <input id="region" className="reg-input" type="text"
+                    placeholder="e.g. Central Region"
+                    value={form.region} onChange={set('region')} />
+                )}
               </Field>
             </div>
             <Field id="country" label="Country" required error={fieldErrors.country}>
@@ -1376,13 +1421,14 @@ function Register({ onNavigate }) {
                     ...p,
                     country:        c,
                     city:           '',
+                    region:         '',
                     phoneCode:      meta.dial || p.phoneCode,
                     adminPhoneCode: meta.dial || p.adminPhoneCode,
                   }));
                 }}
                 onBlur={blur('country')}>
                 <option value="">Select country</option>
-                {countries.map((c) => <option key={c} value={c}>{c}</option>)}
+                {countries.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
               </select>
               {autoDetectedCountry && form.country === autoDetectedCountry && (
                 <p className="country-auto-note">📍 Auto-detected from your timezone — change if incorrect</p>
