@@ -28,6 +28,7 @@ const { Op } = require('sequelize');
 const bcrypt = require('bcryptjs');
 const sequelize = require('../config/db');
 const { sendTeacherWelcomeEmail } = require('../utils/email');
+const { sendSchoolChangesSubmittedEmail } = require('../services/mailer');
 const { requireRoleId } = require('../utils/roleIds');
 
 const successResponse = (data = {}, message = "Success") => ({ success: true, message, ...data });
@@ -119,6 +120,8 @@ async function updateSchoolInfo(req, res) {
     const school = await getSchoolFromUser(req);
     if (!school) return res.status(404).json(errorResponse('School not found'));
 
+    const hadChangesRequested = school.changes_requested;
+
     const { phone, address, city, country, brand_colors, motto } = req.body;
     if (phone !== undefined) school.phone = phone;
     if (address !== undefined) school.address = address;
@@ -127,11 +130,37 @@ async function updateSchoolInfo(req, res) {
     if (brand_colors !== undefined) school.brand_colors = brand_colors;
     if (motto !== undefined) school.motto = motto;
     if (req.file) {
-      // Store only the relative path for the browser to use
       school.badge_path = `/uploads/badges/${req.file.filename}`;
     }
 
+    if (hadChangesRequested) {
+      school.changes_requested = false;
+    }
+
     await school.save();
+
+    if (hadChangesRequested) {
+      try {
+        const superadminRole = await Role.findOne({ where: { code: 'superadmin' } });
+        if (superadminRole) {
+          const superadmins = await User.findAll({
+            where: { role_id: superadminRole.id, is_active: true },
+            attributes: ['id', 'email', 'first_name'],
+          });
+          for (const sa of superadmins) {
+            if (sa.email && String(sa.email).trim()) {
+              await sendSchoolChangesSubmittedEmail({
+                toEmail: String(sa.email).trim(),
+                schoolName: school.name,
+              });
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Changes submitted notification email failed:', err.message || err);
+      }
+    }
+
     return res.json(successResponse({ school }, 'School information updated'));
   } catch (err) {
     console.error(err);

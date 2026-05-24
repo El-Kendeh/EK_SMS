@@ -182,9 +182,109 @@ async function sendSchoolRejectedEmail({ toEmail, schoolName, adminName, reason 
   return { sent: true };
 }
 
+/**
+ * Send change request notification to school admin
+ */
+async function sendSchoolChangeRequestEmail({ toEmail, schoolName, adminName, note }) {
+  if (!toEmail || !String(toEmail).trim()) {
+    console.warn('[mailer] No recipient email; skipping change request notice');
+    return { skipped: true, reason: 'no_email' };
+  }
+
+  const resend = getResend();
+  const supportEmail = 'support@pruhsms.africa';
+
+  const html = `
+  <div style="font-family:system-ui,-apple-system,sans-serif;max-width:560px;margin:0 auto;padding:24px;border:1px solid #e5e7eb;border-radius:12px;background:#fafafa;">
+    <div style="width:60px;height:60px;background:#fef3c7;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:32px;">📝</div>
+    <h1 style="color:#d97706;font-size:1.25rem;margin:0 0 12px;text-align:center;">Changes Requested</h1>
+    <p style="color:#374151;line-height:1.6;margin:0 0 16px;">
+      Hi ${escapeHtml(adminName)},
+      <br><br>
+      The superadmin has reviewed your application for <strong>${escapeHtml(schoolName)}</strong> and has requested the following changes:
+    </p>
+    <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:16px;margin:16px 0;">
+      <p style="margin:0 0 8px;font-size:0.875rem;color:#78350f;font-weight:600;">Changes Required:</p>
+      <p style="margin:0;color:#78350f;">${escapeHtml(note)}</p>
+    </div>
+    <p style="color:#374151;line-height:1.6;margin:16px 0;">
+      Please log in to your account, make the requested changes, and re-submit your application for review.
+    </p>
+    <p style="font-size:0.8125rem;color:#6b7280;margin:16px 0 0;">
+      If you have any questions, contact our support team at <a href="mailto:${supportEmail}">${supportEmail}</a>
+    </p>
+  </div>`;
+
+  if (!resend) {
+    console.warn('[mailer] RESEND_API_KEY missing; change request email not sent to', toEmail);
+    return { skipped: true, reason: 'no_resend' };
+  }
+
+  const { error } = await resend.emails.send({
+    from: fromAddress(),
+    to: [String(toEmail).trim()],
+    subject: `Changes Requested: ${schoolName} — Action Required`,
+    html,
+  });
+
+  if (error) {
+    console.error('[mailer] Resend send error:', error);
+    throw new Error(typeof error === 'string' ? error : error.message || 'Email send failed');
+  }
+  return { sent: true };
+}
+
+/**
+ * Send notification to superadmin when school admin submits changes
+ */
+async function sendSchoolChangesSubmittedEmail({ toEmail, schoolName }) {
+  if (!toEmail || !String(toEmail).trim()) {
+    console.warn('[mailer] No recipient email; skipping changes submitted notice');
+    return { skipped: true, reason: 'no_email' };
+  }
+
+  const resend = getResend();
+  const base = publicAppUrl();
+
+  const html = `
+  <div style="font-family:system-ui,-apple-system,sans-serif;max-width:560px;margin:0 auto;padding:24px;border:1px solid #e5e7eb;border-radius:12px;background:#fafafa;">
+    <div style="width:60px;height:60px;background:#dbeafe;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:32px;">🔄</div>
+    <h1 style="color:#1B3FAF;font-size:1.25rem;margin:0 0 12px;text-align:center;">Changes Resubmitted</h1>
+    <p style="color:#374151;line-height:1.6;margin:0 0 16px;">
+      <strong>${escapeHtml(schoolName)}</strong> has responded to the change request and re-submitted their application.
+    </p>
+    <p style="margin:20px 0;text-align:center;">
+      <a href="${base}/superadmin/applications" style="display:inline-block;background:#1B3FAF;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;">Review Application</a>
+    </p>
+    <p style="font-size:0.8125rem;color:#6b7280;margin:16px 0 0;text-align:center;">
+      Dashboard: <a href="${base}/superadmin">${escapeHtml(base)}/superadmin</a>
+    </p>
+  </div>`;
+
+  if (!resend) {
+    console.warn('[mailer] RESEND_API_KEY missing; changes submitted email not sent to', toEmail);
+    return { skipped: true, reason: 'no_resend' };
+  }
+
+  const { error } = await resend.emails.send({
+    from: fromAddress(),
+    to: [String(toEmail).trim()],
+    subject: `Changes Resubmitted: ${schoolName} — Ready for Review`,
+    html,
+  });
+
+  if (error) {
+    console.error('[mailer] Resend send error:', error);
+    throw new Error(typeof error === 'string' ? error : error.message || 'Email send failed');
+  }
+  return { sent: true };
+}
+
 module.exports = {
   sendRegistrationConfirmationEmail,
   sendSchoolApprovedEmail,
   sendSchoolRejectedEmail,
+  sendSchoolChangeRequestEmail,
+  sendSchoolChangesSubmittedEmail,
   publicAppUrl,
 };

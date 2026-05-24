@@ -10,7 +10,9 @@ const bcrypt = require('bcryptjs');
 const os = require('os');
 const { generateToken } = require('../utils/jwt');
 const { sendSchoolApprovedEmail, sendPasswordResetEmail } = require('../utils/email');
+const { sendSchoolRejectedEmail, sendSchoolChangeRequestEmail } = require('../services/mailer');
 const { appendSecurityAuditLog } = require('../utils/auditLog');
+const Role = require('../models/Role');
 
 const successResponse = (data = {}, message = "Success") => ({ success: true, message, ...data });
 const errorResponse = (message = "Error", status = 400) => ({ success: false, message, status });
@@ -145,6 +147,24 @@ async function handleSchoolAction(req, res) {
       school.changes_requested = false;
       await school.save({ transaction });
       await transaction.commit();
+
+      // Send rejection email to school admin(s)
+      for (const adminLink of school.schoolAdmins || []) {
+        try {
+          const user = await User.findByPk(adminLink.user_id);
+          if (user && user.email && String(user.email).trim()) {
+            await sendSchoolRejectedEmail({
+              toEmail: String(user.email).trim(),
+              schoolName: school.name,
+              adminName: user.first_name || user.username || 'Admin',
+              reason: note || 'Rejected by superadmin',
+            });
+          }
+        } catch (err) {
+          console.error('Rejection email failed:', err.message || err);
+        }
+      }
+
       await appendSecurityAuditLog({
         type: 'school_rejected',
         severity: 'medium',
@@ -158,6 +178,24 @@ async function handleSchoolAction(req, res) {
       school.changes_requested = true;
       await school.save({ transaction });
       await transaction.commit();
+
+      // Send change request email to school admin(s)
+      for (const adminLink of school.schoolAdmins || []) {
+        try {
+          const user = await User.findByPk(adminLink.user_id);
+          if (user && user.email && String(user.email).trim()) {
+            await sendSchoolChangeRequestEmail({
+              toEmail: String(user.email).trim(),
+              schoolName: school.name,
+              adminName: user.first_name || user.username || 'Admin',
+              note: note || 'Please review and update your application.',
+            });
+          }
+        } catch (err) {
+          console.error('Change request email failed:', err.message || err);
+        }
+      }
+
       await appendSecurityAuditLog({
         type: 'school_changes_requested',
         severity: 'low',
