@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&amp;family=DM+Mono:wght@400;500&amp;family=Geist:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #0c0d10;
+            color: #e3e2e6;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #121316;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #30363d;
+            border-radius: 10px;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-secondary-fixed": "#171c23",
+                        "on-surface": "#e3e2e6",
+                        "background": "#121316",
+                        "secondary-container": "#42474f",
+                        "outline-variant": "#444655",
+                        "error": "#ffb4ab",
+                        "surface-container-highest": "#343538",
+                        "primary-container": "#6d88ff",
+                        "on-tertiary-fixed-variant": "#763300",
+                        "surface-tint": "#b8c3ff",
+                        "surface-container": "#1f1f23",
+                        "on-surface-variant": "#c4c5d7",
+                        "surface-container-lowest": "#0d0e11",
+                        "on-primary-fixed": "#001355",
+                        "surface-dim": "#121316",
+                        "surface-variant": "#343538",
+                        "error-container": "#93000a",
+                        "primary-fixed": "#dde1ff",
+                        "on-tertiary-container": "#491d00",
+                        "outline": "#8e90a0",
+                        "on-secondary": "#2c3138",
+                        "surface": "#121316",
+                        "primary-fixed-dim": "#b8c3ff",
+                        "on-secondary-container": "#b1b5bf",
+                        "surface-bright": "#38393c",
+                        "on-primary": "#002388",
+                        "surface-container-high": "#292a2d",
+                        "on-background": "#e3e2e6",
+                        "inverse-surface": "#e3e2e6",
+                        "surface-container-low": "#1b1b1f",
+                        "tertiary": "#ffb68e",
+                        "on-primary-fixed-variant": "#0035bd",
+                        "tertiary-fixed-dim": "#ffb68e",
+                        "tertiary-container": "#e37020",
+                        "on-error": "#690005",
+                        "secondary": "#c2c7d0",
+                        "on-error-container": "#ffdad6",
+                        "tertiary-fixed": "#ffdbc9",
+                        "on-tertiary": "#532200",
+                        "primary": "#b8c3ff",
+                        "inverse-primary": "#294fdb",
+                        "on-secondary-fixed-variant": "#42474f",
+                        "on-tertiary-fixed": "#331200",
+                        "on-primary-container": "#001e77",
+                        "inverse-on-surface": "#303034",
+                        "secondary-fixed-dim": "#c2c7d0",
+                        "secondary-fixed": "#dee2ec"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "container-padding": "32px",
+                        "base": "8px",
+                        "card-gap": "24px",
+                        "sidebar-width": "280px",
+                        "gutter": "24px"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Geist"],
+                        "headline-md": ["Syne"],
+                        "label-sm": ["DM Mono"],
+                        "label-md": ["DM Mono"],
+                        "headline-lg-mobile": ["Syne"],
+                        "display-lg": ["Syne"],
+                        "headline-lg": ["Syne"]
+                    },
+                    "fontSize": {
+                        "body-md": ["16px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                        "headline-md": ["20px", {"lineHeight": "1.4", "fontWeight": "600"}],
+                        "label-sm": ["12px", {"lineHeight": "1.0", "letterSpacing": "0.02em", "fontWeight": "400"}],
+                        "label-md": ["14px", {"lineHeight": "1.0", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                        "display-lg": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+                        "headline-lg": ["32px", {"lineHeight": "1.2", "fontWeight": "700"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface font-body-md overflow-x-hidden custom-scrollbar">
+<!-- NavigationDrawer (Shared Component) -->
+<aside class="hidden md:flex flex-col w-[280px] h-screen bg-surface-container dark:bg-surface-container fixed left-0 top-0 border-r border-outline-variant z-50">
+<div class="p-6">
+<div class="font-label-md text-label-md bg-secondary-container text-on-secondary-container px-2 py-1 rounded uppercase tracking-widest inline-block mb-8">
+                CORE-SYS
+            </div>
+<div class="flex items-center gap-4 mb-10">
+<div class="w-10 h-10 rounded-lg bg-primary-container flex items-center justify-center overflow-hidden">
+<img alt="Super Admin" data-alt="A professional high-contrast headshot of a corporate administrator, set against a dark, tech-oriented studio background with subtle blue and purple neon rim lighting. The style is sharp and modern, reflecting an authoritative and sophisticated executive persona for a high-stakes dashboard system." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA2m1OxDKS_3vJtP9AKsFbcx6eZb1iwWiM9e6KOYAMT8CNZgNlsbBFVzhWUEK9e13V_E-a209aO7gYRFJ3ojjpTpozYugLlKGhx7tqhjKYX5jyL-Z5nE1eHl-O-dodBV-SqFRf9uqMWlhUUE4ZAQ0FQKl1oQzUDRLwFLL0yWSvQomx2Gv3lOpFa4HQLaT621BdgiBfZGFFIaedpaHgp03YJdo8_K2AENrg8h8JgvZjevBUF0Trw3jst9HzU_gnQul0OZMdpXYY7zepw"/>
+</div>
+<div>
+<p class="font-headline-md text-[16px] text-on-surface leading-tight">Super Admin</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Global Controller</p>
+</div>
+</div>
+<nav class="space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="calendar_today">calendar_today</span>
+<span class="font-label-md text-label-md">Academic Years</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-primary bg-primary/10 border-l-4 border-primary transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="schedule" style="font-variation-settings: 'FILL' 1;">schedule</span>
+<span class="font-label-md text-label-md">Terms</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="domain">domain</span>
+<span class="font-label-md text-label-md">Institutions</span>
+</a>
+</nav>
+</div>
+<div class="mt-auto p-6">
+<span class="font-label-sm text-label-sm text-outline">v2.4.0</span>
+</div>
+</aside>
+<!-- Main Content Shell -->
+<main class="md:ml-[280px] min-h-screen flex flex-col">
+<!-- TopAppBar (Shared Component) -->
+<header class="flex items-center justify-between px-container-padding py-base w-full sticky top-0 bg-background z-40">
+<div class="flex items-center gap-4">
+<button class="md:hidden text-on-surface">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+<div class="flex flex-col">
+<nav class="flex items-center gap-2 text-outline font-label-sm text-label-sm mb-1">
+<span>Dashboard</span>
+<span class="material-symbols-outlined text-[12px]" data-icon="chevron_right">chevron_right</span>
+<span>Terms</span>
+<span class="material-symbols-outlined text-[12px]" data-icon="chevron_right">chevron_right</span>
+<span class="text-primary">Create</span>
+</nav>
+<h1 class="font-headline-lg text-headline-lg text-primary">New Term</h1>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<span class="font-label-md text-label-md text-tertiary-fixed font-bold uppercase hidden md:block">System Active</span>
+<div class="w-10 h-10 rounded-full border border-outline-variant p-0.5">
+<img alt="Admin User" class="w-full h-full rounded-full object-cover" data-alt="A minimalist profile avatar placeholder for a system administrator, styled with deep charcoal and electric indigo gradients. The design is clean, geometric, and professional, perfectly fitting a modern corporate administrative interface with a high-tech edge." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCnAbQUtoVvuAQNCFZfKlWe-5s-1OQYdfq5tZ4nscpKF-L9MOUP_ON4_ihZ5ioF8luJh-1QSX9kjSakJOubqzbqbc47KxgH5Phd519rt6shKXa-iEXrYvS2vzuoeyjtKM1G4PpTEMqGQIuaEfCV52QklxAji55JKrVsKL_FhokVe7-Gb6Vwy2WaLpcoMoTLKsIk6EO4BVbJyWNRdT7jTfR_CiHFg1Pyh3wwf5flfbACk0_W7QXGi5AYoh8qc0_g7mMZGl-_h_Ww1GE5"/>
+</div>
+</div>
+</header>
+<!-- Form Content Canvas -->
+<div class="px-container-padding pb-32 flex-grow">
+<p class="font-body-md text-body-md text-on-surface-variant max-w-2xl mb-8">
+                Associate a new teaching term with an academic year. Ensure date ranges do not overlap with existing terms in the same year.
+            </p>
+<div class="max-w-4xl space-y-gutter">
+<!-- Section: Link to Year -->
+<section class="bg-surface-container-low border border-outline-variant rounded-xl p-8 transition-all hover:border-outline">
+<div class="flex items-center gap-3 mb-6">
+<span class="material-symbols-outlined text-primary" data-icon="link">link</span>
+<h2 class="font-headline-md text-headline-md uppercase tracking-tight">Link to Year</h2>
+</div>
+<!-- Warning Banner -->
+<div class="flex items-start gap-4 p-4 bg-tertiary-container/10 border border-tertiary-container/30 rounded-lg mb-6">
+<span class="material-symbols-outlined text-tertiary" data-icon="warning">warning</span>
+<div>
+<p class="font-label-md text-label-md text-tertiary mb-1">Attention Required</p>
+<p class="font-body-md text-[14px] text-on-surface-variant">No active academic years found. Please create one first before associating terms.</p>
+</div>
+</div>
+<div class="space-y-4">
+<label class="block font-label-sm text-label-sm text-on-surface-variant mb-2">ACADEMIC YEAR</label>
+<div class="relative">
+<select class="w-full bg-surface-container-highest border border-outline-variant text-outline rounded-lg px-4 py-3 appearance-none cursor-not-allowed font-body-md focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background outline-none" disabled="">
+<option>Select an academic year...</option>
+</select>
+<div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+<span class="material-symbols-outlined text-outline" data-icon="arrow_drop_down">arrow_drop_down</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Section: Term Details -->
+<section class="bg-surface-container-low border border-outline-variant rounded-xl p-8 transition-all hover:border-outline">
+<div class="flex items-center gap-3 mb-6">
+<span class="material-symbols-outlined text-primary" data-icon="info">info</span>
+<h2 class="font-headline-md text-headline-md uppercase tracking-tight">Term Details</h2>
+</div>
+<div class="grid grid-cols-1 gap-6">
+<div class="space-y-2">
+<label class="block font-label-sm text-label-sm text-on-surface-variant">TERM NAME</label>
+<input class="w-full bg-surface-container-highest border border-outline-variant text-on-surface rounded-lg px-4 py-3 font-body-md focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background outline-none transition-all placeholder:text-outline/50" placeholder="e.g. Fall Semester 2024" type="text"/>
+</div>
+</div>
+</section>
+<!-- Section: Date Range -->
+<section class="bg-surface-container-low border border-outline-variant rounded-xl p-8 transition-all hover:border-outline">
+<div class="flex items-center gap-3 mb-6">
+<span class="material-symbols-outlined text-primary" data-icon="date_range">date_range</span>
+<h2 class="font-headline-md text-headline-md uppercase tracking-tight">Date Range</h2>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="space-y-2">
+<label class="block font-label-sm text-label-sm text-on-surface-variant">START DATE</label>
+<div class="relative">
+<input class="w-full bg-surface-container-highest border border-outline-variant text-on-surface rounded-lg px-4 py-3 font-body-md focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background outline-none transition-all [color-scheme:dark]" type="date"/>
+</div>
+</div>
+<div class="space-y-2">
+<label class="block font-label-sm text-label-sm text-on-surface-variant">END DATE</label>
+<div class="relative">
+<input class="w-full bg-surface-container-highest border border-outline-variant text-on-surface rounded-lg px-4 py-3 font-body-md focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background outline-none transition-all [color-scheme:dark]" type="date"/>
+</div>
+</div>
+</div>
+</section>
+<!-- Section: Status & Notes -->
+<section class="bg-surface-container-low border border-outline-variant rounded-xl p-8 transition-all hover:border-outline">
+<div class="flex items-center gap-3 mb-6">
+<span class="material-symbols-outlined text-primary" data-icon="settings">settings</span>
+<h2 class="font-headline-md text-headline-md uppercase tracking-tight">Status &amp; Notes</h2>
+</div>
+<div class="space-y-6">
+<div class="space-y-2">
+<label class="block font-label-sm text-label-sm text-on-surface-variant">STATUS</label>
+<div class="relative">
+<select class="w-full bg-surface-container-highest border border-outline-variant text-on-surface rounded-lg px-4 py-3 appearance-none font-body-md focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background outline-none transition-all">
+<option selected="">Upcoming</option>
+<option>Active</option>
+<option>Archived</option>
+</select>
+<div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+<span class="material-symbols-outlined text-outline" data-icon="arrow_drop_down">arrow_drop_down</span>
+</div>
+</div>
+</div>
+<div class="space-y-2">
+<label class="block font-label-sm text-label-sm text-on-surface-variant">DESCRIPTION</label>
+<textarea class="w-full bg-surface-container-highest border border-outline-variant text-on-surface rounded-lg px-4 py-3 font-body-md focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background outline-none transition-all placeholder:text-outline/50" placeholder="Brief description of this term's objectives or special notes..." rows="4"></textarea>
+</div>
+</div>
+</section>
+</div>
+</div>
+<!-- Sticky Footer Actions -->
+<footer class="fixed bottom-0 w-full md:left-[280px] md:w-[calc(100%-280px)] bg-surface-container-lowest/80 backdrop-blur-md border-t border-outline-variant p-6 z-40">
+<div class="max-w-4xl mx-auto flex items-center justify-between">
+<button class="px-6 py-2 font-label-md text-label-md text-on-surface-variant hover:text-on-surface transition-all flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]" data-icon="restart_alt">restart_alt</span>
+                    Reset
+                </button>
+<button class="px-8 py-3 bg-primary/40 text-on-primary-fixed/50 cursor-not-allowed rounded-lg font-label-md text-label-md flex items-center gap-3 transition-all" disabled="">
+<span class="material-symbols-outlined" data-icon="save">save</span>
+                    Save Term
+                </button>
+</div>
+</footer>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="fixed bottom-0 w-full z-50 md:hidden bg-surface-container-low border-t border-outline-variant shadow-lg flex justify-around items-center h-16">
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1" href="#">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="font-label-sm text-label-sm">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1" href="#">
+<span class="material-symbols-outlined" data-icon="calendar_month">calendar_month</span>
+<span class="font-label-sm text-label-sm">Years</span>
+</a>
+<div class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-xl px-4 py-1">
+<span class="material-symbols-outlined" data-icon="list_alt" style="font-variation-settings: 'FILL' 1;">list_alt</span>
+<span class="font-label-sm text-label-sm">Terms</span>
+</div>
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-label-sm text-label-sm">Profile</span>
+</a>
+</nav>
+<script>
+        // Simple micro-interactions for the form fields
+        document.querySelectorAll('input, select, textarea').forEach(el => {
+            el.addEventListener('focus', () => {
+                el.closest('section').classList.add('border-primary/50');
+                el.closest('section').style.boxShadow = '0 0 20px rgba(109, 136, 255, 0.05)';
+            });
+            el.addEventListener('blur', () => {
+                el.closest('section').classList.remove('border-primary/50');
+                el.closest('section').style.boxShadow = 'none';
+            });
+        });
+
+        // Toggle mobile drawer placeholder (for demo purposes)
+        const menuBtn = document.querySelector('[data-icon="menu"]');
+        if(menuBtn) {
+            menuBtn.parentElement.addEventListener('click', () => {
+                alert('Navigation drawer would toggle here on mobile.');
+            });
+        }
+    </script>
+</body></html>
