@@ -26,7 +26,7 @@ export default function SAAcademicSystem() {
   const showToast = useCallback((msg, type) => { setToast({ msg, type }); setTimeout(() => setToast(null), 3000); }, []);
   const load = useCallback(async () => {
     setLoading(true);
-    try { const r = await req('GET', '/api/academic-systems/'); setList(r.data?.academicsystems || []); }
+    try { const r = await req('GET', '/api/academic-systems/'); setList(r.academicsystems || []); }
     catch (e) { showToast(e.message, 'error'); }
     setLoading(false);
   }, [showToast]);

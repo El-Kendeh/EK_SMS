@@ -35,7 +35,7 @@ export default function SATeachers() {
     try {
       const params = new URLSearchParams({ page, limit });
       const r = await req('GET', `/api/teachers/?${params}`);
-      setList(r.data?.teachers || []); setTotal(r.data?.total || 0);
+      setList(r.teachers || []); setTotal(r.total || 0);
     } catch (e) { showToast(e.message, 'error'); }
     setLoading(false);
   }, [page, showToast]); // eslint-disable-line

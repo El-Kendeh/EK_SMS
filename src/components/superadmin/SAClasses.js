@@ -38,7 +38,7 @@ export default function SAClasses() {
     try {
       const params = new URLSearchParams({ page, limit });
       const r = await req('GET', `/api/classes/?${params}`);
-      setList(r.data?.classes || []); setTotal(r.data?.total || 0);
+      setList(r.classes || []); setTotal(r.total || 0);
     } catch (e) { showToast(e.message, 'error'); }
     setLoading(false);
   }, [page, showToast]); // eslint-disable-line
@@ -187,6 +187,7 @@ function ClassForm({ editItem, onSave, onClose }) {
   const [subtypes, setSubtypes] = useState([]);
   const [selectedSubtype, setSelectedSubtype] = useState('');
   useEffect(() => {
+<<<<<<< HEAD
     req('GET', '/api/class-subtypes/').then(r => setSubtypes(r.data?.classsubtypes || [])).catch(() => {});
     if (editItem) {
       const f = {};
@@ -194,6 +195,10 @@ function ClassForm({ editItem, onSave, onClose }) {
       setForm(f);
       if (editItem.class_subtype_id) setSelectedSubtype(String(editItem.class_subtype_id));
     }
+=======
+    req('GET', '/api/class-subtypes/').then(r => setSubtypes(r.classsubtypes || [])).catch(() => {});
+    if (editItem) { const f = {}; classFields.forEach(({ key }) => { f[key] = editItem[key] !== undefined && editItem[key] !== null ? String(editItem[key]) : ''; }); setForm(f); }
+>>>>>>> 604871ee07f78e86bfdeb595d6a14ee734d2b221
   }, [editItem]);
   function set(k, v) { setForm(p => ({ ...p, [k]: v })); }
   return (
@@ -253,8 +258,8 @@ function AssignStudentsModal({ classId, onClose, showToast }) {
       req('GET', `/api/classes/${classId}/students/`),
       req('GET', `/api/classes/${classId}/available-students/`),
     ]).then(([a, av]) => {
-      setAssigned(a.data?.students || []);
-      setAvailable(av.data?.students || []);
+      setAssigned(a.students || []);
+      setAvailable(av.students || []);
     }).catch(e => showToast(e.message, 'error')).finally(() => setLoading(false));
   }, [classId, showToast]);
   async function handleAssign() {
@@ -316,8 +321,8 @@ function AssignSubjectsModal({ classId, onClose, showToast }) {
       req('GET', `/api/classes/${classId}/subjects/`),
       req('GET', `/api/classes/${classId}/available-subjects/`),
     ]).then(([a, av]) => {
-      setAssigned(a.data?.subjects || []);
-      setAvailable(av.data?.subjects || []);
+      setAssigned(a.subjects || []);
+      setAvailable(av.subjects || []);
     }).catch(e => showToast(e.message, 'error')).finally(() => setLoading(false));
   }, [classId, showToast]);
   async function handleAssign() {
@@ -372,6 +377,7 @@ function AssignTeacherModal({ classId, onClose, showToast }) {
   const [selected, setSelected] = useState([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
+<<<<<<< HEAD
     Promise.all([
       req('GET', `/api/classes/${classId}/teachers/`),
       req('GET', '/api/teachers/'),
@@ -381,6 +387,12 @@ function AssignTeacherModal({ classId, onClose, showToast }) {
       setSelected(cur.map(t => t.id));
       setAllTeachers(av.data?.teachers || []);
     }).catch(e => showToast(e.message, 'error')).finally(() => setLoading(false));
+=======
+    req('GET', `/api/classes/${classId}/available-teachers/`)
+      .then(r => setTeachers(r.teachers || []))
+      .catch(e => showToast(e.message, 'error'))
+      .finally(() => setLoading(false));
+>>>>>>> 604871ee07f78e86bfdeb595d6a14ee734d2b221
   }, [classId, showToast]);
   async function handleAssign() {
     try {

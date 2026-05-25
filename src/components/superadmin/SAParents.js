@@ -40,7 +40,7 @@ export default function SAParents() {
     try {
       const params = new URLSearchParams({ page, limit });
       const r = await req('GET', `/api/parents/?${params}`);
-      setList(r.data?.parents || []); setTotal(r.data?.total || 0);
+      setList(r.parents || []); setTotal(r.total || 0);
     } catch (e) { showToast(e.message, 'error'); }
     setLoading(false);
   }, [page, showToast]); // eslint-disable-line

@@ -26,7 +26,7 @@ export default function SAGradingSystem() {
   const showToast = useCallback((msg, type) => { setToast({ msg, type }); setTimeout(() => setToast(null), 3000); }, []);
   const load = useCallback(async () => {
     setLoading(true);
-    try { const r = await req('GET', '/api/grading-systems/'); setList(r.data?.gradingsystems || []); }
+    try { const r = await req('GET', '/api/grading-systems/'); setList(r.gradingsystems || []); }
     catch (e) { showToast(e.message, 'error'); }
     setLoading(false);
   }, [showToast]);

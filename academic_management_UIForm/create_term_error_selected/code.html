@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&amp;family=DM+Mono:wght@400;500&amp;family=Geist:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-secondary-fixed": "#171c23",
+                        "on-surface": "#e3e2e6",
+                        "background": "#121316",
+                        "secondary-container": "#42474f",
+                        "outline-variant": "#444655",
+                        "error": "#ffb4ab",
+                        "surface-container-highest": "#343538",
+                        "primary-container": "#6d88ff",
+                        "on-tertiary-fixed-variant": "#763300",
+                        "surface-tint": "#b8c3ff",
+                        "surface-container": "#1f1f23",
+                        "on-surface-variant": "#c4c5d7",
+                        "surface-container-lowest": "#0d0e11",
+                        "on-primary-fixed": "#001355",
+                        "surface-dim": "#121316",
+                        "surface-variant": "#343538",
+                        "error-container": "#93000a",
+                        "primary-fixed": "#dde1ff",
+                        "on-tertiary-container": "#491d00",
+                        "outline": "#8e90a0",
+                        "on-secondary": "#2c3138",
+                        "surface": "#121316",
+                        "primary-fixed-dim": "#b8c3ff",
+                        "on-secondary-container": "#b1b5bf",
+                        "surface-bright": "#38393c",
+                        "on-primary": "#002388",
+                        "surface-container-high": "#292a2d",
+                        "on-background": "#e3e2e6",
+                        "inverse-surface": "#e3e2e6",
+                        "surface-container-low": "#1b1b1f",
+                        "tertiary": "#ffb68e",
+                        "on-primary-fixed-variant": "#0035bd",
+                        "tertiary-fixed-dim": "#ffb68e",
+                        "tertiary-container": "#e37020",
+                        "on-error": "#690005",
+                        "secondary": "#c2c7d0",
+                        "on-error-container": "#ffdad6",
+                        "tertiary-fixed": "#ffdbc9",
+                        "on-tertiary": "#532200",
+                        "primary": "#b8c3ff",
+                        "inverse-primary": "#294fdb",
+                        "on-secondary-fixed-variant": "#42474f",
+                        "on-tertiary-fixed": "#331200",
+                        "on-primary-container": "#001e77",
+                        "inverse-on-surface": "#303034",
+                        "secondary-fixed-dim": "#c2c7d0",
+                        "secondary-fixed": "#dee2ec"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "container-padding": "32px",
+                        "base": "8px",
+                        "card-gap": "24px",
+                        "sidebar-width": "280px",
+                        "gutter": "24px"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Geist"],
+                        "headline-md": ["Syne"],
+                        "label-sm": ["DM Mono"],
+                        "label-md": ["DM Mono"],
+                        "headline-lg-mobile": ["Syne"],
+                        "display-lg": ["Syne"],
+                        "headline-lg": ["Syne"]
+                    },
+                    "fontSize": {
+                        "body-md": ["16px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                        "headline-md": ["20px", {"lineHeight": "1.4", "fontWeight": "600"}],
+                        "label-sm": ["12px", {"lineHeight": "1.0", "letterSpacing": "0.02em", "fontWeight": "400"}],
+                        "label-md": ["14px", {"lineHeight": "1.0", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                        "display-lg": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+                        "headline-lg": ["32px", {"lineHeight": "1.2", "fontWeight": "700"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { background-color: #121316; color: #e3e2e6; -webkit-font-smoothing: antialiased; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .glass-panel { background: rgba(22, 27, 34, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .error-ring { box-shadow: 0 0 0 2px rgba(255, 180, 171, 0.2); }
+        .active-nav-indicator { position: absolute; left: 0; width: 4px; height: 100%; background-color: #b8c3ff; }
+        @keyframes slideInUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .toast-animate { animation: slideInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body-md text-body-md">
+<!-- Navigation Drawer (Desktop Only) -->
+<aside class="hidden md:flex flex-col w-[280px] h-screen fixed left-0 top-0 bg-surface-container border-r border-outline-variant z-40">
+<div class="p-6">
+<div class="font-label-md text-label-md bg-secondary-container text-on-secondary-container px-2 py-1 rounded uppercase tracking-widest inline-block mb-8">
+                SUPER ADMIN
+            </div>
+<div class="space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high transition-colors rounded-lg group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary">dashboard</span>
+<span class="font-label-sm text-label-sm">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-primary bg-primary/10 border-l-4 border-primary rounded-r-lg group" href="#">
+<span class="material-symbols-outlined">calendar_today</span>
+<span class="font-label-sm text-label-sm">Academic Years</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high transition-colors rounded-lg group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary">schedule</span>
+<span class="font-label-sm text-label-sm">Terms</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high transition-colors rounded-lg group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary">domain</span>
+<span class="font-label-sm text-label-sm">Institutions</span>
+</a>
+</div>
+</div>
+<div class="mt-auto p-6 border-t border-outline-variant flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center text-on-primary-fixed font-bold">SA</div>
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface">Super Admin</span>
+<span class="font-label-sm text-label-sm text-outline">v2.4.0</span>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="md:ml-[280px] min-h-screen pb-24 md:pb-12">
+<!-- Top App Bar -->
+<header class="flex items-center justify-between px-container-padding py-base w-full sticky top-0 bg-background/80 backdrop-blur-md z-30">
+<div class="flex flex-col">
+<nav class="flex items-center gap-2 mb-1">
+<span class="font-label-sm text-label-sm text-outline">Dashboard</span>
+<span class="material-symbols-outlined text-outline text-[14px]">chevron_right</span>
+<span class="font-label-sm text-label-sm text-outline">Terms</span>
+<span class="material-symbols-outlined text-outline text-[14px]">chevron_right</span>
+<span class="font-label-sm text-label-sm text-primary">Create</span>
+</nav>
+<h1 class="font-headline-lg text-headline-lg text-primary tracking-tight">New Term</h1>
+<p class="font-body-md text-body-md text-on-surface-variant">Associate a new teaching term with an academic year</p>
+</div>
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors p-2">notifications</button>
+<div class="w-10 h-10 rounded-lg overflow-hidden border border-outline-variant">
+<img alt="Admin Avatar" class="w-full h-full object-cover" data-alt="A professional close-up portrait of a high-level administrator in a corporate setting. The lighting is dramatic and cool-toned, reflecting a sophisticated tech environment. The background shows a soft-focus office with minimalist grey and navy tones. The style is crisp, high-resolution digital photography with deep contrast and an authoritative mood." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA009EQdXED1T3G2W6ZiQrpRzVuRyUJFR5QoMTzIOw1tads3Iy8mtJgpqzMTEntX5NxAuR951ly5O5ivkKzIa6eosUTrhEeZ4-8buQpswRMjmrLz9qgVCbtQ6JZoi0fpEfd5frWZsFnVBUXUQSkf101PSHY2PWkMNvboE8fK28Xp0WLxJHYWOkucaxy1RW-eX4FhU4JY2zwFflQhxoMR9J2aVtwHKlJwPOWptEqCDiamHdf_82oQ04SzliM9qxELGspGYr3pxsm_N5G"/>
+</div>
+</div>
+</header>
+<div class="px-container-padding mt-8 max-w-4xl mx-auto">
+<!-- Form Card -->
+<div class="bg-surface-container-low rounded-xl border border-outline-variant overflow-hidden shadow-xl">
+<div class="p-8 space-y-12">
+<!-- SECTION: LINK TO YEAR -->
+<section class="space-y-4">
+<div class="flex items-center gap-2 mb-2">
+<span class="w-1.5 h-6 bg-primary rounded-full"></span>
+<h2 class="font-headline-md text-headline-md">Link to Year</h2>
+</div>
+<div class="space-y-4">
+<div class="flex flex-col gap-2">
+<label class="font-label-sm text-label-sm text-outline uppercase tracking-wider">Academic Year</label>
+<div class="relative">
+<select class="w-full bg-surface-container h-12 rounded-lg border border-outline-variant px-4 appearance-none text-on-surface focus:ring-2 focus:ring-primary focus:border-transparent transition-all">
+<option selected="">2024/25</option>
+<option>2023/24</option>
+<option>2022/23</option>
+</select>
+<span class="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
+</div>
+<div class="flex items-center gap-2 mt-1 px-3 py-1.5 bg-primary/5 rounded-md border border-primary/20 w-fit">
+<span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+<span class="font-label-sm text-label-sm text-primary">Active • Aug 2024 - Jul 2025</span>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION: TERM DETAILS -->
+<section class="space-y-4">
+<div class="flex items-center gap-2 mb-2">
+<span class="w-1.5 h-6 bg-primary rounded-full"></span>
+<h2 class="font-headline-md text-headline-md">Term Details</h2>
+</div>
+<div class="flex flex-col gap-2">
+<label class="font-label-sm text-label-sm text-outline uppercase tracking-wider">Term Name</label>
+<div class="relative">
+<input class="w-full bg-surface-container h-12 rounded-lg border border-error px-4 text-on-surface focus:ring-2 focus:ring-error focus:border-transparent transition-all outline-none" placeholder="e.g. Michaelmas Term" type="text" value=""/>
+<span class="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-error" data-weight="fill">warning</span>
+</div>
+<span class="font-label-sm text-label-sm text-error flex items-center gap-1 mt-1">
+                                Term name is required
+                            </span>
+</div>
+</section>
+<!-- SECTION: DATE RANGE -->
+<section class="space-y-4">
+<div class="flex items-center gap-2 mb-2">
+<span class="w-1.5 h-6 bg-primary rounded-full"></span>
+<h2 class="font-headline-md text-headline-md">Date Range</h2>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="flex flex-col gap-2">
+<label class="font-label-sm text-label-sm text-outline uppercase tracking-wider">Start Date</label>
+<div class="relative">
+<input class="w-full bg-surface-container h-12 rounded-lg border border-emerald-500/50 px-4 text-on-surface focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none" type="date" value="2024-09-01"/>
+<span class="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-emerald-500">check_circle</span>
+</div>
+</div>
+<div class="flex flex-col gap-2">
+<label class="font-label-sm text-label-sm text-outline uppercase tracking-wider">End Date</label>
+<div class="relative">
+<input class="w-full bg-surface-container h-12 rounded-lg border border-error px-4 text-on-surface focus:ring-2 focus:ring-error focus:border-transparent transition-all outline-none" type="date" value="2025-08-15"/>
+<span class="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-error" data-weight="fill">error</span>
+</div>
+<span class="font-label-sm text-label-sm text-error mt-1">Date must be within academic year range</span>
+</div>
+</div>
+</section>
+<!-- SECTION: STATUS & NOTES -->
+<section class="space-y-4">
+<div class="flex items-center gap-2 mb-2">
+<span class="w-1.5 h-6 bg-primary rounded-full"></span>
+<h2 class="font-headline-md text-headline-md">Status &amp; Notes</h2>
+</div>
+<div class="grid grid-cols-1 gap-6">
+<div class="flex flex-col gap-2">
+<label class="font-label-sm text-label-sm text-outline uppercase tracking-wider">Status</label>
+<div class="relative">
+<select class="w-full bg-surface-container h-12 rounded-lg border border-outline-variant px-4 appearance-none text-on-surface focus:ring-2 focus:ring-primary focus:border-transparent transition-all">
+<option selected="">Upcoming</option>
+<option>Current</option>
+<option>Completed</option>
+</select>
+<span class="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
+</div>
+</div>
+<div class="flex flex-col gap-2">
+<label class="font-label-sm text-label-sm text-outline uppercase tracking-wider">Description</label>
+<textarea class="w-full bg-surface-container rounded-lg border border-outline-variant p-4 text-on-surface focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none resize-none" placeholder="Enter term objectives or additional notes..." rows="4"></textarea>
+</div>
+</div>
+</section>
+</div>
+<!-- Card Footer Actions -->
+<div class="p-6 bg-surface-container-high/50 border-t border-outline-variant flex justify-between items-center">
+<button class="px-6 py-2.5 rounded-lg font-label-md text-label-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-all">
+                        Reset
+                    </button>
+<button class="px-8 py-3 rounded-xl bg-primary text-on-primary font-headline-md text-[16px] hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-primary/20">
+                        Save Term
+                    </button>
+</div>
+</div>
+</div>
+</main>
+<!-- Success Toast (Bottom Right) -->
+<div class="fixed bottom-8 right-8 z-[100] toast-animate">
+<div class="flex items-center gap-4 bg-surface-container-highest border-l-4 border-emerald-500 p-4 pr-8 rounded-lg shadow-2xl backdrop-blur-xl">
+<div class="flex items-center justify-center w-8 h-8 rounded-full bg-emerald-500/20">
+<span class="material-symbols-outlined text-emerald-400 text-[20px]" data-weight="fill">check_circle</span>
+</div>
+<div class="flex flex-col">
+<p class="font-label-md text-label-md text-on-surface">Changes saved successfully</p>
+<p class="font-label-sm text-label-sm text-outline">Redirecting to terms list...</p>
+</div>
+<button class="material-symbols-outlined text-outline hover:text-on-surface transition-colors ml-4" onclick="this.parentElement.parentElement.remove()">close</button>
+</div>
+</div>
+<!-- Mobile Navigation Bar -->
+<nav class="fixed bottom-0 w-full z-50 md:hidden bg-surface-container-low border-t border-outline-variant shadow-lg flex justify-around items-center h-16 px-4">
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-label-sm text-label-sm">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-xl px-4 py-1" href="#">
+<span class="material-symbols-outlined">calendar_month</span>
+<span class="font-label-sm text-label-sm">Years</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1" href="#">
+<span class="material-symbols-outlined">list_alt</span>
+<span class="font-label-sm text-label-sm">Terms</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-label-sm text-label-sm">Profile</span>
+</a>
+</nav>
+<script>
+        // Micro-interaction for inputs
+        document.querySelectorAll('input, select, textarea').forEach(el => {
+            el.addEventListener('focus', () => {
+                el.parentElement.classList.add('scale-[1.01]');
+                el.parentElement.style.transition = 'transform 0.2s ease-out';
+            });
+            el.addEventListener('blur', () => {
+                el.parentElement.classList.remove('scale-[1.01]');
+            });
+        });
+
+        // Toast auto-hide after 5 seconds
+        setTimeout(() => {
+            const toast = document.querySelector('.toast-animate');
+            if (toast) {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(20px)';
+                toast.style.transition = 'all 0.5s ease-in';
+                setTimeout(() => toast.remove(), 500);
+            }
+        }, 5000);
+    </script>
+</body></html>

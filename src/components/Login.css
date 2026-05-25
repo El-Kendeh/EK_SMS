@@ -109,7 +109,7 @@
 
 /* ---- Back to Home button (inside card) ---- */
 .login-back-btn {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 7px;
   background: linear-gradient(135deg, #0284c7 0%, #00B4D8 55%, #38bdf8 100%);
@@ -122,7 +122,8 @@
   font-weight: 600;
   font-family: inherit;
   letter-spacing: 0.02em;
-  margin-bottom: 24px;
+  margin: 0 auto 24px;
+  width: fit-content;
   box-shadow: 0 4px 18px rgba(0, 180, 216, 0.4);
   transition: transform 0.18s ease, box-shadow 0.18s ease;
   position: relative;
