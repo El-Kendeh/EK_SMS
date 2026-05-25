@@ -75,31 +75,50 @@ export default function SAClasses() {
         <>
           <div className="sa-table-wrap">
             <table className="sa-table">
-              <thead><tr><th>Name</th><th>Code</th><th>School</th><th>Form</th><th>Stream</th><th>Capacity</th><th>Status</th><th>Actions</th></tr></thead>
+              <thead><tr><th>ID</th><th>Class Name</th><th>Subtype</th><th>Students</th><th>Teachers</th><th>Actions</th></tr></thead>
               <tbody>
                 {list.length === 0 ? (
-                  <tr><td colSpan={8} style={{ textAlign: 'center', padding: 40, color: 'var(--sa-text-3)' }}>No classes found</td></tr>
-                ) : list.map(p => (
+                  <tr><td colSpan={6} style={{ textAlign: 'center', padding: 40, color: 'var(--sa-text-3)' }}>No classes found</td></tr>
+                ) : list.map(p => {
+                  const cap = p.capacity || 50;
+                  const maxT = p.max_teachers || 10;
+                  const stuPct = Math.round((p.student_count / cap) * 100);
+                  const tchPct = Math.round(((p.teachers?.length || 0) / maxT) * 100);
+                  const stuColor = stuPct >= 100 ? 'var(--sa-red)' : stuPct >= 80 ? 'var(--sa-amber)' : 'var(--sa-green)';
+                  const tchColor = tchPct >= 100 ? 'var(--sa-red)' : tchPct >= 80 ? 'var(--sa-amber)' : 'var(--sa-green)';
+                  return (
                   <tr key={p.id}>
+                    <td><span className="sa-table-school-id">#{p.id}</span></td>
                     <td><div className="sa-table-school-name">{p.name}</div></td>
-                    <td><span className="sa-table-school-id">{p.code || '—'}</span></td>
-                    <td style={{ fontSize: 12, color: 'var(--sa-text-3)' }}>{p.school_name || `ID: ${p.school_id}`}</td>
-                    <td>{p.form || '—'}{p.form_number ? ` ${p.form_number}` : ''}</td>
-                    <td>{p.stream || '—'}</td>
-                    <td>{p.capacity || '—'}</td>
-                    <td>{p.is_active ? <span className="sa-badge sa-badge--approved">Active</span> : <span className="sa-badge sa-badge--inactive">Inactive</span>}</td>
+                    <td>{p.class_subtype_name || '—'}</td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{p.student_count}/{cap}</span>
+                        <div style={{ width: 50, height: 5, background: 'var(--sa-border)', borderRadius: 999, overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: `${Math.min(stuPct, 100)}%`, background: stuColor, borderRadius: 999 }} />
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{(p.teachers?.length || 0)}/{maxT}</span>
+                        <div style={{ width: 50, height: 5, background: 'var(--sa-border)', borderRadius: 999, overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: `${Math.min(tchPct, 100)}%`, background: tchColor, borderRadius: 999 }} />
+                        </div>
+                      </div>
+                    </td>
                     <td>
                       <div style={{ display: 'flex', gap: 4 }}>
                         <button className="sa-btn sa-btn--ghost sa-btn--sm" title="Assign Students" onClick={() => { setAssignId(p.id); setAssignType('students'); }}><IcUser /></button>
                         <button className="sa-btn sa-btn--ghost sa-btn--sm" title="Assign Subjects" onClick={() => { setAssignId(p.id); setAssignType('subjects'); }}><IcBook /></button>
-                        <button className="sa-btn sa-btn--ghost sa-btn--sm" title="Assign Teacher" onClick={() => { setAssignId(p.id); setAssignType('teacher'); }}><IcTeacher /></button>
+                        <button className="sa-btn sa-btn--ghost sa-btn--sm" title="Assign Teachers" onClick={() => { setAssignId(p.id); setAssignType('teacher'); }}><IcTeacher /></button>
                         <button className="sa-btn sa-btn--ghost sa-btn--sm" title="Edit" onClick={() => { setEditItem(p); setShowModal(true); }}><IcEdit /></button>
                         <button className="sa-btn sa-btn--ghost sa-btn--sm" title="Toggle" onClick={() => handleToggle(p)}><span style={{ fontSize: 12 }}>{p.is_active ? '🔴' : '🟢'}</span></button>
                         <button className="sa-btn sa-btn--ghost sa-btn--sm" title="Delete" onClick={() => setDeleting(p.id)}><IcTrash /></button>
                       </div>
                     </td>
                   </tr>
-                ))}
+                )})}
               </tbody>
             </table>
           </div>
@@ -145,14 +164,14 @@ export default function SAClasses() {
 /* ── Class Form (with subtype dropdown) ── */
 const classFields = [
   { key: 'name', label: 'Class Name', type: 'text', required: true, placeholder: 'e.g. SS1' },
-  { key: 'code', label: 'Code', type: 'text', placeholder: 'e.g. SS1-A' },
   { key: 'school_id', label: 'School ID', type: 'number', required: true },
+  { key: 'code', label: 'Code', type: 'text', placeholder: 'e.g. SS1-A' },
   { key: 'form', label: 'Form', type: 'text', placeholder: 'e.g. SS1' },
   { key: 'form_number', label: 'Form Number', type: 'number' },
   { key: 'category', label: 'Category', type: 'text', placeholder: 'e.g. Science' },
   { key: 'stream', label: 'Stream', type: 'text', placeholder: 'e.g. A' },
-  { key: 'capacity', label: 'Capacity', type: 'number', placeholder: '50' },
-  { key: 'class_teacher_id', label: 'Class Teacher ID', type: 'number' },
+  { key: 'capacity', label: 'Student Capacity', type: 'number', placeholder: '50' },
+  { key: 'max_teachers', label: 'Max Teachers', type: 'number', placeholder: '10' },
   { key: 'academic_year_id', label: 'Academic Year ID', type: 'number' },
   { key: 'room', label: 'Room', type: 'text', placeholder: 'e.g. Room 101' },
   { key: 'start_time', label: 'Start Time', type: 'text', placeholder: 'e.g. 08:00:00' },
@@ -161,7 +180,6 @@ const classFields = [
   { key: 'education_level', label: 'Education Level', type: 'text', placeholder: 'e.g. Secondary' },
   { key: 'track', label: 'Track', type: 'text', placeholder: 'e.g. Academic' },
   { key: 'notes', label: 'Notes', type: 'text' },
-  { key: 'auto_promotion_target_id', label: 'Auto Promotion Target ID', type: 'number' },
 ];
 
 function ClassForm({ editItem, onSave, onClose }) {
@@ -170,42 +188,43 @@ function ClassForm({ editItem, onSave, onClose }) {
   const [selectedSubtype, setSelectedSubtype] = useState('');
   useEffect(() => {
     req('GET', '/api/class-subtypes/').then(r => setSubtypes(r.data?.classsubtypes || [])).catch(() => {});
-    if (editItem) { const f = {}; classFields.forEach(({ key }) => { f[key] = editItem[key] !== undefined && editItem[key] !== null ? String(editItem[key]) : ''; }); setForm(f); }
+    if (editItem) {
+      const f = {};
+      classFields.forEach(({ key }) => { f[key] = editItem[key] !== undefined && editItem[key] !== null ? String(editItem[key]) : ''; });
+      setForm(f);
+      if (editItem.class_subtype_id) setSelectedSubtype(String(editItem.class_subtype_id));
+    }
   }, [editItem]);
   function set(k, v) { setForm(p => ({ ...p, [k]: v })); }
-  function handleSubtypeChange(e) {
-    const val = e.target.value;
-    setSelectedSubtype(val);
-    if (val) {
-      const sub = subtypes.find(s => String(s.id) === val);
-      if (sub) {
-        const base = form.form || form.name || '';
-        const baseName = base.split(' ')[0];
-        setForm(p => ({ ...p, name: `${baseName} ${sub.name}` }));
-      }
-    }
-  }
   return (
     <div className="sa-modal-overlay" onClick={onClose}>
       <div className="sa-modal sa-modal--lg" onClick={e => e.stopPropagation()}>
         <h3>{editItem ? 'Edit Class' : 'Create Class'}</h3>
-        <form onSubmit={e => { e.preventDefault(); const data = {}; Object.entries(form).forEach(([k, v]) => { if (v !== '' && v !== null && v !== undefined) data[k] = ['name','code','form','category','stream','room','colour_tag','education_level','track','notes','start_time','end_time'].includes(k) ? v : Number(v); }); onSave(data); }}>
+        <form onSubmit={e => {
+          e.preventDefault();
+          const data = {};
+          Object.entries(form).forEach(([k, v]) => {
+            if (v !== '' && v !== null && v !== undefined) data[k] = ['name','code','form','category','stream','room','colour_tag','education_level','track','notes','start_time','end_time'].includes(k) ? v : Number(v);
+          });
+          if (selectedSubtype) data.class_subtype_id = Number(selectedSubtype);
+          onSave(data);
+        }}>
           <div className="sa-modal-body">
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-              {classFields.slice(0, 3).map(f => (
+              {classFields.slice(0, 2).map(f => (
                 <div key={f.key} className="sa-field">
                   <label>{f.label}{f.required ? ' *' : ''}</label>
                   <input type={f.type === 'number' ? 'number' : 'text'} value={form[f.key] !== undefined ? form[f.key] : ''} onChange={e => set(f.key, e.target.value)} placeholder={f.placeholder || ''} />
                 </div>
               ))}
               <div className="sa-field">
-                <label>Class Subtype (appends to name)</label>
-                <select value={selectedSubtype} onChange={handleSubtypeChange}>
+                <label>Class Subtype</label>
+                <select value={selectedSubtype} onChange={e => setSelectedSubtype(e.target.value)}>
                   <option value="">— None —</option>
                   {subtypes.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
               </div>
-              {classFields.slice(3).map(f => (
+              {classFields.slice(2).map(f => (
                 <div key={f.key} className="sa-field">
                   <label>{f.label}</label>
                   <input type={f.type === 'number' ? 'number' : 'text'} value={form[f.key] !== undefined ? form[f.key] : ''} onChange={e => set(f.key, e.target.value)} placeholder={f.placeholder || ''} />
@@ -346,40 +365,62 @@ function AssignSubjectsModal({ classId, onClose, showToast }) {
   );
 }
 
-/* ── Assign Teacher Modal ── */
+/* ── Assign Teacher Modal (multi-select) ── */
 function AssignTeacherModal({ classId, onClose, showToast }) {
-  const [teachers, setTeachers] = useState([]);
-  const [selectedTeacher, setSelectedTeacher] = useState('');
+  const [allTeachers, setAllTeachers] = useState([]);
+  const [assigned, setAssigned] = useState([]);
+  const [selected, setSelected] = useState([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
-    req('GET', `/api/classes/${classId}/available-teachers/`)
-      .then(r => setTeachers(r.data?.teachers || []))
-      .catch(e => showToast(e.message, 'error'))
-      .finally(() => setLoading(false));
+    Promise.all([
+      req('GET', `/api/classes/${classId}/teachers/`),
+      req('GET', '/api/teachers/'),
+    ]).then(([a, av]) => {
+      const cur = a.data?.teachers || [];
+      setAssigned(cur);
+      setSelected(cur.map(t => t.id));
+      setAllTeachers(av.data?.teachers || []);
+    }).catch(e => showToast(e.message, 'error')).finally(() => setLoading(false));
   }, [classId, showToast]);
   async function handleAssign() {
     try {
-      await req('POST', `/api/classes/${classId}/assign-teacher/`, { teacher_id: selectedTeacher ? Number(selectedTeacher) : null });
-      showToast('Teacher assigned', 'success');
+      await req('POST', `/api/classes/${classId}/assign-multiple-teachers/`, { teacher_ids: selected.map(Number) });
+      showToast('Teachers assigned', 'success');
       onClose();
     } catch (e) { showToast(e.message, 'error'); }
   }
+  function toggle(id) {
+    setSelected(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
+  }
   return (
     <div className="sa-modal-overlay" onClick={onClose}>
-      <div className="sa-modal" onClick={e => e.stopPropagation()}>
-        <h3>Assign Class Teacher</h3>
+      <div className="sa-modal sa-modal--lg" onClick={e => e.stopPropagation()}>
+        <h3>Assign Teachers to Class</h3>
         {loading ? <div className="sa-loading">Loading...</div> : (
           <>
-            <div className="sa-field">
-              <label>Teacher</label>
-              <select value={selectedTeacher} onChange={e => setSelectedTeacher(e.target.value)}>
-                <option value="">— None (clear) —</option>
-                {teachers.map(t => <option key={t.id} value={t.id}>{t.first_name} {t.last_name} ({t.employee_id || `#${t.id}`})</option>)}
-              </select>
+            {assigned.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <p style={{ fontWeight: 600, marginBottom: 8, fontSize: 13 }}>Currently Assigned ({assigned.length})</p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {assigned.map(t => <span key={t.id} className="sa-badge sa-badge--approved">{t.first_name} {t.last_name}</span>)}
+                </div>
+              </div>
+            )}
+            <p style={{ fontWeight: 600, marginBottom: 8, fontSize: 13 }}>All Teachers ({allTeachers.length})</p>
+            <div style={{ maxHeight: 300, overflowY: 'auto', border: '1px solid var(--sa-border)', borderRadius: 8 }}>
+              {allTeachers.length === 0 ? (
+                <p style={{ padding: 16, color: 'var(--sa-text-3)', textAlign: 'center' }}>No teachers available</p>
+              ) : allTeachers.map(t => (
+                <label key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12', cursor: 'pointer', borderBottom: '1px solid var(--sa-border)' }}>
+                  <input type="checkbox" checked={selected.includes(t.id)} onChange={() => toggle(t.id)} />
+                  <span style={{ fontSize: 13 }}>{t.first_name} {t.last_name}</span>
+                  <span style={{ fontSize: 11, color: 'var(--sa-text-3)' }}>{t.employee_id || `#${t.id}`}</span>
+                </label>
+              ))}
             </div>
             <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 16 }}>
               <button className="sa-btn sa-btn--ghost" onClick={onClose}>Cancel</button>
-              <button className="sa-btn sa-btn--primary" onClick={handleAssign}>Assign</button>
+              <button className="sa-btn sa-btn--primary" onClick={handleAssign} disabled={selected.length === 0}>Save ({selected.length})</button>
             </div>
           </>
         )}

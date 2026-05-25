@@ -420,11 +420,31 @@ async function resetUserPassword(req, res) {
   }
 }
 
+// GET /api/superadmin/dashboard
+async function getDashboard(req, res) {
+  try {
+    const schoolCount = await School.count();
+    const totalUsers = await User.count();
+    const pendingSchools = await School.count({ where: { is_approved: false, is_active: true } });
+    const approvedSchools = await School.count({ where: { is_approved: true } });
+    return res.json(successResponse({
+      schools: schoolCount,
+      total_users: totalUsers,
+      pending_schools: pendingSchools,
+      approved_schools: approvedSchools,
+    }));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse("Internal server error", 500));
+  }
+}
+
 module.exports = {
   getAllSchools,
   handleSchoolAction,
   impersonate,
   getGradeAlerts,
   getSystemHealth,
-  resetUserPassword
+  resetUserPassword,
+  getDashboard
 };

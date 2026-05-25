@@ -722,6 +722,24 @@ async function migrate() {
       }
     }
 
+    // Add missing columns to pruh_core_class
+    const classColumns = [
+      { name: 'class_subtype_id', def: 'BIGINT DEFAULT NULL' },
+      { name: 'max_teachers', def: 'INT DEFAULT 10' },
+    ];
+    for (const { name, def } of classColumns) {
+      try {
+        await sequelize.query(`ALTER TABLE \`pruh_core_class\` ADD COLUMN \`${name}\` ${def}`);
+        console.log(`✓ Column added: pruh_core_class.${name}`);
+      } catch (e) {
+        if (e.message && e.message.includes('Duplicate column')) {
+          console.log(`  (column ${name} already exists)`);
+        } else {
+          console.log(`  (column ${name}: ${e.message})`);
+        }
+      }
+    }
+
     // Add indexes
     const indexes = [
       ['idx_msg_school', 'pruh_core_message', 'school_id'],

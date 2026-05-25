@@ -11,7 +11,8 @@ const {
   impersonate,
   getGradeAlerts,
   getSystemHealth,
-  resetUserPassword
+  resetUserPassword,
+  getDashboard
 } = require('../controllers/superadminController');
 
 const data = require('../controllers/superadminDataController');
@@ -107,6 +108,7 @@ router.get('/system-health/', getSystemHealth);
 router.post('/reset-user-password/', resetUserPassword);
 
 /* Superadmin dashboard — MySQL-backed */
+router.get('/dashboard/', getDashboard);
 router.get('/security-logs/', data.getSecurityLogs);
 router.get('/security-counters/', data.getSecurityCounters);
 router.get('/profile/', data.getProfile);
@@ -247,6 +249,8 @@ router.get('/classes/:id/subjects/', data.getClassAssignedSubjects);
 router.get('/classes/:id/available-subjects/', data.getAvailableSubjectsForClass);
 router.post('/classes/:id/assign-subjects/', data.assignClassSubjects);
 router.post('/classes/:id/assign-teacher/', data.assignClassTeacher);
+router.get('/classes/:id/teachers/', data.getClassTeachers);
+router.post('/classes/:id/assign-multiple-teachers/', data.assignClassMultipleTeachers);
 router.get('/classes/:id/available-teachers/', data.getAvailableTeachersForClass);
 
 /* Subject Assignment Routes */

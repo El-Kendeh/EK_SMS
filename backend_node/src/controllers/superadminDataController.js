@@ -1582,8 +1582,37 @@ async function getSuperClasses(req, res) {
     const { rows, count } = await ClassModel.findAndCountAll({ where, order: [['created_at', 'DESC']], offset, limit: parseInt(limit) });
     const classes = await Promise.all(rows.map(async r => {
       let schoolName = '';
+      let subtypeName = '';
+      let teachers = [];
+      let studentCount = 0;
       try { const s = await School.findByPk(r.school_id); schoolName = s?.name || ''; } catch {}
-      return { id: r.id, school_id: r.school_id, school_name: schoolName, name: r.name, code: r.code, form: r.form, form_number: r.form_number, category: r.category, stream: r.stream, class_teacher_id: r.class_teacher_id, capacity: r.capacity, academic_year_id: r.academic_year_id, is_active: Boolean(r.is_active), room: r.room, start_time: r.start_time, end_time: r.end_time, colour_tag: r.colour_tag, education_level: r.education_level, track: r.track, notes: r.notes, auto_promotion_target_id: r.auto_promotion_target_id, created_at: r.created_at };
+      if (r.class_subtype_id) {
+        try { const st = await ClassSubtype.findByPk(r.class_subtype_id); subtypeName = st?.name || ''; } catch {}
+      }
+      try {
+        const links = await ClassAssistantTeacher.findAll({ where: { class_id: r.id } });
+        teachers = await Promise.all(links.map(async l => {
+          const t = await Teacher.findByPk(l.teacher_id);
+          if (!t) return null;
+          const u = await User.findByPk(t.user_id);
+          return { id: t.id, name: u ? `${u.first_name} ${u.last_name}`.trim() : `Teacher #${t.id}` };
+        }));
+        teachers = teachers.filter(Boolean);
+      } catch {}
+      try {
+        studentCount = await Student.count({ where: { classroom_id: r.id } });
+      } catch {}
+      return {
+        id: r.id, school_id: r.school_id, school_name: schoolName, name: r.name, code: r.code,
+        form: r.form, form_number: r.form_number, category: r.category, stream: r.stream,
+        class_teacher_id: r.class_teacher_id, class_subtype_id: r.class_subtype_id,
+        class_subtype_name: subtypeName, capacity: r.capacity, max_teachers: r.max_teachers,
+        academic_year_id: r.academic_year_id,
+        is_active: Boolean(r.is_active), room: r.room, start_time: r.start_time, end_time: r.end_time,
+        colour_tag: r.colour_tag, education_level: r.education_level, track: r.track, notes: r.notes,
+        auto_promotion_target_id: r.auto_promotion_target_id,
+        teachers, student_count: studentCount, created_at: r.created_at
+      };
     }));
     return res.json(successResponse({ classes, total: count, page: parseInt(page), limit: parseInt(limit) }));
   } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
@@ -1598,7 +1627,9 @@ async function createSuperClass(req, res) {
       form: data.form || null, form_number: data.form_number || null,
       category: data.category || null, stream: data.stream || null,
       class_teacher_id: data.class_teacher_id || null,
-      capacity: data.capacity || 50, academic_year_id: data.academic_year_id || null,
+      class_subtype_id: data.class_subtype_id || null,
+      capacity: data.capacity || 50, max_teachers: data.max_teachers || 10,
+      academic_year_id: data.academic_year_id || null,
       room: data.room || null, start_time: data.start_time || null,
       end_time: data.end_time || null, colour_tag: data.colour_tag || '#3B82F6',
       education_level: data.education_level || null, track: data.track || null,
@@ -1612,7 +1643,7 @@ async function updateSuperClass(req, res) {
     const row = await ClassModel.findByPk(req.params.id);
     if (!row) return res.status(404).json(errorResponse('Not found', 404));
     const data = req.body;
-    ['name','code','form','form_number','category','stream','class_teacher_id','capacity','academic_year_id','room','start_time','end_time','colour_tag','education_level','track','notes','auto_promotion_target_id','school_id'].forEach(k => {
+    ['name','code','form','form_number','category','stream','class_teacher_id','class_subtype_id','capacity','max_teachers','academic_year_id','room','start_time','end_time','colour_tag','education_level','track','notes','auto_promotion_target_id','school_id'].forEach(k => {
       if (data[k] !== undefined) row[k] = data[k];
     });
     await row.save();
@@ -1821,6 +1852,13 @@ async function assignClassStudents(req, res) {
     if (!cls) return res.status(404).json(errorResponse('Class not found', 404));
     const { student_ids } = req.body;
     if (!Array.isArray(student_ids)) return res.status(400).json(errorResponse('student_ids must be an array'));
+    const currentCount = await Student.count({ where: { classroom_id: classId } });
+    const newCount = student_ids.length;
+    const capacity = cls.capacity || 50;
+    if (currentCount + newCount > capacity) {
+      const available = Math.max(0, capacity - currentCount);
+      return res.status(400).json(errorResponse(`Class capacity is ${capacity}. ${currentCount} already assigned. Only ${available} more slot(s) available, but ${newCount} provided.`));
+    }
     await Student.update({ classroom_id: classId }, { where: { id: student_ids, school_id: cls.school_id } });
     await Student.update({ classroom_id: null }, { where: { school_id: cls.school_id, classroom_id: classId, id: { [Op.notIn]: student_ids } } });
     return res.json(successResponse({ assigned_count: student_ids.length }, 'Students assigned'));
@@ -1875,6 +1913,45 @@ async function assignClassTeacher(req, res) {
     await cls.save();
     return res.json(successResponse({ class_teacher_id: cls.class_teacher_id }, 'Class teacher updated'));
   } catch (err) { console.error(err); return res.status(500).json(errorResponse(err.message)); }
+}
+
+async function assignClassMultipleTeachers(req, res) {
+  try {
+    const classId = req.params.id;
+    const cls = await ClassModel.findByPk(classId);
+    if (!cls) return res.status(404).json(errorResponse('Class not found', 404));
+    const { teacher_ids } = req.body;
+    if (!Array.isArray(teacher_ids)) return res.status(400).json(errorResponse('teacher_ids must be an array'));
+    const currentCount = await ClassAssistantTeacher.count({ where: { class_id: classId } });
+    const maxTeachers = cls.max_teachers || 10;
+    if (teacher_ids.length > maxTeachers) {
+      return res.status(400).json(errorResponse(`Maximum ${maxTeachers} teacher(s) allowed per class, but ${teacher_ids.length} provided.`));
+    }
+    await ClassAssistantTeacher.destroy({ where: { class_id: classId } });
+    if (teacher_ids.length > 0) {
+      await ClassAssistantTeacher.bulkCreate(
+        teacher_ids.map(tid => ({ class_id: classId, teacher_id: tid })),
+        { ignoreDuplicates: true }
+      );
+    }
+    return res.json(successResponse({ teacher_count: teacher_ids.length }, 'Teachers assigned to class'));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse(err.message)); }
+}
+
+async function getClassTeachers(req, res) {
+  try {
+    const classId = req.params.id;
+    const cls = await ClassModel.findByPk(classId);
+    if (!cls) return res.status(404).json(errorResponse('Class not found', 404));
+    const links = await ClassAssistantTeacher.findAll({ where: { class_id: classId } });
+    const teachers = await Promise.all(links.map(async l => {
+      const t = await Teacher.findByPk(l.teacher_id);
+      if (!t) return null;
+      const u = await User.findByPk(t.user_id);
+      return { id: t.id, user_id: t.user_id, first_name: u?.first_name || '', last_name: u?.last_name || '', employee_id: t.employee_id };
+    }));
+    return res.json(successResponse({ teachers: teachers.filter(Boolean) }));
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
 }
 
 /* ---------- Subject Assignment Functions (superadmin) ---------- */
