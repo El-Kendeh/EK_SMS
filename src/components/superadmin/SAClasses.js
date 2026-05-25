@@ -187,7 +187,6 @@ function ClassForm({ editItem, onSave, onClose }) {
   const [subtypes, setSubtypes] = useState([]);
   const [selectedSubtype, setSelectedSubtype] = useState('');
   useEffect(() => {
-<<<<<<< HEAD
     req('GET', '/api/class-subtypes/').then(r => setSubtypes(r.data?.classsubtypes || [])).catch(() => {});
     if (editItem) {
       const f = {};
@@ -195,10 +194,6 @@ function ClassForm({ editItem, onSave, onClose }) {
       setForm(f);
       if (editItem.class_subtype_id) setSelectedSubtype(String(editItem.class_subtype_id));
     }
-=======
-    req('GET', '/api/class-subtypes/').then(r => setSubtypes(r.classsubtypes || [])).catch(() => {});
-    if (editItem) { const f = {}; classFields.forEach(({ key }) => { f[key] = editItem[key] !== undefined && editItem[key] !== null ? String(editItem[key]) : ''; }); setForm(f); }
->>>>>>> 604871ee07f78e86bfdeb595d6a14ee734d2b221
   }, [editItem]);
   function set(k, v) { setForm(p => ({ ...p, [k]: v })); }
   return (
@@ -377,22 +372,10 @@ function AssignTeacherModal({ classId, onClose, showToast }) {
   const [selected, setSelected] = useState([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
-<<<<<<< HEAD
-    Promise.all([
-      req('GET', `/api/classes/${classId}/teachers/`),
-      req('GET', '/api/teachers/'),
-    ]).then(([a, av]) => {
-      const cur = a.data?.teachers || [];
-      setAssigned(cur);
-      setSelected(cur.map(t => t.id));
-      setAllTeachers(av.data?.teachers || []);
-    }).catch(e => showToast(e.message, 'error')).finally(() => setLoading(false));
-=======
     req('GET', `/api/classes/${classId}/available-teachers/`)
       .then(r => setTeachers(r.teachers || []))
       .catch(e => showToast(e.message, 'error'))
       .finally(() => setLoading(false));
->>>>>>> 604871ee07f78e86bfdeb595d6a14ee734d2b221
   }, [classId, showToast]);
   async function handleAssign() {
     try {
