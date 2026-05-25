@@ -3081,7 +3081,7 @@ module.exports = {
   /* Class Assignments */
   getClassStudents, getAvailableStudents, assignClassStudents,
   getClassAssignedSubjects, getAvailableSubjectsForClass, assignClassSubjects, assignClassTeacher,
-  getAvailableTeachersForClass,
+  getClassTeachers, getAvailableTeachersForClass, assignClassMultipleTeachers,
   /* Subject Assignments */
   assignSubjectClasses, assignSubjectTeacher, getSubjectAssignedClasses, getAvailableClassesForSubject, getTeachersForSubject,
   getPrincipals, createPrincipal, updatePrincipal, deletePrincipal, togglePrincipalStatus,
