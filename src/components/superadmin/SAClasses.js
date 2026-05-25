@@ -372,10 +372,13 @@ function AssignTeacherModal({ classId, onClose, showToast }) {
   const [selected, setSelected] = useState([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
-    req('GET', `/api/classes/${classId}/available-teachers/`)
-      .then(r => setTeachers(r.teachers || []))
-      .catch(e => showToast(e.message, 'error'))
-      .finally(() => setLoading(false));
+    Promise.all([
+      req('GET', `/api/classes/${classId}/teachers/`),
+      req('GET', `/api/classes/${classId}/available-teachers/`),
+    ]).then(([a, av]) => {
+      setAssigned(a.teachers || []);
+      setAllTeachers(av.teachers || []);
+    }).catch(e => showToast(e.message, 'error')).finally(() => setLoading(false));
   }, [classId, showToast]);
   async function handleAssign() {
     try {
