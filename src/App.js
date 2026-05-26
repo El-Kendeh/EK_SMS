@@ -106,12 +106,9 @@ function App() {
           return;
         }
 
-        const isSuper = user.is_superuser || user.role === 'superadmin' || user.role === 'admin' || user.role === 'superuser';
-        if (isSuper) {
-          setCurrentPage('superadmindashboard');
-        } else {
-          setCurrentPage('home');
-        }
+        const page = user.role === 'superadmin' || user.role === 'school_admin' || user.role === 'principal' || user.role === 'bursar' || user.role === 'teacher' || user.role === 'student' || user.role === 'parent'
+          ? 'superadmindashboard' : 'home';
+        setCurrentPage(page);
       } catch (e) {
         setCurrentPage('home');
       }

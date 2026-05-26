@@ -3,6 +3,7 @@ import { useTheme } from '../../context/ThemeContext';
 import './SA.css';
 import './SuperadminDashboard.css';
 import ApiClient from '../../api/client';
+import { canAccess, ROLE_LABELS } from '../../config/permissions';
 import PruhLogo from '../PruhLogo';
 import SAOverview       from './SAOverview';
 import SAApplications   from './SAApplications';
@@ -311,6 +312,14 @@ export default function Dashboard({ onNavigate }) {
     finally { setIsLoading(false); }
   }, []);
 
+  const fetchMySchool = useCallback(async (schoolId) => {
+    try {
+      const data = await ApiClient.get(`/api/schools/${schoolId}/`);
+      if (data.success) setSchools([data.school]);
+    } catch { /* silently ignore */ }
+    finally { setIsLoading(false); }
+  }, []);
+
   /* ---- Auth guard ---- */
   useEffect(() => {
     const token   = localStorage.getItem('token');
@@ -318,13 +327,18 @@ export default function Dashboard({ onNavigate }) {
     if (!token || !userStr) { onNavigate && onNavigate('home'); return; }
     try {
       const parsed = JSON.parse(userStr);
-      const isSuper = parsed.is_superuser || parsed.role === 'superadmin' || parsed.role === 'admin' || parsed.role === 'superuser';
-      if (!isSuper) { onNavigate && onNavigate('home'); return; }
+      if (!parsed.role) { onNavigate && onNavigate('home'); return; }
       setUser(parsed);
-      fetchSchools();
+      if (parsed.role === 'superadmin') {
+        fetchSchools();
+      } else if (parsed.school_id) {
+        fetchMySchool(parsed.school_id);
+      } else {
+        setIsLoading(false);
+      }
       fetchGradeAlerts();
     } catch { onNavigate && onNavigate('home'); }
-  }, [onNavigate, fetchSchools, fetchGradeAlerts]);
+  }, [onNavigate, fetchSchools, fetchMySchool, fetchGradeAlerts]);
 
   /* ---- Global search keyboard shortcut ---- */
   useEffect(() => {
@@ -460,7 +474,7 @@ export default function Dashboard({ onNavigate }) {
   const isSecRelated   = SEC_PAGES.includes(activePage);
   const isGradeRelated = GRADE_PAGES.includes(activePage);
 
-  const navItems = [
+  const ALL_NAV_ITEMS = [
     { key: 'overview',        label: 'Dashboard',    icon: <IcHome />,         badge: 0,            section: null },
     { key: 'applications',    label: 'Applications', icon: <IcApplications />, badge: pendingCount, section: null },
     { key: 'rejected',        label: 'Rejected',     icon: <IcRejected />,     badge: rejectedCount,section: null },
@@ -536,6 +550,7 @@ export default function Dashboard({ onNavigate }) {
     { key: 'reports',         label: 'Reports',       icon: <IcGen />, badge: 0, section: null },
     { key: 'system-settings', label: 'System Settings',icon: <IcGen />, badge: 0, section: null },
   ];
+  const navItems = ALL_NAV_ITEMS.filter(item => canAccess(item.key, user?.role));
 
   return (
     <div className={`sa-wrap${sidebarOpen ? ' sidebar-open' : ''}`}>
@@ -550,7 +565,7 @@ export default function Dashboard({ onNavigate }) {
             <PruhLogo size={38} variant="white" />
             <div>
               <p className="sa-brand-name">EK-SMS</p>
-              <p className="sa-brand-role">Super Admin</p>
+              <p className="sa-brand-role">{ROLE_LABELS[user?.role] || 'Super Admin'}</p>
             </div>
           </div>
         </div>
@@ -600,7 +615,7 @@ export default function Dashboard({ onNavigate }) {
             </div>
             <div style={{ minWidth: 0 }}>
               <p className="sa-user-name">{user?.full_name || user?.username || 'Admin'}</p>
-              <p className="sa-user-role">Super Admin</p>
+              <p className="sa-user-role">{ROLE_LABELS[user?.role] || 'Super Admin'}</p>
             </div>
           </div>
           <button className="sa-logout-btn" onClick={handleLogout}>
