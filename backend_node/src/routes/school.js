@@ -4,7 +4,7 @@ const path = require('path');
 const multer = require('multer');
 const fs = require('fs');
 const authenticateToken = require('../middleware/auth');
-
+const schoolScope = require('../middleware/schoolScope');
 const {
   // School info
   getSchoolInfo, updateSchoolInfo, checkSchoolName,
@@ -130,8 +130,8 @@ function studentUpload(req, res, next) {
 // Public routes
 router.get('/check-school-name/', checkSchoolName);
 
-// Protected routes - all require authentication
-const applyAuth = authenticateToken;
+// Protected routes - all require authentication + school scope
+const applyAuth = [authenticateToken, schoolScope];
 
 // ==================== SCHOOL INFO ====================
 router.get('/school/info/', applyAuth, getSchoolInfo);

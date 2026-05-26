@@ -4,6 +4,8 @@ const fs = require('fs');
 const multer = require('multer');
 const router = express.Router();
 const authenticateToken = require('../middleware/auth');
+const schoolScope = require('../middleware/schoolScope');
+const requireRole = require('../middleware/requireRole');
 
 const {
   getAllSchools,
@@ -80,14 +82,6 @@ const teacherStorage = multer.diskStorage({
 });
 const teacherUpload = multer({ storage: teacherStorage, limits: { fileSize: 5 * 1024 * 1024 } });
 
-function isSuperadmin(req, res, next) {
-  if (req.user && (req.user.is_superuser || req.user.role === 'superadmin' || req.user.role === 'admin')) {
-    next();
-  } else {
-    return res.status(403).json({ success: false, message: 'Access denied. Superadmin only.' });
-  }
-}
-
 /* Public reference data endpoints (no auth required — used by registration form & other public pages) */
 router.get('/institution-types/', data.getInstitutionTypes);
 router.get('/countries/', data.getCountries);
@@ -97,203 +91,186 @@ router.get('/academic-systems/', data.getAcademicSystems);
 router.get('/grading-systems/', data.getGradingSystems);
 
 router.use(authenticateToken);
-router.use(isSuperadmin);
+router.use(schoolScope);
 
-/* Core school / impersonation / health */
-router.get('/schools/', getAllSchools);
-router.post('/schools/approve/', handleSchoolAction);
-router.post('/impersonate/', impersonate);
-router.get('/grade-alerts/', getGradeAlerts);
-router.get('/system-health/', getSystemHealth);
-router.post('/reset-user-password/', resetUserPassword);
-
-/* Superadmin dashboard — MySQL-backed */
+/* ── Shared routes (accessible by multiple roles) ── */
 router.get('/dashboard/', getDashboard);
-router.get('/security-logs/', data.getSecurityLogs);
-router.get('/security-counters/', data.getSecurityCounters);
+router.get('/grade-alerts/', getGradeAlerts);
 router.get('/profile/', data.getProfile);
 router.patch('/profile/', data.patchProfile);
 router.post('/change-password/', data.postChangePassword);
 router.get('/admin-settings/', data.getAdminSettings);
 router.patch('/admin-settings/', data.patchAdminSettings);
-router.get('/users/', data.getUsers);
-router.get('/get-users/', data.getUsersShort);
-router.post('/users/', data.postUsers);
-router.get('/school-stats/', data.getSchoolStats);
-router.get('/grade-stats/', data.getGradeStats);
-router.get('/forensic-events/', data.getForensicEvents);
-router.get('/broadcast-alerts/', data.getBroadcastAlerts);
-router.post('/broadcast-alerts/', data.postBroadcastAlerts);
-router.get('/system-alerts/', data.getSystemAlerts);
-router.post('/system-alerts/', data.postSystemAlerts);
-router.post('/sa/branding/', brandingUpload.single('file'), data.postSaBranding);
-router.get('/sa/lockdown/', data.getSaLockdown);
-router.post('/sa/lockdown/', data.postSaLockdown);
-router.post('/sa/backup/manual/', data.postSaBackupManual);
-router.get('/sa/custom-roles/', data.getSaCustomRoles);
-router.post('/sa/custom-roles/', data.postSaCustomRoles);
-router.get('/sa/export/', data.getSaExport);
 
-/* Academic years CRUD */
-router.get('/academic-years/', data.getAcademicYears);
-router.post('/academic-years/', data.createAcademicYear);
-router.put('/academic-years/:id/', data.updateAcademicYear);
-router.delete('/academic-years/:id/', data.deleteAcademicYear);
-router.patch('/academic-years/:id/toggle/', data.toggleAcademicYearStatus);
-router.post('/academic-years/:id/rollout/', data.rolloutAcademicYear);
+/* ── Superadmin-only routes ── */
+const sa = express.Router();
+sa.use(requireRole(['superadmin']));
 
-/* System terms CRUD */
-router.get('/system-terms/', data.getSystemTerms);
-router.post('/system-terms/', data.createSystemTerm);
-router.put('/system-terms/:id/', data.updateSystemTerm);
-router.delete('/system-terms/:id/', data.deleteSystemTerm);
-router.patch('/system-terms/:id/toggle/', data.toggleSystemTermStatus);
-router.post('/system-terms/:id/rollout/', data.rolloutTerm);
+sa.get('/schools/', getAllSchools);
+sa.post('/schools/approve/', handleSchoolAction);
+sa.post('/impersonate/', impersonate);
+sa.get('/system-health/', getSystemHealth);
+sa.post('/reset-user-password/', resetUserPassword);
+sa.get('/security-logs/', data.getSecurityLogs);
+sa.get('/security-counters/', data.getSecurityCounters);
+sa.get('/forensic-events/', data.getForensicEvents);
+sa.get('/broadcast-alerts/', data.getBroadcastAlerts);
+sa.post('/broadcast-alerts/', data.postBroadcastAlerts);
+sa.get('/system-alerts/', data.getSystemAlerts);
+sa.post('/system-alerts/', data.postSystemAlerts);
+sa.post('/sa/branding/', brandingUpload.single('file'), data.postSaBranding);
+sa.get('/sa/lockdown/', data.getSaLockdown);
+sa.post('/sa/lockdown/', data.postSaLockdown);
+sa.post('/sa/backup/manual/', data.postSaBackupManual);
+sa.get('/sa/custom-roles/', data.getSaCustomRoles);
+sa.post('/sa/custom-roles/', data.postSaCustomRoles);
+sa.get('/sa/export/', data.getSaExport);
+sa.get('/academic-years/', data.getAcademicYears);
+sa.post('/academic-years/', data.createAcademicYear);
+sa.put('/academic-years/:id/', data.updateAcademicYear);
+sa.delete('/academic-years/:id/', data.deleteAcademicYear);
+sa.patch('/academic-years/:id/toggle/', data.toggleAcademicYearStatus);
+sa.post('/academic-years/:id/rollout/', data.rolloutAcademicYear);
+sa.get('/system-terms/', data.getSystemTerms);
+sa.post('/system-terms/', data.createSystemTerm);
+sa.put('/system-terms/:id/', data.updateSystemTerm);
+sa.delete('/system-terms/:id/', data.deleteSystemTerm);
+sa.patch('/system-terms/:id/toggle/', data.toggleSystemTermStatus);
+sa.post('/system-terms/:id/rollout/', data.rolloutTerm);
+sa.get('/institution-types/', data.getInstitutionTypes);
+sa.post('/institution-types/', data.createInstitutionType);
+sa.put('/institution-types/:id/', data.updateInstitutionType);
+sa.delete('/institution-types/:id/', data.deleteInstitutionType);
+sa.patch('/institution-types/:id/toggle/', data.toggleInstitutionTypeStatus);
+sa.get('/capacity-categories/', data.getCapacityCategories);
+sa.post('/capacity-categories/', data.createCapacityCategory);
+sa.put('/capacity-categories/:id/', data.updateCapacityCategory);
+sa.delete('/capacity-categories/:id/', data.deleteCapacityCategory);
+sa.patch('/capacity-categories/:id/toggle/', data.toggleCapacityCategoryStatus);
+sa.get('/school-capacities/', data.getSchoolCapacities);
+sa.post('/school-capacities/', data.createSchoolCapacity);
+sa.put('/school-capacities/:id/', data.updateSchoolCapacity);
+sa.delete('/school-capacities/:id/', data.deleteSchoolCapacity);
+sa.patch('/school-capacities/:id/toggle/', data.toggleSchoolCapacityStatus);
+sa.get('/countries/', data.getCountries);
+sa.post('/countries/', data.createCountry);
+sa.put('/countries/:id/', data.updateCountry);
+sa.delete('/countries/:id/', data.deleteCountry);
+sa.patch('/countries/:id/toggle/', data.toggleCountryStatus);
+sa.get('/regions/', data.getRegions);
+sa.post('/regions/', data.createRegion);
+sa.put('/regions/:id/', data.updateRegion);
+sa.delete('/regions/:id/', data.deleteRegion);
+sa.patch('/regions/:id/toggle/', data.toggleRegionStatus);
+sa.get('/cities/', data.getCities);
+sa.post('/cities/', data.createCity);
+sa.put('/cities/:id/', data.updateCity);
+sa.delete('/cities/:id/', data.deleteCity);
+sa.patch('/cities/:id/toggle/', data.toggleCityStatus);
+sa.get('/school-types/', data.getSchoolTypes);
+sa.post('/school-types/', data.createSchoolType);
+sa.put('/school-types/:id/', data.updateSchoolType);
+sa.delete('/school-types/:id/', data.deleteSchoolType);
+sa.patch('/school-types/:id/toggle/', data.toggleSchoolTypeStatus);
+sa.get('/syllabus-types/', data.getSyllabusTypes);
+sa.post('/syllabus-types/', data.createSyllabusType);
+sa.put('/syllabus-types/:id/', data.updateSyllabusType);
+sa.delete('/syllabus-types/:id/', data.deleteSyllabusType);
+sa.patch('/syllabus-types/:id/toggle/', data.toggleSyllabusTypeStatus);
+sa.get('/class-subtypes/', data.getClassSubtypes);
+sa.post('/class-subtypes/', data.createClassSubtype);
+sa.put('/class-subtypes/:id/', data.updateClassSubtype);
+sa.delete('/class-subtypes/:id/', data.deleteClassSubtype);
+sa.patch('/class-subtypes/:id/toggle/', data.toggleClassSubtypeStatus);
+sa.get('/academic-systems/', data.getAcademicSystems);
+sa.post('/academic-systems/', data.createAcademicSystem);
+sa.put('/academic-systems/:id/', data.updateAcademicSystem);
+sa.delete('/academic-systems/:id/', data.deleteAcademicSystem);
+sa.patch('/academic-systems/:id/toggle/', data.toggleAcademicSystemStatus);
+sa.get('/grading-systems/', data.getGradingSystems);
+sa.post('/grading-systems/', data.createGradingSystem);
+sa.put('/grading-systems/:id/', data.updateGradingSystem);
+sa.delete('/grading-systems/:id/', data.deleteGradingSystem);
+sa.patch('/grading-systems/:id/toggle/', data.toggleGradingSystemStatus);
+sa.get('/grade-stats/', data.getGradeStats);
+sa.get('/school-stats/', data.getSchoolStats);
+sa.get('/users/', data.getUsers);
+sa.get('/get-users/', data.getUsersShort);
+sa.post('/users/', data.postUsers);
+sa.get('/change-alerts/', data.getChangeAlerts);
+sa.post('/change-alerts/', data.postChangeAlerts);
 
-/* Institution types CRUD */
-router.get('/institution-types/', data.getInstitutionTypes);
-router.post('/institution-types/', data.createInstitutionType);
-router.put('/institution-types/:id/', data.updateInstitutionType);
-router.delete('/institution-types/:id/', data.deleteInstitutionType);
-router.patch('/institution-types/:id/toggle/', data.toggleInstitutionTypeStatus);
+router.use(sa);
 
-/* Capacity categories CRUD */
-router.get('/capacity-categories/', data.getCapacityCategories);
-router.post('/capacity-categories/', data.createCapacityCategory);
-router.put('/capacity-categories/:id/', data.updateCapacityCategory);
-router.delete('/capacity-categories/:id/', data.deleteCapacityCategory);
-router.patch('/capacity-categories/:id/toggle/', data.toggleCapacityCategoryStatus);
-
-/* School capacity CRUD */
-router.get('/school-capacities/', data.getSchoolCapacities);
-router.post('/school-capacities/', data.createSchoolCapacity);
-router.put('/school-capacities/:id/', data.updateSchoolCapacity);
-router.delete('/school-capacities/:id/', data.deleteSchoolCapacity);
-router.patch('/school-capacities/:id/toggle/', data.toggleSchoolCapacityStatus);
-
-/* Countries CRUD */
-router.get('/countries/', data.getCountries);
-router.post('/countries/', data.createCountry);
-router.put('/countries/:id/', data.updateCountry);
-router.delete('/countries/:id/', data.deleteCountry);
-router.patch('/countries/:id/toggle/', data.toggleCountryStatus);
-
-/* Regions CRUD */
-router.get('/regions/', data.getRegions);
-router.post('/regions/', data.createRegion);
-router.put('/regions/:id/', data.updateRegion);
-router.delete('/regions/:id/', data.deleteRegion);
-router.patch('/regions/:id/toggle/', data.toggleRegionStatus);
-
-/* Cities CRUD */
-router.get('/cities/', data.getCities);
-router.post('/cities/', data.createCity);
-router.put('/cities/:id/', data.updateCity);
-router.delete('/cities/:id/', data.deleteCity);
-router.patch('/cities/:id/toggle/', data.toggleCityStatus);
-
-/* School Types CRUD */
-router.get('/school-types/', data.getSchoolTypes);
-router.post('/school-types/', data.createSchoolType);
-router.put('/school-types/:id/', data.updateSchoolType);
-router.delete('/school-types/:id/', data.deleteSchoolType);
-router.patch('/school-types/:id/toggle/', data.toggleSchoolTypeStatus);
-
-/* Syllabus Types CRUD */
-router.get('/syllabus-types/', data.getSyllabusTypes);
-router.post('/syllabus-types/', data.createSyllabusType);
-router.put('/syllabus-types/:id/', data.updateSyllabusType);
-router.delete('/syllabus-types/:id/', data.deleteSyllabusType);
-router.patch('/syllabus-types/:id/toggle/', data.toggleSyllabusTypeStatus);
-
-/* Class Subtypes CRUD */
-router.get('/class-subtypes/', data.getClassSubtypes);
-router.post('/class-subtypes/', data.createClassSubtype);
-router.put('/class-subtypes/:id/', data.updateClassSubtype);
-router.delete('/class-subtypes/:id/', data.deleteClassSubtype);
-router.patch('/class-subtypes/:id/toggle/', data.toggleClassSubtypeStatus);
-
-/* Academic System CRUD */
-router.get('/academic-systems/', data.getAcademicSystems);
-router.post('/academic-systems/', data.createAcademicSystem);
-router.put('/academic-systems/:id/', data.updateAcademicSystem);
-router.delete('/academic-systems/:id/', data.deleteAcademicSystem);
-router.patch('/academic-systems/:id/toggle/', data.toggleAcademicSystemStatus);
-
-/* Grading System CRUD */
-router.get('/grading-systems/', data.getGradingSystems);
-router.post('/grading-systems/', data.createGradingSystem);
-router.put('/grading-systems/:id/', data.updateGradingSystem);
-router.delete('/grading-systems/:id/', data.deleteGradingSystem);
-router.patch('/grading-systems/:id/toggle/', data.toggleGradingSystemStatus);
+/* ── School-level routes (accessible by superadmin + school_admin) ── */
+const sla = requireRole(['superadmin', 'school_admin']);
 
 /* Classes CRUD */
-router.get('/classes/', data.getSuperClasses);
-router.post('/classes/', data.createSuperClass);
-router.put('/classes/:id/', data.updateSuperClass);
-router.delete('/classes/:id/', data.deleteSuperClass);
-router.patch('/classes/:id/toggle/', data.toggleSuperClassStatus);
+router.get('/classes/', sla, data.getSuperClasses);
+router.post('/classes/', sla, data.createSuperClass);
+router.put('/classes/:id/', sla, data.updateSuperClass);
+router.delete('/classes/:id/', sla, data.deleteSuperClass);
+router.patch('/classes/:id/toggle/', sla, data.toggleSuperClassStatus);
 
 /* Subjects CRUD */
-router.get('/subjects/', data.getSuperSubjects);
-router.post('/subjects/', data.createSuperSubject);
-router.put('/subjects/:id/', data.updateSuperSubject);
-router.delete('/subjects/:id/', data.deleteSuperSubject);
-router.patch('/subjects/:id/toggle/', data.toggleSuperSubjectStatus);
+router.get('/subjects/', sla, data.getSuperSubjects);
+router.post('/subjects/', sla, data.createSuperSubject);
+router.put('/subjects/:id/', sla, data.updateSuperSubject);
+router.delete('/subjects/:id/', sla, data.deleteSuperSubject);
+router.patch('/subjects/:id/toggle/', sla, data.toggleSuperSubjectStatus);
 
 /* Class Assignment Routes */
-router.get('/classes/:id/students/', data.getClassStudents);
-router.get('/classes/:id/available-students/', data.getAvailableStudents);
-router.post('/classes/:id/assign-students/', data.assignClassStudents);
-router.get('/classes/:id/subjects/', data.getClassAssignedSubjects);
-router.get('/classes/:id/available-subjects/', data.getAvailableSubjectsForClass);
-router.post('/classes/:id/assign-subjects/', data.assignClassSubjects);
-router.post('/classes/:id/assign-teacher/', data.assignClassTeacher);
-router.get('/classes/:id/teachers/', data.getClassTeachers);
-router.post('/classes/:id/assign-multiple-teachers/', data.assignClassMultipleTeachers);
-router.get('/classes/:id/available-teachers/', data.getAvailableTeachersForClass);
+router.get('/classes/:id/students/', sla, data.getClassStudents);
+router.get('/classes/:id/available-students/', sla, data.getAvailableStudents);
+router.post('/classes/:id/assign-students/', sla, data.assignClassStudents);
+router.get('/classes/:id/subjects/', sla, data.getClassAssignedSubjects);
+router.get('/classes/:id/available-subjects/', sla, data.getAvailableSubjectsForClass);
+router.post('/classes/:id/assign-subjects/', sla, data.assignClassSubjects);
+router.post('/classes/:id/assign-teacher/', sla, data.assignClassTeacher);
+router.get('/classes/:id/teachers/', sla, data.getClassTeachers);
+router.post('/classes/:id/assign-multiple-teachers/', sla, data.assignClassMultipleTeachers);
+router.get('/classes/:id/available-teachers/', sla, data.getAvailableTeachersForClass);
 
 /* Subject Assignment Routes */
-router.get('/subjects/:id/classes/', data.getSubjectAssignedClasses);
-router.get('/subjects/:id/available-classes/', data.getAvailableClassesForSubject);
-router.post('/subjects/:id/assign-classes/', data.assignSubjectClasses);
-router.get('/subjects/:id/teachers/', data.getTeachersForSubject);
-router.post('/subjects/:id/assign-teacher/', data.assignSubjectTeacher);
+router.get('/subjects/:id/classes/', sla, data.getSubjectAssignedClasses);
+router.get('/subjects/:id/available-classes/', sla, data.getAvailableClassesForSubject);
+router.post('/subjects/:id/assign-classes/', sla, data.assignSubjectClasses);
+router.get('/subjects/:id/teachers/', sla, data.getTeachersForSubject);
+router.post('/subjects/:id/assign-teacher/', sla, data.assignSubjectTeacher);
 
-/* Bursars CRUD */
 /* Student CRUD */
-router.get('/students/', data.getSuperStudents);
-router.post('/students/', studentUpload.single('passport_photo'), data.createSuperStudent);
-router.put('/students/:id/', studentUpload.single('passport_photo'), data.updateSuperStudent);
-router.delete('/students/:id/', data.deleteSuperStudent);
-router.patch('/students/:id/toggle/', data.toggleSuperStudentStatus);
-router.patch('/students/:id/block/', data.blockSuperStudent);
-router.get('/students/:id/parents/', data.getStudentParents);
+router.get('/students/', sla, data.getSuperStudents);
+router.post('/students/', sla, studentUpload.single('passport_photo'), data.createSuperStudent);
+router.put('/students/:id/', sla, studentUpload.single('passport_photo'), data.updateSuperStudent);
+router.delete('/students/:id/', sla, data.deleteSuperStudent);
+router.patch('/students/:id/toggle/', sla, data.toggleSuperStudentStatus);
+router.patch('/students/:id/block/', sla, data.blockSuperStudent);
+router.get('/students/:id/parents/', sla, data.getStudentParents);
 
 /* Student documents */
-router.get('/students/:id/documents/', data.getStudentDocuments);
-router.post('/students/:id/documents/', docUpload.single('file'), data.uploadStudentDocument);
-router.delete('/students/:id/documents/:docId/', data.deleteStudentDocument);
+router.get('/students/:id/documents/', sla, data.getStudentDocuments);
+router.post('/students/:id/documents/', sla, docUpload.single('file'), data.uploadStudentDocument);
+router.delete('/students/:id/documents/:docId/', sla, data.deleteStudentDocument);
 
 /* Parent CRUD */
-router.get('/parents/', data.getSuperParents);
-router.post('/parents/', parentUpload.single('passport_photo'), data.createSuperParent);
-router.put('/parents/:id/', parentUpload.single('passport_photo'), data.updateSuperParent);
-router.delete('/parents/:id/', data.deleteSuperParent);
-router.patch('/parents/:id/toggle/', data.toggleSuperParentStatus);
-router.patch('/parents/:id/block/', data.blockSuperParent);
+router.get('/parents/', sla, data.getSuperParents);
+router.post('/parents/', sla, parentUpload.single('passport_photo'), data.createSuperParent);
+router.put('/parents/:id/', sla, parentUpload.single('passport_photo'), data.updateSuperParent);
+router.delete('/parents/:id/', sla, data.deleteSuperParent);
+router.patch('/parents/:id/toggle/', sla, data.toggleSuperParentStatus);
+router.patch('/parents/:id/block/', sla, data.blockSuperParent);
 
 /* Student-Parent linking */
-router.post('/link-parent/', data.linkParentToStudent);
-router.post('/unlink-parent/', data.unlinkParentFromStudent);
+router.post('/link-parent/', sla, data.linkParentToStudent);
+router.post('/unlink-parent/', sla, data.unlinkParentFromStudent);
 
 /* Teacher CRUD */
-router.get('/teachers/', data.getSuperTeachers);
-router.post('/teachers/', teacherUpload.single('profile_picture'), data.createSuperTeacher);
-router.put('/teachers/:id/', teacherUpload.single('profile_picture'), data.updateSuperTeacher);
-router.delete('/teachers/:id/', data.deleteSuperTeacher);
-router.patch('/teachers/:id/toggle/', data.toggleSuperTeacherStatus);
-router.patch('/teachers/:id/block/', data.blockSuperTeacher);
+router.get('/teachers/', sla, data.getSuperTeachers);
+router.post('/teachers/', sla, teacherUpload.single('profile_picture'), data.createSuperTeacher);
+router.put('/teachers/:id/', sla, teacherUpload.single('profile_picture'), data.updateSuperTeacher);
+router.delete('/teachers/:id/', sla, data.deleteSuperTeacher);
+router.patch('/teachers/:id/toggle/', sla, data.toggleSuperTeacherStatus);
+router.patch('/teachers/:id/block/', sla, data.blockSuperTeacher);
 
 /* Bursar upload directory */
 const bursarDir = path.join(__dirname, '../../uploads/bursars');
@@ -308,12 +285,12 @@ const bursarStorage = multer.diskStorage({
 const bursarUpload = multer({ storage: bursarStorage, limits: { fileSize: 5 * 1024 * 1024 } });
 
 /* Bursar CRUD */
-router.get('/bursars/', data.getSuperBursars);
-router.post('/bursars/', bursarUpload.single('profile_picture'), data.createSuperBursar);
-router.put('/bursars/:id/', bursarUpload.single('profile_picture'), data.updateSuperBursar);
-router.delete('/bursars/:id/', data.deleteSuperBursar);
-router.patch('/bursars/:id/toggle/', data.toggleSuperBursarStatus);
-router.patch('/bursars/:id/block/', data.blockSuperBursar);
+router.get('/bursars/', sla, data.getSuperBursars);
+router.post('/bursars/', sla, bursarUpload.single('profile_picture'), data.createSuperBursar);
+router.put('/bursars/:id/', sla, bursarUpload.single('profile_picture'), data.updateSuperBursar);
+router.delete('/bursars/:id/', sla, data.deleteSuperBursar);
+router.patch('/bursars/:id/toggle/', sla, data.toggleSuperBursarStatus);
+router.patch('/bursars/:id/block/', sla, data.blockSuperBursar);
 
 /* Principal upload directory */
 const principalDir = path.join(__dirname, '../../uploads/principals');
@@ -328,11 +305,11 @@ const principalStorage = multer.diskStorage({
 const principalUpload = multer({ storage: principalStorage, limits: { fileSize: 5 * 1024 * 1024 } });
 
 /* Principal CRUD */
-router.get('/principals/', data.getSuperPrincipals);
-router.post('/principals/', principalUpload.single('profile_picture'), data.createSuperPrincipal);
-router.put('/principals/:id/', principalUpload.single('profile_picture'), data.updateSuperPrincipal);
-router.delete('/principals/:id/', data.deleteSuperPrincipal);
-router.patch('/principals/:id/toggle/', data.toggleSuperPrincipalStatus);
-router.patch('/principals/:id/block/', data.blockSuperPrincipal);
+router.get('/principals/', sla, data.getSuperPrincipals);
+router.post('/principals/', sla, principalUpload.single('profile_picture'), data.createSuperPrincipal);
+router.put('/principals/:id/', sla, principalUpload.single('profile_picture'), data.updateSuperPrincipal);
+router.delete('/principals/:id/', sla, data.deleteSuperPrincipal);
+router.patch('/principals/:id/toggle/', sla, data.toggleSuperPrincipalStatus);
+router.patch('/principals/:id/block/', sla, data.blockSuperPrincipal);
 
 module.exports = router;
