@@ -197,8 +197,6 @@ sa.get('/school-stats/', data.getSchoolStats);
 sa.get('/users/', data.getUsers);
 sa.get('/get-users/', data.getUsersShort);
 sa.post('/users/', data.postUsers);
-sa.get('/change-alerts/', data.getChangeAlerts);
-sa.post('/change-alerts/', data.postChangeAlerts);
 
 router.use(sa);
 
