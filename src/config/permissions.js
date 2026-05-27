@@ -78,6 +78,10 @@ export const PAGE_PERMISSIONS = {
   'my-attendance':      [ROLES.STUDENT],
   'children-attendance':[ROLES.PARENT],
 
+  /* ── My Classes (Teacher) ── */
+  'my-classes':          [ROLES.TEACHER],
+  'my-timetable':        [ROLES.STUDENT],
+
   /* ── Lessons section ── */
   'lesson-plans':        [ROLES.TEACHER],
   'lesson-plan-type':    [ROLES.SUPERADMIN],

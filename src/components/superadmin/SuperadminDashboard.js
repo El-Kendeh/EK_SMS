@@ -42,6 +42,21 @@ import SASubjects         from './SASubjects';
 import SAAcademicSystem   from './SAAcademicSystem';
 import SAGradingSystem    from './SAGradingSystem';
 
+/* ═══ Role-specific page components ═══ */
+import GradeEntry          from '../teacher/GradeEntry';
+import MyClasses           from '../teacher/MyClasses';
+import StudentGrades       from '../student/StudentGrades';
+import StudentAttendance   from '../student/StudentAttendance';
+import StudentTimetable    from '../student/StudentTimetable';
+import ParentGrades        from '../parent/ParentGrades';
+import ParentAttendance    from '../parent/ParentAttendance';
+import BursarOverview      from '../bursar/BursarOverview';
+import FeeCategories       from '../bursar/FeeCategories';
+import Payments            from '../bursar/Payments';
+import Expenses            from '../bursar/Expenses';
+import GradeApprovals      from '../principal/GradeApprovals';
+import ReportCardApproval  from '../principal/ReportCardApproval';
+
 
 
 
@@ -240,6 +255,18 @@ function getTitle(page, school) {
     'attendance-students': 'Students',
     'lesson-plan-type':    'Lesson Plan Type',
     'lesson-plan-generation': 'Lesson Plan Generation',
+    'grade-entry':            'Grade Entry',
+    'my-classes':             'My Classes',
+    'my-grades':              'My Grades',
+    'my-attendance':          'My Attendance',
+    'my-timetable':           'My Timetable',
+    'children-grades':        "Children's Grades",
+    'children-attendance':    "Children's Attendance",
+    'fee-dashboard':          'Fee Dashboard',
+    'fee-categories':         'Fee Categories',
+    'payments':               'Payments',
+    'expenses':               'Expenses',
+    'grade-approvals':        'Grade Approvals',
     'batch-grades':        'Grades',
     'batch-students':      'Students',
     'batch-image-data':    'Image Data Transfer',
@@ -279,6 +306,10 @@ function StubPage({ title }) {
 export default function Dashboard({ onNavigate }) {
   const { theme, toggleTheme } = useTheme();
   const [user,            setUser]            = useState(null);
+  const schoolId   = user?.school_id;
+  const teacherId  = user?.id;
+  const studentId  = user?.id;
+  const parentId   = user?.id;
   const [activePage,      setActivePage]      = useState('overview');
   const [selectedSchool,  setSelectedSchool]  = useState(null);
   const [forensicEvent,   setForensicEvent]   = useState(null);
@@ -518,19 +549,36 @@ export default function Dashboard({ onNavigate }) {
     { key: 'lesson-plan-type',       label: 'Lesson Plan Type',       icon: <IcGen />, badge: 0, section: 'Lessons' },
     { key: 'lesson-plan-generation', label: 'Lesson Plan Generation', icon: <IcGen />, badge: 0, section: 'Lessons' },
 
+    /* Teacher */
+    { key: 'grade-entry',  label: 'Grade Entry',  icon: <IcGen />, badge: 0, section: 'Teacher' },
+    { key: 'my-classes',   label: 'My Classes',   icon: <IcGen />, badge: 0, section: 'Teacher' },
+
+    /* Student */
+    { key: 'my-grades',      label: 'My Grades',      icon: <IcGen />, badge: 0, section: 'Student' },
+    { key: 'my-attendance',  label: 'My Attendance',  icon: <IcGen />, badge: 0, section: 'Student' },
+    { key: 'my-timetable',   label: 'My Timetable',   icon: <IcGen />, badge: 0, section: 'Student' },
+
+    /* Parent */
+    { key: 'children-grades',      label: "Children's Grades",      icon: <IcGen />, badge: 0, section: 'Parent' },
+    { key: 'children-attendance',  label: "Children's Attendance",  icon: <IcGen />, badge: 0, section: 'Parent' },
+
     /* Batch Transfer */
     { key: 'batch-grades',      label: 'Grades',             icon: <IcGen />, badge: 0, section: 'Batch Transfer' },
     { key: 'batch-students',    label: 'Students',           icon: <IcGen />, badge: 0, section: 'Batch Transfer' },
     { key: 'batch-image-data',  label: 'Image Data Transfer',icon: <IcGen />, badge: 0, section: 'Batch Transfer' },
 
     /* Fees */
+    { key: 'fee-dashboard',     label: 'Fee Dashboard',     icon: <IcGen />, badge: 0, section: 'Fees' },
+    { key: 'fee-categories',    label: 'Fee Categories',    icon: <IcGen />, badge: 0, section: 'Fees' },
     { key: 'fees-structure',    label: 'Fees Structure',  icon: <IcGen />, badge: 0, section: 'Fees' },
     { key: 'fees-payment',      label: 'Fees Payment',    icon: <IcGen />, badge: 0, section: 'Fees' },
+    { key: 'payments',          label: 'Payments',         icon: <IcGen />, badge: 0, section: 'Fees' },
+    { key: 'expenses',          label: 'Expenses',         icon: <IcGen />, badge: 0, section: 'Fees' },
     { key: 'receipt-generator', label: 'Receipt Generator',icon: <IcGen />, badge: 0, section: 'Fees' },
     { key: 'school-financial-report', label: 'School Financial Report', icon: <IcGen />, badge: 0, section: 'Fees' },
 
     /* Grades Approval (no section) */
-    { key: 'grades-approval',   label: 'Grades Approval', icon: <IcGen />, badge: 0, section: null },
+    { key: 'grade-approvals',   label: 'Grade Approvals', icon: <IcGen />, badge: 0, section: null },
 
     /* Report Cards */
     { key: 'report-card-generator', label: 'Report Card Generator', icon: <IcGen />, badge: 0, section: 'Report Cards' },
@@ -961,6 +1009,29 @@ export default function Dashboard({ onNavigate }) {
 
           {activePage === 'subjects' && <SASubjects />}
 
+          {/* ── Teacher pages ── */}
+          {activePage === 'grade-entry' && <GradeEntry navigateTo={goTo} schoolId={schoolId} teacherId={teacherId} />}
+          {activePage === 'my-classes'  && <MyClasses  navigateTo={goTo} schoolId={schoolId} teacherId={teacherId} />}
+
+          {/* ── Student pages ── */}
+          {activePage === 'my-grades'     && <StudentGrades     navigateTo={goTo} studentId={studentId} schoolId={schoolId} />}
+          {activePage === 'my-attendance' && <StudentAttendance studentId={studentId} />}
+          {activePage === 'my-timetable'  && <StudentTimetable  studentId={studentId} />}
+
+          {/* ── Parent pages ── */}
+          {activePage === 'children-grades'     && <ParentGrades     parentId={parentId} />}
+          {activePage === 'children-attendance' && <ParentAttendance parentId={parentId} />}
+
+          {/* ── Bursar pages ── */}
+          {activePage === 'fee-dashboard'  && <BursarOverview schoolId={schoolId} />}
+          {activePage === 'fee-categories' && <FeeCategories  schoolId={schoolId} />}
+          {activePage === 'payments'       && <Payments       schoolId={schoolId} />}
+          {activePage === 'expenses'       && <Expenses       schoolId={schoolId} />}
+
+          {/* ── Principal pages ── */}
+          {activePage === 'grade-approvals'      && <GradeApprovals     schoolId={schoolId} />}
+          {activePage === 'report-card-approval' && <ReportCardApproval schoolId={schoolId} />}
+
           {activePage === 'principal' && <SAPrincipal />}
 
           {activePage === 'bursar' && <SABursar />}
@@ -971,7 +1042,7 @@ export default function Dashboard({ onNavigate }) {
 
           {activePage === 'account-parents' && <SAParents />}
 
-          {!['overview','applications','review','app-history','version-compare','rejected','rejection-audit','grade-report','grade-requests','grade-audit','security-logs','forensics','alert-broadcast','change-alerts','system-health','schools','analytics','benchmarks','onboarding','governance','users','notifications','settings','profile','academic-terms','academic-year','institution-type','school-capacity','countries','regions','cities','school-type','syllabus-type','class-subtype','academic-system','grading-system','classes','subjects','principal','bursar','account-teachers','account-students','account-parents'].includes(activePage) && (
+          {!['overview','applications','review','app-history','version-compare','rejected','rejection-audit','grade-report','grade-requests','grade-audit','security-logs','forensics','alert-broadcast','change-alerts','system-health','schools','analytics','benchmarks','onboarding','governance','users','notifications','settings','profile','academic-terms','academic-year','institution-type','school-capacity','countries','regions','cities','school-type','syllabus-type','class-subtype','academic-system','grading-system','classes','subjects','principal','bursar','account-teachers','account-students','account-parents','grade-entry','my-classes','my-grades','my-attendance','my-timetable','children-grades','children-attendance','fee-dashboard','fee-categories','payments','expenses','grade-approvals','report-card-approval'].includes(activePage) && (
             <StubPage title={getTitle(activePage, selectedSchool)} />
           )}
 
