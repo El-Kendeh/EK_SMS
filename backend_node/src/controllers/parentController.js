@@ -555,7 +555,7 @@ async function startPayment(req, res) {
     const paymentHash = `${child_id}-${transaction_id || 'none'}-${amount}-${Date.now()}`.replace(/[^a-zA-Z0-9-]/g, '');
 
     const payment = await Payment.create({
-      school_id: req.user.school_id || 0,
+      school_id: (req.schoolId || req.user.school_id) || 0,
       student_id: child_id,
       fee_id: transaction_id || null,
       amount,
@@ -774,7 +774,7 @@ async function submitModificationObjection(req, res) {
     if (!reason) return res.status(400).json(errorResponse('reason is required'));
 
     const objection = await ModificationRequest.create({
-      school_id: req.user.school_id || 0,
+      school_id: (req.schoolId || req.user.school_id) || 0,
       student_id: student_id || null,
       subject_id: subject_id || null,
       grade_id: grade_id || null,
@@ -877,7 +877,7 @@ async function submitWhistleblowerReport(req, res) {
     const followUpKey = `WB-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
 
     const report = await WhistleblowerReport.create({
-      school_id: req.user.school_id || 0,
+      school_id: (req.schoolId || req.user.school_id) || 0,
       category_id: category_id || null,
       title,
       description,
@@ -924,7 +924,7 @@ async function getConferenceSlots(req, res) {
   try {
     const slots = await ConferenceSlot.findAll({
       where: {
-        school_id: req.user.school_id,
+        school_id: (req.schoolId || req.user.school_id),
         status: 'available',
       },
       order: [['date', 'ASC'], ['start_time', 'ASC']],
@@ -952,7 +952,7 @@ async function claimConferenceSlot(req, res) {
     const { slotId } = req.params;
 
     const slot = await ConferenceSlot.findOne({
-      where: { id: slotId, school_id: req.user.school_id, status: 'available' },
+      where: { id: slotId, school_id: (req.schoolId || req.user.school_id), status: 'available' },
     });
 
     if (!slot) {
@@ -1004,7 +1004,7 @@ async function getCounsellor(req, res) {
   try {
     const messages = await Message.findAll({
       where: {
-        school_id: req.user.school_id,
+        school_id: (req.schoolId || req.user.school_id),
         [Op.or]: [
           { sender_id: req.user.id, recipient_type: 'counsellor' },
           { recipient_id: req.user.id, sender_type: 'counsellor' },
@@ -1036,7 +1036,7 @@ async function sendCounsellorMessage(req, res) {
     if (!text) return res.status(400).json(errorResponse('text is required'));
 
     const message = await Message.create({
-      school_id: req.user.school_id || 0,
+      school_id: (req.schoolId || req.user.school_id) || 0,
       sender_id: req.user.id,
       sender_type: 'parent',
       recipient_type: 'counsellor',
@@ -1061,7 +1061,7 @@ async function getTeacherThreads(req, res) {
   try {
     const messages = await Message.findAll({
       where: {
-        school_id: req.user.school_id,
+        school_id: (req.schoolId || req.user.school_id),
         [Op.or]: [
           { sender_id: req.user.id },
           { recipient_id: req.user.id },
@@ -1112,7 +1112,7 @@ async function sendTeacherMessage(req, res) {
     const threadId = `thread-${req.user.id}-${teacher_id}`;
 
     const message = await Message.create({
-      school_id: req.user.school_id || 0,
+      school_id: (req.schoolId || req.user.school_id) || 0,
       sender_id: req.user.id,
       sender_type: 'parent',
       recipient_id: teacher_id,
@@ -1187,12 +1187,12 @@ async function inviteCoGuardian(req, res) {
         username: guardian_email,
         email: guardian_email,
         role: 'parent',
-        school_id: req.user.school_id,
+        school_id: (req.schoolId || req.user.school_id),
       });
     }
 
     const coGuardian = await CoGuardian.create({
-      school_id: req.user.school_id || 0,
+      school_id: (req.schoolId || req.user.school_id) || 0,
       student_id,
       guardian_user_id: guardianUser.id,
       relationship: relationship || 'co-guardian',
@@ -1275,7 +1275,7 @@ async function addPickup(req, res) {
     }
 
     const pickup = await PickupPerson.create({
-      school_id: req.user.school_id || 0,
+      school_id: (req.schoolId || req.user.school_id) || 0,
       student_id,
       name,
       phone: phone || '',
@@ -1322,7 +1322,7 @@ async function getPermissionSlips(req, res) {
   try {
     const slips = await PermissionSlip.findAll({
       where: {
-        school_id: req.user.school_id,
+        school_id: (req.schoolId || req.user.school_id),
         is_active: true,
       },
       order: [['event_date', 'DESC']],
@@ -1370,7 +1370,7 @@ async function signPermissionSlip(req, res) {
     }
 
     const slip = await PermissionSlip.findOne({
-      where: { id: slip_id, school_id: req.user.school_id, is_active: true },
+      where: { id: slip_id, school_id: (req.schoolId || req.user.school_id), is_active: true },
     });
 
     if (!slip) {
@@ -1422,7 +1422,7 @@ async function acknowledgeRecord(req, res) {
     }
 
     await Acknowledgment.create({
-      school_id: req.user.school_id || 0,
+      school_id: (req.schoolId || req.user.school_id) || 0,
       user_id: req.user.id,
       record_type,
       record_id,
@@ -1493,7 +1493,7 @@ async function getDonations(req, res) {
   try {
     const campaigns = await DonationCampaign.findAll({
       where: {
-        school_id: req.user.school_id,
+        school_id: (req.schoolId || req.user.school_id),
         is_active: true,
       },
       order: [['created_at', 'DESC']],

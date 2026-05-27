@@ -59,8 +59,8 @@ async function getSchoolFromUser(req) {
       return link.School;
     }
 
-    if (req.user.school_id) {
-      const fallbackSchool = await School.findByPk(req.user.school_id);
+    if ((req.schoolId || req.user.school_id)) {
+      const fallbackSchool = await School.findByPk((req.schoolId || req.user.school_id));
       if (fallbackSchool) {
         return fallbackSchool;
       }
@@ -82,7 +82,7 @@ async function getSchoolFromUser(req) {
       return studentLink.School;
     }
 
-    console.warn(`getSchoolFromUser: No school link found for user_id ${req.user.id} and fallback school_id ${req.user.school_id}`);
+    console.warn(`getSchoolFromUser: No school link found for user_id ${req.user.id} and fallback school_id ${(req.schoolId || req.user.school_id)}`);
     return null;
   } catch (err) {
     console.error('getSchoolFromUser Error:', err);

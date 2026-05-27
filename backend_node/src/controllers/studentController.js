@@ -41,7 +41,7 @@ const errorResponse = (message) => ({ success: false, message });
 
 async function getSchoolFromUser(req) {
   if (!req.user) return null;
-  if (req.user.school_id) return { id: req.user.school_id };
+  if ((req.schoolId || req.user.school_id)) return { id: (req.schoolId || req.user.school_id) };
   if (req.user.Student) return { id: req.user.Student.school_id };
   if (req.user.SchoolAdmin) return { id: req.user.SchoolAdmin.school_id };
   if (req.user.Teacher) return { id: req.user.Teacher.school_id };
@@ -300,7 +300,7 @@ async function getFeedbackThread(req, res) {
     const { thread_id } = req.params;
     const messages = await Message.findAll({
       where: {
-        school_id: req.user.school_id,
+        school_id: (req.schoolId || req.user.school_id),
         [Op.or]: [
           { sender_id: student.user_id, sender_type: 'Student' },
           { recipient_id: student.user_id, recipient_type: 'Student' },
@@ -333,7 +333,7 @@ async function sendFeedbackMessage(req, res) {
 
     const { body, recipient_id, recipient_type, subject, thread_id } = req.body;
     const message = await Message.create({
-      school_id: req.user.school_id,
+      school_id: (req.schoolId || req.user.school_id),
       sender_id: student.user_id,
       sender_type: 'Student',
       recipient_id,
@@ -565,7 +565,7 @@ async function getAssignments(req, res) {
 
     const assignments = await Assignment.findAll({
       where: {
-        school_id: req.user.school_id,
+        school_id: (req.schoolId || req.user.school_id),
         class_id: student.classroom_id,
         is_active: true,
       },
@@ -650,7 +650,7 @@ async function getConversations(req, res) {
 
     const messages = await Message.findAll({
       where: {
-        school_id: req.user.school_id,
+        school_id: (req.schoolId || req.user.school_id),
         [Op.or]: [
           { sender_id: student.user_id, sender_type: 'Student' },
           { recipient_id: student.user_id, recipient_type: 'Student' },
@@ -696,7 +696,7 @@ async function sendMessage(req, res) {
 
     const { text, recipient_id, recipient_type, subject, thread_id } = req.body;
     const message = await Message.create({
-      school_id: req.user.school_id,
+      school_id: (req.schoolId || req.user.school_id),
       sender_id: student.user_id,
       sender_type: 'Student',
       recipient_id,
@@ -724,7 +724,7 @@ async function getResources(req, res) {
 
     const resources = await LearningResource.findAll({
       where: {
-        school_id: req.user.school_id,
+        school_id: (req.schoolId || req.user.school_id),
         class_id: student.classroom_id,
         is_active: true,
       },
@@ -1252,7 +1252,7 @@ async function submitModificationObjection(req, res) {
 
     const { grade_id, subject_id, request_type, reason, current_value, requested_value } = req.body;
     const objection = await ModificationRequest.create({
-      school_id: req.user.school_id,
+      school_id: (req.schoolId || req.user.school_id),
       student_id: student.id,
       grade_id,
       subject_id,
@@ -1343,7 +1343,7 @@ async function updateChannelPreferences(req, res) {
 async function getWhistleblowerCategories(req, res) {
   try {
     const categories = await WhistleblowerCategory.findAll({
-      where: { school_id: req.user.school_id, is_active: true },
+      where: { school_id: (req.schoolId || req.user.school_id), is_active: true },
       order: [['name', 'ASC']],
     });
 
@@ -1369,7 +1369,7 @@ async function submitWhistleblowerReport(req, res) {
     const followUpKey = `WB-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
 
     const report = await WhistleblowerReport.create({
-      school_id: req.user.school_id,
+      school_id: (req.schoolId || req.user.school_id),
       category_id,
       title,
       description,
@@ -1451,7 +1451,7 @@ async function setGoal(req, res) {
       await goal.update({ title, description, target_date, progress_pct });
     } else {
       goal = await Goal.create({
-        school_id: req.user.school_id,
+        school_id: (req.schoolId || req.user.school_id),
         student_id: student.id,
         title,
         description,
@@ -1482,7 +1482,7 @@ async function getOfficeHourSlots(req, res) {
 
     const officeHours = await OfficeHour.findAll({
       where: {
-        school_id: req.user.school_id,
+        school_id: (req.schoolId || req.user.school_id),
         is_active: true,
         date: { [Op.gte]: new Date() },
       },
@@ -1577,7 +1577,7 @@ async function getCounsellorThread(req, res) {
 
     const messages = await Message.findAll({
       where: {
-        school_id: req.user.school_id,
+        school_id: (req.schoolId || req.user.school_id),
         thread_id: { [Op.like]: 'counsellor-%' },
         [Op.or]: [
           { sender_id: student.user_id, sender_type: 'Student' },
@@ -1611,7 +1611,7 @@ async function sendCounsellorMessage(req, res) {
 
     const { text, subject } = req.body;
     const message = await Message.create({
-      school_id: req.user.school_id,
+      school_id: (req.schoolId || req.user.school_id),
       sender_id: student.user_id,
       sender_type: 'Student',
       recipient_type: 'Counsellor',
@@ -1643,7 +1643,7 @@ async function getStudyGroups(req, res) {
 
     const groups = await StudyGroup.findAll({
       where: {
-        school_id: req.user.school_id,
+        school_id: (req.schoolId || req.user.school_id),
         is_active: true,
         [Op.or]: [
           { id: groupIds },
@@ -1850,7 +1850,7 @@ async function uploadDocument(req, res) {
 
     const { title, file_path, file_type } = req.body;
     const document = await Document.create({
-      school_id: req.user.school_id,
+      school_id: (req.schoolId || req.user.school_id),
       student_id: student.id,
       title,
       file_path,
@@ -1876,7 +1876,7 @@ async function requestTranscript(req, res) {
     if (!student) return res.status(404).json(errorResponse('Student not found'));
 
     const transcriptReq = await TranscriptRequest.create({
-      school_id: req.user.school_id,
+      school_id: (req.schoolId || req.user.school_id),
       student_id: student.id,
       requested_by: req.user.id,
       status: 'pending',
@@ -1940,7 +1940,7 @@ async function saveStudyPlan(req, res) {
         }
       } else {
         const newBlock = await StudyPlan.create({
-          school_id: req.user.school_id,
+          school_id: (req.schoolId || req.user.school_id),
           student_id: student.id,
           day_of_week: block.dayOfWeek,
           start_time: block.startTime,
@@ -2098,7 +2098,7 @@ async function listLiveClasses(req, res) {
 
     const liveClasses = await LiveClass.findAll({
       where: {
-        school_id: req.user.school_id,
+        school_id: (req.schoolId || req.user.school_id),
         class_id: student.classroom_id,
         is_active: true,
       },
@@ -2129,7 +2129,7 @@ async function createLiveClass(req, res) {
   try {
     const { title, description, meeting_url, scheduled_at, duration_minutes, class_id, subject_id } = req.body;
     const liveClass = await LiveClass.create({
-      school_id: req.user.school_id,
+      school_id: (req.schoolId || req.user.school_id),
       teacher_id: req.user.id,
       title,
       description,
@@ -2150,7 +2150,7 @@ async function createLiveClass(req, res) {
 async function updateLiveClass(req, res) {
   try {
     const { id } = req.params;
-    const liveClass = await LiveClass.findOne({ where: { id, school_id: req.user.school_id } });
+    const liveClass = await LiveClass.findOne({ where: { id, school_id: (req.schoolId || req.user.school_id) } });
     if (!liveClass) return res.status(404).json(errorResponse('Live class not found'));
     await liveClass.update(req.body);
     return res.json(successResponse({ message: 'Live class updated' }));
@@ -2163,7 +2163,7 @@ async function updateLiveClass(req, res) {
 async function deleteLiveClass(req, res) {
   try {
     const { id } = req.params;
-    const liveClass = await LiveClass.findOne({ where: { id, school_id: req.user.school_id } });
+    const liveClass = await LiveClass.findOne({ where: { id, school_id: (req.schoolId || req.user.school_id) } });
     if (!liveClass) return res.status(404).json(errorResponse('Live class not found'));
     await liveClass.update({ is_active: false });
     return res.json(successResponse({ message: 'Live class deleted' }));

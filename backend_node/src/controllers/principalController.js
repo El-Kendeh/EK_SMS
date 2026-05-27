@@ -17,7 +17,7 @@ const errorResponse = (message) => ({ success: false, message });
 
 async function getSchoolFromUser(req) {
   if (!req.user) return null;
-  if (req.user.school_id) return { id: req.user.school_id };
+  if ((req.schoolId || req.user.school_id)) return { id: (req.schoolId || req.user.school_id) };
   if (req.user.Student) return { id: req.user.Student.school_id };
   if (req.user.SchoolAdmin) return { id: req.user.SchoolAdmin.school_id };
   if (req.user.Teacher) return { id: req.user.Teacher.school_id };
