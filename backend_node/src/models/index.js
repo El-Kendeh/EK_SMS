@@ -62,6 +62,7 @@ require('./WhistleblowerCategory');
 require('./LiveClass');
 require('./PeerReview');
 require('./SpotlightStudent');
+require('./ExamDuty');
 
 require('./SystemAcademicYear');
 require('./SystemTerm');
@@ -75,6 +76,7 @@ require('./SchoolType');
 require('./SyllabusType');
 require('./ClassSubtype');
 require('./AcademicSystem');
+require('./GradingSystem');
 require('./Principal');
 require('./Bursar');
 require('./Parent');

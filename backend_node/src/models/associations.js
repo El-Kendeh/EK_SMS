@@ -65,6 +65,7 @@ const WhistleblowerCategory = require('./WhistleblowerCategory');
 const LiveClass = require('./LiveClass');
 const PeerReview = require('./PeerReview');
 const SpotlightStudent = require('./SpotlightStudent');
+const ExamDuty = require('./ExamDuty');
 
 // ============================================
 // School associations
@@ -394,6 +395,11 @@ School.hasMany(SpotlightStudent, { foreignKey: 'school_id', as: 'spotlightStuden
 SpotlightStudent.belongsTo(School, { foreignKey: 'school_id', as: 'school' });
 SpotlightStudent.belongsTo(Teacher, { foreignKey: 'teacher_id', as: 'teacher' });
 SpotlightStudent.belongsTo(Student, { foreignKey: 'student_id', as: 'student' });
+
+// ExamDuty
+Exam.hasMany(ExamDuty, { foreignKey: 'exam_id', as: 'duties' });
+ExamDuty.belongsTo(Exam, { foreignKey: 'exam_id', as: 'exam' });
+ExamDuty.belongsTo(Teacher, { foreignKey: 'teacher_id', as: 'teacher' });
 
 // Parent associations
 Student.belongsToMany(Parent, { through: StudentParent, foreignKey: 'student_id', otherKey: 'parent_id', as: 'parents' });
