@@ -251,8 +251,8 @@ function getTitle(page, school) {
     test:                  'Test',
     assignment:            'Assignment',
     examination:           'Examination',
-    'attendance-teachers': 'Teachers',
-    'attendance-students': 'Students',
+    'attendance-teachers': 'Record Attendance',
+    'attendance-students': 'Attendance View',
     'lesson-plan-type':    'Lesson Plan Type',
     'lesson-plan-generation': 'Lesson Plan Generation',
     'grade-entry':            'Grade Entry',
@@ -270,6 +270,12 @@ function getTitle(page, school) {
     'batch-grades':        'Grades',
     'batch-students':      'Students',
     'batch-image-data':    'Image Data Transfer',
+    'lesson-plans':        'Lesson Plans',
+    'timetable':           'Timetable',
+    'timetable-mgr':       'Timetable Manager',
+    'my-fees':             'My Fees',
+    'my-report-cards':     'My Report Cards',
+    'children-report-cards': "Children's Report Cards",
     'fees-structure':      'Fees Structure',
     'fees-payment':        'Fees Payment',
     'receipt-generator':   'Receipt Generator',
@@ -277,6 +283,17 @@ function getTitle(page, school) {
     'grades-approval':     'Grades Approval',
     'report-card-generator': 'Report Card Generator',
     'report-card-approval':  'Report Card Approval',
+    'report-cards-published': 'Published Report Cards',
+    'syllabus-progress':    'Syllabus Progress',
+    'exam-schedule':        'Exam Schedule',
+    rooms:                  'Rooms',
+    'grading-scheme':       'Grading Scheme',
+    'academic-calendar':    'Academic Calendar',
+    promotions:             'Promotions',
+    'teacher-assignments':  'Teacher Assignments',
+    'exam-officers':        'Exam Officers',
+    'ai-capture':           'AI Capture',
+    'finance-users':        'Finance Users',
     'live-class':          'Live Class',
     'vm-parents':          'Parents',
     'vm-staffs':           'Staffs',
@@ -284,7 +301,7 @@ function getTitle(page, school) {
     notifications:         'Notifications',
     'system-audits':       'System Audits',
     reports:               'Reports',
-    'system-settings':     'System Settings',
+    settings:              'System Settings',
     profile:               'My Profile',
   };
   return map[page] || page.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
@@ -542,12 +559,17 @@ export default function Dashboard({ onNavigate }) {
     { key: 'examination',         label: 'Examination',        icon: <IcGen />, badge: 0, section: 'Grades' },
 
     /* Attendance */
+    { key: 'attendance-record',  label: 'Record',   icon: <IcGen />, badge: 0, section: 'Attendance' },
+    { key: 'attendance-report',  label: 'Report',    icon: <IcGen />, badge: 0, section: 'Attendance' },
     { key: 'attendance-teachers', label: 'Teachers', icon: <IcGen />, badge: 0, section: 'Attendance' },
     { key: 'attendance-students', label: 'Students', icon: <IcGen />, badge: 0, section: 'Attendance' },
 
     /* Lessons */
+    { key: 'lesson-plans',           label: 'Lesson Plans',           icon: <IcGen />, badge: 0, section: 'Lessons' },
     { key: 'lesson-plan-type',       label: 'Lesson Plan Type',       icon: <IcGen />, badge: 0, section: 'Lessons' },
     { key: 'lesson-plan-generation', label: 'Lesson Plan Generation', icon: <IcGen />, badge: 0, section: 'Lessons' },
+    { key: 'timetable',              label: 'Timetable',              icon: <IcGen />, badge: 0, section: 'Lessons' },
+    { key: 'timetable-mgr',          label: 'Timetable Manager',      icon: <IcGen />, badge: 0, section: 'Lessons' },
 
     /* Teacher */
     { key: 'grade-entry',  label: 'Grade Entry',  icon: <IcGen />, badge: 0, section: 'Teacher' },
@@ -557,10 +579,13 @@ export default function Dashboard({ onNavigate }) {
     { key: 'my-grades',      label: 'My Grades',      icon: <IcGen />, badge: 0, section: 'Student' },
     { key: 'my-attendance',  label: 'My Attendance',  icon: <IcGen />, badge: 0, section: 'Student' },
     { key: 'my-timetable',   label: 'My Timetable',   icon: <IcGen />, badge: 0, section: 'Student' },
+    { key: 'my-fees',        label: 'My Fees',        icon: <IcGen />, badge: 0, section: 'Student' },
+    { key: 'my-report-cards',label: 'My Report Cards',icon: <IcGen />, badge: 0, section: 'Student' },
 
     /* Parent */
     { key: 'children-grades',      label: "Children's Grades",      icon: <IcGen />, badge: 0, section: 'Parent' },
     { key: 'children-attendance',  label: "Children's Attendance",  icon: <IcGen />, badge: 0, section: 'Parent' },
+    { key: 'children-report-cards',label: "Children's Report Cards",icon: <IcGen />, badge: 0, section: 'Parent' },
 
     /* Batch Transfer */
     { key: 'batch-grades',      label: 'Grades',             icon: <IcGen />, badge: 0, section: 'Batch Transfer' },
@@ -583,6 +608,19 @@ export default function Dashboard({ onNavigate }) {
     /* Report Cards */
     { key: 'report-card-generator', label: 'Report Card Generator', icon: <IcGen />, badge: 0, section: 'Report Cards' },
     { key: 'report-card-approval',  label: 'Report Card Approval',  icon: <IcGen />, badge: 0, section: 'Report Cards' },
+    { key: 'report-cards-published',label: 'Published Report Cards',icon: <IcGen />, badge: 0, section: 'Report Cards' },
+
+    /* School Admin */
+    { key: 'syllabus-progress', label: 'Syllabus Progress', icon: <IcGen />, badge: 0, section: 'School Admin' },
+    { key: 'exam-schedule',     label: 'Exam Schedule',     icon: <IcGen />, badge: 0, section: 'School Admin' },
+    { key: 'rooms',             label: 'Rooms',             icon: <IcGen />, badge: 0, section: 'School Admin' },
+    { key: 'grading-scheme',    label: 'Grading Scheme',    icon: <IcGen />, badge: 0, section: 'School Admin' },
+    { key: 'academic-calendar', label: 'Academic Calendar', icon: <IcGen />, badge: 0, section: 'School Admin' },
+    { key: 'promotions',        label: 'Promotions',        icon: <IcGen />, badge: 0, section: 'School Admin' },
+    { key: 'teacher-assignments', label: 'Teacher Assignments', icon: <IcGen />, badge: 0, section: 'School Admin' },
+    { key: 'exam-officers',     label: 'Exam Officers',     icon: <IcGen />, badge: 0, section: 'School Admin' },
+    { key: 'ai-capture',        label: 'AI Capture',        icon: <IcGen />, badge: 0, section: 'School Admin' },
+    { key: 'finance-users',     label: 'Finance Users',     icon: <IcGen />, badge: 0, section: 'School Admin' },
 
     /* Virtual Class */
     { key: 'live-class', label: 'Live Class', icon: <IcGen />, badge: 0, section: 'Virtual Class' },
@@ -596,7 +634,7 @@ export default function Dashboard({ onNavigate }) {
     { key: 'notifications',   label: 'Notifications', icon: <IcBell />, badge: 0, section: null },
     { key: 'system-audits',   label: 'System Audits', icon: <IcGen />, badge: 0, section: null },
     { key: 'reports',         label: 'Reports',       icon: <IcGen />, badge: 0, section: null },
-    { key: 'system-settings', label: 'System Settings',icon: <IcGen />, badge: 0, section: null },
+    { key: 'settings', label: 'System Settings',icon: <IcGen />, badge: 0, section: null },
   ];
   const navItems = ALL_NAV_ITEMS.filter(item => canAccess(item.key, user?.role));
 
@@ -1042,7 +1080,7 @@ export default function Dashboard({ onNavigate }) {
 
           {activePage === 'account-parents' && <SAParents />}
 
-          {!['overview','applications','review','app-history','version-compare','rejected','rejection-audit','grade-report','grade-requests','grade-audit','security-logs','forensics','alert-broadcast','change-alerts','system-health','schools','analytics','benchmarks','onboarding','governance','users','notifications','settings','profile','academic-terms','academic-year','institution-type','school-capacity','countries','regions','cities','school-type','syllabus-type','class-subtype','academic-system','grading-system','classes','subjects','principal','bursar','account-teachers','account-students','account-parents','grade-entry','my-classes','my-grades','my-attendance','my-timetable','children-grades','children-attendance','fee-dashboard','fee-categories','payments','expenses','grade-approvals','report-card-approval'].includes(activePage) && (
+          {!['overview','applications','review','app-history','version-compare','rejected','rejection-audit','grade-report','grade-requests','grade-audit','security-logs','forensics','alert-broadcast','change-alerts','system-health','schools','analytics','benchmarks','onboarding','governance','users','notifications','settings','profile','academic-terms','academic-year','institution-type','school-capacity','countries','regions','cities','school-type','syllabus-type','class-subtype','academic-system','grading-system','classes','subjects','principal','bursar','account-teachers','account-students','account-parents','grade-entry','my-classes','my-grades','my-attendance','my-timetable','children-grades','children-attendance','fee-dashboard','fee-categories','payments','expenses','grade-approvals','report-card-approval','lesson-plans','timetable','timetable-mgr','my-fees','my-report-cards','children-report-cards','attendance-teachers','attendance-students','my-fees','report-cards-published','syllabus-progress','finance-users','exam-schedule','rooms','grading-scheme','academic-calendar','promotions','teacher-assignments','exam-officers','ai-capture','settings'].includes(activePage) && (
             <StubPage title={getTitle(activePage, selectedSchool)} />
           )}
 

@@ -52,11 +52,16 @@ export const PAGE_PERMISSIONS = {
   classes:         [ROLES.SUPERADMIN, ROLES.SCHOOL_ADMIN],
   subjects:        [ROLES.SUPERADMIN, ROLES.SCHOOL_ADMIN],
   teachers:        [ROLES.SUPERADMIN, ROLES.SCHOOL_ADMIN],
-  students:        [ROLES.SUPERADMIN, ROLES.SCHOOL_ADMIN, ROLES.TEACHER, ROLES.PRINCIPAL],
+  students:        [ROLES.SUPERADMIN, ROLES.SCHOOL_ADMIN],
   parents:         [ROLES.SUPERADMIN, ROLES.SCHOOL_ADMIN],
   principal:       [ROLES.SUPERADMIN],
   bursar:          [ROLES.SUPERADMIN],
   'finance-users': [ROLES.SUPERADMIN, ROLES.SCHOOL_ADMIN],
+
+  /* ── Account-management nav (same as underlying model) ── */
+  'account-teachers': [ROLES.SUPERADMIN, ROLES.SCHOOL_ADMIN],
+  'account-students': [ROLES.SUPERADMIN, ROLES.SCHOOL_ADMIN],
+  'account-parents':  [ROLES.SUPERADMIN, ROLES.SCHOOL_ADMIN],
 
   /* ── Grades section ── */
   'grade-entry':       [ROLES.TEACHER],
@@ -73,10 +78,12 @@ export const PAGE_PERMISSIONS = {
   'grade-audit':       [ROLES.SUPERADMIN],
 
   /* ── Attendance section ── */
-  'attendance-record':  [ROLES.TEACHER],
-  'attendance-report':  [ROLES.SCHOOL_ADMIN, ROLES.PRINCIPAL, ROLES.SUPERADMIN],
-  'my-attendance':      [ROLES.STUDENT],
-  'children-attendance':[ROLES.PARENT],
+  'attendance-record':   [ROLES.TEACHER],
+  'attendance-report':   [ROLES.SCHOOL_ADMIN, ROLES.PRINCIPAL, ROLES.SUPERADMIN],
+  'attendance-teachers': [ROLES.TEACHER],
+  'attendance-students': [ROLES.STUDENT],
+  'my-attendance':       [ROLES.STUDENT],
+  'children-attendance': [ROLES.PARENT],
 
   /* ── My Classes (Teacher) ── */
   'my-classes':          [ROLES.TEACHER],
