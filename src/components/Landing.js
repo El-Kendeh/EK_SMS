@@ -1940,23 +1940,37 @@ const SUPPORT_CATS = [
   { icon: 'code',      color: '#A78BFA', title: 'Developer & API',    desc: 'API access, webhooks, and integration documentation.' },
 ];
 
+const NODE_API = process.env.REACT_APP_NODE_API_URL || process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
 function ContactSection() {
-  const [form, setForm] = useState({ name: '', email: '', subject: 'General Inquiry', message: '' });
-  const [sent, setSent] = useState(false);
+  const [form, setForm]       = useState({ name: '', email: '', subject: 'General Inquiry', message: '' });
+  const [status, setStatus]   = useState('idle'); // 'idle' | 'sending' | 'sent' | 'error'
+  const [errMsg, setErrMsg]   = useState('');
   const { t } = useLang();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const subject = encodeURIComponent(`[EK-SMS] ${form.subject} — from ${form.name}`);
-    const body = encodeURIComponent(
-      `Name: ${form.name}\nEmail: ${form.email}\nSubject: ${form.subject}\n\n${form.message}`
-    );
-    window.open(`mailto:admin@elkendeh.com?subject=${subject}&body=${body}`);
-    setSent(true);
-    setTimeout(() => {
-      setSent(false);
-      setForm({ name: '', email: '', subject: 'General Inquiry', message: '' });
-    }, 3000);
+    setStatus('sending');
+    setErrMsg('');
+    try {
+      const res  = await fetch(`${NODE_API}/api/contact`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setStatus('sent');
+        setForm({ name: '', email: '', subject: 'General Inquiry', message: '' });
+        setTimeout(() => setStatus('idle'), 4000);
+      } else {
+        setErrMsg(data.message || 'Something went wrong. Please try again.');
+        setStatus('error');
+      }
+    } catch {
+      setErrMsg('Network error. Please check your connection and try again.');
+      setStatus('error');
+    }
   };
 
   return (
@@ -2053,14 +2067,17 @@ function ContactSection() {
                   required
                 />
               </div>
+              {status === 'error' && (
+                <p className="lp-contact__error">{errMsg}</p>
+              )}
               <button
                 type="submit"
-                className={`lp-btn lp-btn--primary lp-btn--full${sent ? ' lp-contact__btn--sent' : ''}`}
+                disabled={status === 'sending'}
+                className={`lp-btn lp-btn--primary lp-btn--full${status === 'sent' ? ' lp-contact__btn--sent' : ''}`}
               >
-                {sent
-                  ? <><SvgIcon name="check" size={16} /> {t('contact_sent')}</>
-                  : <><SvgIcon name="send" size={16} /> {t('contact_send')}</>
-                }
+                {status === 'sending' && <><span className="lp-contact__spinner" /> Sending…</>}
+                {status === 'sent'    && <><SvgIcon name="check" size={16} /> {t('contact_sent')}</>}
+                {(status === 'idle' || status === 'error') && <><SvgIcon name="send" size={16} /> {t('contact_send')}</>}
               </button>
             </form>
           </div>

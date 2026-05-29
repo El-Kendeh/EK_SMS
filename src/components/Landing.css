@@ -3298,6 +3298,30 @@
   box-shadow: 0 0 20px rgba(52, 211, 153, 0.4) !important;
   color: #052e16 !important;
 }
+.lp-contact__error {
+  color: #f87171;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(248, 113, 113, 0.1);
+  border-radius: 6px;
+  border-left: 3px solid #f87171;
+}
+.lp-contact__spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255,255,255,0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: lp-spin 0.7s linear infinite;
+  margin-right: 8px;
+  vertical-align: middle;
+  will-change: transform;
+}
+@keyframes lp-spin {
+  to { transform: rotate(360deg); }
+}
 
 .lp-contact__support {
   display: flex;

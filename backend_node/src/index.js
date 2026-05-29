@@ -22,6 +22,7 @@ const whistleblowerRouter = require('./routes/whistleblower');
 const liveClassesRouter = require('./routes/live-classes');
 const { logFrontendEvent } = require('./controllers/loggingController');
 const { testEmail } = require('./controllers/testController');
+const { sendContact, contactLimiter } = require('./controllers/contactController');
 
 const app = express();
 
@@ -129,6 +130,8 @@ app.post('/api/logs', logFrontendEvent);
 app.post('/api/logs/', logFrontendEvent); // Support both with and without trailing slash
 app.post('/api/test-email', testEmail);
 app.post('/api/test-email/', testEmail);
+app.post('/api/contact', contactLimiter, sendContact);
+app.post('/api/contact/', contactLimiter, sendContact);
 
 // Mount routers - SPECIFIC paths BEFORE catch-all /api routers
 app.use('/api', authRouter);
