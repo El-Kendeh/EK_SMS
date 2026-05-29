@@ -65,28 +65,32 @@ async function sendContact(req, res) {
       return res.status(500).json(errorResponse('Failed to send message. Please try again.'));
     }
 
-    /* ── Auto-reply to the sender ── */
-    await resend.emails.send({
-      from:    fromAddr,
-      to:      [email],
-      subject: `We received your message — EK-SMS`,
-      html: `
-        <div style="font-family:sans-serif;max-width:600px;margin:0 auto">
-          <div style="background:#1B3FAF;padding:24px 32px;border-radius:8px 8px 0 0">
-            <h2 style="color:#fff;margin:0">Thanks, ${name}!</h2>
+    /* ── Auto-reply to the sender (best-effort — never blocks the main response) ── */
+    try {
+      await resend.emails.send({
+        from:    fromAddr,
+        to:      [email],
+        subject: `We received your message — EK-SMS`,
+        html: `
+          <div style="font-family:sans-serif;max-width:600px;margin:0 auto">
+            <div style="background:#1B3FAF;padding:24px 32px;border-radius:8px 8px 0 0">
+              <h2 style="color:#fff;margin:0">Thanks, ${name}!</h2>
+            </div>
+            <div style="background:#f9f9f9;padding:32px;border-radius:0 0 8px 8px;border:1px solid #e5e5e5">
+              <p style="color:#333;line-height:1.7">
+                We've received your message about <strong>${subjectLabel}</strong> and will get back to you within <strong>4 hours</strong>.
+              </p>
+              <p style="color:#333;line-height:1.7">
+                In the meantime, you can explore our platform at <a href="https://pruhsms.africa">pruhsms.africa</a>.
+              </p>
+            </div>
+            <p style="color:#aaa;font-size:12px;text-align:center;margin-top:16px">EK-SMS · pruhsms.africa</p>
           </div>
-          <div style="background:#f9f9f9;padding:32px;border-radius:0 0 8px 8px;border:1px solid #e5e5e5">
-            <p style="color:#333;line-height:1.7">
-              We've received your message about <strong>${subjectLabel}</strong> and will get back to you within <strong>4 hours</strong>.
-            </p>
-            <p style="color:#333;line-height:1.7">
-              In the meantime, you can explore our platform at <a href="https://pruhsms.africa">pruhsms.africa</a>.
-            </p>
-          </div>
-          <p style="color:#aaa;font-size:12px;text-align:center;margin-top:16px">EK-SMS · pruhsms.africa</p>
-        </div>
-      `,
-    });
+        `,
+      });
+    } catch (replyErr) {
+      console.warn('[contact] Auto-reply failed (non-fatal):', replyErr?.message);
+    }
 
     return res.json(successResponse({}, 'Message sent successfully.'));
   } catch (err) {
