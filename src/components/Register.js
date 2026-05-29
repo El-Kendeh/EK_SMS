@@ -866,12 +866,12 @@ function Register({ onNavigate }) {
   const [autoDetectedCountry, setAutoDetectedCountry] = useState(null);
 
   /* API-fetched reference data */
-  const [institutionTypes, setInstitutionTypes] = useState(DEFAULT_INSTITUTION_TYPES);
+  const [institutionTypes]                      = useState(DEFAULT_INSTITUTION_TYPES);
   const [countries, setCountries]               = useState([]);
   const [regions, setRegions]                   = useState([]);
   const [cities, setCities]                     = useState([]);
-  const [academicSystems, setAcademicSystems]   = useState(DEFAULT_ACADEMIC_SYSTEMS);
-  const [gradingSystems, setGradingSystems]     = useState(DEFAULT_GRADING_SYSTEMS);
+  const [academicSystems]                       = useState(DEFAULT_ACADEMIC_SYSTEMS);
+  const [gradingSystems]                        = useState(DEFAULT_GRADING_SYSTEMS);
 
   const set    = (field) => (e) => setForm((p) => ({ ...p, [field]: e.target.value }));
   const setChk = (field) => (e) => setForm((p) => ({ ...p, [field]: e.target.checked }));
