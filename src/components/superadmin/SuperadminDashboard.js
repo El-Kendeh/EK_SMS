@@ -936,6 +936,8 @@ export default function Dashboard({ onNavigate }) {
               listKey="years"
               itemLabel="academic year"
               hasRollout={true}
+              hasHero={true}
+              hasOverlapCheck={true}
               fields={[
                 { key: 'name',       label: 'Name',       type: 'text', required: true, placeholder: 'e.g. 2024/2025' },
                 { key: 'start_date', label: 'Start Date', type: 'date' },

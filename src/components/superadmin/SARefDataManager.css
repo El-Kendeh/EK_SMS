@@ -48,6 +48,12 @@
 .sard-card--form {
   padding: 20px 24px 24px;
   margin-bottom: 12px;
+  animation: sard-form-reveal 0.2s ease;
+}
+
+@keyframes sard-form-reveal {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 /* ---- Section label (inside card) ---- */
@@ -278,6 +284,106 @@
 
 .sard-rollout-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
+/* ================================================================
+   Year Presets
+   ================================================================ */
+.sard-presets {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sard-preset-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 16px;
+  border: 1px solid var(--sa-border);
+  border-radius: var(--sa-radius-sm);
+  background: var(--sa-card-bg2);
+  cursor: pointer;
+  font-family: var(--sa-font);
+  transition: border-color 0.15s, background 0.15s, transform 0.1s;
+  flex: 1;
+  min-width: 80px;
+}
+
+.sard-preset-btn:hover {
+  border-color: var(--sa-accent);
+  background: var(--sa-accent-dim);
+  transform: translateY(-1px);
+}
+
+.sard-preset-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--sa-text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.sard-preset-btn:hover .sard-preset-label {
+  color: var(--sa-accent);
+}
+
+.sard-preset-year {
+  font-size: 0.9375rem;
+  font-weight: 800;
+  color: var(--sa-text);
+  letter-spacing: -0.01em;
+}
+
+/* ================================================================
+   End-date Suggestion Pill
+   ================================================================ */
+.sard-suggest-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 5px;
+  padding: 3px 10px;
+  border: 1px dashed var(--sa-accent);
+  border-radius: 999px;
+  background: var(--sa-accent-dim);
+  color: var(--sa-accent);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  font-family: var(--sa-font);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  width: fit-content;
+}
+
+.sard-suggest-pill:hover {
+  background: var(--sa-accent);
+  color: #fff;
+  border-style: solid;
+}
+
+/* ================================================================
+   Live Duration Preview
+   ================================================================ */
+.sard-dur-preview {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 12px;
+  border-radius: var(--sa-radius-sm);
+  background: var(--sa-accent-dim);
+  border: 1px solid rgba(14, 165, 233, 0.2);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--sa-accent);
+  animation: sard-fade-in 0.15s ease;
+}
+
+.sard-dur-preview--warn {
+  background: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.3);
+  color: #f59e0b;
+}
+
 /* ---- Form ---- */
 .sard-form {
   display: flex;
@@ -448,6 +554,390 @@
   color: var(--sa-text-3);
 }
 
+/* ================================================================
+   Hero Banner
+   ================================================================ */
+.sard-hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  background: var(--sa-card-bg);
+  border: 1px solid var(--sa-border);
+  border-left: 3px solid var(--sa-accent);
+  border-radius: var(--sa-radius);
+  padding: 24px 28px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+/* Ambient glow behind the card */
+.sard-hero-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 60% 80% at 10% 50%, rgba(14, 165, 233, 0.07) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.sard-hero--empty {
+  border-left-color: var(--sa-border);
+  opacity: 0.7;
+}
+
+.sard-hero-left {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.sard-hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--sa-accent);
+}
+
+/* Live pulse dot next to "Active Year" */
+.sard-hero-pulse {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--sa-accent);
+  flex-shrink: 0;
+  animation: sard-pulse 2s ease-in-out infinite;
+}
+
+@keyframes sard-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.75); }
+}
+
+.sard-hero-name {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--sa-text);
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.sard-hero-name--dim {
+  font-size: 1.4rem;
+  color: var(--sa-text-3);
+}
+
+.sard-hero-no-active {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--sa-text-3);
+}
+
+.sard-hero-dates {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+  color: var(--sa-text-2);
+}
+
+.sard-hero-dur {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--sa-accent-dim);
+  color: var(--sa-accent);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+/* Right side — ring progress */
+.sard-hero-right {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.sard-hero-ring {
+  position: relative;
+  width: 72px;
+  height: 72px;
+}
+
+.sard-hero-ring-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.sard-ring-track {
+  color: var(--sa-border);
+}
+
+.sard-ring-fill {
+  color: var(--sa-accent);
+  transition: stroke-dashoffset 1s ease;
+}
+
+.sard-ring-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sard-ring-pct {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--sa-text);
+  letter-spacing: -0.02em;
+}
+
+.sard-hero-days {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--sa-text-3);
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* ================================================================
+   Stats Row
+   ================================================================ */
+.sard-stats {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.sard-stat-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  background: var(--sa-card-bg);
+  border: 1px solid var(--sa-border);
+  border-radius: var(--sa-radius);
+  padding: 12px 16px;
+}
+
+.sard-stat-chip--green {
+  border-color: rgba(34, 197, 94, 0.2);
+  background: rgba(34, 197, 94, 0.04);
+}
+
+.sard-stat-chip--amber {
+  border-color: rgba(245, 158, 11, 0.2);
+  background: rgba(245, 158, 11, 0.04);
+}
+
+.sard-stat-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--sa-radius-sm);
+  background: var(--sa-ghost-bg);
+  color: var(--sa-text-2);
+  flex-shrink: 0;
+}
+
+.sard-stat-icon--green {
+  background: rgba(34, 197, 94, 0.12);
+  color: #22c55e;
+}
+
+.sard-stat-icon--amber {
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+}
+
+.sard-stat-val {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--sa-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+.sard-stat-key {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--sa-text-3);
+  letter-spacing: 0.03em;
+  margin-top: 1px;
+}
+
+/* ================================================================
+   Active Row Treatment
+   ================================================================ */
+.sard-tr--active {
+  position: relative;
+  background: rgba(14, 165, 233, 0.04) !important;
+}
+
+.sard-tr--active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--sa-accent);
+  border-radius: 0 2px 2px 0;
+}
+
+/* ================================================================
+   Duration Badge (in status cell)
+   ================================================================ */
+.sard-td--status {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 8px;
+}
+
+.sard-duration {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--sa-text-3);
+}
+
+/* ================================================================
+   Overlap Warning
+   ================================================================ */
+.sard-overlap-warn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: var(--sa-radius-sm);
+  font-size: 0.8125rem;
+  color: #f59e0b;
+}
+
+/* ================================================================
+   Rollout Confirmation Modal
+   ================================================================ */
+.sard-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.6);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: sard-fade-in 0.15s ease;
+}
+
+@keyframes sard-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.sard-modal {
+  background: var(--sa-card-bg);
+  border: 1px solid var(--sa-border);
+  border-radius: var(--sa-radius);
+  padding: 32px 28px 24px;
+  max-width: 420px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
+  animation: sard-slide-up 0.18s ease;
+}
+
+@keyframes sard-slide-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.sard-modal-rocket {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--sa-accent-dim);
+  color: var(--sa-accent);
+  margin-bottom: 4px;
+}
+
+.sard-modal-rocket svg {
+  width: 20px;
+  height: 20px;
+}
+
+.sard-modal-title {
+  font-size: 1.0625rem;
+  font-weight: 800;
+  color: var(--sa-text);
+  letter-spacing: -0.01em;
+}
+
+.sard-modal-body {
+  font-size: 0.875rem;
+  color: var(--sa-text-2);
+  line-height: 1.6;
+  max-width: 340px;
+}
+
+.sard-modal-body strong {
+  color: var(--sa-text);
+  font-weight: 700;
+}
+
+.sard-modal-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  width: 100%;
+  justify-content: center;
+}
+
+.sard-btn--rollout-confirm {
+  background: var(--sa-accent);
+  color: #fff;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 18px;
+  border-radius: var(--sa-radius-sm);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  font-family: var(--sa-font);
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.sard-btn--rollout-confirm:hover:not(:disabled) { opacity: 0.88; }
+.sard-btn--rollout-confirm:disabled { opacity: 0.4; cursor: not-allowed; }
+
 /* ---- Spinner ---- */
 .sard-spin {
   animation: sard-rotate 0.8s linear infinite;
@@ -586,4 +1076,90 @@
   .sard-td:not(:first-child):not(.sard-td--actions):not([class*="sard-td--date"]) {
     display: none;
   }
+}
+
+/* ================================================================
+   Hero / Stats / Modal — responsive
+   ================================================================ */
+@media (max-width: 600px) {
+  .sard-hero {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 18px 20px;
+    gap: 12px;
+  }
+
+  .sard-hero-right {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .sard-hero-ring {
+    width: 56px;
+    height: 56px;
+    flex-shrink: 0;
+  }
+
+  .sard-ring-pct { font-size: 0.875rem; }
+
+  .sard-hero-name { font-size: 1.5rem; }
+
+  .sard-hero-days {
+    text-align: left;
+    flex: 1;
+  }
+
+  .sard-stats {
+    gap: 8px;
+    overflow-x: auto;
+  }
+
+  .sard-stat-chip {
+    padding: 10px 12px;
+    min-width: 100px;
+  }
+
+  .sard-stat-val {
+    font-size: 0.8125rem;
+    max-width: 90px;
+  }
+
+  .sard-modal {
+    padding: 24px 20px 20px;
+  }
+
+  .sard-modal-actions {
+    flex-direction: column;
+  }
+
+  .sard-modal-actions .sard-btn,
+  .sard-modal-actions .sard-btn--rollout-confirm {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .sard-presets {
+    gap: 6px;
+  }
+
+  .sard-preset-btn {
+    padding: 8px 10px;
+    min-width: 70px;
+  }
+
+  .sard-preset-year {
+    font-size: 0.8125rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .sard-hero-name { font-size: 1.25rem; }
+
+  .sard-hero-dates { flex-wrap: wrap; }
+
+  .sard-stats { flex-direction: column; }
+
+  .sard-stat-chip { min-width: unset; }
 }
