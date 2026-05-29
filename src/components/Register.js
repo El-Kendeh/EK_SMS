@@ -139,9 +139,9 @@ const DEFAULT_FORM = {
   institutionName: '', institutionType: '', established: '', motto: '',
   registrationNumber: '', estimatedTeachers: '', brandColors: [],
   address: '', city: '', region: '', country: '',
-  phoneCode: '+232', phoneNumber: '', email: '', website: '',
+  phoneCode: '', phoneNumber: '', email: '', website: '',
   firstName: '', lastName: '', adminUsername: '', adminEmail: '',
-  adminPhoneCode: '+232', adminPhoneNumber: '', password: '', confirmPassword: '',
+  adminPhoneCode: '', adminPhoneNumber: '', password: '', confirmPassword: '',
   capacity: '1000', academicSystem: '',
   gradingSystem: 'percentage', language: 'English',
   agreementAccuracy: false, agreementDataProtection: false, agreementAuthorized: false,
@@ -284,6 +284,50 @@ const STANDARD_COLORS = [
 const PUBLIC_DOMAINS = [
   'gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com',
   'icloud.com', 'aol.com', 'live.com', 'msn.com',
+];
+
+/* Institution type options — always used (API data is not curated) */
+const DEFAULT_INSTITUTION_TYPES = [
+  'Pre-School / Nursery',
+  'Primary School',
+  'Junior Secondary School (JSS)',
+  'Senior Secondary School (SSS)',
+  'Secondary School (Combined JSS & SSS)',
+  'Primary & Secondary (All-Through)',
+  'Vocational / Technical School',
+  'College of Education',
+  'Polytechnic / Technical College',
+  'University',
+  'International School',
+  'Community College',
+  'Special Needs School',
+  'Islamic School / Madrasa',
+  'Seminary / Religious Institution',
+];
+
+/* Academic system options — always used (API data is not curated) */
+const DEFAULT_ACADEMIC_SYSTEMS = [
+  { value: 'Semester',      label: 'Semester System (2 semesters / year)' },
+  { value: 'Trimester',     label: 'Trimester System (3 trimesters / year)' },
+  { value: 'Three-Term',    label: 'Three-Term System (3 terms / year)' },
+  { value: 'Quarter',       label: 'Quarter System (4 quarters / year)' },
+  { value: 'Continuous',    label: 'Continuous / Year-Round Learning' },
+  { value: 'Modular',       label: 'Modular / Block Scheduling' },
+];
+
+/* Grading system options — always used (API data is not curated) */
+const DEFAULT_GRADING_SYSTEMS = [
+  { value: 'percentage',    label: 'Percentage (0 – 100%)' },
+  { value: 'letter_gpa',    label: 'Letter Grade + GPA (A = 4.0, B = 3.0 … F = 0.0)' },
+  { value: 'letter_grade',  label: 'Letter Grade Only (A, B, C, D, F — no GPA)' },
+  { value: 'gpa_4',         label: 'GPA Scale (0.0 – 4.0, no letter grades)' },
+  { value: 'gpa_5',         label: 'GPA Scale (0.0 – 5.0)' },
+  { value: 'percentage_marks', label: 'Percentage + Marks (e.g. 85% / 85 out of 100)' },
+  { value: 'marks_300',     label: 'Aggregate Marks out of 300' },
+  { value: 'marks_400',     label: 'Aggregate Marks out of 400' },
+  { value: 'marks_500',     label: 'Aggregate Marks out of 500' },
+  { value: 'pass_fail',     label: 'Pass / Fail' },
+  { value: 'competency',    label: 'Competency-Based (Mastery Levels)' },
 ];
 
 /* Country dial codes — Africa first */
@@ -595,19 +639,19 @@ function PhoneInput({ codeValue, numberValue, onCodeChange, onNumberChange, id, 
       c.dial.includes(search)
   );
 
-  const selected = COUNTRY_CODES.find((c) => c.dial === codeValue) || COUNTRY_CODES[0];
+  const selected = codeValue ? COUNTRY_CODES.find((c) => c.dial === codeValue) : null;
 
   return (
     <div className="phone-input-wrap" ref={wrapRef}>
       {/* Dial code selector */}
       <button
         type="button"
-        className="phone-dial-btn"
+        className={`phone-dial-btn${!selected ? ' phone-dial-btn--empty' : ''}`}
         onClick={() => setOpen((v) => !v)}
         aria-label="Select country code"
         aria-expanded={open}
       >
-        <span className="phone-dial-code">{selected.dial}</span>
+        <span className="phone-dial-code">{selected ? selected.dial : 'Code'}</span>
         <span className="phone-dial-flag">▾</span>
       </button>
 
@@ -822,12 +866,12 @@ function Register({ onNavigate }) {
   const [autoDetectedCountry, setAutoDetectedCountry] = useState(null);
 
   /* API-fetched reference data */
-  const [institutionTypes, setInstitutionTypes] = useState([]);
+  const [institutionTypes, setInstitutionTypes] = useState(DEFAULT_INSTITUTION_TYPES);
   const [countries, setCountries]               = useState([]);
   const [regions, setRegions]                   = useState([]);
   const [cities, setCities]                     = useState([]);
-  const [academicSystems, setAcademicSystems]   = useState([]);
-  const [gradingSystems, setGradingSystems]     = useState([]);
+  const [academicSystems, setAcademicSystems]   = useState(DEFAULT_ACADEMIC_SYSTEMS);
+  const [gradingSystems, setGradingSystems]     = useState(DEFAULT_GRADING_SYSTEMS);
 
   const set    = (field) => (e) => setForm((p) => ({ ...p, [field]: e.target.value }));
   const setChk = (field) => (e) => setForm((p) => ({ ...p, [field]: e.target.checked }));
@@ -891,10 +935,10 @@ function Register({ onNavigate }) {
         }
       };
       await Promise.all([
-        fetchOne('/api/institution-types/', (r) => setInstitutionTypes((r.types || []).filter(t => t.is_active).map((i) => i.name))),
+        fetchOne('/api/institution-types/', () => { /* options managed client-side */ }),
         fetchOne('/api/countries/', (r) => setCountries((r.countries || []).filter(c => c.is_active).map((c) => ({ id: c.id, name: c.name })))),
-        fetchOne('/api/academic-systems/', (r) => setAcademicSystems((r.academicsystems || []).filter(s => s.is_active).map((s) => ({ value: s.name, label: s.name })))),
-        fetchOne('/api/grading-systems/', (r) => setGradingSystems((r.gradingsystems || []).filter(g => g.is_active).map((g) => ({ value: g.name, label: g.name })))),
+        fetchOne('/api/academic-systems/', () => { /* options managed client-side */ }),
+        fetchOne('/api/grading-systems/',  () => { /* options managed client-side */ }),
       ]);
     };
     fetchRefData();
@@ -1099,6 +1143,7 @@ function Register({ onNavigate }) {
       if (!form.country)        { setError('Please select a country.'); return false; }
     }
     if (step === 3) {
+      if (!form.phoneCode)          { setError('Please select a country code for the phone number.'); return false; }
       if (!form.phoneNumber.trim()) { setError('Phone number is required.'); return false; }
       if (form.phoneNumber.length < 6) { setError('Phone number must be at least 6 digits.'); return false; }
       if (!form.email.trim())       { setError('Institutional email is required.'); return false; }
@@ -1117,6 +1162,7 @@ function Register({ onNavigate }) {
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.adminEmail)) {
         setError('Please enter a valid admin email address.'); return false;
       }
+      if (!form.adminPhoneCode)           { setError('Please select a country code for the admin phone number.'); return false; }
       if (!form.adminPhoneNumber.trim()) { setError('Admin phone number is required.'); return false; }
       if (form.adminPhoneNumber.length < 6) { setError('Admin phone number must be at least 6 digits.'); return false; }
       if (form.password.length < 8)              { setError('Password must be at least 8 characters.'); return false; }
@@ -1128,6 +1174,7 @@ function Register({ onNavigate }) {
     if (step === 5) {
       const cap = parseInt(form.capacity, 10);
       if (isNaN(cap) || cap < 1) { setError('Please enter a valid student capacity.'); return false; }
+      if (!form.academicSystem) { setError('Please select an academic system.'); return false; }
     }
     if (step === 6) {
       if (!form.agreementAccuracy)       { setError('Please confirm the school information is accurate.'); return false; }
@@ -1601,6 +1648,7 @@ function Register({ onNavigate }) {
             <Field id="academicSystem" label="Academic System">
               <select id="academicSystem" className="reg-select"
                 value={form.academicSystem} onChange={set('academicSystem')}>
+                <option value="">Select academic system</option>
                 {academicSystems.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
               </select>
             </Field>
@@ -1806,7 +1854,7 @@ function Register({ onNavigate }) {
 
             <ReviewSection title="Basic Information" icon={<InfoIcon />}>
               <ReviewRow label="Institution Name"    value={form.institutionName} />
-              <ReviewRow label="Type"                value={form.institutionType} />
+              <ReviewRow label="Type"                value={form.institutionType || '—'} />
               <ReviewRow label="Reg. Number"         value={form.registrationNumber || '—'} />
               <ReviewRow label="Established"         value={form.established || '—'} />
               <ReviewRow label="Est. Teachers" value={form.estimatedTeachers || '—'} />
@@ -1832,7 +1880,7 @@ function Register({ onNavigate }) {
             </ReviewSection>
 
             <ReviewSection title="Contact" icon={<ContactIcon />}>
-              <ReviewRow label="Phone"   value={`${form.phoneCode} ${form.phoneNumber}`} />
+              <ReviewRow label="Phone"   value={[form.phoneCode, form.phoneNumber].filter(Boolean).join(' ')} />
               <ReviewRow label="Email"   value={form.email} />
               <ReviewRow label="Website" value={form.website || '—'} muted={!form.website} />
             </ReviewSection>
@@ -1841,13 +1889,13 @@ function Register({ onNavigate }) {
               <ReviewRow label="Name"     value={`${form.firstName} ${form.lastName}`} />
               <ReviewRow label="Username" value={form.adminUsername} />
               <ReviewRow label="Email"    value={form.adminEmail} />
-              <ReviewRow label="Phone"    value={`${form.adminPhoneCode} ${form.adminPhoneNumber}`} />
+              <ReviewRow label="Phone"    value={[form.adminPhoneCode, form.adminPhoneNumber].filter(Boolean).join(' ')} />
             </ReviewSection>
 
             <ReviewSection title="School Settings" icon={<SettingsIcon />}>
               <ReviewRow label="Capacity"       value={`${form.capacity} students`} />
-              <ReviewRow label="Academic System" value={academicSystems.find(s => s.value === form.academicSystem)?.label} />
-              <ReviewRow label="Grading"        value={gradingSystems.find(g => g.value === form.gradingSystem)?.label} />
+              <ReviewRow label="Academic System" value={academicSystems.find(s => s.value === form.academicSystem)?.label || '—'} />
+              <ReviewRow label="Grading"        value={gradingSystems.find(g => g.value === form.gradingSystem)?.label || '—'} />
               <ReviewRow label="Language"       value={form.language} />
             </ReviewSection>
 

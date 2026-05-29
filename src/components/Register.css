@@ -1556,6 +1556,13 @@
 .phone-dial-btn:hover {
   background: rgba(255, 255, 255, 0.03);
 }
+.phone-dial-btn--empty .phone-dial-code {
+  color: rgba(255, 255, 255, 0.4);
+  font-style: italic;
+}
+[data-theme="light"] .phone-dial-btn--empty .phone-dial-code {
+  color: rgba(0, 0, 0, 0.35);
+}
 
 .phone-dial-code {
   font-size: 0.875rem;
