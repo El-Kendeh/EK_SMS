@@ -1,0 +1,120 @@
+/* AttendanceReport — per-class attendance bars + status pills.
+   Built on `.pu-*` / `.ga-*` / `.rca-*` classes and `--ska-*` tokens. */
+
+.atr-page .ga-select { min-width: 150px; }
+
+.atr-num--error { color: var(--ska-error); }
+.atr-num--warn  { color: #f59e0b; }
+
+.atr-alert { margin: 0; }
+
+.atr-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.atr-row {
+  background: var(--ska-surface-card);
+  border: 1px solid var(--ska-border);
+  border-radius: var(--ska-radius);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.atr-row:hover {
+  border-color: var(--ska-border-hover);
+  box-shadow: var(--ska-shadow-card);
+}
+
+.atr-row--low {
+  border-left: 3px solid var(--ska-error);
+}
+
+.atr-row__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.atr-row__name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.atr-row__name .ska-icon { color: var(--ska-text-3); }
+
+.atr-row__name strong {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--ska-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.atr-row__rate {
+  font-size: 1rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.atr-row__foot {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.atr-pill {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--ska-surface-high);
+  color: var(--ska-text-2);
+  white-space: nowrap;
+}
+
+.atr-pill--green { background: var(--ska-green-dim); color: var(--ska-green); }
+.atr-pill--error { background: var(--ska-error-dim); color: var(--ska-error); }
+.atr-pill--warn  { background: rgba(245,158,11,0.14); color: #f59e0b; }
+
+.atr-row__total {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--ska-text-3);
+  white-space: nowrap;
+}
+
+/* ── Mobile ── */
+@media (max-width: 600px) {
+  .atr-page .pu-page__head {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .atr-page .ga-select { width: 100%; }
+
+  .atr-row { padding: 14px; }
+
+  .atr-row__name strong { font-size: 0.875rem; }
+
+  .atr-row__foot { gap: 6px; }
+
+  .atr-row__total {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+
+@media (max-width: 360px) {
+  .atr-pill { font-size: 0.625rem; padding: 2px 8px; }
+}

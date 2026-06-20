@@ -1,0 +1,105 @@
+/* PrincipalHome — Syllabus Progress summary card + small layout tweaks.
+   Built on top of `.pu-*` classes from schooladmin/Principal/Principal.css
+   and `--ska-*` tokens from schooladmin/SchoolAdmin.css. */
+
+.prc-home {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.prc-syllabus__empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 24px 16px;
+  color: var(--ska-text-3);
+  font-size: 0.875rem;
+}
+
+.prc-syllabus__list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 4px 0 2px;
+}
+
+.prc-syllabus__row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.prc-syllabus__row-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.prc-syllabus__name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ska-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.prc-syllabus__pct {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--ska-text);
+  flex-shrink: 0;
+}
+
+.prc-syllabus__pending {
+  font-size: 0.75rem;
+  color: var(--ska-text-3);
+}
+
+.prc-syllabus__more {
+  align-self: flex-start;
+  margin-top: 4px;
+  background: none;
+  border: none;
+  color: var(--ska-secondary);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 0;
+}
+
+.prc-syllabus__more:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+  .prc-home {
+    gap: 12px;
+  }
+
+  .prc-syllabus__list {
+    gap: 12px;
+  }
+
+  .prc-syllabus__name {
+    font-size: 0.8125rem;
+  }
+
+  .prc-syllabus__pct {
+    font-size: 0.8125rem;
+  }
+
+  .prc-syllabus__pending {
+    font-size: 0.6875rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .prc-syllabus__row-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+}

@@ -38,7 +38,7 @@ async function getOverview(req, res) {
     const activeTerm = await Term.findOne({ where: { school_id: school.id, is_active: true } });
 
     const pendingGradeChanges = await Grade.count({
-      where: { school_id: school.id, grade_letter: null },
+      where: { school_id: school.id, approval_status: 'pending' },
     });
 
     const reportCardsPending = 0;
@@ -204,6 +204,7 @@ async function listReportCards(req, res) {
         };
       }
       studentMap[sid].subjects.push({
+        id: g.id,
         subject_name: g.subject?.name || '',
         subject_code: g.subject?.code || '',
         ca: g.ca,
@@ -366,12 +367,95 @@ async function updatePrincipalUser(req, res) {
     const admin = await SchoolAdmin.findOne({ where: { id, school_id: school.id } });
     if (!admin) return res.status(404).json(errorResponse('Principal not found'));
 
-    await admin.update({ is_active: !admin.is_active });
+    const { full_name, email, phone, role, access_level, is_active } = req.body || {};
+    const hasProfileChanges = [full_name, email, phone, role, access_level, is_active]
+      .some(v => v !== undefined);
 
-    return res.json(successResponse({}, 'Status updated'));
+    if (!hasProfileChanges) {
+      // Legacy behaviour: an empty payload toggles active status.
+      await admin.update({ is_active: !admin.is_active });
+      return res.json(successResponse({}, 'Status updated'));
+    }
+
+    const adminUpdates = {};
+    if (role !== undefined) adminUpdates.role = role;
+    if (access_level !== undefined) adminUpdates.access_level = access_level;
+    if (is_active !== undefined) adminUpdates.is_active = !!is_active;
+    if (Object.keys(adminUpdates).length) await admin.update(adminUpdates);
+
+    if (full_name !== undefined || email !== undefined || phone !== undefined) {
+      const user = await User.findByPk(admin.user_id);
+      if (user) {
+        const userUpdates = {};
+        if (full_name !== undefined) {
+          userUpdates.first_name = full_name.split(' ')[0] || '';
+          userUpdates.last_name = full_name.split(' ').slice(1).join(' ') || '';
+        }
+        if (email !== undefined) userUpdates.email = email;
+        if (phone !== undefined) userUpdates.phone = phone;
+        await user.update(userUpdates);
+      }
+    }
+
+    return res.json(successResponse({}, 'Member updated'));
   } catch (err) {
     console.error('updatePrincipalUser Error:', err);
     return res.status(500).json(errorResponse(`Failed to update: ${err.message}`));
+  }
+}
+
+async function getAttendanceReport(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+
+    const days = Math.min(parseInt(req.query.days, 10) || 30, 365);
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const records = await Attendance.findAll({
+      where: { school_id: school.id, date: { [Op.gte]: since } },
+      attributes: ['classroom_id', 'status', 'date'],
+    });
+
+    const classes = await Class.findAll({
+      where: { school_id: school.id },
+      attributes: ['id', 'name'],
+    });
+    const classNames = Object.fromEntries(classes.map(c => [c.id, c.name]));
+
+    const byClass = {};
+    const overall = { total: 0, present: 0, absent: 0, late: 0, excused: 0 };
+    for (const r of records) {
+      const key = r.classroom_id || 0;
+      if (!byClass[key]) {
+        byClass[key] = { class_id: key, class_name: classNames[key] || 'Unassigned', total: 0, present: 0, absent: 0, late: 0, excused: 0 };
+      }
+      const bucket = byClass[key];
+      bucket.total += 1;
+      overall.total += 1;
+      const status = ['present', 'absent', 'late', 'excused'].includes(r.status) ? r.status : 'present';
+      bucket[status] += 1;
+      overall[status] += 1;
+    }
+
+    const classReport = Object.values(byClass).map(c => ({
+      ...c,
+      rate: c.total ? Math.round(((c.present + c.late) / c.total) * 100) : 0,
+    })).sort((a, b) => a.rate - b.rate);
+
+    const overallRate = overall.total
+      ? Math.round(((overall.present + overall.late) / overall.total) * 100)
+      : 0;
+
+    return res.json(successResponse({
+      days,
+      overall: { ...overall, rate: overallRate },
+      classes: classReport,
+      low_attendance_count: classReport.filter(c => c.total > 0 && c.rate < 85).length,
+    }));
+  } catch (err) {
+    console.error('getAttendanceReport Error:', err);
+    return res.status(500).json(errorResponse(`Failed to fetch attendance report: ${err.message}`));
   }
 }
 
@@ -396,10 +480,27 @@ async function getSchoolCommandDashboard(req, res) {
     const finance = 'Stable';
     const healthScore = Math.round(avgAcademic * 0.45 + avgAttendance * 0.40 + 15);
 
-    const gradeMods = 0;
+    const gradeMods = await Grade.count({
+      where: { school_id: school.id, approval_status: 'pending' },
+    });
     const atRisk = grades.filter(g => g.total && g.total < 40).length;
     const finAnomaly = 0;
-    const lowAttend = 0;
+
+    // Classes whose attendance rate over the last 30 days falls below 85%
+    const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const recentAttendance = await Attendance.findAll({
+      where: { school_id: school.id, date: { [Op.gte]: since } },
+      attributes: ['classroom_id', 'status'],
+    });
+    const byClass = {};
+    for (const a of recentAttendance) {
+      if (!a.classroom_id) continue;
+      if (!byClass[a.classroom_id]) byClass[a.classroom_id] = { total: 0, present: 0 };
+      byClass[a.classroom_id].total += 1;
+      if (a.status === 'present' || a.status === 'late') byClass[a.classroom_id].present += 1;
+    }
+    const lowAttend = Object.values(byClass)
+      .filter(c => c.total > 0 && (c.present / c.total) * 100 < 85).length;
 
     return res.json(successResponse({
       totalStudents: studentsTotal,
@@ -575,4 +676,5 @@ module.exports = {
   getFinanceSnapshot,
   getActivityFeed,
   getSyllabusProgress,
+  getAttendanceReport,
 };

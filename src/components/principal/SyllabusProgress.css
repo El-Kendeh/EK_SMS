@@ -1,0 +1,118 @@
+/* SyllabusProgress — full page subject coverage list.
+   Relies on `.rca-summary*` (ReportCardApproval.css), `.ga-*`
+   (GradeApprovals.css) and `.pu-finance__bar-*` (Principal.css). */
+
+.syp-page {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.syp-summary__num--warn { color: var(--ska-tertiary); }
+
+/* ---- Search + sort controls ---- */
+.syp-controls {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.syp-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 220px;
+  background: var(--ska-surface-card);
+  border: 1px solid var(--ska-border);
+  border-radius: var(--ska-radius-sm);
+  padding: 8px 12px;
+  color: var(--ska-text-3);
+}
+
+.syp-search input {
+  flex: 1 1 auto;
+  background: transparent;
+  border: none;
+  color: var(--ska-text);
+  font-family: var(--ska-font-body);
+  font-size: 0.8125rem;
+}
+.syp-search input:focus { outline: none; }
+.syp-search input::placeholder { color: var(--ska-text-3); }
+
+/* ---- Subject list ---- */
+.syp-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.syp-row {
+  border: 1px solid var(--ska-border);
+  border-radius: var(--ska-radius);
+  background: var(--ska-surface-card);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.syp-row__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.syp-row__name {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.syp-row__name strong {
+  font-size: 0.9375rem;
+  color: var(--ska-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.syp-row__pct {
+  font-family: var(--ska-font-headline);
+  font-size: 1.125rem;
+  flex-shrink: 0;
+}
+
+.syp-row__foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.75rem;
+  color: var(--ska-text-3);
+}
+
+/* ============================================================
+   Mobile responsiveness
+   ============================================================ */
+@media (max-width: 600px) {
+  .syp-page { gap: 12px; }
+
+  .rca-summary { gap: 8px; }
+  .rca-summary__item { flex: 1 1 calc(50% - 8px); min-width: 0; padding: 10px 12px; }
+  .rca-summary__num { font-size: 1.25rem; }
+
+  .syp-controls { flex-direction: column; align-items: stretch; }
+  .syp-controls .ga-select { width: 100%; }
+
+  .syp-row { padding: 12px; }
+  .syp-row__name strong { font-size: 0.875rem; }
+  .syp-row__pct { font-size: 1rem; }
+  .syp-row__foot { flex-direction: column; gap: 2px; }
+}
+
+@media (max-width: 400px) {
+  .rca-summary__item { flex: 1 1 100%; }
+}

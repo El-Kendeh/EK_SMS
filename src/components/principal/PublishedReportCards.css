@@ -1,0 +1,56 @@
+/* PublishedReportCards — verified card accents + search control.
+   Built on `.pu-*` / `.ga-*` / `.rca-*` classes and `--ska-*` tokens. */
+
+.prp-card { border-left: 3px solid var(--ska-green); }
+
+.prp-card__check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--ska-green-dim);
+  color: var(--ska-green);
+  flex-shrink: 0;
+}
+
+.prp-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.prp-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  max-width: 360px;
+  background: var(--ska-surface-card);
+  border: 1px solid var(--ska-border);
+  border-radius: var(--ska-radius-sm);
+  padding: 8px 12px;
+}
+
+.prp-search .ska-icon { color: var(--ska-text-3); }
+
+.prp-search input {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--ska-text);
+  font-size: 0.875rem;
+  font-family: var(--ska-font-body);
+}
+
+.prp-search input::placeholder { color: var(--ska-text-3); }
+
+.prp-search:focus-within { border-color: var(--ska-primary); }
+
+/* ── Mobile ── */
+@media (max-width: 600px) {
+  .prp-search { max-width: none; }
+}

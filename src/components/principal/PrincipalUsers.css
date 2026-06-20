@@ -1,0 +1,177 @@
+/* PrincipalUsers — Leadership Team management.
+   Relies on shared `.ga-*` classes (GradeApprovals.css) and `.pu-chip*`
+   classes (schooladmin/Principal/Principal.css) for buttons/badges/chips. */
+
+.pru-page {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.pru-page .pu-page__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* ---- Filters row ---- */
+.pru-filters {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.pu-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ---- Card grid ---- */
+.pru-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.pru-card {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--ska-border);
+  border-radius: var(--ska-radius);
+  background: var(--ska-surface-card);
+}
+
+.pru-card__avatar {
+  flex-shrink: 0;
+  color: var(--ska-text-3);
+}
+
+.pru-card__body {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.pru-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.pru-card__head strong {
+  font-size: 0.9375rem;
+  color: var(--ska-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pru-card__role {
+  font-size: 0.75rem;
+  color: var(--ska-text-3);
+  margin-bottom: 4px;
+}
+
+.pru-card__contact {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--ska-text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pru-card__actions {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.pru-card__actions .ga-btn {
+  white-space: nowrap;
+}
+
+/* ---- Add member modal/form ---- */
+.pru-modal {
+  max-width: 480px;
+}
+
+.pru-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pru-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 0;
+}
+
+.pru-field span {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ska-text-3);
+}
+
+.pru-field-row {
+  display: flex;
+  gap: 12px;
+}
+
+.pru-input {
+  background: var(--ska-surface-high);
+  border: 1px solid var(--ska-border);
+  border-radius: var(--ska-radius-sm);
+  color: var(--ska-text);
+  font-family: var(--ska-font-body);
+  font-size: 0.8125rem;
+  padding: 10px;
+  width: 100%;
+}
+.pru-input:focus { outline: none; border-color: var(--ska-primary); }
+
+select.pru-input {
+  min-width: 0;
+}
+
+/* ============================================================
+   Mobile responsiveness
+   ============================================================ */
+@media (max-width: 600px) {
+  .pru-page { gap: 12px; }
+
+  .pru-filters { flex-direction: column; align-items: stretch; }
+  .pru-filters .ga-select { width: 100%; }
+
+  .pru-grid { grid-template-columns: 1fr; }
+
+  .pru-card { flex-direction: column; }
+  .pru-card__avatar { align-self: flex-start; }
+  .pru-card__actions { align-self: stretch; flex-direction: column; }
+  .pru-card__actions .ga-btn { width: 100%; justify-content: center; min-height: 44px; }
+
+  .pru-field-row { flex-direction: column; gap: 12px; }
+
+  .pru-modal { max-width: 100%; }
+}
+
+@media (max-width: 360px) {
+  .pru-card__head { flex-direction: column; align-items: flex-start; gap: 4px; }
+}
