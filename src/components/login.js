@@ -110,20 +110,8 @@ function Login({ onNavigate }) {
           return;
         }
 
-        const isSuper = user.is_superuser || user.role === 'superadmin' || user.role === 'admin' || user.role === 'superuser';
-        if (isSuper) {
-          onNavigate('superadmindashboard');
-        } else if (user.role === 'school_admin') {
-          onNavigate('sa-dashboard');
-        } else if (user.role === 'teacher') {
-          onNavigate('teacher-dashboard');
-        } else if (user.role === 'student') {
-          onNavigate('student-dashboard');
-        } else if (user.role === 'parent') {
-          onNavigate('parentdashboard');
-        } else {
-          onNavigate('home');
-        }
+        const hasDashboard = user.is_superuser || ['superadmin', 'admin', 'superuser', 'school_admin', 'principal', 'bursar', 'teacher', 'student', 'parent'].includes(user.role);
+        onNavigate(hasDashboard ? 'superadmindashboard' : 'home');
       } catch (e) {
         setCheckingAuth(false);
       }
@@ -174,20 +162,8 @@ function Login({ onNavigate }) {
             onNavigate('force-change-password');
             return;
           }
-          const isSuper = user.is_superuser || user.role === 'superadmin' || user.role === 'admin' || user.role === 'superuser';
-          if (isSuper) {
-            onNavigate('superadmindashboard');
-          } else if (user.role === 'school_admin') {
-            onNavigate('sa-dashboard');
-          } else if (user.role === 'teacher') {
-            onNavigate('teacher-dashboard');
-          } else if (user.role === 'student') {
-            onNavigate('student-dashboard');
-          } else if (user.role === 'parent') {
-            onNavigate('parentdashboard');
-          } else {
-            onNavigate('home');
-          }
+          const hasDashboard = user.is_superuser || ['superadmin', 'admin', 'superuser', 'school_admin', 'principal', 'bursar', 'teacher', 'student', 'parent'].includes(user.role);
+          onNavigate(hasDashboard ? 'superadmindashboard' : 'home');
         }
       };
 

@@ -1887,6 +1887,83 @@
   gap: 4px;
 }
 
+/* ---- Country field: select + auto-detect button ---- */
+.country-field-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+.country-field-row .reg-select {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.country-detect-btn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+  padding: 0 14px;
+  min-height: 44px;
+  border-radius: 12px;
+  border: 1px solid rgba(34, 211, 163, 0.45);
+  background: rgba(34, 211, 163, 0.10);
+  color: #22D3A3;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease, opacity 0.18s ease;
+}
+.country-detect-btn:hover:not(:disabled) {
+  background: rgba(34, 211, 163, 0.18);
+  border-color: rgba(34, 211, 163, 0.7);
+}
+.country-detect-btn:disabled {
+  opacity: 0.65;
+  cursor: progress;
+}
+.country-detect-btn svg {
+  width: 16px;
+  height: 16px;
+}
+.country-detect-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(34, 211, 163, 0.35);
+  border-top-color: #22D3A3;
+  border-radius: 50%;
+  animation: country-detect-spin 0.7s linear infinite;
+}
+@keyframes country-detect-spin {
+  to { transform: rotate(360deg); }
+}
+[data-theme="light"] .country-detect-btn {
+  border-color: rgba(5, 150, 105, 0.4);
+  background: rgba(5, 150, 105, 0.08);
+  color: #059669;
+}
+[data-theme="light"] .country-detect-btn:hover:not(:disabled) {
+  background: rgba(5, 150, 105, 0.15);
+  border-color: rgba(5, 150, 105, 0.6);
+}
+[data-theme="light"] .country-detect-spinner {
+  border-color: rgba(5, 150, 105, 0.3);
+  border-top-color: #059669;
+}
+
+/* Mobile: stack the select and the auto-detect button full-width */
+@media (max-width: 600px) {
+  .country-field-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .country-detect-btn {
+    width: 100%;
+    min-height: 46px;
+  }
+}
+
 /* ---- Leave-page warning modal ---- */
 .leave-modal {
   width: 100%;
