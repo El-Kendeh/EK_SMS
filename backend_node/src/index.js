@@ -147,8 +147,11 @@ app.use('/api/live-classes', liveClassesRouter);
 app.use('/api', schoolRouter);
 app.use('/api', superadminRouter);
 
-// Sync database models — use alter only in dev; in production the schema is managed manually
-db.sync({ alter: process.env.NODE_ENV !== 'production' })
+// Sync database models — use alter only in dev; in production the schema is managed manually.
+// Wait for the database to exist first (db.databaseReady) so a fresh deploy
+// doesn't race "Unknown database" against the CREATE DATABASE step.
+const dbReady = Promise.resolve(db.databaseReady)
+  .then(() => db.sync({ alter: process.env.NODE_ENV !== 'production' }))
   .then(() => console.log('✅ Database synchronized'))
   .catch(err => {
     console.error('❌ Database sync failed:', err.message);
@@ -165,8 +168,11 @@ app.use((req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+// Start listening only AFTER the schema sync settles. In dev, `alter: true`
+// re-issues ALTERs on each boot and invalidates mysql2's prepared-statement
+// cache; serving requests mid-sync caused transient ER_NEED_REPREPARE 500s.
+dbReady.finally(() => app.listen(PORT, () => {
   console.log(`🚀 Backend listening on http://localhost:${PORT}`);
-});
+}));
 
 module.exports = app;

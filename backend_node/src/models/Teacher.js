@@ -16,12 +16,13 @@ const Teacher = sequelize.define('Teacher', {
   religion: { type: DataTypes.STRING(100) },
   address: { type: DataTypes.TEXT },
   city: { type: DataTypes.STRING(100) },
-  phone_number: { type: DataTypes.STRING(20), allowNull: false },
-  /* Professional */
-  qualification: { type: DataTypes.STRING(255), allowNull: false },
+  phone_number: { type: DataTypes.STRING(20), allowNull: true },
+  /* Professional — optional at creation (matches Principal/Bursar models and
+     the createSuperTeacher controller, which treats these as optional). */
+  qualification: { type: DataTypes.STRING(255), allowNull: true },
   years_experience: { type: DataTypes.INTEGER, defaultValue: 0 },
   subjects_specialization: { type: DataTypes.TEXT },
-  hire_date: { type: DataTypes.DATEONLY, allowNull: false },
+  hire_date: { type: DataTypes.DATEONLY, allowNull: true },
   contract_type: { type: DataTypes.STRING(50) },
   salary_grade: { type: DataTypes.STRING(50) },
   is_examination_officer: { type: DataTypes.BOOLEAN, defaultValue: false },

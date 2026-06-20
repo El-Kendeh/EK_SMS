@@ -33,8 +33,10 @@ async function ensureDatabaseExists() {
   }
 }
 
-// Pre-connection check
-ensureDatabaseExists();
+// Pre-connection check. Expose the readiness promise so callers (index.js)
+// can await database creation BEFORE running db.sync() — otherwise sync can
+// fire before the database exists and fail with "Unknown database".
+const databaseReady = ensureDatabaseExists();
 
 const sequelizeConfig = {
   dialect: 'mysql',
@@ -48,5 +50,9 @@ if (dbSocketPath) {
 }
 
 const sequelize = new Sequelize(dbName, dbUser, dbPassword, sequelizeConfig);
+
+// Attach the readiness promise so index.js can `await db.databaseReady`
+// before syncing models.
+sequelize.databaseReady = databaseReady;
 
 module.exports = sequelize;
