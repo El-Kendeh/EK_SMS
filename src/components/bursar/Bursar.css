@@ -1,0 +1,280 @@
+/* ============================================================
+   EK-SMS · Bursar / Finance dashboard — shared styles.
+   All page-level styles scoped under .bur-* prefix.
+   Relies on SchoolAdmin.css (ska-*) + Principal.css (pu-*).
+   ============================================================ */
+
+/* ── Banners ──────────────────────────────────────────────── */
+.bur-banner {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; border-radius: 10px;
+  font-size: 0.8125rem; font-weight: 600;
+}
+.bur-banner--success { background: var(--ska-green-dim); color: var(--ska-green); border: 1px solid var(--ska-green); }
+.bur-banner--error   { background: var(--ska-error-dim); color: var(--ska-error); border: 1px solid var(--ska-error); }
+
+/* ── Form fields ──────────────────────────────────────────── */
+.bur-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.bur-field > span {
+  font-size: 0.6875rem; font-weight: 700; color: var(--ska-text-3);
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+.bur-input {
+  width: 100%;
+  padding: 9px 12px;
+  background: var(--ska-surface-low);
+  border: 1px solid var(--ska-border);
+  border-radius: 9px;
+  color: var(--ska-text);
+  font-size: 0.875rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+.bur-input:focus { border-color: var(--ska-primary); }
+.bur-input:disabled { opacity: 0.55; cursor: not-allowed; }
+select.bur-input { cursor: pointer; }
+textarea.bur-input { resize: vertical; min-height: 64px; }
+.bur-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.bur-field-hint { font-size: 0.6875rem; color: var(--ska-text-3); }
+.bur-field-err  { font-size: 0.6875rem; color: var(--ska-error); font-weight: 600; }
+@media (max-width: 600px) { .bur-field-row { grid-template-columns: 1fr; } }
+
+/* ── Filters bar ──────────────────────────────────────────── */
+.bur-filters {
+  display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px;
+  background: var(--ska-surface);
+  border: 1px solid var(--ska-border);
+  border-radius: 14px;
+  padding: 12px;
+}
+.bur-filters .bur-field { min-width: 150px; flex: 1; }
+.bur-filters__search { flex: 2; min-width: 190px; }
+.bur-filters__reset { flex: 0; }
+@media (max-width: 600px) {
+  .bur-filters { align-items: stretch; }
+  .bur-filters .bur-field, .bur-filters__search { min-width: 100%; }
+  .bur-filters__reset { width: 100%; }
+}
+
+/* ── Status pills row ─────────────────────────────────────── */
+.bur-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* ── Summary chips above tables ───────────────────────────── */
+.bur-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+.bur-summary__chip {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 10px 14px;
+  border-radius: 11px;
+  background: var(--ska-surface-low);
+  border: 1px solid var(--ska-border);
+}
+.bur-summary__chip span {
+  font-size: 0.625rem; font-weight: 700; color: var(--ska-text-3);
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+.bur-summary__chip strong {
+  font-size: 1.0625rem; font-weight: 800; color: var(--ska-text);
+  font-family: var(--ska-font-headline, inherit);
+}
+.bur-summary__chip--green  { border-color: var(--ska-green); background: var(--ska-green-dim); }
+.bur-summary__chip--green  strong { color: var(--ska-green); }
+.bur-summary__chip--amber  { border-color: #f59e0b; background: rgba(245,158,11,0.10); }
+.bur-summary__chip--amber  strong { color: #b25d00; }
+.bur-summary__chip--red    { border-color: var(--ska-error); background: var(--ska-error-dim); }
+.bur-summary__chip--red    strong { color: var(--ska-error); }
+.bur-summary__chip--primary{ border-color: var(--ska-primary); background: var(--ska-primary-dim); }
+.bur-summary__chip--primary strong { color: var(--ska-primary); }
+
+/* ── Table wrapper (horizontal scroll on small screens) ───── */
+.bur-table-wrap {
+  background: var(--ska-surface);
+  border: 1px solid var(--ska-border);
+  border-radius: 14px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.bur-table-wrap .ska-table { min-width: 720px; }
+.bur-table-wrap--wide .ska-table { min-width: 880px; }
+
+.bur-cell-main { font-weight: 700; color: var(--ska-text); white-space: nowrap; }
+.bur-cell-sub  { display: block; font-size: 0.6875rem; color: var(--ska-text-3); font-weight: 500; }
+.bur-cell-money { font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.bur-cell-money--green { color: var(--ska-green); }
+.bur-cell-money--red   { color: var(--ska-error); }
+.bur-cell-actions { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
+.bur-cell-mono {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.75rem; white-space: nowrap;
+}
+
+/* ── Loading skeleton rows ────────────────────────────────── */
+@keyframes bur-shimmer { 0% { opacity: 0.45; } 50% { opacity: 1; } 100% { opacity: 0.45; } }
+.bur-skel {
+  height: 14px; border-radius: 6px;
+  background: var(--ska-surface-high);
+  animation: bur-shimmer 1.4s ease-in-out infinite;
+}
+
+/* ── Modal helpers (on top of ska-modal) ──────────────────── */
+.bur-modal-form { display: flex; flex-direction: column; gap: 12px; }
+.bur-modal__actions {
+  display: flex; justify-content: flex-end; gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--ska-border);
+}
+@media (max-width: 600px) {
+  .bur-modal__actions { flex-direction: column-reverse; }
+  .bur-modal__actions .ska-btn { width: 100%; justify-content: center; }
+}
+
+/* ── Student picker (record payment / assign fees) ────────── */
+.bur-picker {
+  border: 1px solid var(--ska-border);
+  border-radius: 10px;
+  background: var(--ska-surface-low);
+  max-height: 220px;
+  overflow-y: auto;
+}
+.bur-picker__row {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  background: none; border: none;
+  border-bottom: 1px solid var(--ska-border);
+  cursor: pointer;
+  color: var(--ska-text);
+  text-align: left;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  min-height: 44px;
+}
+.bur-picker__row:last-child { border-bottom: none; }
+.bur-picker__row:hover { background: var(--ska-surface-high); }
+.bur-picker__row.is-on { background: var(--ska-primary-dim); color: var(--ska-primary); }
+.bur-picker__row input[type="checkbox"] { accent-color: var(--ska-primary); cursor: pointer; flex-shrink: 0; }
+.bur-picker__name { font-weight: 700; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.bur-picker__sub  { font-size: 0.6875rem; color: var(--ska-text-3); white-space: nowrap; }
+.bur-picker__empty {
+  padding: 16px; text-align: center;
+  font-size: 0.8125rem; color: var(--ska-text-3);
+}
+
+/* ── Selected student chip ────────────────────────────────── */
+.bur-selected {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--ska-primary-dim);
+  border: 1px solid var(--ska-primary);
+}
+.bur-selected__avatar {
+  width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--ska-primary); color: var(--ska-on-primary, #fff);
+  font-weight: 800; font-size: 0.8125rem;
+}
+.bur-selected__body { flex: 1; min-width: 0; }
+.bur-selected__body strong { display: block; font-size: 0.875rem; color: var(--ska-text); }
+.bur-selected__body span   { font-size: 0.6875rem; color: var(--ska-text-3); }
+.bur-selected__change {
+  background: none; border: none; cursor: pointer;
+  color: var(--ska-primary); font-weight: 700; font-size: 0.75rem;
+  padding: 6px;
+}
+
+/* ── Receipt confirmation (after recording a payment) ─────── */
+.bur-receipt {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  text-align: center;
+  padding: 8px 0 4px;
+}
+.bur-receipt__icon {
+  width: 64px; height: 64px; border-radius: 20px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--ska-green-dim); color: var(--ska-green);
+  border: 1px solid var(--ska-green);
+}
+.bur-receipt__icon .ska-icon { font-size: 34px; }
+.bur-receipt__title { margin: 0; font-size: 1.0625rem; font-weight: 800; color: var(--ska-text); }
+.bur-receipt__number {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 1.25rem; font-weight: 700;
+  color: var(--ska-primary);
+  background: var(--ska-primary-dim);
+  border: 1px dashed var(--ska-primary);
+  border-radius: 10px;
+  padding: 8px 18px;
+  letter-spacing: 0.04em;
+}
+.bur-receipt__grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 8px; width: 100%;
+  margin-top: 4px;
+}
+.bur-receipt__grid > div {
+  padding: 9px 10px;
+  background: var(--ska-surface-low);
+  border: 1px solid var(--ska-border);
+  border-radius: 9px;
+  display: flex; flex-direction: column; gap: 2px;
+  text-align: left; min-width: 0;
+}
+.bur-receipt__grid span {
+  font-size: 0.625rem; font-weight: 700; color: var(--ska-text-3);
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+.bur-receipt__grid strong {
+  font-size: 0.875rem; color: var(--ska-text); font-weight: 800;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.bur-receipt__hash {
+  width: 100%;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.6875rem; color: var(--ska-text-3);
+  word-break: break-all;
+  background: var(--ska-surface-low);
+  border: 1px solid var(--ska-border);
+  border-radius: 9px;
+  padding: 8px 10px;
+  text-align: left;
+}
+@media (max-width: 600px) { .bur-receipt__grid { grid-template-columns: 1fr; } }
+
+/* ── Chips multi-select (applicable classes) ──────────────── */
+.bur-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* ── Detail rows (statement / payment detail modals) ──────── */
+.bur-detail-list { display: flex; flex-direction: column; gap: 6px; }
+.bur-detail-row {
+  display: grid; grid-template-columns: 1fr auto;
+  align-items: center; gap: 10px;
+  padding: 9px 12px;
+  background: var(--ska-surface-low);
+  border: 1px solid var(--ska-border);
+  border-radius: 9px;
+}
+.bur-detail-row p { margin: 0; font-size: 0.8125rem; color: var(--ska-text); font-weight: 600; }
+.bur-detail-row small { display: block; font-size: 0.6875rem; color: var(--ska-text-3); font-weight: 500; }
+.bur-detail-row strong { font-size: 0.875rem; font-weight: 800; white-space: nowrap; }
+
+/* ── Page head right-side actions ─────────────────────────── */
+.bur-head-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+@media (max-width: 600px) {
+  .bur-head-actions { width: 100%; }
+  .bur-head-actions .ska-btn { flex: 1; justify-content: center; }
+}
+
+/* ── Tiny screens ─────────────────────────────────────────── */
+@media (max-width: 400px) {
+  .bur-summary { grid-template-columns: 1fr 1fr; }
+  .bur-receipt__number { font-size: 1.05rem; padding: 7px 12px; }
+}
+@media (max-width: 360px) {
+  .bur-summary { grid-template-columns: 1fr; }
+}

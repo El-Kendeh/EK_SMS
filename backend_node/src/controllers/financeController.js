@@ -56,6 +56,155 @@ async function getFinanceStats(req, res) {
   }
 }
 
+async function getFinanceAnalytics(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+
+    const { date_from, date_to } = req.query;
+    const payWhere = { school_id: school.id, status: 'completed' };
+    const expWhere = { school_id: school.id, status: 'approved' };
+    if (date_from || date_to) {
+      payWhere.paid_at = {};
+      expWhere.date = {};
+      if (date_from) { payWhere.paid_at[Op.gte] = date_from; expWhere.date[Op.gte] = date_from; }
+      if (date_to)   { payWhere.paid_at[Op.lte] = date_to;   expWhere.date[Op.lte] = date_to; }
+    }
+
+    // SQL-side aggregation — unaffected by the 200-row ledger caps
+    const payMonth = sequelize.literal("DATE_FORMAT(paid_at, '%Y-%m')");
+    const expMonth = sequelize.literal("DATE_FORMAT(date, '%Y-%m')");
+
+    const [monthlyRevenue, monthlyExpenses, methods, expenseCategories] = await Promise.all([
+      Payment.findAll({
+        where: payWhere,
+        attributes: [
+          [payMonth, 'month'],
+          [sequelize.fn('SUM', sequelize.col('amount')), 'total'],
+          [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
+        ],
+        group: [payMonth],
+        order: [[payMonth, 'ASC']],
+        raw: true,
+      }),
+      Expense.findAll({
+        where: expWhere,
+        attributes: [
+          [expMonth, 'month'],
+          [sequelize.fn('SUM', sequelize.col('amount')), 'total'],
+        ],
+        group: [expMonth],
+        order: [[expMonth, 'ASC']],
+        raw: true,
+      }),
+      Payment.findAll({
+        where: payWhere,
+        attributes: [
+          'payment_method',
+          [sequelize.fn('SUM', sequelize.col('amount')), 'total'],
+          [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
+        ],
+        group: ['payment_method'],
+        order: [[sequelize.fn('SUM', sequelize.col('amount')), 'DESC']],
+        raw: true,
+      }),
+      Expense.findAll({
+        where: expWhere,
+        attributes: [
+          'category',
+          [sequelize.fn('SUM', sequelize.col('amount')), 'total'],
+          [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
+        ],
+        group: ['category'],
+        order: [[sequelize.fn('SUM', sequelize.col('amount')), 'DESC']],
+        raw: true,
+      }),
+    ]);
+
+    // Merge revenue + expenses into one month-keyed series
+    const monthMap = new Map();
+    for (const r of monthlyRevenue) {
+      monthMap.set(r.month, {
+        month: r.month,
+        revenue: Math.round(Number(r.total || 0) * 100) / 100,
+        expenses: 0,
+        payments: Number(r.count || 0),
+      });
+    }
+    for (const e of monthlyExpenses) {
+      const row = monthMap.get(e.month)
+        || { month: e.month, revenue: 0, expenses: 0, payments: 0 };
+      row.expenses = Math.round(Number(e.total || 0) * 100) / 100;
+      monthMap.set(e.month, row);
+    }
+    const monthly = [...monthMap.values()].sort((a, b) => a.month.localeCompare(b.month));
+
+    // Top outstanding balances (all-time fee ledger, not date-filtered)
+    const debtorRows = await Fee.findAll({
+      where: { school_id: school.id, status: { [Op.in]: ['pending', 'partial'] } },
+      attributes: [
+        'student_id',
+        [sequelize.fn('SUM', sequelize.literal('amount_due - amount_paid')), 'balance'],
+        [sequelize.fn('COUNT', sequelize.col('id')), 'open_fees'],
+      ],
+      group: ['student_id'],
+      order: [[sequelize.literal('balance'), 'DESC']],
+      limit: 8,
+      raw: true,
+    });
+    const debtorStudents = debtorRows.length
+      ? await Student.findAll({
+          where: { id: { [Op.in]: debtorRows.map(d => d.student_id) } },
+          include: [{ model: User, as: 'user', attributes: ['first_name', 'last_name'] }],
+        })
+      : [];
+    const studentById = new Map(debtorStudents.map(s => [String(s.id), s]));
+    const topDebtors = debtorRows
+      .map(d => {
+        const s = studentById.get(String(d.student_id));
+        return {
+          student_id: d.student_id,
+          student_name: s ? `${s.user?.first_name || ''} ${s.user?.last_name || ''}`.trim() : 'Unknown',
+          admission_number: s?.admission_number || '',
+          balance: Math.round(Number(d.balance || 0) * 100) / 100,
+          open_fees: Number(d.open_fees || 0),
+        };
+      })
+      .filter(d => d.balance > 0);
+
+    const revenue = monthly.reduce((sum, m) => sum + m.revenue, 0);
+    const expensesTotal = monthly.reduce((sum, m) => sum + m.expenses, 0);
+    const paymentCount = monthly.reduce((sum, m) => sum + m.payments, 0);
+    const largestPayment = await Payment.max('amount', { where: payWhere }) || 0;
+
+    return res.json(successResponse({
+      summary: {
+        revenue: Math.round(revenue * 100) / 100,
+        expenses: Math.round(expensesTotal * 100) / 100,
+        net: Math.round((revenue - expensesTotal) * 100) / 100,
+        payment_count: paymentCount,
+        avg_payment: paymentCount ? Math.round((revenue / paymentCount) * 100) / 100 : 0,
+        largest_payment: Math.round(Number(largestPayment) * 100) / 100,
+      },
+      monthly,
+      methods: methods.map(m => ({
+        method: m.payment_method || 'other',
+        total: Math.round(Number(m.total || 0) * 100) / 100,
+        count: Number(m.count || 0),
+      })),
+      expense_categories: expenseCategories.map(c => ({
+        category: c.category || 'general',
+        total: Math.round(Number(c.total || 0) * 100) / 100,
+        count: Number(c.count || 0),
+      })),
+      top_debtors: topDebtors,
+    }));
+  } catch (err) {
+    console.error('getFinanceAnalytics Error:', err);
+    return res.status(500).json(errorResponse(`Failed to fetch finance analytics: ${err.message}`));
+  }
+}
+
 async function getFinanceFees(req, res) {
   try {
     const school = await getSchoolFromUser(req);
@@ -914,7 +1063,7 @@ async function getSyllabusProgress(req, res) {
 }
 
 module.exports = {
-  getFinanceStats, getFinanceFees, recordExpense, getExpenses,
+  getFinanceStats, getFinanceAnalytics, getFinanceFees, recordExpense, getExpenses,
   getFeeCategories, createFeeCategory, assignFees,
   recordPayment, getPayments, getStudentFees,
   getFinanceUsers, createFinanceUser, updateFinanceUser,

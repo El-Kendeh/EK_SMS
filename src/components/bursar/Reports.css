@@ -1,0 +1,325 @@
+/* EK-SMS · Bursar — Reports & Analytics (bfr-*) */
+
+/* ── Period pills ─────────────────────────────────────────── */
+.bfr-periods {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+/* ── KPI deltas ───────────────────────────────────────────── */
+.bfr-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-weight: 700;
+}
+.bfr-delta .ska-icon { font-size: 14px; }
+.bfr-delta--up   { color: var(--ska-green); }
+.bfr-delta--down { color: var(--ska-error); }
+
+/* ── Monthly performance chart ────────────────────────────── */
+.bfr-legend {
+  display: flex;
+  gap: 14px;
+  font-size: 0.75rem;
+  color: var(--ska-text-2);
+}
+.bfr-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.bfr-legend__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  display: inline-block;
+}
+.bfr-legend__dot--rev { background: var(--ska-green); }
+.bfr-legend__dot--exp { background: var(--ska-error); }
+
+.bfr-chart-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 4px;
+}
+.bfr-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  height: 220px;
+  padding-top: 8px;
+}
+.bfr-chart__col {
+  flex: 1 1 0;
+  min-width: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+  cursor: default;
+}
+.bfr-chart__bars {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 4px;
+}
+.bfr-chart__bar {
+  width: 38%;
+  max-width: 22px;
+  min-height: 2px;
+  border-radius: 4px 4px 0 0;
+  transition: height 0.35s ease;
+}
+.bfr-chart__bar--rev { background: var(--ska-green); }
+.bfr-chart__bar--exp { background: var(--ska-error); opacity: 0.85; }
+.bfr-chart__col:hover .bfr-chart__bar--rev { filter: brightness(1.15); }
+.bfr-chart__col:hover .bfr-chart__bar--exp { filter: brightness(1.15); }
+.bfr-chart__label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--ska-text-3);
+  white-space: nowrap;
+}
+.bfr-chart-skel {
+  display: grid;
+  gap: 10px;
+  padding: 24px 0;
+}
+.bfr-chart-skel .bur-skel { height: 18px; }
+
+/* ── Two-column analytics grid ────────────────────────────── */
+.bfr-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin-top: 18px;
+}
+.bfr-grid .pu-card { margin: 0; }
+
+/* ── Insight chips (most popular / fastest growing) ───────── */
+.bfr-insight-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.bfr-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  color: var(--ska-text-2);
+  border: 1px solid var(--ska-border);
+  background: var(--ska-surface-2);
+}
+.bfr-chip strong { color: var(--ska-text-1); }
+.bfr-chip--primary .ska-icon { color: var(--ska-primary); }
+.bfr-chip--green .ska-icon   { color: var(--ska-green); }
+
+/* ── Share rows (methods / categories) ────────────────────── */
+.bfr-share-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.bfr-share__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.bfr-share__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ska-text-1);
+}
+.bfr-share__label .ska-icon { color: var(--ska-text-3); }
+.bfr-share__figures {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  white-space: nowrap;
+}
+.bfr-share__figures strong {
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ska-text-1);
+}
+.bfr-share__figures small {
+  font-size: 0.6875rem;
+  color: var(--ska-text-3);
+}
+.bfr-share__track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--ska-surface-2);
+  border: 1px solid var(--ska-border);
+  overflow: hidden;
+}
+.bfr-share__fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.35s ease;
+}
+
+/* ── Period summary facts ─────────────────────────────────── */
+.bfr-facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.bfr-fact {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid var(--ska-border);
+  background: var(--ska-surface-2);
+}
+.bfr-fact span {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ska-text-3);
+}
+.bfr-fact strong {
+  font-size: 1.125rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ska-text-1);
+}
+
+/* ── Export modal ─────────────────────────────────────────── */
+.bfr-export-period {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+  font-size: 0.8125rem;
+  color: var(--ska-text-2);
+}
+.bfr-export-opts {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.bfr-export-opt {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--ska-border);
+  background: var(--ska-surface-2);
+  color: var(--ska-text-1);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.bfr-export-opt:hover { border-color: var(--ska-primary); }
+.bfr-export-opt--on {
+  border-color: var(--ska-primary);
+  background: var(--ska-primary-dim, rgba(59, 130, 246, 0.1));
+}
+.bfr-export-opt__radio {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  border-radius: 50%;
+  border: 2px solid var(--ska-text-3);
+}
+.bfr-export-opt--on .bfr-export-opt__radio {
+  border-color: var(--ska-primary);
+  background: radial-gradient(circle, var(--ska-primary) 0 45%, transparent 50%);
+}
+.bfr-export-opt strong {
+  display: block;
+  font-size: 0.8125rem;
+}
+.bfr-export-opt small {
+  display: block;
+  font-size: 0.6875rem;
+  color: var(--ska-text-3);
+  margin-top: 2px;
+}
+.bfr-export-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 28px 12px;
+  text-align: center;
+}
+.bfr-export-state__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ska-text-1);
+}
+.bfr-export-state__desc {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--ska-text-3);
+}
+.bfr-export-state .bur-modal__actions { margin-top: 12px; }
+.bfr-spinner {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 3px solid var(--ska-border);
+  border-top-color: var(--ska-primary);
+  animation: bfr-spin 0.8s linear infinite;
+}
+@keyframes bfr-spin { to { transform: rotate(360deg); } }
+
+/* ── Mobile ───────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .bfr-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 600px) {
+  .bfr-periods { gap: 6px; }
+  .bfr-periods .pu-pill {
+    flex: 1 1 auto;
+    min-height: 44px;
+    font-size: 0.75rem;
+  }
+  .bfr-chart { height: 180px; gap: 6px; }
+  .bfr-chart__col { min-width: 40px; }
+  .bfr-legend { font-size: 0.6875rem; gap: 10px; }
+  .bfr-facts { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .bfr-fact { padding: 10px; }
+  .bfr-fact strong { font-size: 1rem; }
+  .bfr-share__figures small { display: block; text-align: right; }
+  .bfr-insight-chips .bfr-chip { font-size: 0.6875rem; }
+}
+
+@media (max-width: 400px) {
+  .bfr-chart { height: 150px; }
+  .bfr-facts { grid-template-columns: 1fr; }
+  .bfr-share__head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+  .bfr-share__figures { gap: 6px; }
+}
+
+@media (max-width: 360px) {
+  .bfr-periods .pu-pill { font-size: 0.6875rem; padding: 8px 10px; }
+  .bfr-chart__col { min-width: 34px; }
+  .bfr-chart__label { font-size: 0.625rem; }
+}

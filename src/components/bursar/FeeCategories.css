@@ -1,0 +1,42 @@
+/* ============================================================
+   EK-SMS · Bursar — Fee Categories page styles (burc-*)
+   ============================================================ */
+
+.burc-card { gap: 10px; }
+
+.burc-card__top {
+  display: grid; grid-template-columns: 44px 1fr auto;
+  align-items: center; gap: 10px;
+}
+.burc-card__icon {
+  width: 44px; height: 44px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--ska-primary-dim); color: var(--ska-primary);
+  flex-shrink: 0;
+}
+.burc-card__id { display: flex; flex-direction: column; min-width: 0; }
+.burc-card__name {
+  font-size: 0.9375rem; font-weight: 800; color: var(--ska-text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.burc-card__amount {
+  font-size: 1.0625rem; font-weight: 800; color: var(--ska-green);
+  font-family: var(--ska-font-headline, inherit);
+}
+.burc-card__desc {
+  margin: 0; font-size: 0.8125rem; color: var(--ska-text-2); line-height: 1.45;
+}
+.burc-card__meta { display: flex; flex-wrap: wrap; gap: 6px; }
+.burc-card__foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--ska-border);
+  flex-wrap: wrap;
+}
+.burc-card__date { font-size: 0.6875rem; color: var(--ska-text-3); }
+
+@media (max-width: 600px) {
+  .burc-card__foot { flex-direction: column; align-items: stretch; }
+  .burc-card__foot .ska-btn { width: 100%; justify-content: center; }
+  .burc-card__date { text-align: center; }
+}

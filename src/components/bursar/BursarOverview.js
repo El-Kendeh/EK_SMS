@@ -1,11 +1,11 @@
 import React from 'react';
+import BursarHome from './BursarHome';
 
-export default function BursarOverview({ schoolId }) {
-  return (
-    <div style={{ padding: 24 }}>
-      <h2>Fee Dashboard</h2>
-      <p>School ID: {schoolId}</p>
-      <p>Summary of fees, payments, and outstanding balances will appear here.</p>
-    </div>
-  );
+/**
+ * 'fee-dashboard' page key — kept for superadmin / school-admin nav.
+ * For bursars, 'overview' renders BursarHome directly; this wrapper keeps
+ * both keys showing the same Finance Command Center (no duplicate page).
+ */
+export default function BursarOverview({ navigateTo, schoolId }) {
+  return <BursarHome navigateTo={navigateTo} schoolId={schoolId} />;
 }

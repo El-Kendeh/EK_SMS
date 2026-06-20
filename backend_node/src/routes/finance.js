@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authenticateToken = require('../middleware/auth');
+const schoolScope = require('../middleware/schoolScope');
 
 const {
   getOverview, listGradeApprovals, reviewGradeChange,
@@ -8,12 +9,15 @@ const {
   getFinanceSnapshot, getSchoolCommandDashboard, getClassPerformance,
   getTeacherInsights, getActivityFeed, getSyllabusProgress,
   getFinanceUsers, createFinanceUser, updateFinanceUser,
-  getFinanceStats, getFinanceFees, recordExpense, getExpenses,
+  getFinanceStats, getFinanceAnalytics, getFinanceFees, recordExpense, getExpenses,
   getFeeCategories, createFeeCategory, assignFees,
   recordPayment, getPayments, getStudentFees,
 } = require('../controllers/financeController');
 
 router.use(authenticateToken);
+// schoolScope lets superadmins target a school via ?school_id= (controllers
+// resolve the school as req.schoolId || req.user.school_id).
+router.use(schoolScope);
 
 router.get('/overview/', getOverview);
 router.get('/grade-approvals/', listGradeApprovals);
@@ -34,6 +38,7 @@ router.post('/finance-users/', createFinanceUser);
 router.put('/finance-users/:id/', updateFinanceUser);
 
 router.get('/stats/', getFinanceStats);
+router.get('/analytics/', getFinanceAnalytics);
 router.get('/fees/', getFinanceFees);
 router.get('/fee-categories/', getFeeCategories);
 router.post('/fee-categories/', createFeeCategory);

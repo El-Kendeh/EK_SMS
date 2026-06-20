@@ -1,0 +1,47 @@
+/* ============================================================
+   EK-SMS · Bursar — Finance Team page styles (burt-*)
+   ============================================================ */
+
+.burt-card { gap: 10px; }
+
+.burt-card__head {
+  display: grid; grid-template-columns: 44px 1fr 12px;
+  align-items: center; gap: 10px;
+}
+.burt-card__avatar {
+  width: 44px; height: 44px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--ska-primary-dim); color: var(--ska-primary);
+  font-weight: 800; font-size: 1.0625rem;
+  flex-shrink: 0;
+}
+.burt-card__id { display: flex; flex-direction: column; min-width: 0; }
+.burt-card__name {
+  font-size: 0.9375rem; font-weight: 800; color: var(--ska-text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.burt-card__email {
+  font-size: 0.75rem; color: var(--ska-text-3);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.burt-card__dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--ska-text-3);
+}
+.burt-card__dot.is-active { background: var(--ska-green); }
+
+.burt-card__badges { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.burt-card__meta {
+  display: flex; flex-direction: column; gap: 4px;
+  font-size: 0.75rem; color: var(--ska-text-2);
+}
+.burt-card__meta span { display: flex; align-items: center; gap: 6px; }
+.burt-card__meta .ska-icon { font-size: 15px; color: var(--ska-text-3); }
+
+.burt-card__actions {
+  display: flex; gap: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--ska-border);
+}
+.burt-card__actions .ska-btn { flex: 1; justify-content: center; min-height: 44px; }

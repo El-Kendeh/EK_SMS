@@ -1,0 +1,8 @@
+/* ============================================================
+   EK-SMS · Bursar — Student Fees ledger page styles.
+   Shared rules live in Bursar.css; only page tweaks here.
+   ============================================================ */
+
+@media (max-width: 600px) {
+  .pu-page .bur-table-wrap--wide .ska-table { min-width: 820px; }
+}

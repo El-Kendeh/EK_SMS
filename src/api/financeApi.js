@@ -1,0 +1,152 @@
+/**
+ * Finance / Bursar API helpers.
+ * Covers the full `/api/finance/*` suite (routes/finance.js — auth only,
+ * school-scoped via the token's school_id) plus the school-scoped lookup
+ * endpoints the finance pages need for pickers (classes, students, terms).
+ */
+import apiClient from './client';
+
+/** Build a query string, skipping empty/null/undefined values. */
+const qs = (params = {}) => {
+  const entries = Object.entries(params).filter(
+    ([, v]) => v !== undefined && v !== null && v !== ''
+  );
+  return entries.length ? `?${new URLSearchParams(entries).toString()}` : '';
+};
+
+export const financeApi = {
+  /* ── Overview / dashboard ─────────────────────────────────── */
+  async getOverview() {
+    return apiClient.get('/api/finance/overview/');
+  },
+  async getStats() {
+    // → { total_collected, outstanding_balance, expenses, balance, total_students }
+    return apiClient.get('/api/finance/stats/');
+  },
+  async getFinanceSnapshot() {
+    // → { revenue, outstanding, paymentsToday, transactions[] }
+    return apiClient.get('/api/finance/finance-snapshot/');
+  },
+  async getActivityFeed() {
+    // → { items[] } each { kind, text, at }
+    return apiClient.get('/api/finance/activity-feed/');
+  },
+  async getDashboard() {
+    return apiClient.get('/api/finance/dashboard/');
+  },
+  async getAnalytics(params = {}) {
+    // params: date_from, date_to (SQL-side aggregation — not capped at 200 rows)
+    // → { summary, monthly[], methods[], expense_categories[], top_debtors[] }
+    return apiClient.get(`/api/finance/analytics/${qs(params)}`);
+  },
+
+  /* ── Fees ─────────────────────────────────────────────────── */
+  async getFees(params = {}) {
+    // params: class_id, status (pending|partial|paid), student_id
+    return apiClient.get(`/api/finance/fees/${qs(params)}`);
+  },
+  async getStudentFees(studentId) {
+    // → { fees[], payments[], summary: { total_due, total_paid, balance } }
+    return apiClient.get(`/api/finance/students/${studentId}/fees/`);
+  },
+  async assignFees({ feeCategoryId, studentIds, termId, discount }) {
+    return apiClient.post('/api/finance/fees/assign/', {
+      fee_category_id: feeCategoryId,
+      student_ids: studentIds,
+      term_id: termId || null,
+      discount: discount || 0,
+    });
+  },
+
+  /* ── Fee categories (GET/POST only — no update/delete route) ─ */
+  async getFeeCategories() {
+    return apiClient.get('/api/finance/fee-categories/');
+  },
+  async createFeeCategory({ name, amount, description, frequency, applicableClasses }) {
+    return apiClient.post('/api/finance/fee-categories/', {
+      name,
+      amount,
+      description: description || '',
+      frequency: frequency || 'term',
+      applicable_classes: applicableClasses && applicableClasses.length ? applicableClasses : null,
+    });
+  },
+
+  /* ── Payments ─────────────────────────────────────────────── */
+  async getPayments(params = {}) {
+    // params: student_id, date_from, date_to
+    return apiClient.get(`/api/finance/payments/${qs(params)}`);
+  },
+  async recordPayment({ studentId, amount, feeId, paymentMethod, reference, notes, paidBy }) {
+    // backend adds amount to fee.amount_paid arithmetically — must be a Number
+    return apiClient.post('/api/finance/payments/', {
+      student_id: studentId,
+      amount: Number(amount),
+      fee_id: feeId || null,
+      payment_method: paymentMethod || 'cash',
+      reference: reference || null,
+      notes: notes || null,
+      paid_by: paidBy || null,
+    });
+  },
+
+  /* ── Expenses ─────────────────────────────────────────────── */
+  async getExpenses(params = {}) {
+    // params: category, date_from, date_to → { expenses[], total } (total = all-time)
+    return apiClient.get(`/api/finance/expenses/${qs(params)}`);
+  },
+  async recordExpense({ description, amount, category, date }) {
+    return apiClient.post('/api/finance/expenses/', {
+      description,
+      amount: Number(amount),
+      category: category || 'general',
+      date: date || null,
+    });
+  },
+
+  /* ── Finance users (PUT only toggles is_active) ───────────── */
+  async getFinanceUsers() {
+    return apiClient.get('/api/finance/finance-users/');
+  },
+  async createFinanceUser({ fullName, email, phone, username, password, role, accessLevel }) {
+    return apiClient.post('/api/finance/finance-users/', {
+      full_name: fullName,
+      email,
+      phone: phone || null,
+      username: username || email,
+      password: password || undefined,
+      role: role || 'Bursar',
+      access_level: accessLevel || 'Full',
+    });
+  },
+  async toggleFinanceUser(id) {
+    return apiClient.put(`/api/finance/finance-users/${id}/`, {});
+  },
+
+  /* ── Grade approvals / report cards (bursar shares workflow) ─ */
+  async listGradeApprovals(params = {}) {
+    return apiClient.get(`/api/finance/grade-approvals/${qs(params)}`);
+  },
+  async reviewGradeChange({ gradeIds, action, comment }) {
+    return apiClient.post('/api/finance/grade-approvals/', {
+      grade_ids: gradeIds, action, comment,
+    });
+  },
+  async listReportCards() {
+    return apiClient.get('/api/finance/report-cards/');
+  },
+
+  /* ── School-scoped lookups for pickers (auth + schoolScope) ── */
+  async getClasses() {
+    return apiClient.get('/api/school/classes/');
+  },
+  async getStudents(params = {}) {
+    // params: classroom_id
+    return apiClient.get(`/api/school/students/${qs(params)}`);
+  },
+  async getTerms() {
+    return apiClient.get('/api/school/terms/');
+  },
+};
+
+export default financeApi;

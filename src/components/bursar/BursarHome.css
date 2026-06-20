@@ -1,0 +1,31 @@
+/* ============================================================
+   EK-SMS · Bursar — Finance Command Center page styles (burh-*)
+   ============================================================ */
+
+.burh-bar-note {
+  font-size: 0.6875rem;
+  color: var(--ska-text-3);
+  margin-top: 2px;
+}
+
+.burh-empty {
+  display: flex; align-items: center; gap: 8px;
+  padding: 14px;
+  border-radius: 10px;
+  background: var(--ska-surface-low);
+  border: 1px dashed var(--ska-border);
+  color: var(--ska-text-3);
+  font-size: 0.8125rem;
+}
+
+.burh-more { cursor: pointer; }
+.burh-more:hover { border-color: var(--ska-primary); }
+
+@media (max-width: 600px) {
+  .burh-home .pu-stats { grid-template-columns: 1fr 1fr; }
+  .burh-home .pu-quick__grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 360px) {
+  .burh-home .pu-stats { grid-template-columns: 1fr; }
+  .burh-home .pu-quick__grid { grid-template-columns: 1fr; }
+}
