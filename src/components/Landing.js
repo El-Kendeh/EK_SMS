@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import ApiClient from '../api/client';
 import './Landing.css';
 import PruhLogo from './PruhLogo';
@@ -425,10 +426,60 @@ function Navbar({ onNavigate, menuOpen, setMenuOpen }) {
 // ============================================================
 // HERO SECTION
 // ============================================================
+// ── Demo video lightbox — portals to <body> so it escapes the hero's 3D transforms ──
+function DemoVideoModal({ open, onClose }) {
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    // The click that opened the modal counts as a user gesture, so sound-on autoplay is allowed.
+    const v = videoRef.current;
+    if (v) { try { v.currentTime = 0; } catch (_) {} const p = v.play(); if (p && p.catch) p.catch(() => {}); }
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return ReactDOM.createPortal(
+    <div
+      className="lp-demo-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-label="EK-SMS product demo video"
+      onClick={onClose}
+    >
+      <button className="lp-demo-modal__close" onClick={onClose} aria-label="Close demo video" type="button">
+        <SvgIcon name="close" size={22} />
+      </button>
+      <div className="lp-demo-modal__frame" onClick={(e) => e.stopPropagation()}>
+        <video
+          ref={videoRef}
+          className="lp-demo-modal__video"
+          src={`${process.env.PUBLIC_URL}/demo/EK-SMS-demo.mp4`}
+          poster={`${process.env.PUBLIC_URL}/demo/demo-poster.jpg`}
+          controls
+          autoPlay
+          playsInline
+          preload="metadata"
+        />
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 function HeroSection({ onNavigate }) {
   const heroRef = useRef(null);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  const [showDemo, setShowDemo] = useState(false);
   const { t } = useLang();
 
   useEffect(() => {
@@ -456,6 +507,8 @@ function HeroSection({ onNavigate }) {
 
   return (
     <section ref={heroRef} className="lp-hero" id="hero">
+      <DemoVideoModal open={showDemo} onClose={() => setShowDemo(false)} />
+
       {/* Ballpit 3D physics background — desktop only (too heavy for mid-range Android) */}
       {!isMobile && (
         <div className="lp-hero__ballpit" style={{
@@ -517,7 +570,7 @@ function HeroSection({ onNavigate }) {
               <SvgIcon name="rocket" size={18} />
               {t('hero_cta_register')}
             </button>
-            <button className="lp-btn lp-btn--cta-outline lp-btn--lg" onClick={() => onNavigate('login')}>
+            <button className="lp-btn lp-btn--cta-outline lp-btn--lg" onClick={() => setShowDemo(true)}>
               <SvgIcon name="play" size={18} />
               {t('hero_cta_demo')}
             </button>
