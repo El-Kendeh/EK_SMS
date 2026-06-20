@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/>
+<title>Verification History</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container": "#171f33",
+                        "surface-container-low": "#131b2e",
+                        "secondary-container": "#00a572",
+                        "on-error-container": "#ffdad6",
+                        "on-primary-fixed": "#001a42",
+                        "on-primary": "#002e6a",
+                        "surface-tint": "#adc6ff",
+                        "secondary": "#4edea3",
+                        "on-secondary-container": "#00311f",
+                        "surface-container-highest": "#2d3449",
+                        "primary-container": "#4d8eff",
+                        "tertiary-fixed-dim": "#ffb3ad",
+                        "surface-bright": "#31394d",
+                        "tertiary-fixed": "#ffdad7",
+                        "surface": "#0b1326",
+                        "on-tertiary-fixed": "#410004",
+                        "surface-container-lowest": "#060e20",
+                        "surface-container-high": "#222a3d",
+                        "on-secondary": "#003824",
+                        "error-container": "#93000a",
+                        "inverse-surface": "#dae2fd",
+                        "surface-variant": "#2d3449",
+                        "surface-dim": "#0b1326",
+                        "outline-variant": "#424754",
+                        "on-background": "#dae2fd",
+                        "on-surface-variant": "#c2c6d6",
+                        "inverse-on-surface": "#283044",
+                        "primary": "#adc6ff",
+                        "inverse-primary": "#005ac2",
+                        "secondary-fixed": "#6ffbbe",
+                        "on-surface": "#dae2fd",
+                        "tertiary-container": "#ff5451",
+                        "primary-fixed-dim": "#adc6ff",
+                        "on-secondary-fixed": "#002113",
+                        "outline": "#8c909f",
+                        "primary-fixed": "#d8e2ff",
+                        "on-primary-container": "#00285d",
+                        "background": "#0b1326",
+                        "secondary-fixed-dim": "#4edea3",
+                        "on-tertiary-container": "#5c0008",
+                        "on-error": "#690005",
+                        "tertiary": "#ffb3ad",
+                        "on-primary-fixed-variant": "#004395",
+                        "on-tertiary-fixed-variant": "#930013",
+                        "on-secondary-fixed-variant": "#005236",
+                        "on-tertiary": "#68000a",
+                        "error": "#ffb4ab"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "md": "24px",
+                        "xs": "8px",
+                        "container-max": "1440px",
+                        "lg": "32px",
+                        "base": "4px",
+                        "sm": "16px",
+                        "xl": "48px",
+                        "gutter": "24px"
+                    },
+                    "fontFamily": {
+                        "display-lg": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "body-md": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "title-md": ["Inter"],
+                        "label-caps": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "headline-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "data-mono": ["14px", { "lineHeight": "20px", "fontWeight": "500" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "title-md": ["18px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { background-color: theme('colors.background'); color: theme('colors.on-background'); }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .fill-icon .material-symbols-outlined { font-variation-settings: 'FILL' 1; }
+        
+        /* Custom scrollbar for data tables if needed */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: theme('colors.surface-container-lowest'); }
+        ::-webkit-scrollbar-thumb { background: theme('colors.outline-variant'); border-radius: theme('borderRadius.full'); }
+        ::-webkit-scrollbar-thumb:hover { background: theme('colors.outline'); }
+        
+        .safe-pb { padding-bottom: env(safe-area-inset-bottom, 24px); }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="antialiased min-h-screen flex flex-col md:flex-row">
+<!-- TopAppBar (Web) / Header (Mobile) -->
+<!-- Applying style logic from JSON although NavigationDrawer is preferred on desktop, we use TopAppBar structurally here as per requirements -->
+<header class="w-full top-0 sticky bg-surface dark:bg-surface border-b border-outline-variant dark:border-outline-variant flat no shadows flex items-center justify-between px-sm md:px-lg h-16 w-full max-w-container-max mx-auto z-40 md:hidden">
+<div class="flex items-center gap-xs">
+<button aria-label="Back" class="text-primary dark:text-primary active:scale-95 duration-150 p-xs hover:bg-surface-variant/50 dark:hover:bg-surface-variant/50 transition-colors rounded-full">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile md:font-headline-lg md:text-headline-lg font-bold text-primary dark:text-primary">Verification History</h1>
+</div>
+<button aria-label="Search" class="text-primary dark:text-primary active:scale-95 duration-150 p-xs hover:bg-surface-variant/50 dark:hover:bg-surface-variant/50 transition-colors rounded-full">
+<span class="material-symbols-outlined">search</span>
+</button>
+</header>
+<!-- NavigationDrawer (Desktop) -->
+<aside class="hidden md:flex flex-col py-lg px-md bg-surface-container dark:bg-surface-container border-r border-outline-variant dark:border-outline-variant h-screen w-[280px] fixed left-0 top-0 z-40 transition-all duration-200 ease-in-out">
+<div class="mb-lg px-sm">
+<div class="flex items-center gap-sm">
+<img alt="Finance Officer Avatar" class="w-12 h-12 rounded-full border-2 border-primary object-cover" data-alt="A professional portrait of a senior finance officer in a modern, well-lit corporate setting. The officer wears professional business attire. The lighting is crisp and cool, reflecting a high-tech corporate environment. The overall tone is authoritative and trustworthy, fitting a high-stakes financial SaaS application." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBmgw8GuaRvADJrTfjfLFI8hrKQvr3QWKFpr5tPp0_KXVJ64Vn9Gfg40UytEOp0lLQus4cAFq3P7u_OMrhlTpdgJoupGyPRe6L4YpGdbSwuHUXIcgTheb3826Z-dwkkN1EB_lzK-6qY0I2GgxLH7OQJpTrXdH8uf1MiTaB0RqTFeg5CmaBkjKhs0KC1-wZZRFZSO7MnbkB7oB8vyQsQSo6gyE6ccbrLWm8HxoOMPINk-ZZzzjxHyL1gXWV0wM7tFKI6yg78uULTgtI"/>
+<div>
+<h2 class="font-title-md text-title-md font-bold text-primary">Marcus Vane</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Senior Finance Officer</p>
+<span class="font-label-caps text-label-caps text-secondary uppercase bg-secondary/10 px-2 py-1 rounded mt-1 inline-block">Admin Access</span>
+</div>
+</div>
+</div>
+<nav class="flex-1 space-y-2">
+<a class="flex items-center gap-sm px-sm py-xs rounded text-on-surface-variant dark:text-on-surface-variant hover:bg-primary/10 dark:hover:bg-primary/10 transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-body-md text-body-md">Dashboard</span>
+</a>
+<!-- Active State: Since intent is Verification History, and Verification Queue is the closest semantic match in the JSON array, we highlight it, or we add History. Given JSON: ["Dashboard", "Verification Queue", "Fiscal Reports", "Audit Log"]. We will highlight Verification Queue as it's the closest domain. -->
+<a class="flex items-center gap-sm px-sm py-xs rounded bg-primary/10 text-primary dark:text-primary font-bold border-r-2 border-primary transition-colors fill-icon" href="#">
+<span class="material-symbols-outlined">fact_check</span>
+<span class="font-body-md text-body-md">Verification Queue</span>
+</a>
+<a class="flex items-center gap-sm px-sm py-xs rounded text-on-surface-variant dark:text-on-surface-variant hover:bg-primary/10 dark:hover:bg-primary/10 transition-colors" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="font-body-md text-body-md">Fiscal Reports</span>
+</a>
+<a class="flex items-center gap-sm px-sm py-xs rounded text-on-surface-variant dark:text-on-surface-variant hover:bg-primary/10 dark:hover:bg-primary/10 transition-colors" href="#">
+<span class="material-symbols-outlined">history</span>
+<span class="font-body-md text-body-md">Audit Log</span>
+</a>
+</nav>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-1 md:ml-[280px] p-sm md:p-lg max-w-container-max mx-auto w-full pb-24 md:pb-lg safe-pb">
+<!-- Desktop Header (Hides Mobile TopAppBar) -->
+<div class="hidden md:flex items-center justify-between mb-lg">
+<div class="flex items-center gap-sm">
+<button class="p-xs hover:bg-surface-variant rounded-full transition-colors text-on-surface-variant group">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">arrow_back</span>
+</button>
+<h1 class="font-headline-lg text-headline-lg text-primary font-bold">Verification History</h1>
+</div>
+<!-- Global Actions / Context -->
+<div class="flex items-center gap-sm">
+<button class="flex items-center gap-xs px-sm py-xs bg-surface-container border border-outline-variant rounded hover:border-primary/50 transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">download</span>
+<span class="font-body-sm text-body-sm text-on-surface">Export CSV</span>
+</button>
+</div>
+</div>
+<!-- Search & Filter Bar -->
+<section class="bg-surface-container border border-outline-variant rounded-xl p-sm md:p-md mb-md shadow-sm">
+<div class="flex flex-col lg:flex-row gap-sm items-start lg:items-center">
+<!-- Search Input -->
+<div class="relative w-full lg:w-96">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full bg-surface border border-outline-variant rounded-lg pl-10 pr-4 py-2 font-body-sm text-body-sm text-on-surface placeholder-on-surface-variant focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all" placeholder="Search by Student Name, ID, or Receipt..." type="text"/>
+</div>
+<!-- Filters Layout -->
+<div class="flex flex-wrap items-center gap-sm w-full lg:w-auto">
+<!-- Date Range -->
+<div class="flex items-center gap-xs bg-surface border border-outline-variant rounded-lg px-3 py-2 cursor-pointer hover:border-primary/50 transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">calendar_today</span>
+<span class="font-body-sm text-body-sm text-on-surface">Last 30 Days</span>
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">arrow_drop_down</span>
+</div>
+<!-- Status Filter -->
+<div class="flex items-center gap-xs bg-surface border border-outline-variant rounded-lg px-3 py-2 cursor-pointer hover:border-primary/50 transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">filter_list</span>
+<span class="font-body-sm text-body-sm text-on-surface">Status: All</span>
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">arrow_drop_down</span>
+</div>
+<!-- Payment Method Filter -->
+<div class="flex items-center gap-xs bg-surface border border-outline-variant rounded-lg px-3 py-2 cursor-pointer hover:border-primary/50 transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">payments</span>
+<span class="font-body-sm text-body-sm text-on-surface">Method: All</span>
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">arrow_drop_down</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Data List Container (Glassmorphism/High-density cards approach) -->
+<section class="space-y-sm">
+<!-- Record Card 1: Approved -->
+<div class="bg-surface-container-low border border-outline-variant rounded-lg p-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-sm hover:border-primary/50 transition-colors group">
+<div class="flex items-center gap-sm w-full md:w-auto">
+<div class="w-10 h-10 rounded-full bg-secondary-container/20 flex items-center justify-center border border-secondary-container/30 shrink-0">
+<span class="material-symbols-outlined text-secondary">check_circle</span>
+</div>
+<div>
+<h3 class="font-title-md text-title-md text-on-surface font-semibold group-hover:text-primary transition-colors">Adebayo, Oluwaseun</h3>
+<p class="font-data-mono text-data-mono text-on-surface-variant">ID: STU-2023-8942</p>
+</div>
+</div>
+<div class="flex flex-wrap md:flex-nowrap items-center gap-md w-full md:w-auto justify-between md:justify-end">
+<div class="text-left md:text-right">
+<p class="font-data-mono text-data-mono text-on-surface font-bold text-lg">₦ 150,000.00</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1 md:justify-end">
+<span class="material-symbols-outlined text-[16px]">account_balance</span> Bank Transfer
+                        </p>
+</div>
+<div class="hidden md:block w-px h-8 bg-outline-variant"></div>
+<div class="text-left md:text-right">
+<p class="font-body-sm text-body-sm text-on-surface">Oct 24, 2023</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant text-[12px]">Processed by M. Vane</p>
+</div>
+<div class="bg-secondary/10 px-3 py-1 rounded text-secondary font-label-caps text-label-caps border border-secondary/20">
+                        APPROVED
+                    </div>
+</div>
+</div>
+<!-- Record Card 2: Flagged -->
+<div class="bg-surface-container-low border border-outline-variant rounded-lg p-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-sm hover:border-tertiary-container/50 transition-colors group">
+<div class="flex items-center gap-sm w-full md:w-auto">
+<div class="w-10 h-10 rounded-full bg-tertiary-container/20 flex items-center justify-center border border-tertiary-container/30 shrink-0">
+<span class="material-symbols-outlined text-tertiary-container">warning</span>
+</div>
+<div>
+<h3 class="font-title-md text-title-md text-on-surface font-semibold group-hover:text-tertiary-container transition-colors">Nnaji, Chioma</h3>
+<p class="font-data-mono text-data-mono text-on-surface-variant">ID: STU-2023-4410</p>
+</div>
+</div>
+<div class="flex flex-wrap md:flex-nowrap items-center gap-md w-full md:w-auto justify-between md:justify-end">
+<div class="text-left md:text-right">
+<p class="font-data-mono text-data-mono text-on-surface font-bold text-lg">₦ 45,500.00</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1 md:justify-end">
+<span class="material-symbols-outlined text-[16px]">smartphone</span> Mobile Money
+                        </p>
+</div>
+<div class="hidden md:block w-px h-8 bg-outline-variant"></div>
+<div class="text-left md:text-right">
+<p class="font-body-sm text-body-sm text-on-surface">Oct 23, 2023</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant text-[12px]">Processed by S. Okoro</p>
+</div>
+<div class="bg-tertiary-container/10 px-3 py-1 rounded text-tertiary-container font-label-caps text-label-caps border border-tertiary-container/20">
+                        FLAGGED
+                    </div>
+</div>
+</div>
+<!-- Record Card 3: Rejected -->
+<div class="bg-surface-container-low border border-outline-variant rounded-lg p-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-sm hover:border-error/50 transition-colors group">
+<div class="flex items-center gap-sm w-full md:w-auto">
+<div class="w-10 h-10 rounded-full bg-error/20 flex items-center justify-center border border-error/30 shrink-0">
+<span class="material-symbols-outlined text-error">cancel</span>
+</div>
+<div>
+<h3 class="font-title-md text-title-md text-on-surface font-semibold group-hover:text-error transition-colors">Okafor, Emeka</h3>
+<p class="font-data-mono text-data-mono text-on-surface-variant">ID: STU-2022-1102</p>
+</div>
+</div>
+<div class="flex flex-wrap md:flex-nowrap items-center gap-md w-full md:w-auto justify-between md:justify-end">
+<div class="text-left md:text-right">
+<p class="font-data-mono text-data-mono text-on-surface font-bold text-lg">₦ 200,000.00</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1 md:justify-end">
+<span class="material-symbols-outlined text-[16px]">account_balance</span> Bank Transfer
+                        </p>
+</div>
+<div class="hidden md:block w-px h-8 bg-outline-variant"></div>
+<div class="text-left md:text-right">
+<p class="font-body-sm text-body-sm text-on-surface">Oct 21, 2023</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant text-[12px]">Processed by M. Vane</p>
+</div>
+<div class="bg-error/10 px-3 py-1 rounded text-error font-label-caps text-label-caps border border-error/20">
+                        REJECTED
+                    </div>
+</div>
+</div>
+</section>
+<!-- Pagination (Simulated) -->
+<div class="mt-lg flex items-center justify-between border-t border-outline-variant pt-sm">
+<p class="font-body-sm text-body-sm text-on-surface-variant">Showing 1 to 3 of 128 records</p>
+<div class="flex items-center gap-xs">
+<button class="p-2 rounded border border-outline-variant text-on-surface-variant hover:bg-surface-variant disabled:opacity-50" disabled="">
+<span class="material-symbols-outlined text-[18px]">chevron_left</span>
+</button>
+<button class="w-8 h-8 rounded bg-primary text-on-primary-fixed font-body-sm text-body-sm flex items-center justify-center">1</button>
+<button class="w-8 h-8 rounded border border-outline-variant text-on-surface-variant hover:bg-surface-variant font-body-sm text-body-sm flex items-center justify-center">2</button>
+<button class="w-8 h-8 rounded border border-outline-variant text-on-surface-variant hover:bg-surface-variant font-body-sm text-body-sm flex items-center justify-center">3</button>
+<span class="text-on-surface-variant px-1">...</span>
+<button class="p-2 rounded border border-outline-variant text-on-surface-variant hover:bg-surface-variant">
+<span class="material-symbols-outlined text-[18px]">chevron_right</span>
+</button>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full flex justify-around items-center px-4 py-2 pb-safe bg-surface-container-low dark:bg-surface-container-low border-t border-outline-variant dark:border-outline-variant shadow-lg z-50">
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant dark:hover:bg-surface-variant active:scale-90 transition-transform p-2 rounded-lg" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-label-caps text-label-caps mt-1">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-full px-4 py-1 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined fill-icon">fact_check</span>
+<span class="font-label-caps text-label-caps mt-1">Queue</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant dark:hover:bg-surface-variant active:scale-90 transition-transform p-2 rounded-lg" href="#">
+<span class="material-symbols-outlined">assessment</span>
+<span class="font-label-caps text-label-caps mt-1">Reports</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant dark:hover:bg-surface-variant active:scale-90 transition-transform p-2 rounded-lg" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-caps text-label-caps mt-1">Settings</span>
+</a>
+</nav>
+</body></html>

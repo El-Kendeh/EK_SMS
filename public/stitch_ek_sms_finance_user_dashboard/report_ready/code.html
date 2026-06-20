@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Report Ready - Financial Reporting</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "on-secondary-fixed-variant": "#005236",
+                        "on-tertiary": "#68000a",
+                        "on-tertiary-fixed": "#410004",
+                        "on-secondary-fixed": "#002113",
+                        "on-secondary-container": "#00311f",
+                        "on-primary-fixed-variant": "#004395",
+                        "on-primary": "#002e6a",
+                        "surface-tint": "#adc6ff",
+                        "tertiary": "#ffb3ad",
+                        "surface-container-highest": "#2d3449",
+                        "inverse-primary": "#005ac2",
+                        "outline-variant": "#424754",
+                        "on-surface-variant": "#c2c6d6",
+                        "surface": "#0b1326",
+                        "on-surface": "#dae2fd",
+                        "surface-dim": "#0b1326",
+                        "primary-fixed-dim": "#adc6ff",
+                        "surface-container-high": "#222a3d",
+                        "primary-fixed": "#d8e2ff",
+                        "inverse-on-surface": "#283044",
+                        "surface-bright": "#31394d",
+                        "secondary-fixed-dim": "#4edea3",
+                        "on-tertiary-fixed-variant": "#930013",
+                        "error-container": "#93000a",
+                        "outline": "#8c909f",
+                        "tertiary-container": "#ff5451",
+                        "surface-container": "#171f33",
+                        "on-secondary": "#003824",
+                        "primary-container": "#4d8eff",
+                        "error": "#ffb4ab",
+                        "background": "#0b1326",
+                        "inverse-surface": "#dae2fd",
+                        "tertiary-fixed": "#ffdad7",
+                        "surface-variant": "#2d3449",
+                        "on-primary-container": "#00285d",
+                        "on-error": "#690005",
+                        "surface-container-low": "#131b2e",
+                        "secondary-fixed": "#6ffbbe",
+                        "on-background": "#dae2fd",
+                        "secondary": "#4edea3",
+                        "tertiary-fixed-dim": "#ffb3ad",
+                        "surface-container-lowest": "#060e20",
+                        "on-error-container": "#ffdad6",
+                        "on-tertiary-container": "#5c0008",
+                        "secondary-container": "#00a572",
+                        "primary": "#adc6ff",
+                        "on-primary-fixed": "#001a42"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    spacing: {
+                        "xl": "48px",
+                        "gutter": "24px",
+                        "sm": "16px",
+                        "md": "24px",
+                        "lg": "32px",
+                        "container-max": "1440px",
+                        "xs": "8px",
+                        "base": "4px"
+                    },
+                    fontFamily: {
+                        "title-md": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "label-caps": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "headline-lg-mobile": ["Inter"],
+                        "body-sm": ["Inter"]
+                    },
+                    fontSize: {
+                        "title-md": ["18px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "data-mono": ["14px", { "lineHeight": "20px", "fontWeight": "500" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .success-pulse {
+            animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+        @keyframes pulse-ring {
+            0% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(78, 222, 163, 0.4); }
+            70% { transform: scale(1); box-shadow: 0 0 0 20px rgba(78, 222, 163, 0); }
+            100% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(78, 222, 163, 0); }
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background min-h-screen flex flex-col antialiased selection:bg-primary-container selection:text-on-primary-container">
+<!-- TopAppBar -->
+<header class="bg-surface dark:bg-surface text-primary dark:text-primary border-b border-outline-variant fixed top-0 w-full z-50 flex items-center justify-between px-md h-16">
+<div class="flex items-center gap-xs cursor-pointer hover:bg-surface-container-high transition-colors p-xs rounded-full active:scale-95 transition-transform" onclick="window.history.back()">
+<span class="material-symbols-outlined text-primary">arrow_back</span>
+</div>
+<h1 class="font-title-md text-title-md font-bold text-on-surface">Financial Reporting</h1>
+<div class="flex items-center gap-xs cursor-pointer hover:bg-surface-container-high transition-colors p-xs rounded-full active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-primary">more_vert</span>
+</div>
+</header>
+<!-- Canvas -->
+<main class="flex-1 flex flex-col items-center justify-center p-sm md:p-lg mt-16 max-w-container-max mx-auto w-full">
+<div class="max-w-md w-full flex flex-col items-center">
+<!-- Success Icon -->
+<div class="relative flex items-center justify-center w-24 h-24 mb-md">
+<div class="absolute inset-0 rounded-full bg-secondary-container/20 success-pulse"></div>
+<div class="relative bg-secondary-container text-on-secondary-container rounded-full p-sm flex items-center justify-center">
+<span class="material-symbols-outlined font-display-lg text-display-lg" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+</div>
+<!-- Title -->
+<h2 class="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mb-xl text-center">Report Ready for Download</h2>
+<!-- Report Details Card -->
+<div class="w-full bg-[#0F172A] border border-[#1E293B] rounded-xl p-md mb-xl hover:border-primary/50 transition-colors duration-300">
+<div class="flex items-center justify-between mb-sm border-b border-[#1E293B] pb-sm">
+<div class="flex items-center gap-sm">
+<div class="bg-surface-container p-xs rounded-lg text-primary">
+<span class="material-symbols-outlined">picture_as_pdf</span>
+</div>
+<div>
+<p class="font-label-caps text-label-caps text-on-surface-variant mb-base uppercase">Report Name</p>
+<p class="font-title-md text-title-md text-on-surface">Revenue_Summary_Q1.pdf</p>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-sm">
+<div>
+<p class="font-label-caps text-label-caps text-on-surface-variant mb-base uppercase">File Size</p>
+<p class="font-data-mono text-data-mono text-on-surface">2.4 MB</p>
+</div>
+<div>
+<p class="font-label-caps text-label-caps text-on-surface-variant mb-base uppercase">Generated</p>
+<p class="font-data-mono text-data-mono text-on-surface">Today, 14:32</p>
+</div>
+</div>
+</div>
+<!-- Actions -->
+<div class="w-full flex flex-col gap-sm">
+<!-- Primary Action -->
+<button class="w-full bg-primary text-on-primary font-title-md text-title-md py-sm px-md rounded-lg flex items-center justify-center gap-xs hover:bg-primary-fixed transition-colors duration-200 active:scale-[0.98]">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">download</span>
+                    Download PDF
+                </button>
+<!-- Secondary Actions -->
+<div class="grid grid-cols-2 gap-sm">
+<button class="w-full border border-primary text-primary font-title-md text-title-md py-sm px-md rounded-lg flex items-center justify-center gap-xs hover:bg-primary/10 transition-colors duration-200 active:scale-[0.98]">
+<span class="material-symbols-outlined">share</span>
+                        Share Report
+                    </button>
+<button class="w-full border border-outline text-on-surface-variant font-title-md text-title-md py-sm px-md rounded-lg flex items-center justify-center gap-xs hover:bg-surface-container-high transition-colors duration-200 active:scale-[0.98]">
+<span class="material-symbols-outlined">add_circle</span>
+                        Generate Another
+                    </button>
+</div>
+</div>
+</div>
+</main>
+</body></html>

@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Invoice Preview - EK-SMS Finance</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-tertiary-fixed": "#410004",
+                    "surface-container": "#171f33",
+                    "background": "#0b1326",
+                    "surface-container-low": "#131b2e",
+                    "on-primary-fixed-variant": "#004395",
+                    "secondary-container": "#00a572",
+                    "primary-container": "#4d8eff",
+                    "on-error-container": "#ffdad6",
+                    "surface": "#0b1326",
+                    "secondary-fixed-dim": "#4edea3",
+                    "on-tertiary-fixed-variant": "#930013",
+                    "on-secondary": "#003824",
+                    "error": "#ffb4ab",
+                    "outline": "#8c909f",
+                    "on-primary-fixed": "#001a42",
+                    "tertiary-fixed-dim": "#ffb3ad",
+                    "surface-bright": "#31394d",
+                    "surface-container-high": "#222a3d",
+                    "secondary-fixed": "#6ffbbe",
+                    "primary-fixed-dim": "#adc6ff",
+                    "on-primary-container": "#00285d",
+                    "surface-dim": "#0b1326",
+                    "secondary": "#4edea3",
+                    "tertiary": "#ffb3ad",
+                    "surface-container-highest": "#2d3449",
+                    "inverse-primary": "#005ac2",
+                    "on-secondary-fixed-variant": "#005236",
+                    "inverse-surface": "#dae2fd",
+                    "outline-variant": "#424754",
+                    "tertiary-container": "#ff5451",
+                    "error-container": "#93000a",
+                    "on-secondary-fixed": "#002113",
+                    "primary-fixed": "#d8e2ff",
+                    "on-primary": "#002e6a",
+                    "on-tertiary-container": "#5c0008",
+                    "surface-tint": "#adc6ff",
+                    "on-background": "#dae2fd",
+                    "on-secondary-container": "#00311f",
+                    "surface-variant": "#2d3449",
+                    "on-tertiary": "#68000a",
+                    "on-surface-variant": "#c2c6d6",
+                    "inverse-on-surface": "#283044",
+                    "primary": "#adc6ff",
+                    "surface-container-lowest": "#060e20",
+                    "on-error": "#690005",
+                    "tertiary-fixed": "#ffdad7",
+                    "on-surface": "#dae2fd"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "xl": "48px",
+                    "lg": "32px",
+                    "base": "4px",
+                    "xs": "8px",
+                    "container-max": "1440px",
+                    "sm": "16px",
+                    "md": "24px",
+                    "gutter": "24px"
+            },
+            "fontFamily": {
+                    "headline-lg-mobile": [
+                            "Inter"
+                    ],
+                    "label-caps": [
+                            "Inter"
+                    ],
+                    "display-lg": [
+                            "Inter"
+                    ],
+                    "title-md": [
+                            "Inter"
+                    ],
+                    "body-sm": [
+                            "Inter"
+                    ],
+                    "headline-lg": [
+                            "Inter"
+                    ],
+                    "data-mono": [
+                            "JetBrains Mono"
+                    ],
+                    "body-md": [
+                            "Inter"
+                    ]
+            },
+            "fontSize": {
+                    "headline-lg-mobile": [
+                            "24px",
+                            {
+                                    "lineHeight": "32px",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "label-caps": [
+                            "12px",
+                            {
+                                    "lineHeight": "16px",
+                                    "letterSpacing": "0.05em",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "display-lg": [
+                            "48px",
+                            {
+                                    "lineHeight": "56px",
+                                    "letterSpacing": "-0.02em",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "title-md": [
+                            "18px",
+                            {
+                                    "lineHeight": "28px",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "body-sm": [
+                            "14px",
+                            {
+                                    "lineHeight": "20px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "headline-lg": [
+                            "32px",
+                            {
+                                    "lineHeight": "40px",
+                                    "letterSpacing": "-0.01em",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "data-mono": [
+                            "14px",
+                            {
+                                    "lineHeight": "20px",
+                                    "fontWeight": "500"
+                            }
+                    ],
+                    "body-md": [
+                            "16px",
+                            {
+                                    "lineHeight": "24px",
+                                    "fontWeight": "400"
+                            }
+                    ]
+            }
+    },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.filled {
+            font-variation-settings: 'FILL' 1;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface min-h-screen flex flex-col md:flex-row antialiased selection:bg-primary-container selection:text-on-primary-container">
+<!-- Sidebar Navigation (Desktop Only) - Suppressed per rules for transactional/sub-page -->
+<!-- Nav elements omitted as this is a specific review task/sub-page (Invoice Preview) -->
+<!-- Main Content Canvas -->
+<main class="flex-1 flex flex-col h-screen overflow-hidden relative w-full">
+<!-- TopAppBar -->
+<header class="bg-background dark:bg-background border-b border-outline-variant dark:border-outline-variant flex justify-between items-center px-lg h-xl w-full z-40 shrink-0">
+<div class="flex items-center gap-sm">
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-variant transition-colors text-on-surface-variant">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+</button>
+<h1 class="font-title-md text-title-md text-primary dark:text-primary">Invoice Preview</h1>
+</div>
+<div>
+<!-- Status Badge -->
+<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-surface-variant/50 border border-outline-variant">
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+<span class="font-label-caps text-label-caps text-on-surface uppercase tracking-wider">Draft</span>
+</div>
+</div>
+</header>
+<!-- Scrollable Content Area -->
+<div class="flex-1 overflow-y-auto p-sm md:p-lg pb-32"> <!-- pb-32 for fixed bottom actions -->
+<div class="max-w-[800px] mx-auto space-y-md">
+<!-- Header Section: Student & Invoice Metadata (Bento-style) -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-md">
+<!-- Student Details Card -->
+<div class="bg-surface-container-low border border-outline-variant rounded-xl p-md flex flex-col gap-sm hover:border-primary/50 transition-colors">
+<div class="flex items-center gap-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-[20px]" data-icon="person">person</span>
+<h2 class="font-label-caps text-label-caps uppercase text-outline">Student Details</h2>
+</div>
+<div>
+<p class="font-title-md text-title-md text-on-surface">Alex Johnson</p>
+<div class="flex gap-4 mt-1 font-body-sm text-body-sm text-on-surface-variant">
+<span>ID: STU-2024-001</span>
+<span>•</span>
+<span>Grade 10</span>
+</div>
+</div>
+</div>
+<!-- Invoice Metadata Card -->
+<div class="bg-surface-container-low border border-outline-variant rounded-xl p-md flex flex-col gap-sm hover:border-primary/50 transition-colors">
+<div class="flex items-center gap-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-[20px]" data-icon="receipt_long">receipt_long</span>
+<h2 class="font-label-caps text-label-caps uppercase text-outline">Invoice Details</h2>
+</div>
+<div class="space-y-1">
+<div class="flex justify-between items-center font-body-sm text-body-sm">
+<span class="text-on-surface-variant">Invoice #:</span>
+<span class="font-data-mono text-data-mono text-on-surface">INV-2024-001</span>
+</div>
+<div class="flex justify-between items-center font-body-sm text-body-sm">
+<span class="text-on-surface-variant">Issue Date:</span>
+<span class="font-data-mono text-data-mono text-on-surface">Oct 12, 2024</span>
+</div>
+<div class="flex justify-between items-center font-body-sm text-body-sm">
+<span class="text-on-surface-variant">Due Date:</span>
+<span class="font-data-mono text-data-mono text-error font-medium">Oct 26, 2024</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Bill To Card -->
+<div class="bg-surface-container-low border border-outline-variant rounded-xl p-md hover:border-primary/50 transition-colors">
+<div class="flex items-center gap-xs text-on-surface-variant mb-sm">
+<span class="material-symbols-outlined text-[20px]" data-icon="location_on">location_on</span>
+<h2 class="font-label-caps text-label-caps uppercase text-outline">Bill To</h2>
+</div>
+<div class="font-body-md text-body-md text-on-surface">
+<p class="font-medium mb-1">Mr. &amp; Mrs. Johnson</p>
+<p class="text-on-surface-variant">123 Education Blvd, Apt 4B</p>
+<p class="text-on-surface-variant">Knowledge City, ST 98765</p>
+<p class="text-on-surface-variant mt-2 text-sm">contact@johnsonfamily.email</p>
+</div>
+</div>
+<!-- Fee Items Table -->
+<div class="bg-surface-container-low border border-outline-variant rounded-xl overflow-hidden">
+<div class="p-md border-b border-outline-variant flex items-center gap-xs text-on-surface-variant bg-surface-container-high">
+<span class="material-symbols-outlined text-[20px]" data-icon="list_alt">list_alt</span>
+<h2 class="font-label-caps text-label-caps uppercase text-outline">Fee Items</h2>
+</div>
+<div class="w-full overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-outline-variant/50 bg-surface-container/50">
+<th class="py-3 px-md font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider w-3/5">Description</th>
+<th class="py-3 px-md font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider text-right w-2/5">Amount</th>
+</tr>
+</thead>
+<tbody class="font-body-sm text-body-sm">
+<tr class="border-b border-outline-variant/30 hover:bg-surface-variant/30 transition-colors">
+<td class="py-4 px-md text-on-surface">Tuition Fee - Fall 2024</td>
+<td class="py-4 px-md font-data-mono text-data-mono text-on-surface text-right">$4,500.00</td>
+</tr>
+<tr class="border-b border-outline-variant/30 hover:bg-surface-variant/30 transition-colors">
+<td class="py-4 px-md text-on-surface">Technology &amp; Library Fee</td>
+<td class="py-4 px-md font-data-mono text-data-mono text-on-surface text-right">$250.00</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Financial Summary & Notes -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-md items-start">
+<!-- Notes Section -->
+<div class="bg-surface-container-low border border-outline-variant rounded-xl p-md h-full flex flex-col justify-between">
+<div>
+<div class="flex items-center gap-xs text-on-surface-variant mb-2">
+<span class="material-symbols-outlined text-[20px]" data-icon="info">info</span>
+<h3 class="font-label-caps text-label-caps uppercase text-outline">Notes / Terms</h3>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+                                Please ensure payment is made by the due date to avoid late fees. Payments can be processed via the online portal or bank transfer using the invoice number as reference.
+                            </p>
+</div>
+</div>
+<!-- Summary Section -->
+<div class="bg-surface-container-high border border-outline-variant rounded-xl p-md">
+<div class="space-y-3 mb-4">
+<div class="flex justify-between items-center font-body-sm text-body-sm">
+<span class="text-on-surface-variant">Subtotal</span>
+<span class="font-data-mono text-data-mono text-on-surface">$4,750.00</span>
+</div>
+<div class="flex justify-between items-center font-body-sm text-body-sm">
+<span class="text-on-surface-variant">Tax/VAT</span>
+<span class="font-data-mono text-data-mono text-on-surface">$0.00</span>
+</div>
+</div>
+<div class="pt-4 border-t border-outline-variant flex justify-between items-center">
+<span class="font-title-md text-title-md text-on-surface">Total Due</span>
+<span class="font-display-lg text-display-lg font-data-mono text-primary">$4,750.00</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Fixed Bottom Action Bar -->
+<div class="absolute bottom-0 left-0 w-full bg-surface-container-highest border-t border-outline-variant p-4 z-50">
+<div class="max-w-[800px] mx-auto flex justify-end gap-4 items-center">
+<button class="px-6 py-3 rounded-lg border border-primary text-primary font-body-md text-body-md font-medium hover:bg-primary/10 transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined" data-icon="edit">edit</span>
+                    Edit Details
+                </button>
+<button class="px-6 py-3 rounded-lg bg-primary text-on-primary font-body-md text-body-md font-bold hover:bg-primary/90 transition-colors flex items-center gap-2 shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined filled" data-icon="send">send</span>
+                    Confirm &amp; Send
+                </button>
+</div>
+</div>
+</main>
+</body></html>

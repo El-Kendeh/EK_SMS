@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Fiscal Reports</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "background": "#0b1326",
+                      "on-tertiary-fixed-variant": "#930013",
+                      "surface-variant": "#2d3449",
+                      "on-tertiary-container": "#5c0008",
+                      "on-error-container": "#ffdad6",
+                      "outline-variant": "#424754",
+                      "inverse-surface": "#dae2fd",
+                      "primary-fixed-dim": "#adc6ff",
+                      "secondary-container": "#00a572",
+                      "on-background": "#dae2fd",
+                      "on-surface-variant": "#c2c6d6",
+                      "secondary": "#4edea3",
+                      "surface-container-highest": "#2d3449",
+                      "on-error": "#690005",
+                      "surface-tint": "#adc6ff",
+                      "surface": "#0b1326",
+                      "on-primary-fixed-variant": "#004395",
+                      "primary": "#adc6ff",
+                      "tertiary": "#ffb3ad",
+                      "surface-container": "#171f33",
+                      "primary-fixed": "#d8e2ff",
+                      "on-surface": "#dae2fd",
+                      "on-secondary-fixed": "#002113",
+                      "inverse-primary": "#005ac2",
+                      "surface-container-high": "#222a3d",
+                      "surface-container-low": "#131b2e",
+                      "primary-container": "#4d8eff",
+                      "tertiary-container": "#ff5451",
+                      "on-tertiary-fixed": "#410004",
+                      "inverse-on-surface": "#283044",
+                      "on-secondary-fixed-variant": "#005236",
+                      "outline": "#8c909f",
+                      "error": "#ffb4ab",
+                      "tertiary-fixed": "#ffdad7",
+                      "on-primary": "#002e6a",
+                      "error-container": "#93000a",
+                      "on-primary-fixed": "#001a42",
+                      "surface-bright": "#31394d",
+                      "on-secondary": "#003824",
+                      "surface-dim": "#0b1326",
+                      "tertiary-fixed-dim": "#ffb3ad",
+                      "on-primary-container": "#00285d",
+                      "on-tertiary": "#68000a",
+                      "secondary-fixed-dim": "#4edea3",
+                      "surface-container-lowest": "#060e20",
+                      "on-secondary-container": "#00311f",
+                      "secondary-fixed": "#6ffbbe"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "xs": "8px",
+                      "container-max": "1440px",
+                      "xl": "48px",
+                      "sm": "16px",
+                      "md": "24px",
+                      "base": "4px",
+                      "gutter": "24px",
+                      "lg": "32px"
+              },
+              "fontFamily": {
+                      "label-caps": [
+                              "Inter"
+                      ],
+                      "display-lg": [
+                              "Inter"
+                      ],
+                      "data-mono": [
+                              "JetBrains Mono"
+                      ],
+                      "headline-lg-mobile": [
+                              "Inter"
+                      ],
+                      "body-sm": [
+                              "Inter"
+                      ],
+                      "headline-lg": [
+                              "Inter"
+                      ],
+                      "title-md": [
+                              "Inter"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "label-caps": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "display-lg": [
+                              "48px",
+                              {
+                                      "lineHeight": "56px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "data-mono": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "headline-lg-mobile": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-sm": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "title-md": [
+                              "18px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface font-body-md min-h-screen pb-[80px]">
+<!-- TopAppBar -->
+<header class="w-full top-0 sticky bg-surface dark:bg-surface border-b border-outline-variant dark:border-outline-variant z-40">
+<div class="flex items-center justify-between px-sm md:px-lg h-16 w-full max-w-container-max mx-auto">
+<button class="text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-variant/50 dark:hover:bg-surface-variant/50 transition-colors active:scale-95 duration-150 p-2 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile md:font-headline-lg md:text-headline-lg text-primary dark:text-primary font-bold">Fiscal Reports</h1>
+<button class="text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-variant/50 dark:hover:bg-surface-variant/50 transition-colors active:scale-95 duration-150 p-2 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined">search</span>
+</button>
+</div>
+</header>
+<main class="px-sm pt-md pb-xl max-w-container-max mx-auto flex flex-col gap-md">
+<!-- Period Selector -->
+<div class="flex justify-between items-center bg-[#0F172A] border border-[#1E293B] rounded-lg p-xs">
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<div class="font-title-md text-title-md font-semibold text-on-surface">Term 1, 2024</div>
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+<!-- KPI Cards Grid -->
+<div class="grid grid-cols-1 gap-xs">
+<!-- Revenue -->
+<div class="bg-[#0F172A] border border-[#1E293B] rounded-lg p-sm hover:border-primary/50 transition-colors">
+<div class="flex justify-between items-start mb-2">
+<h2 class="font-title-md text-title-md text-on-surface-variant">Total Revenue</h2>
+<span class="material-symbols-outlined text-outline">account_balance</span>
+</div>
+<div class="font-display-lg text-display-lg font-data-mono text-on-surface mb-2">$4.2M</div>
+<div class="flex items-center gap-2">
+<span class="inline-flex items-center gap-1 bg-secondary-container/10 text-secondary-container px-2 py-1 rounded-full font-label-caps text-label-caps">
+<span class="material-symbols-outlined text-[14px]">trending_up</span> +8.4%
+                    </span>
+<span class="font-body-sm text-body-sm text-outline">vs last term</span>
+</div>
+</div>
+<!-- Dues -->
+<div class="bg-[#0F172A] border border-[#1E293B] rounded-lg p-sm hover:border-primary/50 transition-colors">
+<div class="flex justify-between items-start mb-2">
+<h2 class="font-title-md text-title-md text-on-surface-variant">Outstanding Dues</h2>
+<span class="material-symbols-outlined text-outline">receipt_long</span>
+</div>
+<div class="font-display-lg text-display-lg font-data-mono text-on-surface mb-2">$342K</div>
+<div class="flex items-center gap-2">
+<span class="inline-flex items-center gap-1 bg-error/10 text-error px-2 py-1 rounded-full font-label-caps text-label-caps">
+<span class="material-symbols-outlined text-[14px]">trending_down</span> -2.1%
+                    </span>
+<span class="font-body-sm text-body-sm text-outline">vs last term</span>
+</div>
+</div>
+<!-- Margin -->
+<div class="bg-[#0F172A] border border-[#1E293B] rounded-lg p-sm hover:border-primary/50 transition-colors">
+<div class="flex justify-between items-start mb-2">
+<h2 class="font-title-md text-title-md text-on-surface-variant">Operating Margin</h2>
+<span class="material-symbols-outlined text-outline">percent</span>
+</div>
+<div class="font-display-lg text-display-lg font-data-mono text-on-surface mb-2">18.5%</div>
+<div class="flex items-center gap-2">
+<span class="inline-flex items-center gap-1 bg-secondary-container/10 text-secondary-container px-2 py-1 rounded-full font-label-caps text-label-caps">
+<span class="material-symbols-outlined text-[14px]">trending_up</span> +1.2%
+                    </span>
+<span class="font-body-sm text-body-sm text-outline">vs last term</span>
+</div>
+</div>
+</div>
+<!-- Revenue vs Budget -->
+<section class="bg-[#0F172A] border border-[#1E293B] rounded-lg p-sm mt-xs">
+<h3 class="font-title-md text-title-md mb-md text-on-surface">Revenue vs. Budget</h3>
+<div class="relative pt-1">
+<div class="flex mb-2 items-center justify-between">
+<div>
+<span class="font-label-caps text-label-caps text-primary uppercase">Attained</span>
+</div>
+<div class="text-right">
+<span class="font-data-mono text-data-mono text-on-surface font-semibold">82%</span>
+</div>
+</div>
+<div class="overflow-hidden h-2 mb-4 text-xs flex rounded bg-[#1E293B]">
+<div class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-primary" style="width:82%"></div>
+</div>
+<div class="flex justify-between font-body-sm text-body-sm text-outline">
+<span>$4.2M</span>
+<span>Target: $5.1M</span>
+</div>
+</div>
+</section>
+<!-- Spending Category -->
+<section class="bg-[#0F172A] border border-[#1E293B] rounded-lg p-sm">
+<h3 class="font-title-md text-title-md mb-md text-on-surface">Spending by Category</h3>
+<div class="flex flex-col gap-sm">
+<!-- Row 1 -->
+<div>
+<div class="flex justify-between mb-1">
+<span class="font-body-sm text-body-sm text-on-surface-variant">Salaries</span>
+<span class="font-data-mono text-data-mono text-on-surface">$2.1M</span>
+</div>
+<div class="w-full bg-[#1E293B] rounded-full h-1.5">
+<div class="bg-primary-container h-1.5 rounded-full" style="width: 65%"></div>
+</div>
+</div>
+<!-- Row 2 -->
+<div>
+<div class="flex justify-between mb-1">
+<span class="font-body-sm text-body-sm text-on-surface-variant">Maintenance</span>
+<span class="font-data-mono text-data-mono text-on-surface">$850K</span>
+</div>
+<div class="w-full bg-[#1E293B] rounded-full h-1.5">
+<div class="bg-secondary-container h-1.5 rounded-full" style="width: 25%"></div>
+</div>
+</div>
+<!-- Row 3 -->
+<div>
+<div class="flex justify-between mb-1">
+<span class="font-body-sm text-body-sm text-on-surface-variant">Utilities</span>
+<span class="font-data-mono text-data-mono text-on-surface">$320K</span>
+</div>
+<div class="w-full bg-[#1E293B] rounded-full h-1.5">
+<div class="bg-tertiary-container h-1.5 rounded-full" style="width: 15%"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- Recent Anomalies -->
+<section class="bg-[#0F172A] border border-[#1E293B] rounded-lg p-sm">
+<div class="flex justify-between items-center mb-md">
+<h3 class="font-title-md text-title-md text-on-surface">Financial Anomalies</h3>
+<span class="inline-flex items-center justify-center w-6 h-6 bg-error-container text-on-error-container rounded-full font-label-caps text-[10px]">2</span>
+</div>
+<div class="flex flex-col gap-xs">
+<!-- Item 1 -->
+<div class="p-xs bg-background rounded border border-[#1E293B] flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-error/10 flex items-center justify-center text-error">
+<span class="material-symbols-outlined text-[18px]">warning</span>
+</div>
+<div>
+<div class="font-title-md text-body-sm font-semibold">Vendor Payment Spike</div>
+<div class="font-body-sm text-[12px] text-outline">Tech Supplies Inc.</div>
+</div>
+</div>
+<div class="text-right">
+<div class="font-data-mono text-data-mono text-error font-medium">+$45K</div>
+<div class="font-body-sm text-[10px] text-outline">Today, 09:41</div>
+</div>
+</div>
+<!-- Item 2 -->
+<div class="p-xs bg-background rounded border border-[#1E293B] flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-error/10 flex items-center justify-center text-error">
+<span class="material-symbols-outlined text-[18px]">warning</span>
+</div>
+<div>
+<div class="font-title-md text-body-sm font-semibold">Unbudgeted Transfer</div>
+<div class="font-body-sm text-[12px] text-outline">Dept: Athletics</div>
+</div>
+</div>
+<div class="text-right">
+<div class="font-data-mono text-data-mono text-error font-medium">+$12K</div>
+<div class="font-body-sm text-[10px] text-outline">Yesterday</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 bg-surface-container-low dark:bg-surface-container-low shadow-lg md:hidden border-t border-outline-variant dark:border-outline-variant">
+<div class="w-full flex justify-around items-center px-4 py-2 pb-safe">
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant dark:hover:bg-surface-variant active:scale-90 transition-transform p-2 rounded-lg">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 0;">home</span>
+<span class="font-label-caps text-label-caps">Home</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant dark:hover:bg-surface-variant active:scale-90 transition-transform p-2 rounded-lg">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 0;">fact_check</span>
+<span class="font-label-caps text-label-caps">Queue</span>
+</button>
+<button class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-full px-4 py-1 active:scale-90 transition-transform">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 1;">assessment</span>
+<span class="font-label-caps text-label-caps">Reports</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant dark:hover:bg-surface-variant active:scale-90 transition-transform p-2 rounded-lg">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 0;">settings</span>
+<span class="font-label-caps text-label-caps">Settings</span>
+</button>
+</div>
+</nav>
+</body></html>

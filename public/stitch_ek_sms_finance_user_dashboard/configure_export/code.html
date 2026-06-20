@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Export Financial Report - Kinetic Ledger</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "on-secondary-fixed-variant": "#005236",
+                        "on-tertiary": "#68000a",
+                        "on-tertiary-fixed": "#410004",
+                        "on-secondary-fixed": "#002113",
+                        "on-secondary-container": "#00311f",
+                        "on-primary-fixed-variant": "#004395",
+                        "on-primary": "#002e6a",
+                        "surface-tint": "#adc6ff",
+                        "tertiary": "#ffb3ad",
+                        "surface-container-highest": "#2d3449",
+                        "inverse-primary": "#005ac2",
+                        "outline-variant": "#424754",
+                        "on-surface-variant": "#c2c6d6",
+                        "surface": "#0b1326",
+                        "on-surface": "#dae2fd",
+                        "surface-dim": "#0b1326",
+                        "primary-fixed-dim": "#adc6ff",
+                        "surface-container-high": "#222a3d",
+                        "primary-fixed": "#d8e2ff",
+                        "inverse-on-surface": "#283044",
+                        "surface-bright": "#31394d",
+                        "secondary-fixed-dim": "#4edea3",
+                        "on-tertiary-fixed-variant": "#930013",
+                        "error-container": "#93000a",
+                        "outline": "#8c909f",
+                        "tertiary-container": "#ff5451",
+                        "surface-container": "#171f33",
+                        "on-secondary": "#003824",
+                        "primary-container": "#4d8eff",
+                        "error": "#ffb4ab",
+                        "background": "#0b1326",
+                        "inverse-surface": "#dae2fd",
+                        "tertiary-fixed": "#ffdad7",
+                        "surface-variant": "#2d3449",
+                        "on-primary-container": "#00285d",
+                        "on-error": "#690005",
+                        "surface-container-low": "#131b2e",
+                        "secondary-fixed": "#6ffbbe",
+                        "on-background": "#dae2fd",
+                        "secondary": "#4edea3",
+                        "tertiary-fixed-dim": "#ffb3ad",
+                        "surface-container-lowest": "#060e20",
+                        "on-error-container": "#ffdad6",
+                        "on-tertiary-container": "#5c0008",
+                        "secondary-container": "#00a572",
+                        "primary": "#adc6ff",
+                        "on-primary-fixed": "#001a42"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    spacing: {
+                        "xl": "48px",
+                        "gutter": "24px",
+                        "sm": "16px",
+                        "md": "24px",
+                        "lg": "32px",
+                        "container-max": "1440px",
+                        "xs": "8px",
+                        "base": "4px"
+                    },
+                    fontFamily: {
+                        "title-md": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "label-caps": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "headline-lg-mobile": ["Inter"],
+                        "body-sm": ["Inter"]
+                    },
+                    fontSize: {
+                        "title-md": ["18px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "data-mono": ["14px", { "lineHeight": "20px", "fontWeight": "500" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: #020617; /* Deep Navy Level 0 */
+        }
+        .custom-select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%238c909f' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+            padding-right: 2.5rem;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-[#020617] text-on-surface antialiased min-h-screen flex flex-col md:flex-row relative">
+<!-- TopAppBar (Mobile/Tablet) -->
+<header class="bg-surface dark:bg-surface text-primary dark:text-primary fixed top-0 w-full z-50 border-b border-outline-variant flat no shadows flex items-center justify-between px-md h-16 w-full md:hidden">
+<button class="text-primary hover:bg-surface-container-high transition-colors active:scale-95 transition-transform p-2 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+</button>
+<h1 class="font-title-md text-title-md font-bold text-on-surface">Financial Reporting</h1>
+<button class="text-primary hover:bg-surface-container-high transition-colors active:scale-95 transition-transform p-2 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="more_vert">more_vert</span>
+</button>
+</header>
+<!-- NavigationDrawer (Desktop) -->
+<nav class="bg-surface-container dark:bg-surface-container text-primary dark:text-primary font-body-md text-body-md fixed left-0 top-0 h-full w-[280px] border-r border-outline-variant flat no shadows hidden lg:flex flex-col h-screen py-lg z-40">
+<div class="px-md mb-xl flex flex-col">
+<div class="flex items-center gap-sm mb-lg">
+<div class="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center overflow-hidden">
+<img alt="User Avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDheA-PCbC-M8se5MsD3sNi0Bot2Axx4UOpbSwMP7TcY-qx3o31v-qeX-19CNVM8kv5uBZvcnadoXVPSbVO_F1Jk_-ia7l2buBn_5LzWwejBe6KCagaOtJFPerVH4JTlrZfBv8fYJLROE13jqYDPHROAEGjLOByUt4FSOymkGjxML0cbIV9Khf2JjkEQ6uvDKOyMymKHNZKfs_S-RUbhRyUKvj_DAFf8FUXbNc__h22DwvnmLkPJf125y9bNHk3iZTHuuEmjlu5F3c"/>
+</div>
+<div>
+<h2 class="font-title-md text-title-md text-on-surface">Finance Officer</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">St. Jude Academy</p>
+<p class="font-label-caps text-label-caps text-primary mt-1">Admin</p>
+</div>
+</div>
+<h1 class="font-headline-lg text-headline-lg font-black text-primary">Kinetic Ledger</h1>
+</div>
+<div class="flex-1 overflow-y-auto flex flex-col gap-xs">
+<a class="flex items-center gap-sm py-3 px-4 text-on-surface-variant hover:text-on-surface mx-2 hover:bg-surface-container-highest transition-all cursor-pointer transition-colors duration-200 rounded-xl" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span>Dashboard</span>
+</a>
+<a class="flex items-center gap-sm py-3 px-4 bg-secondary-container text-on-secondary-container rounded-full mx-2 font-bold hover:bg-surface-container-highest transition-all cursor-pointer transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="analytics" data-weight="fill" style="font-variation-settings: 'FILL' 1;">analytics</span>
+<span>Reports</span>
+</a>
+<a class="flex items-center gap-sm py-3 px-4 text-on-surface-variant hover:text-on-surface mx-2 hover:bg-surface-container-highest transition-all cursor-pointer transition-colors duration-200 rounded-xl" href="#">
+<span class="material-symbols-outlined" data-icon="security">security</span>
+<span>Audit Logs</span>
+</a>
+<a class="flex items-center gap-sm py-3 px-4 text-on-surface-variant hover:text-on-surface mx-2 hover:bg-surface-container-highest transition-all cursor-pointer transition-colors duration-200 rounded-xl mt-auto mb-md" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span>Settings</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-1 w-full max-w-container-max mx-auto px-sm md:px-lg pt-24 md:pt-lg pb-32 lg:ml-[280px] min-h-screen flex flex-col">
+<!-- Desktop Header (Suppressed on Mobile by TopAppBar) -->
+<div class="hidden md:flex items-center gap-sm mb-lg pb-sm border-b border-outline-variant">
+<button class="text-primary hover:bg-surface-container-high transition-colors active:scale-95 transition-transform p-2 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+</button>
+<h1 class="font-headline-lg text-headline-lg text-on-surface">Export Report</h1>
+</div>
+<!-- Configuration Form Area -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter flex-1">
+<!-- Left Column: Primary Settings -->
+<div class="lg:col-span-8 flex flex-col gap-gutter">
+<!-- Report Type Selection Card -->
+<div class="bg-[#0F172A] border border-[#1E293B] rounded-xl p-md flex flex-col gap-sm">
+<h2 class="font-title-md text-title-md text-on-surface border-b border-[#1E293B] pb-xs">Report Type</h2>
+<div class="relative mt-2">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="w-full bg-[#020617] border border-[#1E293B] rounded-lg pl-10 pr-4 py-3 font-body-md text-body-md text-on-surface placeholder:text-outline-variant focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors" placeholder="Search report types..." type="text"/>
+</div>
+<div class="flex flex-wrap gap-xs mt-sm">
+<label class="cursor-pointer group">
+<input checked="" class="peer sr-only" name="report_type" type="radio"/>
+<div class="px-4 py-2 rounded-full border border-primary bg-primary/10 text-primary peer-checked:bg-primary peer-checked:text-on-primary font-body-sm text-body-sm transition-colors">
+                                Revenue Summary
+                            </div>
+</label>
+<label class="cursor-pointer group">
+<input class="peer sr-only" name="report_type" type="radio"/>
+<div class="px-4 py-2 rounded-full border border-[#1E293B] bg-transparent text-on-surface-variant peer-checked:bg-primary peer-checked:text-on-primary peer-checked:border-primary hover:border-primary/50 font-body-sm text-body-sm transition-colors">
+                                Fee Collection
+                            </div>
+</label>
+<label class="cursor-pointer group">
+<input class="peer sr-only" name="report_type" type="radio"/>
+<div class="px-4 py-2 rounded-full border border-[#1E293B] bg-transparent text-on-surface-variant peer-checked:bg-primary peer-checked:text-on-primary peer-checked:border-primary hover:border-primary/50 font-body-sm text-body-sm transition-colors">
+                                Expense Report
+                            </div>
+</label>
+<label class="cursor-pointer group">
+<input class="peer sr-only" name="report_type" type="radio"/>
+<div class="px-4 py-2 rounded-full border border-[#1E293B] bg-transparent text-on-surface-variant peer-checked:bg-primary peer-checked:text-on-primary peer-checked:border-primary hover:border-primary/50 font-body-sm text-body-sm transition-colors">
+                                Audit Log
+                            </div>
+</label>
+</div>
+</div>
+<!-- Date Range & Filters Bento Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-gutter">
+<!-- Date Range Card -->
+<div class="bg-[#0F172A] border border-[#1E293B] rounded-xl p-md flex flex-col gap-sm">
+<h2 class="font-title-md text-title-md text-on-surface border-b border-[#1E293B] pb-xs mb-2">Timeframe</h2>
+<div class="flex flex-col gap-4">
+<div>
+<label class="font-label-caps text-label-caps text-on-surface-variant block mb-1">Start Date</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">calendar_today</span>
+<input class="w-full bg-[#020617] border border-[#1E293B] rounded-lg pl-10 pr-4 py-2 font-data-mono text-data-mono text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors [color-scheme:dark]" type="date" value="2023-09-01"/>
+</div>
+</div>
+<div>
+<label class="font-label-caps text-label-caps text-on-surface-variant block mb-1">End Date</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">calendar_today</span>
+<input class="w-full bg-[#020617] border border-[#1E293B] rounded-lg pl-10 pr-4 py-2 font-data-mono text-data-mono text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors [color-scheme:dark]" type="date" value="2023-10-31"/>
+</div>
+</div>
+</div>
+</div>
+<!-- Filters Card -->
+<div class="bg-[#0F172A] border border-[#1E293B] rounded-xl p-md flex flex-col gap-sm">
+<h2 class="font-title-md text-title-md text-on-surface border-b border-[#1E293B] pb-xs mb-2">Filters</h2>
+<div class="flex flex-col gap-4">
+<div>
+<label class="font-label-caps text-label-caps text-on-surface-variant block mb-1">Grade Level</label>
+<select class="custom-select w-full bg-[#020617] border border-[#1E293B] rounded-lg px-3 py-2 font-body-md text-body-md text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors">
+<option>All Grades</option>
+<option>Kindergarten</option>
+<option>Elementary</option>
+<option>Middle School</option>
+<option>High School</option>
+</select>
+</div>
+<div>
+<label class="font-label-caps text-label-caps text-on-surface-variant block mb-1">Payment Method</label>
+<select class="custom-select w-full bg-[#020617] border border-[#1E293B] rounded-lg px-3 py-2 font-body-md text-body-md text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors">
+<option>All Methods</option>
+<option>Credit Card</option>
+<option>Bank Transfer</option>
+<option>Cash / Check</option>
+</select>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column: Export Format & Summary -->
+<div class="lg:col-span-4 flex flex-col gap-gutter">
+<!-- Format Selection -->
+<div class="bg-[#0F172A] border border-[#1E293B] rounded-xl p-md flex flex-col gap-sm relative overflow-hidden">
+<!-- Subtle Glow Effect -->
+<div class="absolute -top-10 -right-10 w-32 h-32 bg-primary/10 rounded-full blur-2xl pointer-events-none"></div>
+<h2 class="font-title-md text-title-md text-on-surface border-b border-[#1E293B] pb-xs mb-2 relative z-10">Export Format</h2>
+<div class="flex flex-col gap-2 relative z-10">
+<label class="flex items-center p-3 rounded-lg border border-primary bg-primary/5 cursor-pointer transition-colors group">
+<input checked="" class="text-primary bg-surface border-outline focus:ring-primary focus:ring-offset-surface" name="export_format" type="radio"/>
+<span class="material-symbols-outlined ml-3 text-error">picture_as_pdf</span>
+<span class="ml-2 font-body-md text-body-md text-on-surface">PDF Document</span>
+<span class="ml-auto font-label-caps text-label-caps text-primary bg-primary/20 px-2 py-1 rounded">Default</span>
+</label>
+<label class="flex items-center p-3 rounded-lg border border-[#1E293B] hover:border-primary/50 cursor-pointer transition-colors group">
+<input class="text-primary bg-surface border-outline focus:ring-primary focus:ring-offset-surface" name="export_format" type="radio"/>
+<span class="material-symbols-outlined ml-3 text-secondary">table_chart</span>
+<span class="ml-2 font-body-md text-body-md text-on-surface">Excel (.xlsx)</span>
+</label>
+<label class="flex items-center p-3 rounded-lg border border-[#1E293B] hover:border-primary/50 cursor-pointer transition-colors group">
+<input class="text-primary bg-surface border-outline focus:ring-primary focus:ring-offset-surface" name="export_format" type="radio"/>
+<span class="material-symbols-outlined ml-3 text-on-surface-variant">data_object</span>
+<span class="ml-2 font-body-md text-body-md text-on-surface">CSV Data</span>
+</label>
+</div>
+</div>
+</div>
+</div>
+<!-- Sticky Footer CTA (Mobile & Desktop) -->
+<div class="fixed bottom-0 left-0 lg:left-[280px] right-0 p-sm md:p-md bg-[#0F172A]/90 backdrop-blur-md border-t border-[#1E293B] z-30 flex justify-end gap-sm mb-20 lg:mb-0">
+<button class="px-6 py-2 rounded-lg border border-primary text-primary font-body-md text-body-md hover:bg-primary/10 transition-colors">
+                Cancel
+            </button>
+<button class="px-6 py-2 rounded-lg bg-primary text-on-primary font-body-md text-body-md font-semibold hover:bg-primary-container hover:text-on-primary-container transition-colors shadow-[0_0_15px_rgba(77,142,255,0.3)] flex items-center gap-2">
+<span class="material-symbols-outlined" data-icon="download">download</span>
+                Generate Report
+            </button>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="bg-surface-container-low dark:bg-surface-container-low text-secondary dark:text-secondary font-label-caps text-label-caps fixed bottom-0 w-full z-50 border-t border-outline-variant shadow-lg lg:hidden flex justify-around items-center h-20 px-sm pb-safe">
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 transition-transform duration-150 p-2 rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="mt-1">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-xl px-4 py-1 hover:bg-surface-variant active:scale-90 transition-transform duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="assessment" data-weight="fill" style="font-variation-settings: 'FILL' 1;">assessment</span>
+<span class="mt-1">Reports</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 transition-transform duration-150 p-2 rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="file_download">file_download</span>
+<span class="mt-1">Export</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 transition-transform duration-150 p-2 rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="mt-1">Profile</span>
+</a>
+</nav>
+</body></html>

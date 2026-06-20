@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Generating Report</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-secondary-fixed-variant": "#005236",
+                      "on-tertiary": "#68000a",
+                      "on-tertiary-fixed": "#410004",
+                      "on-secondary-fixed": "#002113",
+                      "on-secondary-container": "#00311f",
+                      "on-primary-fixed-variant": "#004395",
+                      "on-primary": "#002e6a",
+                      "surface-tint": "#adc6ff",
+                      "tertiary": "#ffb3ad",
+                      "surface-container-highest": "#2d3449",
+                      "inverse-primary": "#005ac2",
+                      "outline-variant": "#424754",
+                      "on-surface-variant": "#c2c6d6",
+                      "surface": "#0b1326",
+                      "on-surface": "#dae2fd",
+                      "surface-dim": "#0b1326",
+                      "primary-fixed-dim": "#adc6ff",
+                      "surface-container-high": "#222a3d",
+                      "primary-fixed": "#d8e2ff",
+                      "inverse-on-surface": "#283044",
+                      "surface-bright": "#31394d",
+                      "secondary-fixed-dim": "#4edea3",
+                      "on-tertiary-fixed-variant": "#930013",
+                      "error-container": "#93000a",
+                      "outline": "#8c909f",
+                      "tertiary-container": "#ff5451",
+                      "surface-container": "#171f33",
+                      "on-secondary": "#003824",
+                      "primary-container": "#4d8eff",
+                      "error": "#ffb4ab",
+                      "background": "#0b1326",
+                      "inverse-surface": "#dae2fd",
+                      "tertiary-fixed": "#ffdad7",
+                      "surface-variant": "#2d3449",
+                      "on-primary-container": "#00285d",
+                      "on-error": "#690005",
+                      "surface-container-low": "#131b2e",
+                      "secondary-fixed": "#6ffbbe",
+                      "on-background": "#dae2fd",
+                      "secondary": "#4edea3",
+                      "tertiary-fixed-dim": "#ffb3ad",
+                      "surface-container-lowest": "#060e20",
+                      "on-error-container": "#ffdad6",
+                      "on-tertiary-container": "#5c0008",
+                      "secondary-container": "#00a572",
+                      "primary": "#adc6ff",
+                      "on-primary-fixed": "#001a42"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "xl": "48px",
+                      "gutter": "24px",
+                      "sm": "16px",
+                      "md": "24px",
+                      "lg": "32px",
+                      "container-max": "1440px",
+                      "xs": "8px",
+                      "base": "4px"
+              },
+              "fontFamily": {
+                      "title-md": [
+                              "Inter"
+                      ],
+                      "headline-lg": [
+                              "Inter"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "label-caps": [
+                              "Inter"
+                      ],
+                      "display-lg": [
+                              "Inter"
+                      ],
+                      "data-mono": [
+                              "JetBrains Mono"
+                      ],
+                      "headline-lg-mobile": [
+                              "Inter"
+                      ],
+                      "body-sm": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "title-md": [
+                              "18px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-caps": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "display-lg": [
+                              "48px",
+                              {
+                                      "lineHeight": "56px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "data-mono": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "headline-lg-mobile": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-sm": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+            },
+          },
+        }
+    </script>
+<style>
+        .progress-ring__circle {
+            transition: stroke-dashoffset 0.35s;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+            animation: progress 3s linear infinite;
+        }
+
+        @keyframes progress {
+            0% {
+                stroke-dashoffset: 283;
+            }
+            50% {
+                stroke-dashoffset: 141.5;
+            }
+            100% {
+                stroke-dashoffset: 0;
+            }
+        }
+        
+        .pulse-text {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: .5;
+            }
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface h-screen w-screen overflow-hidden flex flex-col font-body-md relative">
+<!-- TopAppBar Container -->
+<header class="bg-surface dark:bg-surface fixed top-0 w-full z-50 border-b border-outline-variant flat no shadows flex items-center justify-between px-md h-16 w-full">
+<div class="flex items-center gap-xs">
+<button class="text-primary dark:text-primary hover:bg-surface-container-high transition-colors active:scale-95 transition-transform p-2 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+</button>
+<h1 class="font-title-md text-title-md font-bold text-on-surface">Financial Reporting</h1>
+</div>
+<button class="text-primary dark:text-primary hover:bg-surface-container-high transition-colors active:scale-95 transition-transform p-2 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="more_vert">more_vert</span>
+</button>
+</header>
+<!-- Main Content Area -->
+<main class="flex-1 flex items-center justify-center pt-16 pb-safe lg:pb-0 px-sm lg:px-lg">
+<div class="bg-[#0F172A] border border-[#1E293B] rounded-xl p-lg flex flex-col items-center justify-center text-center max-w-md w-full relative overflow-hidden">
+<!-- Subtle background glow -->
+<div class="absolute inset-0 bg-primary/5 rounded-xl blur-2xl z-0 pointer-events-none"></div>
+<div class="z-10 flex flex-col items-center">
+<!-- Circular Progress -->
+<div class="relative w-32 h-32 mb-xl">
+<svg class="w-full h-full" viewbox="0 0 100 100">
+<!-- Background ring -->
+<circle class="text-[#1E293B] stroke-current" cx="50" cy="50" fill="transparent" r="45" stroke-width="8"></circle>
+<!-- Progress ring -->
+<circle class="text-primary stroke-current progress-ring__circle" cx="50" cy="50" fill="transparent" r="45" stroke-dasharray="283" stroke-dashoffset="283" stroke-linecap="round" stroke-width="8"></circle>
+</svg>
+<div class="absolute inset-0 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-4xl pulse-text" data-icon="analytics" data-weight="fill" style="font-variation-settings: 'FILL' 1;">analytics</span>
+</div>
+</div>
+<!-- Text Content -->
+<h2 class="font-headline-lg-mobile lg:font-headline-lg text-headline-lg-mobile lg:text-headline-lg text-on-surface mb-xs pulse-text">Generating Revenue Summary Report...</h2>
+<p class="font-body-md text-body-md text-on-surface-variant mb-xl">Processing 1,240 records for Jan 2024 - Jun 2024.</p>
+<!-- Action -->
+<button class="border border-primary text-primary hover:bg-primary/10 transition-colors rounded-DEFAULT px-md py-xs font-title-md text-title-md w-full sm:w-auto flex items-center justify-center gap-xs">
+<span class="material-symbols-outlined text-sm" data-icon="close">close</span>
+                    Cancel
+                </button>
+</div>
+</div>
+</main>
+</body></html>

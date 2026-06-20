@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>EK-SMS - Invoice Sent</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary-fixed-variant": "#930013",
+                        "tertiary": "#ffb3ad",
+                        "surface-container-low": "#131b2e",
+                        "on-tertiary": "#68000a",
+                        "tertiary-fixed-dim": "#ffb3ad",
+                        "on-background": "#dae2fd",
+                        "outline-variant": "#424754",
+                        "inverse-primary": "#005ac2",
+                        "on-error-container": "#ffdad6",
+                        "surface-container-high": "#222a3d",
+                        "secondary": "#4edea3",
+                        "secondary-fixed-dim": "#4edea3",
+                        "inverse-on-surface": "#283044",
+                        "on-tertiary-container": "#5c0008",
+                        "on-secondary-fixed": "#002113",
+                        "on-primary-container": "#00285d",
+                        "on-tertiary-fixed": "#410004",
+                        "tertiary-fixed": "#ffdad7",
+                        "surface-tint": "#adc6ff",
+                        "primary-container": "#4d8eff",
+                        "on-primary": "#002e6a",
+                        "primary-fixed": "#d8e2ff",
+                        "on-secondary": "#003824",
+                        "on-secondary-fixed-variant": "#005236",
+                        "surface-container": "#171f33",
+                        "primary-fixed-dim": "#adc6ff",
+                        "error": "#ffb4ab",
+                        "surface-container-lowest": "#060e20",
+                        "inverse-surface": "#dae2fd",
+                        "on-primary-fixed": "#001a42",
+                        "surface-container-highest": "#2d3449",
+                        "tertiary-container": "#ff5451",
+                        "on-surface": "#dae2fd",
+                        "error-container": "#93000a",
+                        "surface-variant": "#2d3449",
+                        "surface-bright": "#31394d",
+                        "outline": "#8c909f",
+                        "on-primary-fixed-variant": "#004395",
+                        "background": "#0b1326",
+                        "primary": "#adc6ff",
+                        "on-surface-variant": "#c2c6d6",
+                        "on-secondary-container": "#00311f",
+                        "surface-dim": "#0b1326",
+                        "secondary-container": "#00a572",
+                        "on-error": "#690005",
+                        "surface": "#0b1326",
+                        "secondary-fixed": "#6ffbbe"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "xs": "8px",
+                        "md": "24px",
+                        "lg": "32px",
+                        "base": "4px",
+                        "container-max": "1440px",
+                        "xl": "48px",
+                        "gutter": "24px",
+                        "sm": "16px"
+                    },
+                    "fontFamily": {
+                        "body-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "title-md": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "label-caps": ["Inter"],
+                        "data-mono": ["JetBrains Mono"]
+                    },
+                    "fontSize": {
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "title-md": ["18px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "data-mono": ["14px", { "lineHeight": "20px", "fontWeight": "500" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .success-checkmark {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: block;
+            stroke-width: 2;
+            stroke: #4edea3;
+            stroke-miterlimit: 10;
+            box-shadow: inset 0px 0px 0px #4edea3;
+            animation: fill .4s ease-in-out .4s forwards, scale .3s ease-in-out .9s both;
+            margin: 0 auto;
+        }
+
+        .success-checkmark__circle {
+            stroke-dasharray: 166;
+            stroke-dashoffset: 166;
+            stroke-width: 2;
+            stroke-miterlimit: 10;
+            stroke: #4edea3;
+            fill: none;
+            animation: stroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+        }
+
+        .success-checkmark__check {
+            transform-origin: 50% 50%;
+            stroke-dasharray: 48;
+            stroke-dashoffset: 48;
+            animation: stroke 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.8s forwards;
+        }
+
+        @keyframes stroke {
+            100% {
+                stroke-dashoffset: 0;
+            }
+        }
+
+        @keyframes scale {
+            0%, 100% {
+                transform: none;
+            }
+            50% {
+                transform: scale3d(1.1, 1.1, 1);
+            }
+        }
+
+        @keyframes fill {
+            100% {
+                box-shadow: inset 0px 0px 0px 40px rgba(78, 222, 163, 0.1);
+            }
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface min-h-screen flex flex-col font-body-md antialiased selection:bg-primary-container selection:text-on-primary-container">
+<!-- TopAppBar -->
+<header class="bg-background dark:bg-background border-b border-outline-variant dark:border-outline-variant flex justify-between items-center px-lg h-xl w-full z-40 docked full-width top-0">
+<div class="flex items-center gap-sm">
+<button class="p-xs text-on-surface-variant dark:text-on-surface-variant hover:text-primary dark:hover:text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary rounded-DEFAULT">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">menu</span>
+</button>
+<h1 class="font-headline-lg text-headline-lg font-black text-primary dark:text-primary hidden md:block">EK-SMS Dashboard</h1>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile font-black text-primary dark:text-primary block md:hidden">EK-SMS Dashboard</h1>
+</div>
+<div class="flex items-center">
+<button class="p-xs text-on-surface-variant dark:text-on-surface-variant hover:text-primary dark:hover:text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary rounded-DEFAULT">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">notifications</span>
+</button>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-grow flex items-center justify-center p-sm md:p-lg relative overflow-hidden">
+<!-- Subtle Background Glow -->
+<div class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">
+<div class="w-[600px] h-[600px] bg-secondary rounded-full blur-[120px]"></div>
+</div>
+<div class="w-full max-w-xl bg-surface-container-low border border-outline-variant rounded-xl p-lg flex flex-col items-center text-center relative z-10 shadow-2xl">
+<!-- Animated Success Icon -->
+<div class="mb-lg">
+<svg class="success-checkmark" viewbox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+<circle class="success-checkmark__circle" cx="26" cy="26" fill="none" r="25"></circle>
+<path class="success-checkmark__check" d="M14.1 27.2l7.1 7.2 16.7-16.8" fill="none"></path>
+</svg>
+</div>
+<h2 class="font-display-lg text-display-lg text-on-surface mb-sm">Invoice Sent Successfully</h2>
+<p class="font-body-md text-body-md text-on-surface-variant mb-xl max-w-md">
+                Invoice <span class="font-data-mono text-data-mono text-primary">#INV-2024-001</span> has been sent to Mr. &amp; Mrs. Johnson for student Alex Johnson.
+            </p>
+<!-- Summary Card -->
+<div class="w-full bg-surface-container border border-outline-variant rounded-lg p-md mb-xl flex flex-col gap-sm text-left">
+<div class="flex justify-between items-center pb-sm border-b border-outline-variant/50">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">Total Amount</span>
+<span class="font-data-mono text-[24px] leading-[32px] font-bold text-secondary">$4,750.00</span>
+</div>
+<div class="flex justify-between items-center pt-xs">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">Delivery Method</span>
+<div class="flex gap-xs">
+<span class="px-xs py-[2px] bg-primary/10 text-primary border border-primary/20 rounded font-label-caps text-label-caps flex items-center gap-[4px]">
+<span class="material-symbols-outlined text-[14px]">mail</span> Email
+                        </span>
+<span class="px-xs py-[2px] bg-primary/10 text-primary border border-primary/20 rounded font-label-caps text-label-caps flex items-center gap-[4px]">
+<span class="material-symbols-outlined text-[14px]">sms</span> SMS
+                        </span>
+</div>
+</div>
+</div>
+<!-- Actions -->
+<div class="flex flex-col sm:flex-row gap-md w-full justify-center">
+<button class="flex-1 px-md py-sm bg-primary text-on-primary font-title-md text-title-md rounded-lg hover:bg-primary-container hover:text-on-primary-container transition-all active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background flex items-center justify-center gap-xs">
+<span class="material-symbols-outlined">dashboard</span>
+                    Back to Dashboard
+                </button>
+<button class="flex-1 px-md py-sm bg-transparent border border-primary text-primary font-title-md text-title-md rounded-lg hover:bg-primary/10 transition-all active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background flex items-center justify-center gap-xs">
+<span class="material-symbols-outlined">add</span>
+                    Create Another Invoice
+                </button>
+</div>
+</div>
+</main>
+</body></html>

@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Budget Audit Log - Kinetic Ledger</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-container": "#00a572",
+                        "outline": "#8c909f",
+                        "surface-container-high": "#222a3d",
+                        "inverse-primary": "#005ac2",
+                        "background": "#0b1326",
+                        "primary-container": "#4d8eff",
+                        "on-tertiary-fixed": "#410004",
+                        "on-primary-fixed": "#001a42",
+                        "outline-variant": "#424754",
+                        "on-primary-container": "#00285d",
+                        "surface-bright": "#31394d",
+                        "inverse-surface": "#dae2fd",
+                        "tertiary-fixed": "#ffdad7",
+                        "on-tertiary": "#68000a",
+                        "tertiary-fixed-dim": "#ffb3ad",
+                        "on-secondary-fixed": "#002113",
+                        "on-secondary-container": "#00311f",
+                        "on-primary": "#002e6a",
+                        "on-error-container": "#ffdad6",
+                        "on-error": "#690005",
+                        "secondary": "#4edea3",
+                        "secondary-fixed-dim": "#4edea3",
+                        "error-container": "#93000a",
+                        "on-surface": "#dae2fd",
+                        "on-primary-fixed-variant": "#004395",
+                        "on-background": "#dae2fd",
+                        "on-tertiary-container": "#5c0008",
+                        "error": "#ffb4ab",
+                        "tertiary": "#ffb3ad",
+                        "surface-container-lowest": "#060e20",
+                        "surface-variant": "#2d3449",
+                        "primary-fixed-dim": "#adc6ff",
+                        "surface-tint": "#adc6ff",
+                        "on-tertiary-fixed-variant": "#930013",
+                        "tertiary-container": "#ff5451",
+                        "surface-container-highest": "#2d3449",
+                        "on-surface-variant": "#c2c6d6",
+                        "inverse-on-surface": "#283044",
+                        "primary": "#adc6ff",
+                        "on-secondary": "#003824",
+                        "primary-fixed": "#d8e2ff",
+                        "surface-dim": "#0b1326",
+                        "secondary-fixed": "#6ffbbe",
+                        "on-secondary-fixed-variant": "#005236",
+                        "surface": "#0b1326",
+                        "surface-container": "#171f33",
+                        "surface-container-low": "#131b2e"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "xs": "8px",
+                        "xl": "48px",
+                        "lg": "32px",
+                        "gutter": "24px",
+                        "sm": "16px",
+                        "base": "4px",
+                        "md": "24px",
+                        "container-max": "1440px"
+                    },
+                    "fontFamily": {
+                        "body-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "headline-lg-mobile": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "label-caps": ["Inter"],
+                        "title-md": ["Inter"],
+                        "display-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "data-mono": ["14px", { "lineHeight": "20px", "fontWeight": "500" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "title-md": ["18px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface font-body-md min-h-screen flex flex-col md:flex-row">
+<!-- Desktop Navigation Drawer -->
+<nav aria-label="Sidebar" class="hidden lg:flex flex-col h-full py-lg px-md bg-surface-container-low text-primary font-body-md fixed left-0 top-0 w-[280px] border-r border-outline-variant z-40 transition-all duration-200 ease-in-out">
+<div class="mb-xl">
+<h1 class="font-headline-lg text-headline-lg text-primary font-black mb-md">Kinetic Ledger</h1>
+<div class="flex items-center gap-sm">
+<img alt="Finance Officer Profile" class="w-12 h-12 rounded-full object-cover border border-outline-variant" data-alt="A close up portrait of a professional finance officer in a modern corporate setting. The lighting is cinematic and focused, with a deep navy background that implies authority and precision. The style is hyper-realistic and high-end, suitable for a premium financial software application." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBIo1kC6XE5p3gJktk6W672MwafYeIExGGQYVOQllMd7pGdY0d-LfE_-TsPjZHDyaRYxW8yaseTKpxKlT6PyKzTXsc907lGyOaALnoNGELiAPGwva3kFjlp5VUkm76YalQ3csek7bosHCMuIZnIIxhF8FYdp4HlEfRfNzc3Y7VzxGdZBoyFtUyxbqns8DZPXASyPuTku4GTxUcr5BmuKA9FJJ5Gyvmb-uaXmjEB48w4xaXh0enXQHLWSyLDqhpc7-MPWXmBBOyhCY4"/>
+<div>
+<p class="font-title-md text-title-md text-on-surface">Marcus Vane</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Senior Finance Officer</p>
+<p class="font-label-caps text-label-caps text-outline">School ID: 4829</p>
+</div>
+</div>
+</div>
+<ul class="flex flex-col gap-xs flex-1">
+<li>
+<a class="flex items-center gap-sm px-sm py-xs rounded text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+                    Dashboard
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-sm px-sm py-xs rounded text-primary font-bold border-l-4 border-primary bg-surface-container-high transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="account_balance">account_balance</span>
+                    Ledger
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-sm px-sm py-xs rounded text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+                    Payments
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-sm px-sm py-xs rounded text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+                    Students
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-sm px-sm py-xs rounded text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+                    Settings
+                </a>
+</li>
+</ul>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-1 flex flex-col min-h-screen lg:ml-[280px] pb-24 lg:pb-0">
+<!-- Top App Bar (Mobile & Desktop) -->
+<header class="w-full top-0 sticky bg-surface text-primary font-headline-lg-mobile md:font-headline-lg border-b border-outline-variant z-30 flex items-center justify-between px-sm md:px-lg h-16 md:h-20 transition-colors duration-200">
+<div class="flex items-center gap-sm">
+<button aria-label="Back" class="md:hidden text-on-surface-variant hover:bg-surface-variant p-2 rounded transition-colors duration-200">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+</button>
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile md:font-headline-lg md:text-headline-lg text-on-surface">Budget Audit Log</h2>
+</div>
+<button aria-label="History" class="text-on-surface-variant hover:bg-surface-variant p-2 rounded transition-colors duration-200">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+</button>
+</header>
+<!-- Page Content -->
+<div class="flex-1 p-sm md:p-lg space-y-gutter max-w-container-max mx-auto w-full">
+<!-- Filters Section -->
+<section class="bg-surface-container-low border border-outline-variant rounded-xl p-md flex flex-col md:flex-row gap-sm items-center justify-between">
+<div class="relative w-full md:w-auto flex-1 max-w-md">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="w-full bg-surface text-on-surface border-outline-variant rounded-lg pl-10 pr-4 py-2 focus:border-primary focus:ring-1 focus:ring-primary font-body-sm transition-colors duration-200" placeholder="Search by officer or department..." type="text"/>
+</div>
+<div class="flex flex-wrap gap-sm w-full md:w-auto">
+<select class="bg-surface text-on-surface border-outline-variant rounded-lg px-3 py-2 focus:border-primary focus:ring-1 focus:ring-primary font-body-sm">
+<option>All Departments</option>
+<option>Academics</option>
+<option>Athletics</option>
+<option>Facilities</option>
+</select>
+<select class="bg-surface text-on-surface border-outline-variant rounded-lg px-3 py-2 focus:border-primary focus:ring-1 focus:ring-primary font-body-sm">
+<option>Last 30 Days</option>
+<option>This Quarter</option>
+<option>This Year</option>
+</select>
+<button class="bg-surface-variant text-on-surface px-4 py-2 rounded-lg font-title-md text-title-md hover:bg-outline-variant transition-colors flex items-center gap-xs">
+<span class="material-symbols-outlined text-sm">filter_list</span> Filter
+                    </button>
+</div>
+</section>
+<!-- Audit Log Timeline/List -->
+<section class="space-y-sm">
+<!-- Log Entry 1: Increased -->
+<article class="bg-surface-container-low border border-outline-variant rounded-lg p-sm md:p-md flex flex-col md:flex-row gap-md hover:border-primary/50 transition-colors duration-200">
+<div class="flex-shrink-0 flex items-start md:w-48">
+<div class="flex flex-col">
+<span class="font-data-mono text-data-mono text-on-surface">2023-10-24</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">14:32:05 UTC</span>
+</div>
+</div>
+<div class="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-sm md:gap-md items-center">
+<div>
+<p class="font-label-caps text-label-caps text-outline uppercase">Department</p>
+<p class="font-title-md text-title-md text-on-surface">Athletics</p>
+</div>
+<div>
+<p class="font-label-caps text-label-caps text-outline uppercase">Adjustment</p>
+<div class="flex items-center gap-2">
+<span class="bg-secondary/10 text-secondary px-2 py-0.5 rounded font-data-mono text-data-mono flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">arrow_upward</span>
+                                    +15.0%
+                                </span>
+</div>
+</div>
+<div>
+<p class="font-label-caps text-label-caps text-outline uppercase">Budget Variance</p>
+<div class="flex flex-col">
+<span class="font-body-sm text-body-sm text-on-surface-variant line-through">$120,000.00</span>
+<span class="font-data-mono text-data-mono text-on-surface">$138,000.00</span>
+</div>
+</div>
+<div class="flex items-center gap-xs">
+<div class="w-8 h-8 rounded-full bg-surface-variant flex items-center justify-center text-on-surface-variant font-title-md text-title-md">
+                                MV
+                            </div>
+<div class="flex flex-col">
+<span class="font-body-sm text-body-sm text-on-surface">Marcus Vane</span>
+<span class="font-label-caps text-label-caps text-outline">Authorized</span>
+</div>
+</div>
+</div>
+</article>
+<!-- Log Entry 2: Reduced -->
+<article class="bg-surface-container-low border border-outline-variant rounded-lg p-sm md:p-md flex flex-col md:flex-row gap-md hover:border-primary/50 transition-colors duration-200">
+<div class="flex-shrink-0 flex items-start md:w-48">
+<div class="flex flex-col">
+<span class="font-data-mono text-data-mono text-on-surface">2023-10-22</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">09:15:22 UTC</span>
+</div>
+</div>
+<div class="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-sm md:gap-md items-center">
+<div>
+<p class="font-label-caps text-label-caps text-outline uppercase">Department</p>
+<p class="font-title-md text-title-md text-on-surface">Facilities</p>
+</div>
+<div>
+<p class="font-label-caps text-label-caps text-outline uppercase">Adjustment</p>
+<div class="flex items-center gap-2">
+<span class="bg-error/10 text-error px-2 py-0.5 rounded font-data-mono text-data-mono flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">arrow_downward</span>
+                                    -5.2%
+                                </span>
+</div>
+</div>
+<div>
+<p class="font-label-caps text-label-caps text-outline uppercase">Budget Variance</p>
+<div class="flex flex-col">
+<span class="font-body-sm text-body-sm text-on-surface-variant line-through">$450,000.00</span>
+<span class="font-data-mono text-data-mono text-on-surface">$426,600.00</span>
+</div>
+</div>
+<div class="flex items-center gap-xs">
+<div class="w-8 h-8 rounded-full bg-surface-variant flex items-center justify-center text-on-surface-variant font-title-md text-title-md">
+                                SJ
+                            </div>
+<div class="flex flex-col">
+<span class="font-body-sm text-body-sm text-on-surface">Sarah Jenkins</span>
+<span class="font-label-caps text-label-caps text-outline">Authorized</span>
+</div>
+</div>
+</div>
+</article>
+<!-- Log Entry 3: Initial Allocation -->
+<article class="bg-surface-container-low border border-outline-variant rounded-lg p-sm md:p-md flex flex-col md:flex-row gap-md hover:border-primary/50 transition-colors duration-200">
+<div class="flex-shrink-0 flex items-start md:w-48">
+<div class="flex flex-col">
+<span class="font-data-mono text-data-mono text-on-surface">2023-09-01</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">00:00:01 UTC</span>
+</div>
+</div>
+<div class="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-sm md:gap-md items-center">
+<div>
+<p class="font-label-caps text-label-caps text-outline uppercase">Department</p>
+<p class="font-title-md text-title-md text-on-surface">Academics</p>
+</div>
+<div>
+<p class="font-label-caps text-label-caps text-outline uppercase">Adjustment</p>
+<div class="flex items-center gap-2">
+<span class="bg-primary/10 text-primary px-2 py-0.5 rounded font-data-mono text-data-mono flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">fiber_new</span>
+                                    Initial
+                                </span>
+</div>
+</div>
+<div>
+<p class="font-label-caps text-label-caps text-outline uppercase">Budget Variance</p>
+<div class="flex flex-col">
+<span class="font-body-sm text-body-sm text-on-surface-variant">-</span>
+<span class="font-data-mono text-data-mono text-on-surface">$1,250,000.00</span>
+</div>
+</div>
+<div class="flex items-center gap-xs">
+<div class="w-8 h-8 rounded-full bg-surface-variant flex items-center justify-center text-on-surface-variant font-title-md text-title-md">
+                                SYS
+                            </div>
+<div class="flex flex-col">
+<span class="font-body-sm text-body-sm text-on-surface">System Admin</span>
+<span class="font-label-caps text-label-caps text-outline">Automated</span>
+</div>
+</div>
+</div>
+</article>
+</section>
+<!-- Pagination -->
+<div class="flex justify-between items-center mt-md pt-sm border-t border-outline-variant">
+<p class="font-body-sm text-body-sm text-on-surface-variant">Showing 1 to 3 of 156 entries</p>
+<div class="flex gap-xs">
+<button class="px-3 py-1 bg-surface-variant text-on-surface rounded disabled:opacity-50" disabled="">Prev</button>
+<button class="px-3 py-1 bg-primary text-on-primary rounded">1</button>
+<button class="px-3 py-1 bg-surface-variant text-on-surface rounded hover:bg-outline-variant">2</button>
+<button class="px-3 py-1 bg-surface-variant text-on-surface rounded hover:bg-outline-variant">3</button>
+<button class="px-3 py-1 bg-surface-variant text-on-surface rounded hover:bg-outline-variant">Next</button>
+</div>
+</div>
+</div>
+</main>
+<!-- Mobile Bottom Navigation -->
+<nav class="lg:hidden fixed bottom-0 w-full z-50 bg-surface-container text-secondary font-label-caps border-t border-outline-variant pb-safe flex justify-around items-center h-20 px-md">
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-secondary active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="home">home</span>
+            Home
+        </a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-secondary active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="verified_user">verified_user</span>
+            Verify
+        </a>
+<a class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-4 py-1 active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="receipt_long">receipt_long</span>
+            Ledger
+        </a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-secondary active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="account_circle">account_circle</span>
+            Profile
+        </a>
+</nav>
+</body></html>

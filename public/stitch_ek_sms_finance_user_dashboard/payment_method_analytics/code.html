@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Payment Method Analytics</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "tertiary": "#ffb3ad",
+                      "primary": "#adc6ff",
+                      "on-primary-fixed-variant": "#004395",
+                      "surface-tint": "#adc6ff",
+                      "surface": "#0b1326",
+                      "surface-container-highest": "#2d3449",
+                      "on-error": "#690005",
+                      "secondary": "#4edea3",
+                      "secondary-container": "#00a572",
+                      "on-background": "#dae2fd",
+                      "on-surface-variant": "#c2c6d6",
+                      "primary-fixed-dim": "#adc6ff",
+                      "inverse-surface": "#dae2fd",
+                      "on-error-container": "#ffdad6",
+                      "outline-variant": "#424754",
+                      "on-tertiary-container": "#5c0008",
+                      "surface-variant": "#2d3449",
+                      "background": "#0b1326",
+                      "on-tertiary-fixed-variant": "#930013",
+                      "secondary-fixed": "#6ffbbe",
+                      "surface-container-lowest": "#060e20",
+                      "on-secondary-container": "#00311f",
+                      "on-tertiary": "#68000a",
+                      "secondary-fixed-dim": "#4edea3",
+                      "tertiary-fixed-dim": "#ffb3ad",
+                      "on-primary-container": "#00285d",
+                      "surface-dim": "#0b1326",
+                      "surface-bright": "#31394d",
+                      "on-secondary": "#003824",
+                      "on-primary-fixed": "#001a42",
+                      "error-container": "#93000a",
+                      "tertiary-fixed": "#ffdad7",
+                      "on-primary": "#002e6a",
+                      "outline": "#8c909f",
+                      "error": "#ffb4ab",
+                      "tertiary-container": "#ff5451",
+                      "on-tertiary-fixed": "#410004",
+                      "inverse-on-surface": "#283044",
+                      "on-secondary-fixed-variant": "#005236",
+                      "surface-container-low": "#131b2e",
+                      "primary-container": "#4d8eff",
+                      "surface-container": "#171f33",
+                      "primary-fixed": "#d8e2ff",
+                      "on-surface": "#dae2fd",
+                      "on-secondary-fixed": "#002113",
+                      "inverse-primary": "#005ac2",
+                      "surface-container-high": "#222a3d"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "xl": "48px",
+                      "xs": "8px",
+                      "container-max": "1440px",
+                      "md": "24px",
+                      "base": "4px",
+                      "sm": "16px",
+                      "gutter": "24px",
+                      "lg": "32px"
+              },
+              "fontFamily": {
+                      "title-md": [
+                              "Inter"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "headline-lg": [
+                              "Inter"
+                      ],
+                      "headline-lg-mobile": [
+                              "Inter"
+                      ],
+                      "body-sm": [
+                              "Inter"
+                      ],
+                      "display-lg": [
+                              "Inter"
+                      ],
+                      "data-mono": [
+                              "JetBrains Mono"
+                      ],
+                      "label-caps": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "title-md": [
+                              "18px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-lg-mobile": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-sm": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "display-lg": [
+                              "48px",
+                              {
+                                      "lineHeight": "56px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "data-mono": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "label-caps": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "700"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface font-body-md antialiased min-h-screen flex flex-col items-center">
+<div class="w-full max-w-[480px] bg-surface flex-grow flex flex-col relative shadow-2xl overflow-hidden">
+<!-- Top App Bar (Task-Focused/Transactional so no main shell nav) -->
+<header class="flex justify-between items-center px-lg h-xl w-full z-40 bg-background border-b border-outline-variant">
+<button class="text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center p-xs rounded-full">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">arrow_back</span>
+</button>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile font-black text-primary">Payment Analytics</h1>
+<div class="w-8"></div> <!-- Placeholder for balance -->
+</header>
+<main class="flex-grow p-sm overflow-y-auto space-y-md pb-xl">
+<!-- Summary Cards (Bento Grid Style) -->
+<section class="grid grid-cols-2 gap-sm">
+<div class="bg-surface-container-low border border-outline-variant rounded-xl p-sm flex flex-col justify-between">
+<div class="flex items-center gap-xs mb-xs">
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">account_balance</span>
+<h3 class="font-label-caps text-label-caps text-on-surface-variant uppercase">Most Popular</h3>
+</div>
+<div>
+<p class="font-title-md text-title-md text-on-surface">Bank Transfer</p>
+<p class="font-data-mono text-data-mono text-secondary mt-base">45%</p>
+</div>
+</div>
+<div class="bg-surface-container-low border border-outline-variant rounded-xl p-sm flex flex-col justify-between">
+<div class="flex items-center gap-xs mb-xs">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">trending_up</span>
+<h3 class="font-label-caps text-label-caps text-on-surface-variant uppercase">Fastest Growing</h3>
+</div>
+<div>
+<p class="font-title-md text-title-md text-on-surface">Mobile Money</p>
+<p class="font-data-mono text-data-mono text-primary mt-base">+18% MoM</p>
+</div>
+</div>
+<div class="bg-surface-container-low border border-outline-variant rounded-xl p-sm col-span-2 flex items-center justify-between">
+<div class="flex items-center gap-sm">
+<div class="p-xs bg-surface-variant rounded-lg">
+<span class="material-symbols-outlined text-on-surface-variant" style="font-variation-settings: 'FILL' 0;">schedule</span>
+</div>
+<div>
+<h3 class="font-label-caps text-label-caps text-on-surface-variant uppercase">Avg. Settlement Time</h3>
+<p class="font-title-md text-title-md text-on-surface">1.2 Days</p>
+</div>
+</div>
+<div class="h-8 w-16 bg-surface-variant rounded-full relative overflow-hidden">
+<div class="absolute left-0 top-0 bottom-0 w-3/4 bg-primary rounded-full opacity-50"></div>
+</div>
+</div>
+</section>
+<!-- Chart Section (Method Distribution) -->
+<section class="bg-surface-container-low border border-outline-variant rounded-xl p-sm relative overflow-hidden group hover:border-primary/50 transition-colors">
+<h2 class="font-title-md text-title-md text-on-surface mb-md">Method Distribution</h2>
+<!-- CSS representation of a Donut Chart -->
+<div class="flex flex-col items-center justify-center relative py-md">
+<div class="w-48 h-48 rounded-full border-8 border-surface-variant relative flex items-center justify-center">
+<!-- Simulated Chart Segments via borders/gradients (Simplified for UI representation) -->
+<div class="absolute inset-0 rounded-full border-8 border-primary" style="clip-path: polygon(50% 50%, 50% 0, 100% 0, 100% 100%, 0 100%, 0 80%);"></div>
+<div class="absolute inset-0 rounded-full border-8 border-secondary" style="clip-path: polygon(50% 50%, 0 80%, 0 0, 50% 0);"></div>
+<div class="text-center z-10">
+<p class="font-data-mono text-data-mono text-on-surface-variant">Total</p>
+<p class="font-title-md text-title-md text-on-surface mt-base">100%</p>
+</div>
+</div>
+<div class="mt-md w-full grid grid-cols-2 gap-xs">
+<div class="flex items-center gap-xs">
+<div class="w-3 h-3 rounded-full bg-primary"></div>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Bank Transfer (45%)</span>
+</div>
+<div class="flex items-center gap-xs">
+<div class="w-3 h-3 rounded-full bg-secondary"></div>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Credit Card (30%)</span>
+</div>
+<div class="flex items-center gap-xs">
+<div class="w-3 h-3 rounded-full bg-tertiary"></div>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Mobile Money (20%)</span>
+</div>
+<div class="flex items-center gap-xs">
+<div class="w-3 h-3 rounded-full bg-outline-variant"></div>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Cash (5%)</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Chart Section (Trend) -->
+<section class="bg-surface-container-low border border-outline-variant rounded-xl p-sm relative overflow-hidden group hover:border-primary/50 transition-colors">
+<h2 class="font-title-md text-title-md text-on-surface mb-md">Volume Trend (6m)</h2>
+<!-- CSS representation of a Line Chart -->
+<div class="h-32 w-full relative flex items-end justify-between border-b border-l border-outline-variant pb-xs pl-xs mt-sm">
+<!-- Y Axis Labels -->
+<div class="absolute -left-2 top-0 h-full flex flex-col justify-between text-on-surface-variant font-label-caps text-label-caps transform -translate-x-full pr-base">
+<span>10k</span>
+<span>5k</span>
+<span>0</span>
+</div>
+<!-- Bars/Lines simulation -->
+<div class="w-1/6 h-[40%] bg-primary/20 rounded-t-sm relative group-hover:bg-primary/40 transition-colors">
+<div class="absolute bottom-full left-1/2 w-2 h-2 rounded-full bg-primary transform -translate-x-1/2 translate-y-1"></div>
+</div>
+<div class="w-1/6 h-[60%] bg-primary/20 rounded-t-sm relative group-hover:bg-primary/40 transition-colors">
+<div class="absolute bottom-full left-1/2 w-2 h-2 rounded-full bg-primary transform -translate-x-1/2 translate-y-1"></div>
+</div>
+<div class="w-1/6 h-[50%] bg-primary/20 rounded-t-sm relative group-hover:bg-primary/40 transition-colors">
+<div class="absolute bottom-full left-1/2 w-2 h-2 rounded-full bg-primary transform -translate-x-1/2 translate-y-1"></div>
+</div>
+<div class="w-1/6 h-[80%] bg-primary/20 rounded-t-sm relative group-hover:bg-primary/40 transition-colors">
+<div class="absolute bottom-full left-1/2 w-2 h-2 rounded-full bg-primary transform -translate-x-1/2 translate-y-1"></div>
+</div>
+<div class="w-1/6 h-[70%] bg-primary/20 rounded-t-sm relative group-hover:bg-primary/40 transition-colors">
+<div class="absolute bottom-full left-1/2 w-2 h-2 rounded-full bg-primary transform -translate-x-1/2 translate-y-1"></div>
+</div>
+<div class="w-1/6 h-[95%] bg-primary/20 rounded-t-sm relative group-hover:bg-primary/40 transition-colors">
+<div class="absolute bottom-full left-1/2 w-2 h-2 rounded-full bg-primary transform -translate-x-1/2 translate-y-1"></div>
+</div>
+</div>
+<!-- X Axis Labels -->
+<div class="flex justify-between mt-xs px-xs">
+<span class="font-label-caps text-label-caps text-on-surface-variant">Jul</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant">Dec</span>
+</div>
+</section>
+<!-- Method Performance List -->
+<section class="space-y-xs">
+<h2 class="font-title-md text-title-md text-on-surface mb-sm px-xs">Method Performance</h2>
+<div class="bg-surface-container-low border border-outline-variant rounded-lg p-sm flex justify-between items-center hover:border-primary/50 transition-colors">
+<div class="flex items-center gap-sm">
+<div class="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 0;">account_balance</span>
+</div>
+<div>
+<p class="font-title-md text-title-md text-on-surface">Bank Transfer</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Fee: 0.5% | Fail: <span class="text-secondary">0.1%</span></p>
+</div>
+</div>
+<div class="text-right">
+<span class="material-symbols-outlined text-on-surface-variant" style="font-variation-settings: 'FILL' 0;">chevron_right</span>
+</div>
+</div>
+<div class="bg-surface-container-low border border-outline-variant rounded-lg p-sm flex justify-between items-center hover:border-primary/50 transition-colors">
+<div class="flex items-center gap-sm">
+<div class="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 0;">credit_card</span>
+</div>
+<div>
+<p class="font-title-md text-title-md text-on-surface">Credit Card</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Fee: 2.9% | Fail: <span class="text-error">2.4%</span></p>
+</div>
+</div>
+<div class="text-right">
+<span class="material-symbols-outlined text-on-surface-variant" style="font-variation-settings: 'FILL' 0;">chevron_right</span>
+</div>
+</div>
+<div class="bg-surface-container-low border border-outline-variant rounded-lg p-sm flex justify-between items-center hover:border-primary/50 transition-colors">
+<div class="flex items-center gap-sm">
+<div class="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center">
+<span class="material-symbols-outlined text-tertiary" style="font-variation-settings: 'FILL' 0;">phone_iphone</span>
+</div>
+<div>
+<p class="font-title-md text-title-md text-on-surface">Mobile Money</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Fee: 1.5% | Fail: <span class="text-secondary">0.5%</span></p>
+</div>
+</div>
+<div class="text-right">
+<span class="material-symbols-outlined text-on-surface-variant" style="font-variation-settings: 'FILL' 0;">chevron_right</span>
+</div>
+</div>
+</section>
+</main>
+</div>
+</body></html>

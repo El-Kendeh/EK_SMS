@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Mobile Money Payment</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface": "#0b1326",
+                        "surface-container-high": "#222a3d",
+                        "outline": "#8c909f",
+                        "on-surface-variant": "#c2c6d6",
+                        "primary-container": "#4d8eff",
+                        "inverse-on-surface": "#283044",
+                        "inverse-primary": "#005ac2",
+                        "surface-variant": "#2d3449",
+                        "surface-container-highest": "#2d3449",
+                        "surface-container": "#171f33",
+                        "surface-bright": "#31394d",
+                        "primary": "#adc6ff",
+                        "on-primary-container": "#00285d",
+                        "on-tertiary-fixed": "#410004",
+                        "primary-fixed-dim": "#adc6ff",
+                        "outline-variant": "#424754",
+                        "tertiary-fixed-dim": "#ffb3ad",
+                        "primary-fixed": "#d8e2ff",
+                        "background": "#0b1326",
+                        "on-secondary": "#003824",
+                        "secondary-fixed-dim": "#4edea3",
+                        "on-background": "#dae2fd",
+                        "secondary": "#4edea3",
+                        "surface-dim": "#0b1326",
+                        "on-secondary-fixed": "#002113",
+                        "on-primary-fixed-variant": "#004395",
+                        "on-tertiary-fixed-variant": "#930013",
+                        "on-primary-fixed": "#001a42",
+                        "on-primary": "#002e6a",
+                        "on-secondary-fixed-variant": "#005236",
+                        "error": "#ffb4ab",
+                        "tertiary-container": "#ff5451",
+                        "secondary-fixed": "#6ffbbe",
+                        "on-tertiary-container": "#5c0008",
+                        "on-secondary-container": "#00311f",
+                        "on-surface": "#dae2fd",
+                        "tertiary-fixed": "#ffdad7",
+                        "on-tertiary": "#68000a",
+                        "surface-tint": "#adc6ff",
+                        "tertiary": "#ffb3ad",
+                        "surface-container-lowest": "#060e20",
+                        "inverse-surface": "#dae2fd",
+                        "error-container": "#93000a",
+                        "on-error": "#690005",
+                        "on-error-container": "#ffdad6",
+                        "surface-container-low": "#131b2e",
+                        "secondary-container": "#00a572"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "xs": "8px",
+                        "md": "24px",
+                        "gutter": "24px",
+                        "lg": "32px",
+                        "xl": "48px",
+                        "sm": "16px",
+                        "container-max": "1440px",
+                        "base": "4px"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "title-md": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "label-caps": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "body-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "title-md": ["18px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "data-mono": ["14px", { "lineHeight": "20px", "fontWeight": "500" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Custom styles to map font families correctly for specific tokens where Tailwind plugin might need a nudge */
+        .font-data-mono { font-family: 'JetBrains Mono', monospace; }
+        
+        /* Hide number input spinners */
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface font-body-md min-h-screen flex items-center justify-center p-sm md:p-md selection:bg-primary-container selection:text-on-primary-container">
+<!-- Suppressed NavigationDrawer & TopAppBar as per Transactional Intent rules -->
+<main class="w-full max-w-[480px]">
+<!-- Main Payment Card -->
+<div class="bg-surface-container-low border border-outline-variant rounded-xl shadow-2xl overflow-hidden flex flex-col">
+<!-- Header -->
+<header class="flex items-center px-md py-sm border-b border-outline-variant bg-surface-container/50">
+<button aria-label="Go back" class="p-xs -ml-xs text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center rounded-full hover:bg-surface-variant">
+<span class="material-symbols-outlined text-[24px]">arrow_back</span>
+</button>
+<h1 class="font-title-md text-title-md ml-xs">Mobile Money Transfer</h1>
+</header>
+<div class="p-md md:p-lg flex flex-col gap-lg">
+<!-- Amount Display -->
+<div class="flex flex-col items-center justify-center py-sm">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider mb-xs">Amount to Pay</span>
+<div class="flex items-baseline gap-xs">
+<span class="font-title-md text-title-md text-on-surface-variant">GHS</span>
+<span class="font-display-lg text-display-lg font-data-mono tracking-tight">1,268.75</span>
+</div>
+</div>
+<!-- Network Selector -->
+<div class="flex flex-col gap-sm">
+<label class="font-label-caps text-label-caps text-on-surface-variant uppercase">Select Network Provider</label>
+<div class="grid grid-cols-3 gap-sm">
+<!-- Provider 1 (Active) -->
+<label class="relative cursor-pointer group">
+<input checked="" class="peer sr-only" name="provider" type="radio" value="mtn"/>
+<div class="h-full flex flex-col items-center justify-center gap-xs p-sm border border-primary bg-primary/10 rounded-lg peer-checked:border-primary peer-checked:bg-primary/10 transition-all">
+<div class="w-10 h-10 rounded-full bg-[#FFCC00] flex items-center justify-center text-surface-container-lowest font-title-md font-bold">M</div>
+<span class="font-body-sm text-body-sm text-on-surface">MTN</span>
+</div>
+<!-- Active Indicator -->
+<div class="absolute top-xs right-xs text-primary hidden peer-checked:block">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+</label>
+<!-- Provider 2 -->
+<label class="relative cursor-pointer group">
+<input class="peer sr-only" name="provider" type="radio" value="airtel"/>
+<div class="h-full flex flex-col items-center justify-center gap-xs p-sm border border-outline-variant bg-background rounded-lg group-hover:border-primary/50 group-hover:bg-surface-variant transition-all peer-checked:border-primary peer-checked:bg-primary/10">
+<div class="w-10 h-10 rounded-full bg-[#FF0000] flex items-center justify-center text-on-surface font-title-md font-bold">A</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant group-hover:text-on-surface">Airtel</span>
+</div>
+</label>
+<!-- Provider 3 -->
+<label class="relative cursor-pointer group">
+<input class="peer sr-only" name="provider" type="radio" value="vodafone"/>
+<div class="h-full flex flex-col items-center justify-center gap-xs p-sm border border-outline-variant bg-background rounded-lg group-hover:border-primary/50 group-hover:bg-surface-variant transition-all peer-checked:border-primary peer-checked:bg-primary/10">
+<div class="w-10 h-10 rounded-full bg-[#E60000] flex items-center justify-center text-on-surface font-title-md font-bold">V</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant group-hover:text-on-surface">Vodafone</span>
+</div>
+</label>
+</div>
+</div>
+<!-- Phone Number Input -->
+<div class="flex flex-col gap-xs">
+<label class="font-label-caps text-label-caps text-on-surface-variant uppercase" for="phone_number">Mobile Wallet Number</label>
+<div class="relative flex items-center">
+<span class="absolute left-sm text-on-surface-variant font-data-mono text-title-md">+233</span>
+<input autocomplete="off" class="w-full bg-background border border-outline-variant rounded-lg py-sm pr-sm pl-[72px] font-data-mono text-title-md text-on-surface placeholder:text-outline focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors h-[56px]" id="phone_number" placeholder="000 000 000" type="number"/>
+<span class="absolute right-sm text-outline material-symbols-outlined">contact_phone</span>
+</div>
+</div>
+<!-- Payment Summary -->
+<div class="bg-surface border border-outline-variant rounded-lg p-sm flex flex-col gap-xs">
+<div class="flex justify-between items-center">
+<span class="font-body-sm text-body-sm text-on-surface-variant">Subtotal</span>
+<span class="font-data-mono text-body-sm text-on-surface">1,250.00</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-base">
+                            Transaction Fee (1.5%)
+                            <span class="material-symbols-outlined text-[14px] cursor-help" title="Standard network processing fee">info</span>
+</span>
+<span class="font-data-mono text-body-sm text-on-surface">18.75</span>
+</div>
+<hr class="border-outline-variant my-base"/>
+<div class="flex justify-between items-center">
+<span class="font-title-md text-title-md text-on-surface">Total Deduction</span>
+<span class="font-data-mono text-title-md text-primary font-bold">GHS 1,268.75</span>
+</div>
+</div>
+<!-- Action Button -->
+<button class="w-full h-[56px] rounded-xl bg-primary-container text-on-primary-container font-title-md text-title-md flex justify-center items-center gap-sm hover:opacity-90 active:scale-[0.98] transition-all mt-xs shadow-[0_0_24px_rgba(77,142,255,0.15)] hover:shadow-[0_0_32px_rgba(77,142,255,0.25)]">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">send_to_mobile</span>
+                    Initiate STK Push
+                </button>
+</div>
+<!-- Footer -->
+<footer class="py-sm bg-surface-container border-t border-outline-variant flex items-center justify-center gap-base">
+<span class="material-symbols-outlined text-[16px] text-secondary" style="font-variation-settings: 'FILL' 1;">lock</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant">Secured by EK-SMS</span>
+</footer>
+</div>
+</main>
+<script>
+        // Lightweight interaction for radio card selection styling
+        document.querySelectorAll('input[name="provider"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                // Focus styling handled largely by Tailwind peer classes, 
+                // but can add custom JS logic here if needed for more complex state management
+                const phoneInput = document.getElementById('phone_number');
+                phoneInput.focus();
+            });
+        });
+    </script>
+</body></html>

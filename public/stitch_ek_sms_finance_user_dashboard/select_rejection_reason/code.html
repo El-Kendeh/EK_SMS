@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Reject Payment - EK-SMS</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-secondary": "#003824",
+                        "on-tertiary": "#68000a",
+                        "secondary": "#4edea3",
+                        "on-primary-fixed-variant": "#004395",
+                        "on-primary-container": "#00285d",
+                        "tertiary": "#ffb3ad",
+                        "on-tertiary-fixed-variant": "#930013",
+                        "tertiary-fixed": "#ffdad7",
+                        "primary-container": "#4d8eff",
+                        "primary": "#adc6ff",
+                        "on-secondary-container": "#00311f",
+                        "on-secondary-fixed-variant": "#005236",
+                        "surface-container": "#171f33",
+                        "surface-variant": "#2d3449",
+                        "background": "#0b1326",
+                        "on-background": "#dae2fd",
+                        "outline-variant": "#424754",
+                        "secondary-fixed": "#6ffbbe",
+                        "primary-fixed": "#d8e2ff",
+                        "surface-container-low": "#131b2e",
+                        "on-surface": "#dae2fd",
+                        "tertiary-fixed-dim": "#ffb3ad",
+                        "surface": "#0b1326",
+                        "secondary-fixed-dim": "#4edea3",
+                        "on-error-container": "#ffdad6",
+                        "error-container": "#93000a",
+                        "surface-container-high": "#222a3d",
+                        "primary-fixed-dim": "#adc6ff",
+                        "surface-bright": "#31394d",
+                        "on-tertiary-container": "#5c0008",
+                        "surface-tint": "#adc6ff",
+                        "on-secondary-fixed": "#002113",
+                        "inverse-surface": "#dae2fd",
+                        "inverse-on-surface": "#283044",
+                        "on-error": "#690005",
+                        "error": "#ffb4ab",
+                        "surface-dim": "#0b1326",
+                        "on-tertiary-fixed": "#410004",
+                        "on-surface-variant": "#c2c6d6",
+                        "secondary-container": "#00a572",
+                        "inverse-primary": "#005ac2",
+                        "on-primary-fixed": "#001a42",
+                        "tertiary-container": "#ff5451",
+                        "on-primary": "#002e6a",
+                        "surface-container-lowest": "#060e20",
+                        "surface-container-highest": "#2d3449",
+                        "outline": "#8c909f"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "gutter": "24px",
+                        "container-max": "1440px",
+                        "base": "4px",
+                        "xs": "8px",
+                        "sm": "16px",
+                        "xl": "48px",
+                        "lg": "32px",
+                        "md": "24px"
+                    },
+                    "fontFamily": {
+                        "display-lg": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "title-md": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "body-sm": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "label-caps": ["Inter"],
+                        "body-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "title-md": ["18px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "data-mono": ["14px", { "lineHeight": "20px", "fontWeight": "500" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        /* Custom scrollbar for text area */
+        textarea::-webkit-scrollbar {
+            width: 8px;
+        }
+        textarea::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        textarea::-webkit-scrollbar-thumb {
+            background-color: #424754;
+            border-radius: 4px;
+        }
+        
+        /* Radio button animation */
+        .radio-custom:checked + div {
+            border-color: #adc6ff;
+            background-color: rgba(173, 198, 255, 0.1);
+        }
+        .radio-custom:checked + div .radio-inner {
+            opacity: 1;
+            transform: scale(1);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background min-h-screen flex flex-col font-body-sm md:font-body-md overflow-x-hidden selection:bg-primary-container selection:text-on-primary-container">
+<!-- TopAppBar -->
+<header class="bg-surface-container dark:bg-surface-container docked full-width top-0 border-b border-outline-variant flat no shadows flex items-center w-full px-sm h-16 z-50 sticky">
+<button aria-label="Go back" class="mr-sm text-primary dark:text-primary-fixed-dim hover:bg-surface-variant transition-colors duration-200 active:opacity-80 p-2 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">arrow_back</span>
+</button>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile font-semibold text-on-surface flex-1">Reject Payment</h1>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 flex flex-col p-sm md:p-md lg:p-lg max-w-2xl mx-auto w-full gap-gutter pb-xl">
+<div class="mb-sm">
+<p class="font-body-sm text-body-sm md:font-body-md md:text-body-md text-on-surface-variant">
+                Please select the primary reason for rejecting this payment verification request. This will be communicated to the submitter.
+            </p>
+</div>
+<!-- Rejection Reasons Form -->
+<form class="flex flex-col gap-sm flex-1" id="rejectionForm">
+<!-- Option 1 -->
+<label class="relative flex items-center cursor-pointer group">
+<input class="peer sr-only radio-custom" name="rejectionReason" required="" type="radio" value="illegible"/>
+<div class="w-full flex items-center p-sm bg-[#0F172A] border border-[#1E293B] rounded-lg transition-all duration-200 hover:border-primary/50">
+<div class="w-5 h-5 rounded-full border-2 border-outline-variant mr-sm flex items-center justify-center relative flex-shrink-0 peer-checked:border-primary">
+<div class="w-2.5 h-2.5 rounded-full bg-primary opacity-0 transform scale-50 transition-all duration-200 radio-inner"></div>
+</div>
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-on-surface">Illegible Receipt</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant mt-1">The uploaded receipt image is too blurry or damaged to read.</span>
+</div>
+</div>
+</label>
+<!-- Option 2 -->
+<label class="relative flex items-center cursor-pointer group">
+<input class="peer sr-only radio-custom" name="rejectionReason" type="radio" value="mismatch"/>
+<div class="w-full flex items-center p-sm bg-[#0F172A] border border-[#1E293B] rounded-lg transition-all duration-200 hover:border-primary/50">
+<div class="w-5 h-5 rounded-full border-2 border-outline-variant mr-sm flex items-center justify-center relative flex-shrink-0 peer-checked:border-primary">
+<div class="w-2.5 h-2.5 rounded-full bg-primary opacity-0 transform scale-50 transition-all duration-200 radio-inner"></div>
+</div>
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-on-surface">Amount Mismatch</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant mt-1">The claimed amount does not match the amount shown on the receipt.</span>
+</div>
+</div>
+</label>
+<!-- Option 3 -->
+<label class="relative flex items-center cursor-pointer group">
+<input class="peer sr-only radio-custom" name="rejectionReason" type="radio" value="duplicate"/>
+<div class="w-full flex items-center p-sm bg-[#0F172A] border border-[#1E293B] rounded-lg transition-all duration-200 hover:border-primary/50">
+<div class="w-5 h-5 rounded-full border-2 border-outline-variant mr-sm flex items-center justify-center relative flex-shrink-0 peer-checked:border-primary">
+<div class="w-2.5 h-2.5 rounded-full bg-primary opacity-0 transform scale-50 transition-all duration-200 radio-inner"></div>
+</div>
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-on-surface">Duplicate Transaction</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant mt-1">This exact payment receipt has already been processed and approved.</span>
+</div>
+</div>
+</label>
+<!-- Option 4 -->
+<label class="relative flex items-center cursor-pointer group">
+<input class="peer sr-only radio-custom" name="rejectionReason" type="radio" value="expired"/>
+<div class="w-full flex items-center p-sm bg-[#0F172A] border border-[#1E293B] rounded-lg transition-all duration-200 hover:border-primary/50">
+<div class="w-5 h-5 rounded-full border-2 border-outline-variant mr-sm flex items-center justify-center relative flex-shrink-0 peer-checked:border-primary">
+<div class="w-2.5 h-2.5 rounded-full bg-primary opacity-0 transform scale-50 transition-all duration-200 radio-inner"></div>
+</div>
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-on-surface">Expired Document</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant mt-1">The receipt date falls outside the acceptable submission window.</span>
+</div>
+</div>
+</label>
+<!-- Option 5: Other -->
+<label class="relative flex items-center cursor-pointer group">
+<input class="peer sr-only radio-custom" id="radioOther" name="rejectionReason" type="radio" value="other"/>
+<div class="w-full flex items-center p-sm bg-[#0F172A] border border-[#1E293B] rounded-lg transition-all duration-200 hover:border-primary/50">
+<div class="w-5 h-5 rounded-full border-2 border-outline-variant mr-sm flex items-center justify-center relative flex-shrink-0 peer-checked:border-primary">
+<div class="w-2.5 h-2.5 rounded-full bg-primary opacity-0 transform scale-50 transition-all duration-200 radio-inner"></div>
+</div>
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-on-surface">Other (Specify)</span>
+</div>
+</div>
+</label>
+<!-- Conditional Text Area for 'Other' -->
+<div class="hidden mt-xs animate-[fadeIn_0.3s_ease-out]" id="otherTextAreaContainer">
+<label class="sr-only" for="customRemarks">Custom Remarks</label>
+<textarea class="w-full bg-[#020617] border border-[#1E293B] rounded-lg p-sm text-on-surface font-body-sm focus:border-primary focus:ring-1 focus:ring-primary transition-colors resize-none placeholder:text-outline" id="customRemarks" name="customRemarks" placeholder="Please provide detailed remarks for rejection..." rows="4"></textarea>
+<div class="flex justify-end mt-1">
+<span class="font-label-caps text-label-caps text-on-surface-variant">Max 250 chars</span>
+</div>
+</div>
+<!-- Spacer to push button to bottom if content is short -->
+<div class="flex-1"></div>
+<!-- Action Button -->
+<div class="mt-lg pt-sm border-t border-[#1E293B] sticky bottom-0 bg-background/95 backdrop-blur-sm z-10 py-sm">
+<button class="w-full bg-primary text-on-primary font-title-md text-title-md py-sm px-md rounded-full hover:bg-primary/90 transition-colors duration-200 active:scale-[0.98] flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(173,198,255,0.15)]" type="submit">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">cancel</span>
+                    Confirm Rejection
+                </button>
+</div>
+</form>
+</main>
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const radioOther = document.getElementById('radioOther');
+            const otherTextAreaContainer = document.getElementById('otherTextAreaContainer');
+            const customRemarks = document.getElementById('customRemarks');
+            const radios = document.querySelectorAll('input[name="rejectionReason"]');
+
+            // Handle showing/hiding the text area
+            radios.forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    if (e.target.value === 'other') {
+                        otherTextAreaContainer.classList.remove('hidden');
+                        customRemarks.setAttribute('required', 'true');
+                        // Small delay to allow display:block to apply before focusing
+                        setTimeout(() => customRemarks.focus(), 50);
+                    } else {
+                        otherTextAreaContainer.classList.add('hidden');
+                        customRemarks.removeAttribute('required');
+                        customRemarks.value = ''; // Clear value when hidden
+                    }
+                });
+            });
+
+            // Prevent form submission for demo
+            document.getElementById('rejectionForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const selectedReason = document.querySelector('input[name="rejectionReason"]:checked')?.value;
+                if(selectedReason) {
+                    console.log('Rejection confirmed. Reason:', selectedReason);
+                    if(selectedReason === 'other') {
+                        console.log('Remarks:', customRemarks.value);
+                    }
+                    // Visual feedback
+                    const btn = e.target.querySelector('button[type="submit"]');
+                    const originalText = btn.innerHTML;
+                    btn.innerHTML = `<span class="material-symbols-outlined animate-spin">progress_activity</span> Processing...`;
+                    setTimeout(() => {
+                        btn.innerHTML = `<span class="material-symbols-outlined">check_circle</span> Rejected`;
+                        btn.classList.remove('bg-primary', 'text-on-primary');
+                        btn.classList.add('bg-error', 'text-on-error');
+                        setTimeout(() => {
+                            btn.innerHTML = originalText;
+                            btn.classList.add('bg-primary', 'text-on-primary');
+                            btn.classList.remove('bg-error', 'text-on-error');
+                        }, 2000);
+                    }, 1000);
+                }
+            });
+        });
+    </script>
+</body></html>

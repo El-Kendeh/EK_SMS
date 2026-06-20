@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Finance Team Management | Kinetic Ledger</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-container": "#ff5451",
+                        "error-container": "#93000a",
+                        "on-secondary-fixed-variant": "#005236",
+                        "inverse-surface": "#dae2fd",
+                        "outline-variant": "#424754",
+                        "surface-tint": "#adc6ff",
+                        "on-background": "#dae2fd",
+                        "on-secondary-container": "#00311f",
+                        "on-secondary-fixed": "#002113",
+                        "primary-fixed": "#d8e2ff",
+                        "on-primary": "#002e6a",
+                        "on-tertiary-container": "#5c0008",
+                        "on-surface-variant": "#c2c6d6",
+                        "inverse-on-surface": "#283044",
+                        "surface-variant": "#2d3449",
+                        "on-tertiary": "#68000a",
+                        "on-error": "#690005",
+                        "tertiary-fixed": "#ffdad7",
+                        "on-surface": "#dae2fd",
+                        "primary": "#adc6ff",
+                        "surface-container-lowest": "#060e20",
+                        "on-tertiary-fixed": "#410004",
+                        "surface-container-low": "#131b2e",
+                        "surface-container": "#171f33",
+                        "background": "#0b1326",
+                        "on-secondary": "#003824",
+                        "error": "#ffb4ab",
+                        "outline": "#8c909f",
+                        "on-primary-fixed": "#001a42",
+                        "tertiary-fixed-dim": "#ffb3ad",
+                        "surface-bright": "#31394d",
+                        "on-primary-fixed-variant": "#004395",
+                        "secondary-container": "#00a572",
+                        "primary-container": "#4d8eff",
+                        "on-error-container": "#ffdad6",
+                        "surface": "#0b1326",
+                        "secondary-fixed-dim": "#4edea3",
+                        "on-tertiary-fixed-variant": "#930013",
+                        "secondary": "#4edea3",
+                        "tertiary": "#ffb3ad",
+                        "surface-container-highest": "#2d3449",
+                        "inverse-primary": "#005ac2",
+                        "surface-container-high": "#222a3d",
+                        "secondary-fixed": "#6ffbbe",
+                        "primary-fixed-dim": "#adc6ff",
+                        "on-primary-container": "#00285d",
+                        "surface-dim": "#0b1326"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "xs": "8px",
+                        "container-max": "1440px",
+                        "sm": "16px",
+                        "md": "24px",
+                        "gutter": "24px",
+                        "xl": "48px",
+                        "lg": "32px",
+                        "base": "4px"
+                    },
+                    "fontFamily": {
+                        "title-md": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "label-caps": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "body-md": ["Inter"],
+                        "headline-lg-mobile": ["Inter"]
+                    },
+                    "fontSize": {
+                        "title-md": ["18px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "data-mono": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            background-color: #0b1326;
+            color: #dae2fd;
+            -webkit-font-smoothing: antialiased;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #0b1326;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 3px;
+        }
+        .card-hover:hover {
+            border-color: rgba(173, 198, 255, 0.5);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="min-h-screen flex flex-col font-body-md text-body-md overflow-x-hidden">
+<!-- Top Navigation Bar -->
+<header class="flex justify-between items-center w-full px-md h-16 bg-surface dark:bg-surface border-b border-outline-variant dark:border-outline-variant docked full-width top-0 z-50">
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-primary cursor-pointer">menu</span>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary dark:text-primary tracking-tight">Kinetic Ledger</h1>
+</div>
+<div class="flex items-center gap-md">
+<div class="relative">
+<span class="material-symbols-outlined text-on-surface-variant hover:bg-surface-container-high p-xs rounded transition-colors duration-200 cursor-pointer">notifications</span>
+<span class="absolute top-1 right-1 w-2 h-2 bg-tertiary-container rounded-full"></span>
+</div>
+<div class="w-10 h-10 rounded-full border border-outline-variant bg-surface-container-high flex items-center justify-center overflow-hidden">
+<img alt="Profile" class="w-full h-full object-cover" data-alt="A professional headshot of a senior finance administrator in a corporate setting, with clean lighting and a focus on reliability and authority. The background is a soft-focus modern office with dark navy and steel grey tones." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDxBmgdOq3xGCa_LbKmVGfNEXJri613aKXbk4KH1krJwIrhVuQVFgH-hVZUwMXvkSrpRb6nPju2Y3z24abAuq0dJ5uKN0SmHwJLNZyAhEwV9ZCBUyVj2eON8z9uG2IFHAFb4HwqKaD8a0-Mi8jd1QlBDeYTvY4Zci4CBmCN6brNUMg_N6E1lboBMBxqd-YMBLP3eu2KJJcQXFTDrXc5cOzE7CDk2A6Pe-3MVDMQRixxWT_-AEMi7G9r4-py5hrT8XsFyE32FnYwzAs"/>
+</div>
+</div>
+</header>
+<div class="flex-1 flex overflow-hidden">
+<!-- Sidebar Navigation (Desktop) -->
+<aside class="hidden md:flex flex-col w-[280px] bg-surface-container-low border-r border-outline-variant p-md gap-sm">
+<nav class="flex flex-col gap-base">
+<div class="flex items-center gap-sm px-sm py-md text-on-surface-variant hover:bg-surface-container-high rounded-xl transition-all cursor-pointer">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-title-md text-title-md">Dashboard</span>
+</div>
+<div class="flex items-center gap-sm px-sm py-md text-on-surface-variant hover:bg-surface-container-high rounded-xl transition-all cursor-pointer">
+<span class="material-symbols-outlined">payments</span>
+<span class="font-title-md text-title-md">Payments</span>
+</div>
+<div class="flex items-center gap-sm px-sm py-md text-on-surface-variant hover:bg-surface-container-high rounded-xl transition-all cursor-pointer">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+<span class="font-title-md text-title-md">Budgets</span>
+</div>
+<div class="flex items-center gap-sm px-sm py-md bg-secondary-container text-on-secondary-container rounded-xl transition-all cursor-pointer">
+<span class="material-symbols-outlined">group</span>
+<span class="font-title-md text-title-md">Finance Team</span>
+</div>
+<div class="flex items-center gap-sm px-sm py-md text-on-surface-variant hover:bg-surface-container-high rounded-xl transition-all cursor-pointer">
+<span class="material-symbols-outlined">assessment</span>
+<span class="font-title-md text-title-md">Reports</span>
+</div>
+</nav>
+<div class="mt-auto pt-md border-t border-outline-variant">
+<div class="flex items-center gap-sm px-sm py-md text-on-surface-variant hover:bg-surface-container-high rounded-xl transition-all cursor-pointer">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-title-md text-title-md">Settings</span>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col bg-background p-md md:p-xl overflow-y-auto custom-scrollbar">
+<!-- Page Header -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-md mb-xl">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Finance Team</h2>
+<p class="text-on-surface-variant mt-base">Manage staff access and organizational permissions.</p>
+</div>
+<button class="bg-primary text-on-primary px-lg py-sm rounded-xl font-title-md flex items-center gap-xs hover:brightness-110 transition-all shadow-lg active:scale-95" onclick="toggleAddUserForm()">
+<span class="material-symbols-outlined">add</span>
+                    Add Finance User
+                </button>
+</div>
+<!-- Add User Form (Hidden by default) -->
+<div class="hidden mb-xl transition-all duration-300" id="addUserForm">
+<div class="bg-surface-container border border-primary/30 rounded-xl p-md md:p-lg shadow-2xl">
+<div class="flex items-center justify-between mb-md">
+<h3 class="font-title-md text-title-md text-primary">Add New Team Member</h3>
+<button class="text-on-surface-variant hover:text-on-surface" onclick="toggleAddUserForm()">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<form class="grid grid-cols-1 md:grid-cols-3 gap-md">
+<div class="flex flex-col gap-base">
+<label class="font-label-caps text-label-caps text-on-surface-variant">Full Name</label>
+<input class="bg-surface-container-lowest border border-outline-variant rounded-lg p-sm focus:border-primary focus:ring-0 text-on-surface outline-none" placeholder="e.g. Sarah Mitchell" type="text"/>
+</div>
+<div class="flex flex-col gap-base">
+<label class="font-label-caps text-label-caps text-on-surface-variant">Email Address</label>
+<input class="bg-surface-container-lowest border border-outline-variant rounded-lg p-sm focus:border-primary focus:ring-0 text-on-surface outline-none" placeholder="sarah.m@kinetic.edu" type="email"/>
+</div>
+<div class="flex flex-col gap-base">
+<label class="font-label-caps text-label-caps text-on-surface-variant">Phone Number</label>
+<input class="bg-surface-container-lowest border border-outline-variant rounded-lg p-sm focus:border-primary focus:ring-0 text-on-surface outline-none" placeholder="+1 (555) 000-0000" type="tel"/>
+</div>
+<div class="flex flex-col gap-base">
+<label class="font-label-caps text-label-caps text-on-surface-variant">Username</label>
+<input class="bg-surface-container-lowest border border-outline-variant rounded-lg p-sm focus:border-primary focus:ring-0 text-on-surface outline-none" placeholder="smitchell_finance" type="text"/>
+</div>
+<div class="flex flex-col gap-base">
+<label class="font-label-caps text-label-caps text-on-surface-variant">Role</label>
+<select class="bg-surface-container-lowest border border-outline-variant rounded-lg p-sm focus:border-primary focus:ring-0 text-on-surface outline-none">
+<option>Finance Officer</option>
+<option>Bursar</option>
+<option>Accounts Clerk</option>
+<option>Audit Manager</option>
+</select>
+</div>
+<div class="flex flex-col gap-base">
+<label class="font-label-caps text-label-caps text-on-surface-variant">Access Level</label>
+<select class="bg-surface-container-lowest border border-outline-variant rounded-lg p-sm focus:border-primary focus:ring-0 text-on-surface outline-none">
+<option>Full Access</option>
+<option>Read Only</option>
+<option>Approval Only</option>
+</select>
+</div>
+<div class="flex flex-col gap-base md:col-span-2">
+<label class="font-label-caps text-label-caps text-on-surface-variant">Temporary Password</label>
+<div class="relative">
+<input class="w-full bg-surface-container-lowest border border-outline-variant rounded-lg p-sm focus:border-primary focus:ring-0 text-on-surface outline-none pr-10" id="tempPassword" type="password" value="K1net1cPass2024!"/>
+<button class="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary" onclick="togglePasswordVisibility()" type="button">
+<span class="material-symbols-outlined text-[20px]">visibility</span>
+</button>
+</div>
+</div>
+<div class="md:col-span-3 flex flex-col md:flex-row items-center justify-between gap-md pt-sm border-t border-outline-variant mt-sm">
+<p class="text-body-sm text-on-surface-variant italic">User will be required to change password on first login</p>
+<div class="flex items-center gap-md w-full md:w-auto">
+<button class="flex-1 md:flex-none px-lg py-sm border border-outline-variant text-on-surface rounded-xl hover:bg-surface-container-high transition-all" onclick="toggleAddUserForm()" type="button">Cancel</button>
+<button class="flex-1 md:flex-none px-lg py-sm bg-primary text-on-primary rounded-xl font-semibold hover:brightness-110 transition-all" type="submit">Create User</button>
+</div>
+</div>
+</form>
+</div>
+</div>
+<!-- Bento-Style Grid for Team Members -->
+<div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-gutter">
+<!-- Member Card 1 -->
+<div class="bg-surface-container border border-outline-variant rounded-xl p-md flex flex-col gap-md transition-all card-hover group">
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-md">
+<div class="w-14 h-14 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-title-md relative">
+                                MV
+                                <span class="absolute bottom-0 right-0 w-4 h-4 bg-secondary border-2 border-surface-container rounded-full" title="Active"></span>
+</div>
+<div>
+<h4 class="font-title-md text-on-surface group-hover:text-primary transition-colors">Marcus Vane</h4>
+<div class="flex gap-xs mt-base">
+<span class="font-label-caps text-[10px] px-xs py-[2px] bg-secondary/10 text-secondary border border-secondary/20 rounded">Bursar</span>
+<span class="font-label-caps text-[10px] px-xs py-[2px] bg-primary/10 text-primary border border-primary/20 rounded">Full Access</span>
+</div>
+</div>
+</div>
+<div class="flex gap-xs">
+<button class="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-container-high rounded transition-all">
+<span class="material-symbols-outlined text-[20px]">edit</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:text-tertiary-container hover:bg-surface-container-high rounded transition-all">
+<span class="material-symbols-outlined text-[20px]">block</span>
+</button>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-sm pt-sm border-t border-outline-variant/30">
+<div class="flex flex-col gap-base">
+<span class="font-label-caps text-[10px] text-on-surface-variant">Email</span>
+<span class="text-body-sm text-on-surface truncate">m.vane@kinetic.edu</span>
+</div>
+<div class="flex flex-col gap-base">
+<span class="font-label-caps text-[10px] text-on-surface-variant">Phone</span>
+<span class="text-body-sm text-on-surface">+1 555-0129</span>
+</div>
+<div class="flex flex-col gap-base col-span-2">
+<span class="font-label-caps text-[10px] text-on-surface-variant">Username</span>
+<span class="font-data-mono text-data-mono text-on-surface-variant">mvane_admin</span>
+</div>
+</div>
+</div>
+<!-- Member Card 2 -->
+<div class="bg-surface-container border border-outline-variant rounded-xl p-md flex flex-col gap-md transition-all card-hover group">
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-md">
+<div class="w-14 h-14 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-bold text-title-md relative">
+                                JL
+                                <span class="absolute bottom-0 right-0 w-4 h-4 bg-secondary border-2 border-surface-container rounded-full" title="Active"></span>
+</div>
+<div>
+<h4 class="font-title-md text-on-surface group-hover:text-primary transition-colors">Jenna Lee</h4>
+<div class="flex gap-xs mt-base">
+<span class="font-label-caps text-[10px] px-xs py-[2px] bg-secondary/10 text-secondary border border-secondary/20 rounded">Finance Officer</span>
+<span class="font-label-caps text-[10px] px-xs py-[2px] bg-primary/10 text-primary border border-primary/20 rounded">Full Access</span>
+</div>
+</div>
+</div>
+<div class="flex gap-xs">
+<button class="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-container-high rounded transition-all">
+<span class="material-symbols-outlined text-[20px]">edit</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:text-tertiary-container hover:bg-surface-container-high rounded transition-all">
+<span class="material-symbols-outlined text-[20px]">block</span>
+</button>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-sm pt-sm border-t border-outline-variant/30">
+<div class="flex flex-col gap-base">
+<span class="font-label-caps text-[10px] text-on-surface-variant">Email</span>
+<span class="text-body-sm text-on-surface truncate">jlee@kinetic.edu</span>
+</div>
+<div class="flex flex-col gap-base">
+<span class="font-label-caps text-[10px] text-on-surface-variant">Phone</span>
+<span class="text-body-sm text-on-surface">+1 555-0144</span>
+</div>
+<div class="flex flex-col gap-base col-span-2">
+<span class="font-label-caps text-[10px] text-on-surface-variant">Username</span>
+<span class="font-data-mono text-data-mono text-on-surface-variant">jlee_finance</span>
+</div>
+</div>
+</div>
+<!-- Member Card 3 (Suspended State) -->
+<div class="bg-surface-container-low border border-outline-variant rounded-xl p-md flex flex-col gap-md transition-all card-hover group opacity-75">
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-md">
+<div class="w-14 h-14 rounded-full bg-surface-container-high text-on-surface-variant flex items-center justify-center font-bold text-title-md relative grayscale">
+                                RK
+                                <span class="absolute bottom-0 right-0 w-4 h-4 bg-outline-variant border-2 border-surface-container-low rounded-full" title="Suspended"></span>
+</div>
+<div>
+<h4 class="font-title-md text-on-surface-variant">Robert King</h4>
+<div class="flex gap-xs mt-base">
+<span class="font-label-caps text-[10px] px-xs py-[2px] bg-surface-variant text-on-surface-variant border border-outline-variant rounded">Accounts Clerk</span>
+<span class="font-label-caps text-[10px] px-xs py-[2px] bg-tertiary/10 text-tertiary border border-tertiary/20 rounded">Read Only</span>
+</div>
+</div>
+</div>
+<div class="flex gap-xs">
+<button class="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-container-high rounded transition-all">
+<span class="material-symbols-outlined text-[20px]">edit</span>
+</button>
+<button class="px-xs h-8 flex items-center justify-center text-secondary border border-secondary/30 hover:bg-secondary/10 rounded transition-all text-xs font-semibold">
+                                Reactivate
+                            </button>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-sm pt-sm border-t border-outline-variant/30">
+<div class="flex flex-col gap-base">
+<span class="font-label-caps text-[10px] text-on-surface-variant">Email</span>
+<span class="text-body-sm text-on-surface-variant truncate italic">r.king@kinetic.edu</span>
+</div>
+<div class="flex flex-col gap-base">
+<span class="font-label-caps text-[10px] text-on-surface-variant">Phone</span>
+<span class="text-body-sm text-on-surface-variant">+1 555-0188</span>
+</div>
+<div class="flex flex-col gap-base col-span-2">
+<span class="font-label-caps text-[10px] text-on-surface-variant text-tertiary">Account Status</span>
+<span class="text-body-sm text-tertiary font-semibold flex items-center gap-xs"><span class="material-symbols-outlined text-sm">lock</span> Suspended by Admin</span>
+</div>
+</div>
+</div>
+<!-- Member Card 4 -->
+<div class="bg-surface-container border border-outline-variant rounded-xl p-md flex flex-col gap-md transition-all card-hover group">
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-md">
+<div class="w-14 h-14 rounded-full bg-tertiary-fixed-dim text-on-tertiary-fixed flex items-center justify-center font-bold text-title-md relative">
+                                AS
+                                <span class="absolute bottom-0 right-0 w-4 h-4 bg-secondary border-2 border-surface-container rounded-full" title="Active"></span>
+</div>
+<div>
+<h4 class="font-title-md text-on-surface group-hover:text-primary transition-colors">Alice Stern</h4>
+<div class="flex gap-xs mt-base">
+<span class="font-label-caps text-[10px] px-xs py-[2px] bg-secondary/10 text-secondary border border-secondary/20 rounded">Accounts Clerk</span>
+<span class="font-label-caps text-[10px] px-xs py-[2px] bg-tertiary/10 text-tertiary border border-tertiary/20 rounded">Read Only</span>
+</div>
+</div>
+</div>
+<div class="flex gap-xs">
+<button class="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-container-high rounded transition-all">
+<span class="material-symbols-outlined text-[20px]">edit</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:text-tertiary-container hover:bg-surface-container-high rounded transition-all">
+<span class="material-symbols-outlined text-[20px]">block</span>
+</button>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-sm pt-sm border-t border-outline-variant/30">
+<div class="flex flex-col gap-base">
+<span class="font-label-caps text-[10px] text-on-surface-variant">Email</span>
+<span class="text-body-sm text-on-surface truncate">astern@kinetic.edu</span>
+</div>
+<div class="flex flex-col gap-base">
+<span class="font-label-caps text-[10px] text-on-surface-variant">Phone</span>
+<span class="text-body-sm text-on-surface">+1 555-0211</span>
+</div>
+<div class="flex flex-col gap-base col-span-2">
+<span class="font-label-caps text-[10px] text-on-surface-variant">Username</span>
+<span class="font-data-mono text-data-mono text-on-surface-variant">astern_clerk</span>
+</div>
+</div>
+</div>
+<!-- Empty State / Placeholder Slot -->
+<div class="bg-surface-container border border-dashed border-outline-variant rounded-xl p-md flex flex-col items-center justify-center gap-sm cursor-pointer hover:bg-surface-container-high transition-all group min-h-[220px]" onclick="toggleAddUserForm()">
+<div class="w-12 h-12 rounded-full border-2 border-dashed border-outline-variant flex items-center justify-center text-on-surface-variant group-hover:text-primary group-hover:border-primary transition-all">
+<span class="material-symbols-outlined text-[28px]">person_add</span>
+</div>
+<span class="font-title-md text-on-surface-variant group-hover:text-on-surface">Add New Member</span>
+</div>
+</div>
+</main>
+</div>
+<!-- Mobile Bottom Navigation Shell -->
+<nav class="md:hidden fixed bottom-0 w-full z-50 flex justify-around items-center py-xs bg-surface-container border-t border-outline-variant">
+<div class="flex flex-col items-center justify-center text-on-surface-variant px-xs py-base hover:text-primary transition-all">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-caps text-[10px]">Dashboard</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant px-xs py-base hover:text-primary transition-all">
+<span class="material-symbols-outlined">payments</span>
+<span class="font-label-caps text-[10px]">Payments</span>
+</div>
+<div class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-xs py-base scale-95">
+<span class="material-symbols-outlined">group</span>
+<span class="font-label-caps text-[10px]">Team</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant px-xs py-base hover:text-primary transition-all">
+<span class="material-symbols-outlined">assessment</span>
+<span class="font-label-caps text-[10px]">Reports</span>
+</div>
+</nav>
+<script>
+        function toggleAddUserForm() {
+            const form = document.getElementById('addUserForm');
+            if (form.classList.contains('hidden')) {
+                form.classList.remove('hidden');
+                form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else {
+                form.classList.add('hidden');
+            }
+        }
+
+        function togglePasswordVisibility() {
+            const pwdInput = document.getElementById('tempPassword');
+            const icon = event.currentTarget.querySelector('.material-symbols-outlined');
+            if (pwdInput.type === 'password') {
+                pwdInput.type = 'text';
+                icon.innerText = 'visibility_off';
+            } else {
+                pwdInput.type = 'password';
+                icon.innerText = 'visibility';
+            }
+        }
+    </script>
+</body></html>

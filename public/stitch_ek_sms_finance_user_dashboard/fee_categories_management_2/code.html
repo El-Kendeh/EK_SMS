@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Fee Categories Management | Kinetic Ledger</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface": "#0b1326",
+                        "inverse-on-surface": "#283044",
+                        "on-tertiary": "#68000a",
+                        "on-error-container": "#ffdad6",
+                        "outline-variant": "#424754",
+                        "secondary-container": "#00a572",
+                        "error-container": "#93000a",
+                        "surface-container-high": "#222a3d",
+                        "surface-tint": "#adc6ff",
+                        "on-surface-variant": "#c2c6d6",
+                        "error": "#ffb4ab",
+                        "surface-bright": "#31394d",
+                        "on-tertiary-container": "#5c0008",
+                        "on-surface": "#dae2fd",
+                        "on-secondary-fixed": "#002113",
+                        "on-primary-container": "#00285d",
+                        "on-primary": "#002e6a",
+                        "on-tertiary-fixed-variant": "#930013",
+                        "primary": "#adc6ff",
+                        "tertiary-fixed": "#ffdad7",
+                        "surface-container": "#171f33",
+                        "primary-container": "#4d8eff",
+                        "on-tertiary-fixed": "#410004",
+                        "surface-container-lowest": "#060e20",
+                        "outline": "#8c909f",
+                        "secondary-fixed": "#6ffbbe",
+                        "secondary-fixed-dim": "#4edea3",
+                        "on-secondary-fixed-variant": "#005236",
+                        "inverse-primary": "#005ac2",
+                        "surface-container-highest": "#2d3449",
+                        "surface-dim": "#0b1326",
+                        "on-background": "#dae2fd",
+                        "on-secondary": "#003824",
+                        "on-error": "#690005",
+                        "tertiary-container": "#ff5451",
+                        "inverse-surface": "#dae2fd",
+                        "background": "#0b1326",
+                        "surface-variant": "#2d3449",
+                        "on-secondary-container": "#00311f",
+                        "tertiary-fixed-dim": "#ffb3ad",
+                        "on-primary-fixed-variant": "#004395",
+                        "tertiary": "#ffb3ad",
+                        "primary-fixed-dim": "#adc6ff",
+                        "surface-container-low": "#131b2e",
+                        "secondary": "#4edea3",
+                        "primary-fixed": "#d8e2ff",
+                        "on-primary-fixed": "#001a42"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "container-max": "1440px",
+                        "base": "4px",
+                        "xs": "8px",
+                        "sm": "16px",
+                        "lg": "32px",
+                        "gutter": "24px",
+                        "md": "24px",
+                        "xl": "48px"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "title-md": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "body-sm": ["Inter"],
+                        "label-caps": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "title-md": ["18px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "data-mono": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .fee-card-border {
+            border-left: 4px solid transparent;
+        }
+        .fee-card-border:hover {
+            border-left: 4px solid #adc6ff;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface font-body-md overflow-x-hidden min-h-screen">
+<!-- Top AppBar -->
+<header class="flex justify-between items-center w-full px-md h-16 bg-surface dark:bg-surface border-b border-outline-variant dark:border-outline-variant fixed top-0 z-50">
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-primary dark:text-primary">menu</span>
+<span class="font-headline-lg text-headline-lg font-bold text-primary dark:text-primary tracking-tight">Kinetic Ledger</span>
+</div>
+<div class="flex items-center gap-sm">
+<button class="p-xs hover:bg-surface-container-high rounded-full transition-colors duration-200">
+<span class="material-symbols-outlined text-on-surface-variant dark:text-on-surface-variant">notifications</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container font-bold text-xs">
+                FO
+            </div>
+</div>
+</header>
+<main class="pt-24 pb-32 px-md max-w-container-max mx-auto">
+<!-- Page Header -->
+<div class="flex flex-col md:flex-row md:items-end justify-between mb-xl gap-sm">
+<div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface">Fee Categories</h1>
+<p class="font-body-md text-on-surface-variant">Define and manage institutional fee structures.</p>
+</div>
+<button class="flex items-center gap-xs bg-primary text-on-primary px-sm py-xs rounded-lg hover:brightness-110 transition-all font-title-md text-title-md shadow-lg shadow-primary/10">
+<span class="material-symbols-outlined">add</span>
+<span>New Category</span>
+</button>
+</div>
+<!-- Dashboard-style Stats Row -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-gutter mb-xl">
+<div class="bg-surface-container border border-outline-variant p-md rounded-xl">
+<p class="font-label-caps text-label-caps text-on-surface-variant mb-xs">TOTAL ACTIVE CATEGORIES</p>
+<p class="font-display-lg text-display-lg text-primary">12</p>
+</div>
+<div class="bg-surface-container border border-outline-variant p-md rounded-xl">
+<p class="font-label-caps text-label-caps text-on-surface-variant mb-xs">PENDING ASSIGNMENTS</p>
+<p class="font-display-lg text-display-lg text-secondary">08</p>
+</div>
+<div class="bg-surface-container border border-outline-variant p-md rounded-xl">
+<p class="font-label-caps text-label-caps text-on-surface-variant mb-xs">ANNUAL PROJECTED REVENUE</p>
+<p class="font-display-lg text-display-lg text-primary font-data-mono">Le 850M</p>
+</div>
+</div>
+<!-- Fee Category Cards Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-gutter mb-xl">
+<!-- Card 1 -->
+<div class="bg-surface-container border border-outline-variant p-md rounded-xl fee-card-border transition-all duration-300 group">
+<div class="flex justify-between items-start mb-sm">
+<div>
+<div class="flex items-center gap-xs mb-xs">
+<span class="bg-secondary-container/10 text-secondary text-[10px] font-bold px-xs py-[2px] rounded-full uppercase tracking-widest border border-secondary/20">Active</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant">TERM</span>
+</div>
+<h3 class="font-title-md text-title-md text-on-surface">Tuition Fee — Term 1</h3>
+</div>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+<div class="mb-md">
+<p class="font-display-lg text-[28px] text-primary font-data-mono leading-none">Le 2,500,000</p>
+</div>
+<div class="space-y-sm mb-lg">
+<div class="flex items-center gap-sm text-body-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px]">school</span>
+<span>JSS1, JSS2, JSS3</span>
+</div>
+<div class="flex items-center gap-sm text-body-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px]">update</span>
+<span>Next due: Sept 2024</span>
+</div>
+</div>
+<button class="w-full flex items-center justify-center gap-xs border border-primary text-primary px-sm py-xs rounded-lg hover:bg-primary/10 transition-colors font-label-caps text-label-caps uppercase">
+<span class="material-symbols-outlined text-[20px]">person_add</span>
+                    Assign to Students
+                </button>
+</div>
+<!-- Card 2 -->
+<div class="bg-surface-container border border-outline-variant p-md rounded-xl fee-card-border transition-all duration-300">
+<div class="flex justify-between items-start mb-sm">
+<div>
+<div class="flex items-center gap-xs mb-xs">
+<span class="bg-secondary-container/10 text-secondary text-[10px] font-bold px-xs py-[2px] rounded-full uppercase tracking-widest border border-secondary/20">Active</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant">ANNUAL</span>
+</div>
+<h3 class="font-title-md text-title-md text-on-surface">Library Fee</h3>
+</div>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+<div class="mb-md">
+<p class="font-display-lg text-[28px] text-primary font-data-mono leading-none">Le 150,000</p>
+</div>
+<div class="space-y-sm mb-lg">
+<div class="flex items-center gap-sm text-body-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px]">group</span>
+<span>All Classes</span>
+</div>
+<div class="flex items-center gap-sm text-body-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px]">book</span>
+<span>Resource Maintenance</span>
+</div>
+</div>
+<button class="w-full flex items-center justify-center gap-xs border border-primary text-primary px-sm py-xs rounded-lg hover:bg-primary/10 transition-colors font-label-caps text-label-caps uppercase">
+<span class="material-symbols-outlined text-[20px]">person_add</span>
+                    Assign to Students
+                </button>
+</div>
+<!-- Card 3 -->
+<div class="bg-surface-container border border-outline-variant p-md rounded-xl fee-card-border transition-all duration-300 opacity-80">
+<div class="flex justify-between items-start mb-sm">
+<div>
+<div class="flex items-center gap-xs mb-xs">
+<span class="bg-on-surface-variant/10 text-on-surface-variant text-[10px] font-bold px-xs py-[2px] rounded-full uppercase tracking-widest border border-outline-variant">Inactive</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant">ONE-TIME</span>
+</div>
+<h3 class="font-title-md text-title-md text-on-surface">Sports &amp; Activities</h3>
+</div>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+<div class="mb-md">
+<p class="font-display-lg text-[28px] text-primary font-data-mono leading-none">Le 300,000</p>
+</div>
+<div class="space-y-sm mb-lg">
+<div class="flex items-center gap-sm text-body-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px]">sports_soccer</span>
+<span>SS1, SS2, SS3</span>
+</div>
+<div class="flex items-center gap-sm text-body-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px]">event_busy</span>
+<span>Last used: May 2023</span>
+</div>
+</div>
+<button class="w-full flex items-center justify-center gap-xs border border-primary text-primary px-sm py-xs rounded-lg hover:bg-primary/10 transition-colors font-label-caps text-label-caps uppercase">
+<span class="material-symbols-outlined text-[20px]">person_add</span>
+                    Assign to Students
+                </button>
+</div>
+</div>
+<!-- Inline Creation Form (Expanded) -->
+<section class="mt-xl">
+<div class="bg-surface-container-high border border-outline-variant rounded-xl overflow-hidden">
+<div class="p-md border-b border-outline-variant flex items-center gap-sm">
+<div class="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+</div>
+<div>
+<h2 class="font-title-md text-title-md text-on-surface">Create Fee Category</h2>
+<p class="font-body-sm text-on-surface-variant">Setup a new line item for the institutional ledger.</p>
+</div>
+</div>
+<form class="p-md md:p-lg grid grid-cols-1 md:grid-cols-2 gap-gutter">
+<!-- Column 1 -->
+<div class="space-y-md">
+<div class="space-y-base">
+<label class="font-label-caps text-label-caps text-on-surface-variant">CATEGORY NAME</label>
+<input class="w-full bg-surface-container-lowest border border-outline-variant rounded-lg px-sm py-xs focus:border-primary focus:ring-1 focus:ring-primary outline-none text-on-surface placeholder:text-on-surface-variant/40" placeholder="e.g. Science Lab Fee" type="text"/>
+</div>
+<div class="space-y-base">
+<label class="font-label-caps text-label-caps text-on-surface-variant">AMOUNT (LE)</label>
+<div class="relative">
+<span class="absolute left-sm top-1/2 -translate-y-1/2 text-on-surface-variant font-data-mono">Le</span>
+<input class="w-full bg-surface-container-lowest border border-outline-variant rounded-lg pl-12 pr-sm py-xs focus:border-primary focus:ring-1 focus:ring-primary outline-none text-on-surface font-data-mono placeholder:text-on-surface-variant/40" placeholder="0.00" type="text"/>
+</div>
+</div>
+<div class="space-y-base">
+<label class="font-label-caps text-label-caps text-on-surface-variant">DESCRIPTION</label>
+<textarea class="w-full bg-surface-container-lowest border border-outline-variant rounded-lg px-sm py-xs focus:border-primary focus:ring-1 focus:ring-primary outline-none text-on-surface placeholder:text-on-surface-variant/40 resize-none" placeholder="Specify details about this fee category..." rows="3"></textarea>
+</div>
+</div>
+<!-- Column 2 -->
+<div class="space-y-md">
+<div class="space-y-base">
+<label class="font-label-caps text-label-caps text-on-surface-variant">FREQUENCY</label>
+<select class="w-full bg-surface-container-lowest border border-outline-variant rounded-lg px-sm py-xs focus:border-primary focus:ring-1 focus:ring-primary outline-none text-on-surface appearance-none">
+<option>Term</option>
+<option>Annual</option>
+<option>One-time</option>
+<option>Monthly</option>
+</select>
+</div>
+<div class="space-y-base">
+<label class="font-label-caps text-label-caps text-on-surface-variant">APPLICABLE CLASSES</label>
+<div class="flex flex-wrap gap-xs pt-xs">
+<button class="px-sm py-1 rounded-full border border-primary bg-primary/20 text-primary font-label-caps text-label-caps" type="button">JSS1</button>
+<button class="px-sm py-1 rounded-full border border-primary bg-primary/20 text-primary font-label-caps text-label-caps" type="button">JSS2</button>
+<button class="px-sm py-1 rounded-full border border-primary bg-primary/20 text-primary font-label-caps text-label-caps" type="button">JSS3</button>
+<button class="px-sm py-1 rounded-full border border-outline-variant text-on-surface-variant font-label-caps text-label-caps hover:border-primary transition-colors" type="button">SS1</button>
+<button class="px-sm py-1 rounded-full border border-outline-variant text-on-surface-variant font-label-caps text-label-caps hover:border-primary transition-colors" type="button">SS2</button>
+<button class="px-sm py-1 rounded-full border border-outline-variant text-on-surface-variant font-label-caps text-label-caps hover:border-primary transition-colors" type="button">SS3</button>
+<button class="px-sm py-1 rounded-full border border-dashed border-outline-variant text-on-surface-variant font-label-caps text-label-caps flex items-center gap-1" type="button">
+<span class="material-symbols-outlined text-[14px]">add</span> Add
+                                </button>
+</div>
+</div>
+<div class="pt-sm">
+<button class="w-full bg-primary text-on-primary py-sm rounded-lg font-title-md text-title-md hover:brightness-110 transition-all shadow-lg shadow-primary/20" type="submit">
+                                Create Category
+                            </button>
+</div>
+</div>
+</form>
+</div>
+</section>
+</main>
+<!-- Bottom Navigation (Mobile View) -->
+<nav class="md:hidden fixed bottom-0 w-full z-50 flex justify-around items-center py-xs bg-surface-container border-t border-outline-variant">
+<div class="flex flex-col items-center justify-center text-on-surface-variant px-xs py-base">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-caps text-label-caps mt-1">Dashboard</span>
+</div>
+<div class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-xs py-base">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">payments</span>
+<span class="font-label-caps text-label-caps mt-1">Payments</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant px-xs py-base">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+<span class="font-label-caps text-label-caps mt-1">Budgets</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant px-xs py-base">
+<span class="material-symbols-outlined">assessment</span>
+<span class="font-label-caps text-label-caps mt-1">Reports</span>
+</div>
+</nav>
+<!-- Side Navigation (Desktop Hint) -->
+<aside class="hidden lg:flex fixed left-0 top-16 h-[calc(100vh-64px)] w-20 flex-col items-center py-xl gap-xl border-r border-outline-variant bg-surface-container-lowest">
+<div class="p-xs text-primary bg-primary/10 rounded-xl cursor-pointer">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+</div>
+<div class="p-xs text-on-surface-variant hover:text-primary transition-colors cursor-pointer">
+<span class="material-symbols-outlined">group</span>
+</div>
+<div class="p-xs text-on-surface-variant hover:text-primary transition-colors cursor-pointer">
+<span class="material-symbols-outlined">receipt_long</span>
+</div>
+<div class="p-xs text-on-surface-variant hover:text-primary transition-colors cursor-pointer">
+<span class="material-symbols-outlined">settings</span>
+</div>
+<div class="mt-auto p-xs text-error cursor-pointer">
+<span class="material-symbols-outlined">logout</span>
+</div>
+</aside>
+<script>
+        // Simple micro-interaction for chips
+        document.querySelectorAll('form button[type="button"]').forEach(btn => {
+            btn.addEventListener('click', function() {
+                if (!this.innerText.includes('Add')) {
+                    this.classList.toggle('bg-primary/20');
+                    this.classList.toggle('text-primary');
+                    this.classList.toggle('border-primary');
+                    this.classList.toggle('text-on-surface-variant');
+                    this.classList.toggle('border-outline-variant');
+                }
+            });
+        });
+    </script>
+</body></html>

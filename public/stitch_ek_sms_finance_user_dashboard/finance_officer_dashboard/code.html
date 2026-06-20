@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>EK-SMS Finance Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary-container": "#5c0008",
+                        "tertiary": "#ffb3ad",
+                        "on-secondary-container": "#00311f",
+                        "on-primary-fixed-variant": "#004395",
+                        "on-surface-variant": "#c2c6d6",
+                        "outline": "#8c909f",
+                        "surface-dim": "#0b1326",
+                        "on-error-container": "#ffdad6",
+                        "on-secondary": "#003824",
+                        "on-secondary-fixed-variant": "#005236",
+                        "inverse-primary": "#005ac2",
+                        "surface-container-low": "#131b2e",
+                        "on-background": "#dae2fd",
+                        "background": "#0b1326",
+                        "primary-container": "#4d8eff",
+                        "surface-container-high": "#222a3d",
+                        "on-secondary-fixed": "#002113",
+                        "on-surface": "#dae2fd",
+                        "secondary-container": "#00a572",
+                        "tertiary-fixed-dim": "#ffb3ad",
+                        "primary": "#adc6ff",
+                        "on-tertiary-fixed-variant": "#930013",
+                        "inverse-surface": "#dae2fd",
+                        "on-error": "#690005",
+                        "tertiary-container": "#ff5451",
+                        "secondary": "#4edea3",
+                        "on-primary-container": "#00285d",
+                        "primary-fixed": "#d8e2ff",
+                        "secondary-fixed-dim": "#4edea3",
+                        "surface-container": "#171f33",
+                        "on-primary": "#002e6a",
+                        "surface": "#0b1326",
+                        "surface-container-lowest": "#060e20",
+                        "error-container": "#93000a",
+                        "surface-variant": "#2d3449",
+                        "on-primary-fixed": "#001a42",
+                        "tertiary-fixed": "#ffdad7",
+                        "surface-tint": "#adc6ff",
+                        "on-tertiary-fixed": "#410004",
+                        "surface-container-highest": "#2d3449",
+                        "error": "#ffb4ab",
+                        "inverse-on-surface": "#283044",
+                        "on-tertiary": "#68000a",
+                        "surface-bright": "#31394d",
+                        "secondary-fixed": "#6ffbbe",
+                        "outline-variant": "#424754",
+                        "primary-fixed-dim": "#adc6ff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "md": "24px",
+                        "xl": "48px",
+                        "gutter": "24px",
+                        "sm": "16px",
+                        "xs": "8px",
+                        "lg": "32px",
+                        "container-max": "1440px",
+                        "base": "4px"
+                    },
+                    "fontFamily": {
+                        "label-caps": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "title-md": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "headline-lg-mobile": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "title-md": ["18px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "data-mono": ["14px", { "lineHeight": "20px", "fontWeight": "500" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-sm antialiased h-screen flex flex-col md:hidden">
+<!-- TopAppBar -->
+<header class="docked full-width top-0 bg-background dark:bg-background border-b border-outline-variant dark:border-outline-variant flat no shadows flex justify-between items-center px-lg h-xl w-full z-40">
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-primary dark:text-primary">menu</span>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile font-black text-primary dark:text-primary leading-none ml-xs">EK-SMSDashboard</h1>
+</div>
+<div class="flex items-center gap-sm">
+<button class="relative hover:text-primary dark:hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant dark:text-on-surface-variant">notifications</span>
+<span class="absolute top-0 right-0 w-2 h-2 bg-error rounded-full"></span>
+</button>
+</div>
+</header>
+<main class="flex-1 overflow-y-auto pb-xl">
+<!-- Canvas wrapper -->
+<div class="p-sm flex flex-col gap-sm">
+<!-- Welcome Section -->
+<section class="mb-sm">
+<p class="font-body-sm text-body-sm text-on-surface-variant">Academic Session 2024-2025</p>
+<h2 class="font-title-md text-title-md text-on-surface">Welcome Back, Finance Officer</h2>
+</section>
+<!-- Quick Actions Horizontal Scroll -->
+<section class="-mx-sm px-sm overflow-x-auto hide-scrollbar">
+<div class="flex gap-xs w-max pb-xs">
+<button class="flex items-center gap-base px-sm py-xs bg-primary text-on-primary rounded-full hover:opacity-90 transition-opacity">
+<span class="material-symbols-outlined text-[18px]">payments</span>
+<span class="font-label-caps text-label-caps uppercase">Record Payment</span>
+</button>
+<button class="flex items-center gap-base px-sm py-xs bg-surface-container border border-outline-variant text-on-surface rounded-full hover:border-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">receipt_long</span>
+<span class="font-label-caps text-label-caps uppercase">Generate Invoice</span>
+</button>
+<button class="flex items-center gap-base px-sm py-xs bg-surface-container border border-outline-variant text-on-surface rounded-full hover:border-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">send</span>
+<span class="font-label-caps text-label-caps uppercase">Send Reminder</span>
+</button>
+<button class="flex items-center gap-base px-sm py-xs bg-surface-container border border-outline-variant text-on-surface rounded-full hover:border-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">download</span>
+<span class="font-label-caps text-label-caps uppercase">Export Report</span>
+</button>
+</div>
+</section>
+<!-- KPI Grid -->
+<section class="grid grid-cols-2 gap-xs">
+<!-- KPI 1 -->
+<div class="bg-surface-container-low border border-outline-variant rounded-lg p-sm hover:border-primary/50 transition-colors flex flex-col gap-xs">
+<div class="flex justify-between items-start">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Total Revenue</span>
+<span class="material-symbols-outlined text-primary text-[20px]">account_balance</span>
+</div>
+<div class="font-display-lg text-headline-lg-mobile font-data-mono text-on-surface">$1.2M</div>
+<div class="flex items-center gap-base text-secondary bg-secondary/10 px-xs py-[2px] rounded-sm w-fit">
+<span class="material-symbols-outlined text-[14px]">trending_up</span>
+<span class="font-label-caps text-label-caps">+5%</span>
+</div>
+</div>
+<!-- KPI 2 -->
+<div class="bg-surface-container-low border border-outline-variant rounded-lg p-sm hover:border-primary/50 transition-colors flex flex-col gap-xs">
+<div class="flex justify-between items-start">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Rev This Month</span>
+<span class="material-symbols-outlined text-primary text-[20px]">calendar_today</span>
+</div>
+<div class="font-display-lg text-headline-lg-mobile font-data-mono text-on-surface">$120k</div>
+<div class="flex items-center gap-base text-secondary bg-secondary/10 px-xs py-[2px] rounded-sm w-fit">
+<span class="material-symbols-outlined text-[14px]">trending_up</span>
+<span class="font-label-caps text-label-caps">+8%</span>
+</div>
+</div>
+<!-- KPI 3 -->
+<div class="bg-surface-container-low border border-outline-variant rounded-lg p-sm hover:border-primary/50 transition-colors flex flex-col gap-xs">
+<div class="flex justify-between items-start">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Outstanding</span>
+<span class="material-symbols-outlined text-error text-[20px]">warning</span>
+</div>
+<div class="font-display-lg text-headline-lg-mobile font-data-mono text-on-surface">$45k</div>
+<div class="flex items-center gap-base text-error bg-error/10 px-xs py-[2px] rounded-sm w-fit">
+<span class="material-symbols-outlined text-[14px]">trending_down</span>
+<span class="font-label-caps text-label-caps">-2%</span>
+</div>
+</div>
+<!-- KPI 4 -->
+<div class="bg-surface-container-low border border-outline-variant rounded-lg p-sm hover:border-primary/50 transition-colors flex flex-col gap-xs">
+<div class="flex justify-between items-start">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Collection Rate</span>
+<span class="material-symbols-outlined text-primary text-[20px]">check_circle</span>
+</div>
+<div class="font-display-lg text-headline-lg-mobile font-data-mono text-on-surface">92%</div>
+<div class="w-full bg-outline-variant h-[4px] rounded-full mt-auto overflow-hidden">
+<div class="bg-secondary h-full rounded-full" style="width: 92%"></div>
+</div>
+</div>
+</section>
+<!-- Financial Alerts -->
+<section class="flex flex-col gap-xs">
+<div class="bg-error-container/20 border border-error/50 rounded-lg p-sm flex items-center justify-between">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-error" style="font-variation-settings: 'FILL' 1;">error</span>
+<span class="font-title-md text-body-md text-error font-medium">3 Failed Payments</span>
+</div>
+<span class="material-symbols-outlined text-error">chevron_right</span>
+</div>
+<div class="bg-error-container/20 border border-error/50 rounded-lg p-sm flex items-center justify-between">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-error" style="font-variation-settings: 'FILL' 1;">warning</span>
+<span class="font-title-md text-body-md text-error font-medium">12 Overdue Accounts</span>
+</div>
+<span class="material-symbols-outlined text-error">chevron_right</span>
+</div>
+</section>
+<!-- Revenue Analytics Placeholder -->
+<section class="bg-surface-container-low border border-outline-variant rounded-lg p-sm">
+<h3 class="font-title-md text-title-md text-on-surface mb-sm">Revenue Performance</h3>
+<div class="h-[150px] w-full bg-surface-container flex items-center justify-center rounded border border-outline-variant/50">
+<span class="text-on-surface-variant text-body-sm">[Line Chart Placeholder]</span>
+</div>
+</section>
+<!-- Outstanding Fees Center -->
+<section class="bg-surface-container-low border border-outline-variant rounded-lg p-sm">
+<h3 class="font-title-md text-title-md text-on-surface mb-xs">Total Outstanding</h3>
+<div class="font-display-lg text-headline-lg-mobile font-data-mono text-on-surface mb-sm">$45,200</div>
+<div class="w-full bg-outline-variant h-[8px] rounded-full mb-xs overflow-hidden">
+<div class="bg-error h-full rounded-full" style="width: 15%"></div>
+</div>
+<p class="font-body-sm text-body-sm text-error">15 High-risk defaulters identified.</p>
+</section>
+<!-- Recent Payments Table (Mobile List View) -->
+<section class="bg-surface-container-low border border-outline-variant rounded-lg p-sm">
+<div class="flex justify-between items-center mb-sm">
+<h3 class="font-title-md text-title-md text-on-surface">Recent Payments</h3>
+<button class="text-primary font-body-sm text-body-sm hover:underline">View All</button>
+</div>
+<div class="flex flex-col gap-sm">
+<!-- Row 1 -->
+<div class="flex justify-between items-center pb-xs border-b border-outline-variant/30">
+<div class="flex flex-col">
+<span class="font-body-md text-body-md text-on-surface">John Doe</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Oct 24, 2024</span>
+</div>
+<div class="flex flex-col items-end">
+<span class="font-data-mono text-data-mono text-on-surface">$1,200.00</span>
+<span class="bg-secondary/10 text-secondary font-label-caps text-[10px] px-2 py-1 rounded-sm mt-1">PAID</span>
+</div>
+</div>
+<!-- Row 2 -->
+<div class="flex justify-between items-center pb-xs border-b border-outline-variant/30">
+<div class="flex flex-col">
+<span class="font-body-md text-body-md text-on-surface">Jane Smith</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Oct 23, 2024</span>
+</div>
+<div class="flex flex-col items-end">
+<span class="font-data-mono text-data-mono text-on-surface">$850.00</span>
+<span class="bg-error/10 text-error font-label-caps text-[10px] px-2 py-1 rounded-sm mt-1">PENDING</span>
+</div>
+</div>
+<!-- Row 3 -->
+<div class="flex justify-between items-center">
+<div class="flex flex-col">
+<span class="font-body-md text-body-md text-on-surface">Alex Johnson</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Oct 22, 2024</span>
+</div>
+<div class="flex flex-col items-end">
+<span class="font-data-mono text-data-mono text-on-surface">$1,500.00</span>
+<span class="bg-secondary/10 text-secondary font-label-caps text-[10px] px-2 py-1 rounded-sm mt-1">PAID</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Audit Panel Action -->
+<button class="w-full flex justify-center items-center gap-xs p-sm border border-primary text-primary rounded-lg hover:bg-primary/10 transition-colors mt-sm">
+<span class="material-symbols-outlined">history_edu</span>
+<span class="font-title-md text-body-md font-medium">View Full Audit Trail</span>
+</button>
+</div>
+</main>
+</body></html>

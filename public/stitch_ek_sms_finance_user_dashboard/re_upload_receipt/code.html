@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Re-upload Receipt</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+                "on-primary-fixed-variant": "#004395",
+                "tertiary": "#ffb3ad",
+                "primary": "#adc6ff",
+                "secondary": "#4edea3",
+                "on-surface-variant": "#c2c6d6",
+                "secondary-container": "#00a572",
+                "on-background": "#dae2fd",
+                "surface-tint": "#adc6ff",
+                "surface": "#0b1326",
+                "on-error": "#690005",
+                "surface-container-highest": "#2d3449",
+                "outline-variant": "#424754",
+                "on-error-container": "#ffdad6",
+                "primary-fixed-dim": "#adc6ff",
+                "inverse-surface": "#dae2fd",
+                "surface-variant": "#2d3449",
+                "on-tertiary-fixed-variant": "#930013",
+                "background": "#0b1326",
+                "on-tertiary-container": "#5c0008",
+                "surface-container-lowest": "#060e20",
+                "on-secondary-container": "#00311f",
+                "secondary-fixed-dim": "#4edea3",
+                "on-tertiary": "#68000a",
+                "secondary-fixed": "#6ffbbe",
+                "surface-bright": "#31394d",
+                "on-secondary": "#003824",
+                "on-primary-fixed": "#001a42",
+                "on-primary-container": "#00285d",
+                "tertiary-fixed-dim": "#ffb3ad",
+                "surface-dim": "#0b1326",
+                "outline": "#8c909f",
+                "error": "#ffb4ab",
+                "error-container": "#93000a",
+                "on-primary": "#002e6a",
+                "tertiary-fixed": "#ffdad7",
+                "surface-container-high": "#222a3d",
+                "surface-container": "#171f33",
+                "primary-fixed": "#d8e2ff",
+                "on-surface": "#dae2fd",
+                "on-secondary-fixed": "#002113",
+                "inverse-primary": "#005ac2",
+                "on-secondary-fixed-variant": "#005236",
+                "tertiary-container": "#ff5451",
+                "on-tertiary-fixed": "#410004",
+                "inverse-on-surface": "#283044",
+                "surface-container-low": "#131b2e",
+                "primary-container": "#4d8eff"
+        },
+        "borderRadius": {
+                "DEFAULT": "0.125rem",
+                "lg": "0.25rem",
+                "xl": "0.5rem",
+                "full": "0.75rem"
+        },
+        "spacing": {
+                "gutter": "24px",
+                "lg": "32px",
+                "xs": "8px",
+                "container-max": "1440px",
+                "xl": "48px",
+                "sm": "16px",
+                "md": "24px",
+                "base": "4px"
+        },
+        "fontFamily": {
+                "label-caps": [
+                        "Inter"
+                ],
+                "headline-lg-mobile": [
+                        "Inter"
+                ],
+                "body-sm": [
+                        "Inter"
+                ],
+                "display-lg": [
+                        "Inter"
+                ],
+                "data-mono": [
+                        "JetBrains Mono"
+                ],
+                "headline-lg": [
+                        "Inter"
+                ],
+                "title-md": [
+                        "Inter"
+                ],
+                "body-md": [
+                        "Inter"
+                ]
+        },
+        "fontSize": {
+                "label-caps": [
+                        "12px",
+                        {
+                                "lineHeight": "16px",
+                                "letterSpacing": "0.05em",
+                                "fontWeight": "700"
+                        }
+                ],
+                "headline-lg-mobile": [
+                        "24px",
+                        {
+                                "lineHeight": "32px",
+                                "fontWeight": "600"
+                        }
+                ],
+                "body-sm": [
+                        "14px",
+                        {
+                                "lineHeight": "20px",
+                                "fontWeight": "400"
+                        }
+                ],
+                "display-lg": [
+                        "48px",
+                        {
+                                "lineHeight": "56px",
+                                "letterSpacing": "-0.02em",
+                                "fontWeight": "700"
+                        }
+                ],
+                "data-mono": [
+                        "14px",
+                        {
+                                "lineHeight": "20px",
+                                "fontWeight": "500"
+                        }
+                ],
+                "headline-lg": [
+                        "32px",
+                        {
+                                "lineHeight": "40px",
+                                "letterSpacing": "-0.01em",
+                                "fontWeight": "600"
+                        }
+                ],
+                "title-md": [
+                        "18px",
+                        {
+                                "lineHeight": "28px",
+                                "fontWeight": "600"
+                        }
+                ],
+                "body-md": [
+                        "16px",
+                        {
+                                "lineHeight": "24px",
+                                "fontWeight": "400"
+                        }
+                ]
+        }
+},
+    },
+  }
+</script>
+<style>
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  }
+  .file-drag-active {
+    border-color: theme('colors.primary');
+    background-color: theme('colors.primary-fixed-dim') / 0.1;
+  }
+</style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background min-h-screen font-body-md antialiased overflow-x-hidden selection:bg-primary selection:text-on-primary">
+<header class="w-full top-0 sticky bg-surface border-b border-outline-variant flex items-center justify-between px-sm md:px-lg h-16 w-full z-10">
+<button class="flex items-center justify-center p-xs hover:bg-surface-variant transition-colors duration-200 rounded-full text-on-surface-variant">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+</button>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile md:font-headline-lg md:text-headline-lg text-primary font-bold tracking-tight">Re-upload Receipt</h1>
+<div class="w-10"></div>
+</header>
+<main class="max-w-[800px] mx-auto px-sm md:px-md py-lg md:py-xl">
+<div class="bg-error-container/10 border border-error/20 rounded-lg p-md mb-lg flex items-start gap-sm">
+<span class="material-symbols-outlined text-error mt-1" data-icon="error" data-weight="fill">error</span>
+<div>
+<h2 class="font-title-md text-title-md text-error mb-xs">Receipt Rejected</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">The previously uploaded receipt was illegible. Please upload a clear, well-lit image of your bank transfer receipt. Ensure all text and the transaction date are clearly visible.</p>
+</div>
+</div>
+<div class="bg-surface-container rounded-lg border border-outline-variant p-md mb-lg">
+<h3 class="font-label-caps text-label-caps text-on-surface-variant mb-md uppercase">Transaction Details</h3>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-md">
+<div>
+<span class="block font-body-sm text-body-sm text-outline mb-base">Student</span>
+<span class="font-body-md text-body-md text-on-surface">Alex Johnson</span>
+</div>
+<div>
+<span class="block font-body-sm text-body-sm text-outline mb-base">Amount</span>
+<span class="font-data-mono text-data-mono text-on-surface">$450.00</span>
+</div>
+<div>
+<span class="block font-body-sm text-body-sm text-outline mb-base">Method</span>
+<span class="font-body-md text-body-md text-on-surface">Bank Transfer</span>
+</div>
+</div>
+</div>
+<div class="mb-lg">
+<h3 class="font-title-md text-title-md text-on-surface mb-sm">Upload Document</h3>
+<div class="border-2 border-dashed border-outline-variant rounded-xl p-xl flex flex-col items-center justify-center text-center transition-colors duration-200 hover:border-primary/50 cursor-pointer bg-surface-container-lowest" id="dropzone">
+<span class="material-symbols-outlined text-4xl text-primary mb-sm" data-icon="cloud_upload">cloud_upload</span>
+<h4 class="font-title-md text-title-md text-on-surface mb-xs">Drag and drop your receipt here</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-md">or click to browse files</p>
+<p class="font-label-caps text-label-caps text-outline uppercase mb-md">Supported formats: JPG, PNG, PDF (Max 5MB)</p>
+<input accept=".jpg,.jpeg,.png,.pdf" class="hidden" id="file-upload" type="file"/>
+<button class="bg-surface-variant text-on-surface px-md py-xs rounded-full font-label-caps text-label-caps uppercase tracking-wider hover:bg-surface-bright transition-colors border border-outline-variant focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background" onclick="document.getElementById('file-upload').click()">Browse Files</button>
+</div>
+<div class="hidden mt-md p-sm border border-outline-variant rounded-lg bg-surface flex items-center justify-between" id="file-preview">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary" data-icon="description">description</span>
+<div>
+<span class="font-body-sm text-body-sm text-on-surface block" id="file-name">filename.jpg</span>
+<span class="font-label-caps text-label-caps text-outline block" id="file-size">1.2 MB</span>
+</div>
+</div>
+<button class="text-on-surface-variant hover:text-error transition-colors p-xs rounded-full hover:bg-surface-variant" id="remove-file">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+</div>
+</div>
+<div class="bg-surface-container-low rounded-lg p-md mb-xl border border-outline-variant">
+<h4 class="font-label-caps text-label-caps text-on-surface-variant uppercase mb-sm flex items-center gap-xs">
+<span class="material-symbols-outlined text-sm" data-icon="lightbulb">lightbulb</span> Tips for a valid upload
+      </h4>
+<ul class="space-y-sm">
+<li class="flex items-start gap-xs font-body-sm text-body-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-secondary text-sm mt-0.5" data-icon="check_circle">check_circle</span>
+          Ensure all four corners of the receipt are visible in the image.
+        </li>
+<li class="flex items-start gap-xs font-body-sm text-body-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-secondary text-sm mt-0.5" data-icon="check_circle">check_circle</span>
+          Avoid glare or shadows over important text.
+        </li>
+<li class="flex items-start gap-xs font-body-sm text-body-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-secondary text-sm mt-0.5" data-icon="check_circle">check_circle</span>
+          The transaction reference number and date must be clearly readable.
+        </li>
+</ul>
+</div>
+<div class="flex flex-col sm:flex-row items-center justify-end gap-md pt-lg border-t border-outline-variant">
+<button class="w-full sm:w-auto px-lg py-sm rounded-full font-label-caps text-label-caps uppercase tracking-wider text-primary border border-primary hover:bg-primary/10 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background">
+        Cancel
+      </button>
+<button class="w-full sm:w-auto px-lg py-sm rounded-full font-label-caps text-label-caps uppercase tracking-wider bg-surface-variant text-on-surface-variant cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background" disabled="" id="submit-btn">
+        Submit New Receipt
+      </button>
+</div>
+</main>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const dropzone = document.getElementById('dropzone');
+      const fileInput = document.getElementById('file-upload');
+      const filePreview = document.getElementById('file-preview');
+      const fileNameDisplay = document.getElementById('file-name');
+      const fileSizeDisplay = document.getElementById('file-size');
+      const removeBtn = document.getElementById('remove-file');
+      const submitBtn = document.getElementById('submit-btn');
+
+      const handleFile = (file) => {
+        if (file) {
+          fileNameDisplay.textContent = file.name;
+          fileSizeDisplay.textContent = (file.size / (1024 * 1024)).toFixed(2) + ' MB';
+          dropzone.classList.add('hidden');
+          filePreview.classList.remove('hidden');
+          filePreview.classList.add('flex');
+          
+          submitBtn.disabled = false;
+          submitBtn.classList.remove('bg-surface-variant', 'text-on-surface-variant', 'cursor-not-allowed');
+          submitBtn.classList.add('bg-primary', 'text-on-primary', 'hover:bg-primary-container', 'hover:text-on-primary-container');
+        }
+      };
+
+      const clearFile = () => {
+        fileInput.value = '';
+        dropzone.classList.remove('hidden');
+        filePreview.classList.add('hidden');
+        filePreview.classList.remove('flex');
+        
+        submitBtn.disabled = true;
+        submitBtn.classList.add('bg-surface-variant', 'text-on-surface-variant', 'cursor-not-allowed');
+        submitBtn.classList.remove('bg-primary', 'text-on-primary', 'hover:bg-primary-container', 'hover:text-on-primary-container');
+      };
+
+      fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+          handleFile(e.target.files[0]);
+        }
+      });
+
+      removeBtn.addEventListener('click', clearFile);
+
+      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropzone.addEventListener(eventName, preventDefaults, false);
+      });
+
+      function preventDefaults (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+
+      ['dragenter', 'dragover'].forEach(eventName => {
+        dropzone.addEventListener(eventName, highlight, false);
+      });
+
+      ['dragleave', 'drop'].forEach(eventName => {
+        dropzone.addEventListener(eventName, unhighlight, false);
+      });
+
+      function highlight(e) {
+        dropzone.classList.add('file-drag-active');
+      }
+
+      function unhighlight(e) {
+        dropzone.classList.remove('file-drag-active');
+      }
+
+      dropzone.addEventListener('drop', handleDrop, false);
+
+      function handleDrop(e) {
+        let dt = e.dataTransfer;
+        let files = dt.files;
+        if(files.length > 0) {
+            handleFile(files[0]);
+            fileInput.files = files;
+        }
+      }
+      
+      dropzone.addEventListener('click', () => fileInput.click());
+    });
+  </script>
+</body></html>

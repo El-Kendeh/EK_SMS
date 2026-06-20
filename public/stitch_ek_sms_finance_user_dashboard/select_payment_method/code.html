@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Select Payment Method - EK-SMS</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface": "#0b1326",
+                        "surface-container-high": "#222a3d",
+                        "outline": "#8c909f",
+                        "on-surface-variant": "#c2c6d6",
+                        "primary-container": "#4d8eff",
+                        "inverse-on-surface": "#283044",
+                        "inverse-primary": "#005ac2",
+                        "surface-variant": "#2d3449",
+                        "surface-container-highest": "#2d3449",
+                        "surface-container": "#171f33",
+                        "surface-bright": "#31394d",
+                        "primary": "#adc6ff",
+                        "on-primary-container": "#00285d",
+                        "on-tertiary-fixed": "#410004",
+                        "primary-fixed-dim": "#adc6ff",
+                        "outline-variant": "#424754",
+                        "tertiary-fixed-dim": "#ffb3ad",
+                        "primary-fixed": "#d8e2ff",
+                        "background": "#0b1326",
+                        "on-secondary": "#003824",
+                        "secondary-fixed-dim": "#4edea3",
+                        "on-background": "#dae2fd",
+                        "secondary": "#4edea3",
+                        "surface-dim": "#0b1326",
+                        "on-secondary-fixed": "#002113",
+                        "on-primary-fixed-variant": "#004395",
+                        "on-tertiary-fixed-variant": "#930013",
+                        "on-primary-fixed": "#001a42",
+                        "on-primary": "#002e6a",
+                        "on-secondary-fixed-variant": "#005236",
+                        "error": "#ffb4ab",
+                        "tertiary-container": "#ff5451",
+                        "secondary-fixed": "#6ffbbe",
+                        "on-tertiary-container": "#5c0008",
+                        "on-secondary-container": "#00311f",
+                        "on-surface": "#dae2fd",
+                        "tertiary-fixed": "#ffdad7",
+                        "on-tertiary": "#68000a",
+                        "surface-tint": "#adc6ff",
+                        "tertiary": "#ffb3ad",
+                        "surface-container-lowest": "#060e20",
+                        "inverse-surface": "#dae2fd",
+                        "error-container": "#93000a",
+                        "on-error": "#690005",
+                        "on-error-container": "#ffdad6",
+                        "surface-container-low": "#131b2e",
+                        "secondary-container": "#00a572"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "xs": "8px",
+                        "md": "24px",
+                        "gutter": "24px",
+                        "lg": "32px",
+                        "xl": "48px",
+                        "sm": "16px",
+                        "container-max": "1440px",
+                        "base": "4px"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "title-md": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "label-caps": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "body-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "title-md": ["18px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "data-mono": ["14px", { "lineHeight": "20px", "fontWeight": "500" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { background-color: theme('colors.background'); color: theme('colors.on-background'); }
+        .payment-card { transition: all 0.2s ease-in-out; }
+        .payment-card:hover { border-color: rgba(173, 198, 255, 0.5); }
+        .payment-card.selected { border-color: theme('colors.primary'); background-color: theme('colors.surface-container'); }
+        .payment-card.selected .selection-indicator { color: theme('colors.primary'); }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="antialiased min-h-screen flex flex-col items-center justify-center p-sm md:p-lg">
+<main class="w-full max-w-md bg-surface-container-low border border-outline-variant rounded-xl overflow-hidden shadow-2xl flex flex-col">
+<!-- Header -->
+<header class="p-lg border-b border-outline-variant bg-surface-container">
+<div class="flex items-center justify-between mb-sm">
+<button class="text-on-surface-variant hover:text-primary transition-colors flex items-center gap-xs">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+<span class="font-label-caps text-label-caps uppercase tracking-widest">Back</span>
+</button>
+<div class="font-label-caps text-label-caps text-on-surface-variant bg-surface-variant px-xs py-[2px] rounded uppercase">Invoice #8492</div>
+</div>
+<h1 class="font-title-md text-title-md text-on-surface mb-xs">Select Payment Method</h1>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-md">Payment due for Alex Johnson (Student ID: 2024-001)</p>
+<div class="flex flex-col items-center justify-center p-md bg-surface border border-outline-variant rounded-lg">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase mb-xs">Amount Due</span>
+<span class="font-display-lg text-display-lg font-data-mono text-primary">$450.00</span>
+</div>
+</header>
+<!-- Payment Options -->
+<div class="p-lg flex flex-col gap-sm overflow-y-auto">
+<!-- Option 1: Bank Transfer -->
+<button class="payment-card w-full text-left p-md bg-surface border border-outline-variant rounded-lg flex items-center justify-between group cursor-pointer" onclick="selectPayment(this)">
+<div class="flex items-center gap-md">
+<div class="w-12 h-12 rounded-full bg-surface-container-high flex items-center justify-center text-primary group-hover:bg-primary-container group-hover:text-on-primary-container transition-colors">
+<span class="material-symbols-outlined" data-icon="account_balance">account_balance</span>
+</div>
+<div>
+<div class="font-title-md text-title-md text-on-surface">Bank Transfer</div>
+<div class="font-body-sm text-body-sm text-on-surface-variant">1-2 days settlement via ACH</div>
+</div>
+</div>
+<div class="selection-indicator text-surface-container-high material-symbols-outlined" data-icon="radio_button_unchecked">radio_button_unchecked</div>
+</button>
+<!-- Option 2: Credit/Debit Card -->
+<button class="payment-card w-full text-left p-md bg-surface border border-outline-variant rounded-lg flex items-center justify-between group cursor-pointer" onclick="selectPayment(this)">
+<div class="flex items-center gap-md">
+<div class="w-12 h-12 rounded-full bg-surface-container-high flex items-center justify-center text-primary group-hover:bg-primary-container group-hover:text-on-primary-container transition-colors">
+<span class="material-symbols-outlined" data-icon="credit_card">credit_card</span>
+</div>
+<div>
+<div class="font-title-md text-title-md text-on-surface">Credit/Debit Card</div>
+<div class="font-body-sm text-body-sm text-on-surface-variant">Instant processing, 2.9% fee</div>
+</div>
+</div>
+<div class="selection-indicator text-surface-container-high material-symbols-outlined" data-icon="radio_button_unchecked">radio_button_unchecked</div>
+</button>
+<!-- Option 3: Mobile Money -->
+<button class="payment-card w-full text-left p-md bg-surface border border-outline-variant rounded-lg flex items-center justify-between group cursor-pointer" onclick="selectPayment(this)">
+<div class="flex items-center gap-md">
+<div class="w-12 h-12 rounded-full bg-surface-container-high flex items-center justify-center text-primary group-hover:bg-primary-container group-hover:text-on-primary-container transition-colors">
+<span class="material-symbols-outlined" data-icon="smartphone">smartphone</span>
+</div>
+<div>
+<div class="font-title-md text-title-md text-on-surface">Mobile Money</div>
+<div class="font-body-sm text-body-sm text-on-surface-variant">Instant processing via USSD/App</div>
+</div>
+</div>
+<div class="selection-indicator text-surface-container-high material-symbols-outlined" data-icon="radio_button_unchecked">radio_button_unchecked</div>
+</button>
+<!-- Option 4: Cash at Office -->
+<button class="payment-card w-full text-left p-md bg-surface border border-outline-variant rounded-lg flex items-center justify-between group cursor-pointer" onclick="selectPayment(this)">
+<div class="flex items-center gap-md">
+<div class="w-12 h-12 rounded-full bg-surface-container-high flex items-center justify-center text-primary group-hover:bg-primary-container group-hover:text-on-primary-container transition-colors">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+</div>
+<div>
+<div class="font-title-md text-title-md text-on-surface">Cash at School Office</div>
+<div class="font-body-sm text-body-sm text-on-surface-variant">Generate pay slip to present on-site</div>
+</div>
+</div>
+<div class="selection-indicator text-surface-container-high material-symbols-outlined" data-icon="radio_button_unchecked">radio_button_unchecked</div>
+</button>
+</div>
+<!-- Footer Action -->
+<footer class="p-lg border-t border-outline-variant bg-surface-container mt-auto">
+<button class="w-full py-md px-lg bg-surface-variant text-on-surface-variant font-title-md text-title-md rounded-lg flex items-center justify-center gap-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed [&amp;:not(:disabled)]:bg-primary [&amp;:not(:disabled)]:text-on-primary [&amp;:not(:disabled)]:hover:opacity-90" disabled="" id="continueBtn">
+                Continue to Payment
+                <span class="material-symbols-outlined" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</footer>
+</main>
+<script>
+        function selectPayment(selectedCard) {
+            // Remove selected class from all cards
+            document.querySelectorAll('.payment-card').forEach(card => {
+                card.classList.remove('selected');
+                card.querySelector('.selection-indicator').textContent = 'radio_button_unchecked';
+            });
+
+            // Add selected class to clicked card
+            selectedCard.classList.add('selected');
+            selectedCard.querySelector('.selection-indicator').textContent = 'radio_button_checked';
+
+            // Enable continue button
+            const btn = document.getElementById('continueBtn');
+            btn.disabled = false;
+        }
+    </script>
+</body></html>

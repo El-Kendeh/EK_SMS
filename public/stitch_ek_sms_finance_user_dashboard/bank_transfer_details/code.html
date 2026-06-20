@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Bank Transfer Details - EK-SMS</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface": "#0b1326",
+                        "surface-container-high": "#222a3d",
+                        "outline": "#8c909f",
+                        "on-surface-variant": "#c2c6d6",
+                        "primary-container": "#4d8eff",
+                        "inverse-on-surface": "#283044",
+                        "inverse-primary": "#005ac2",
+                        "surface-variant": "#2d3449",
+                        "surface-container-highest": "#2d3449",
+                        "surface-container": "#171f33",
+                        "surface-bright": "#31394d",
+                        "primary": "#adc6ff",
+                        "on-primary-container": "#00285d",
+                        "on-tertiary-fixed": "#410004",
+                        "primary-fixed-dim": "#adc6ff",
+                        "outline-variant": "#424754",
+                        "tertiary-fixed-dim": "#ffb3ad",
+                        "primary-fixed": "#d8e2ff",
+                        "background": "#0b1326",
+                        "on-secondary": "#003824",
+                        "secondary-fixed-dim": "#4edea3",
+                        "on-background": "#dae2fd",
+                        "secondary": "#4edea3",
+                        "surface-dim": "#0b1326",
+                        "on-secondary-fixed": "#002113",
+                        "on-primary-fixed-variant": "#004395",
+                        "on-tertiary-fixed-variant": "#930013",
+                        "on-primary-fixed": "#001a42",
+                        "on-primary": "#002e6a",
+                        "on-secondary-fixed-variant": "#005236",
+                        "error": "#ffb4ab",
+                        "tertiary-container": "#ff5451",
+                        "secondary-fixed": "#6ffbbe",
+                        "on-tertiary-container": "#5c0008",
+                        "on-secondary-container": "#00311f",
+                        "on-surface": "#dae2fd",
+                        "tertiary-fixed": "#ffdad7",
+                        "on-tertiary": "#68000a",
+                        "surface-tint": "#adc6ff",
+                        "tertiary": "#ffb3ad",
+                        "surface-container-lowest": "#060e20",
+                        "inverse-surface": "#dae2fd",
+                        "error-container": "#93000a",
+                        "on-error": "#690005",
+                        "on-error-container": "#ffdad6",
+                        "surface-container-low": "#131b2e",
+                        "secondary-container": "#00a572"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "xs": "8px",
+                        "md": "24px",
+                        "gutter": "24px",
+                        "lg": "32px",
+                        "xl": "48px",
+                        "sm": "16px",
+                        "container-max": "1440px",
+                        "base": "4px"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "title-md": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "label-caps": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "body-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "title-md": ["18px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "data-mono": ["14px", { "lineHeight": "20px", "fontWeight": "500" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: theme('colors.background');
+            color: theme('colors.on-background');
+        }
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: theme('colors.surface-container-low'); 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: theme('colors.outline-variant'); 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: theme('colors.outline'); 
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="flex h-screen overflow-hidden bg-background font-body-md text-body-md text-on-background selection:bg-primary selection:text-on-primary">
+<!-- Sidebar Navigation -->
+<nav class="hidden md:flex flex-col h-full p-sm bg-surface-container-low dark:bg-surface-container-low fixed left-0 top-0 h-full w-[280px] border-r border-outline-variant dark:border-outline-variant z-50">
+<!-- Header -->
+<div class="mb-lg flex items-center gap-md px-xs">
+<div class="w-12 h-12 rounded-full overflow-hidden shrink-0 border border-outline-variant">
+<img alt="Finance Officer Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC_SWODrNeiiphlwXJ7zQrrBk0nUGUlf5_79uAwySsjVX3vIFHnr_zQ3rNzqJ1drPFFyBkaUkHUMxMfj00obu7-PNmnYBu1D7nYecAs4wBhLm4YlURTHGTjc0eGPZwmGs4u5wFef9aTDwEnPn9vE-BgyohxubHY0c7zaPZ6QlZ3Zb6_F0Q0AfajSM5cTLnpjbi_4B-2goeF9cW-8_ZwinSiEnB6-F_sN-ktkx0kUxakvt1xl3H_QLQ4CQ5q0RhAPv0xtybUd1u92Z0"/>
+</div>
+<div class="overflow-hidden">
+<h2 class="font-headline-lg text-headline-lg font-bold text-primary dark:text-primary truncate">EK-SMS Admin</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">Finance Department</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant opacity-70 truncate">School ID: 2024-001</p>
+</div>
+</div>
+<!-- Navigation Links -->
+<ul class="flex flex-col gap-xs flex-grow">
+<li>
+<a class="flex items-center gap-sm px-md py-sm rounded-full text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-variant dark:hover:bg-surface-variant transition-colors group" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+<span class="font-body-md text-body-md">Financial Operations</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-sm px-md py-sm rounded-full bg-secondary-container dark:bg-secondary-container text-on-secondary-container dark:text-on-secondary-container opacity-80 scale-[0.98] transition-all group" href="#">
+<span class="material-symbols-outlined" data-icon="account_balance_wallet" data-weight="fill" style="font-variation-settings: 'FILL' 1;">account_balance_wallet</span>
+<span class="font-body-md text-body-md font-semibold">Student Finance</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-sm px-md py-sm rounded-full text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-variant dark:hover:bg-surface-variant transition-colors group" href="#">
+<span class="material-symbols-outlined" data-icon="query_stats">query_stats</span>
+<span class="font-body-md text-body-md">Analytics</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-sm px-md py-sm rounded-full text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-variant dark:hover:bg-surface-variant transition-colors group" href="#">
+<span class="material-symbols-outlined" data-icon="history_edu">history_edu</span>
+<span class="font-body-md text-body-md">Audit</span>
+</a>
+</li>
+</ul>
+<!-- Bottom Link -->
+<div class="mt-auto pt-md border-t border-outline-variant dark:border-outline-variant">
+<a class="flex items-center gap-sm px-md py-sm rounded-full text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-variant dark:hover:bg-surface-variant transition-colors group" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-body-md text-body-md">Settings</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<div class="flex-1 flex flex-col md:ml-[280px] h-full overflow-hidden bg-background">
+<!-- Top App Bar -->
+<header class="flex justify-between items-center px-lg h-xl w-full z-40 bg-background dark:bg-background border-b border-outline-variant dark:border-outline-variant shrink-0">
+<div class="flex items-center gap-sm md:hidden">
+<button class="p-xs text-on-surface-variant hover:text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary rounded-full">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+</div>
+<div class="flex-1 flex justify-center md:justify-start">
+<h1 class="font-title-md text-title-md text-primary dark:text-primary md:hidden">EK-SMS</h1>
+<!-- Breadcrumbs/Context for Desktop -->
+<div class="hidden md:flex items-center gap-xs text-on-surface-variant font-body-sm text-body-sm">
+<span>Student Finance</span>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+<span>Payments</span>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+<span class="text-primary font-medium">Bank Transfer</span>
+</div>
+</div>
+<div class="flex items-center gap-sm">
+<button class="p-xs text-on-surface-variant hover:text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary rounded-full relative">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span>
+</button>
+</div>
+</header>
+<!-- Main Canvas -->
+<main class="flex-1 overflow-y-auto p-sm md:p-lg bg-surface">
+<div class="max-w-3xl mx-auto space-y-md">
+<!-- Page Header -->
+<div class="mb-lg">
+<h1 class="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-background mb-xs">Bank Transfer Details</h1>
+<p class="font-body-md text-body-md text-on-surface-variant">Please remit payment to the following account and upload your transaction receipt.</p>
+</div>
+<!-- Bento Grid Layout for Details -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-md">
+<!-- Bank Information Card -->
+<div class="bg-surface-container-high border border-outline-variant rounded-xl p-md flex flex-col gap-md md:col-span-2 shadow-sm transition-colors hover:border-primary/50 relative overflow-hidden group">
+<!-- Decorative subtle gradient -->
+<div class="absolute -right-20 -top-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-colors pointer-events-none"></div>
+<div class="flex items-center gap-sm mb-xs">
+<span class="material-symbols-outlined text-primary p-xs bg-primary/10 rounded-lg">account_balance</span>
+<h2 class="font-title-md text-title-md text-on-background">School Receiving Account</h2>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-y-md gap-x-lg">
+<!-- Field: Account Name -->
+<div class="flex flex-col gap-base">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">Account Name</span>
+<div class="flex items-center justify-between bg-surface p-sm rounded-lg border border-outline-variant/50 group/field hover:border-primary/50 transition-colors">
+<span class="font-data-mono text-data-mono text-on-background select-all">EK-SMS Operations</span>
+<button class="text-on-surface-variant hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary rounded p-1 transition-colors" title="Copy Account Name">
+<span class="material-symbols-outlined text-[20px]" data-icon="content_copy">content_copy</span>
+</button>
+</div>
+</div>
+<!-- Field: Bank -->
+<div class="flex flex-col gap-base">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">Bank Name</span>
+<div class="flex items-center justify-between bg-surface p-sm rounded-lg border border-outline-variant/50 group/field hover:border-primary/50 transition-colors">
+<span class="font-data-mono text-data-mono text-on-background select-all">Kinetic Bank</span>
+<button class="text-on-surface-variant hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary rounded p-1 transition-colors" title="Copy Bank Name">
+<span class="material-symbols-outlined text-[20px]" data-icon="content_copy">content_copy</span>
+</button>
+</div>
+</div>
+<!-- Field: Account Number -->
+<div class="flex flex-col gap-base">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">Account Number</span>
+<div class="flex items-center justify-between bg-surface p-sm rounded-lg border border-outline-variant/50 group/field hover:border-primary/50 transition-colors">
+<span class="font-data-mono text-data-mono text-on-background select-all text-lg tracking-wider">1234-5678-9012</span>
+<button class="text-on-surface-variant hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary rounded p-1 transition-colors" title="Copy Account Number">
+<span class="material-symbols-outlined text-[20px]" data-icon="content_copy">content_copy</span>
+</button>
+</div>
+</div>
+<!-- Field: Branch -->
+<div class="flex flex-col gap-base">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">Branch</span>
+<div class="flex items-center justify-between bg-surface p-sm rounded-lg border border-outline-variant/50 group/field hover:border-primary/50 transition-colors">
+<span class="font-data-mono text-data-mono text-on-background select-all">Central Square</span>
+<button class="text-on-surface-variant hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary rounded p-1 transition-colors" title="Copy Branch Name">
+<span class="material-symbols-outlined text-[20px]" data-icon="content_copy">content_copy</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Instructions Card (Side Panel on Desktop) -->
+<div class="bg-surface-container-low border border-outline-variant rounded-xl p-md flex flex-col gap-sm md:col-span-2">
+<div class="flex items-center gap-xs text-secondary mb-xs">
+<span class="material-symbols-outlined text-[20px]">info</span>
+<h3 class="font-title-md text-title-md text-on-background">Important Instructions</h3>
+</div>
+<ul class="list-disc list-inside space-y-xs font-body-sm text-body-sm text-on-surface-variant ml-xs">
+<li>Please ensure the exact amount is transferred.</li>
+<li>Include your Student ID in the transfer reference notes.</li>
+<li>Transfers may take 1-3 business days to reflect in our system.</li>
+</ul>
+</div>
+<!-- Upload Section -->
+<div class="bg-surface-container border border-outline-variant rounded-xl p-md flex flex-col gap-md md:col-span-2 shadow-sm transition-colors hover:border-primary/50">
+<div class="flex items-center gap-sm mb-xs">
+<span class="material-symbols-outlined text-primary p-xs bg-primary/10 rounded-lg">upload_file</span>
+<h2 class="font-title-md text-title-md text-on-background">Upload Proof of Payment</h2>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Upload a clear screenshot or PDF of your transaction receipt to expedite verification.</p>
+<!-- Drag & Drop Area -->
+<div class="border-2 border-dashed border-outline-variant hover:border-primary transition-colors rounded-lg bg-surface flex flex-col items-center justify-center p-xl gap-sm cursor-pointer group">
+<span class="material-symbols-outlined text-[48px] text-outline-variant group-hover:text-primary transition-colors">cloud_upload</span>
+<p class="font-body-md text-body-md text-on-background text-center">
+<span class="text-primary font-medium">Click to upload</span> or drag and drop
+                            </p>
+<p class="font-body-sm text-body-sm text-on-surface-variant text-center">PDF, JPG, PNG (Max. 5MB)</p>
+<!-- Hidden File Input -->
+<input accept=".pdf,.jpg,.jpeg,.png" class="hidden" id="file-upload" type="file"/>
+</div>
+</div>
+</div>
+<!-- Action Bar -->
+<div class="flex justify-end pt-md gap-sm border-t border-outline-variant mt-lg">
+<button class="px-md py-xs rounded-full border border-primary text-primary font-title-md text-body-md hover:bg-primary/10 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background">
+                        Cancel
+                    </button>
+<button class="px-md py-xs rounded-full bg-primary text-on-primary-container font-title-md text-body-md hover:bg-primary/90 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background flex items-center gap-xs">
+<span class="material-symbols-outlined text-[20px]">check_circle</span>
+                        Confirm Payment
+                    </button>
+</div>
+</div>
+</main>
+</div>
+<!-- Micro-interaction Script for Copy Buttons -->
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const copyButtons = document.querySelectorAll('button[title^="Copy"]');
+            
+            copyButtons.forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const textToCopy = e.currentTarget.parentElement.querySelector('span.font-data-mono').textContent;
+                    
+                    navigator.clipboard.writeText(textToCopy).then(() => {
+                        // Visual feedback
+                        const iconSpan = e.currentTarget.querySelector('span');
+                        const originalIcon = iconSpan.textContent;
+                        
+                        iconSpan.textContent = 'check';
+                        iconSpan.classList.replace('text-on-surface-variant', 'text-secondary');
+                        e.currentTarget.classList.add('bg-secondary/10');
+                        
+                        setTimeout(() => {
+                            iconSpan.textContent = originalIcon;
+                            iconSpan.classList.replace('text-secondary', 'text-on-surface-variant');
+                            e.currentTarget.classList.remove('bg-secondary/10');
+                        }, 2000);
+                    }).catch(err => {
+                        console.error('Failed to copy text: ', err);
+                    });
+                });
+            });
+
+            // Make the whole dashed area clickable for file upload
+            const uploadArea = document.querySelector('.border-dashed');
+            const fileInput = document.getElementById('file-upload');
+            if(uploadArea && fileInput) {
+                uploadArea.addEventListener('click', () => {
+                    fileInput.click();
+                });
+            }
+        });
+    </script>
+</body></html>

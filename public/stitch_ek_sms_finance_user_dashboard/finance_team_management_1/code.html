@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Finance Team | Kinetic Ledger</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        /* Custom scrollbar for high-stakes data environments */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0b1326;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #2d3449;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-lowest": "#060e20",
+                        "on-secondary": "#003824",
+                        "error": "#ffb4ab",
+                        "tertiary-container": "#ff5451",
+                        "on-secondary-fixed-variant": "#005236",
+                        "background": "#0b1326",
+                        "on-tertiary-fixed": "#410004",
+                        "on-tertiary-fixed-variant": "#930013",
+                        "on-tertiary-container": "#5c0008",
+                        "on-primary-fixed": "#001a42",
+                        "secondary": "#4edea3",
+                        "on-primary-fixed-variant": "#004395",
+                        "outline-variant": "#424754",
+                        "on-surface-variant": "#c2c6d6",
+                        "surface-container-high": "#222a3d",
+                        "on-surface": "#dae2fd",
+                        "outline": "#8c909f",
+                        "inverse-surface": "#dae2fd",
+                        "surface-container-highest": "#2d3449",
+                        "secondary-fixed-dim": "#4edea3",
+                        "inverse-on-surface": "#283044",
+                        "on-primary": "#002e6a",
+                        "on-error-container": "#ffdad6",
+                        "tertiary": "#ffb3ad",
+                        "on-error": "#690005",
+                        "secondary-fixed": "#6ffbbe",
+                        "primary": "#adc6ff",
+                        "tertiary-fixed-dim": "#ffb3ad",
+                        "surface": "#0b1326",
+                        "surface-tint": "#adc6ff",
+                        "primary-fixed": "#d8e2ff",
+                        "surface-dim": "#0b1326",
+                        "secondary-container": "#00a572",
+                        "on-secondary-container": "#00311f",
+                        "surface-variant": "#2d3449",
+                        "tertiary-fixed": "#ffdad7",
+                        "primary-container": "#4d8eff",
+                        "on-primary-container": "#00285d",
+                        "on-secondary-fixed": "#002113",
+                        "primary-fixed-dim": "#adc6ff",
+                        "surface-container-low": "#131b2e",
+                        "surface-bright": "#31394d",
+                        "on-tertiary": "#68000a",
+                        "inverse-primary": "#005ac2",
+                        "error-container": "#93000a",
+                        "on-background": "#dae2fd",
+                        "surface-container": "#171f33"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "base": "4px",
+                        "lg": "32px",
+                        "gutter": "24px",
+                        "xl": "48px",
+                        "md": "24px",
+                        "xs": "8px",
+                        "container-max": "1440px",
+                        "sm": "16px"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Inter"],
+                        "title-md": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "label-caps": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "body-sm": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "title-md": ["18px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "data-mono": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+                        "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface font-body-md selection:bg-primary selection:text-on-primary">
+<!-- Top Navigation Bar (Shared Component) -->
+<header class="fixed top-0 left-0 w-full z-50 bg-surface-container border-b border-outline-variant flex items-center justify-between px-md h-16 w-full">
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-primary text-2xl" data-icon="account_balance">account_balance</span>
+<span class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary">Kinetic Ledger</span>
+</div>
+<div class="flex items-center gap-md">
+<div class="hidden md:flex items-center gap-sm">
+<nav class="flex gap-md">
+<a class="text-on-surface-variant hover:bg-surface-container-high transition-colors px-3 py-2 rounded-lg font-label-caps text-label-caps" href="#">Dashboard</a>
+<a class="text-on-surface-variant hover:bg-surface-container-high transition-colors px-3 py-2 rounded-lg font-label-caps text-label-caps" href="#">Payments</a>
+<a class="text-on-surface-variant hover:bg-surface-container-high transition-colors px-3 py-2 rounded-lg font-label-caps text-label-caps" href="#">Budgets</a>
+<a class="text-primary bg-surface-container-high px-3 py-2 rounded-lg font-label-caps text-label-caps" href="#">Reports</a>
+</nav>
+</div>
+<div class="w-10 h-10 rounded-full bg-surface-container-highest border border-outline flex items-center justify-center overflow-hidden">
+<img alt="User profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCKlEvIyrIc0ZSmHEd7M7UdO1WMi9v7YlEGv9RifiFNBnVdC5CB5SbfwyzC7q_Pw_AAmc8j3AvU0Fig7gQUdrtKBUdESXT8EskhdEnbmTaLaP1On2c49Loa953o-K0lt7OEo8Z6mDPrTzQGARWKsqxaPUeODDxfOhIQlOdfB_gp8WpG13uCbv7BJONY6pQ4A0qwNCZ_yvVbp6Yj3VDpdrS5WFFlY6OJ0Zs51ZOEs_HUzKu3E1p0TX2ynLE9Gsxg7UK8AOzN9xqFOc0"/>
+</div>
+</div>
+</header>
+<main class="pt-24 pb-32 px-sm md:px-lg max-w-7xl mx-auto">
+<!-- Screen Header -->
+<div class="flex flex-col md:flex-row md:items-center justify-between mb-lg gap-md">
+<div>
+<h1 class="font-headline-lg text-headline-lg md:text-headline-lg text-on-surface">Finance Team</h1>
+<p class="text-on-surface-variant font-body-sm mt-1">Manage administrative access and permissions for school fiscal operations.</p>
+</div>
+<button class="bg-primary text-on-primary font-label-caps text-label-caps px-lg py-3 rounded-xl flex items-center justify-center gap-2 active:opacity-80 transition-all shadow-lg shadow-primary/10">
+<span class="material-symbols-outlined" data-icon="person_add">person_add</span>
+                + Add Finance User
+            </button>
+</div>
+<!-- Team Member List (Bento-style Cards) -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-gutter mb-xl">
+<!-- User Card 1 -->
+<div class="bg-surface-container-low border border-outline-variant p-md rounded-xl hover:border-primary/50 transition-colors group relative overflow-hidden">
+<div class="flex items-start justify-between mb-md">
+<div class="flex items-center gap-md">
+<div class="relative">
+<div class="w-12 h-12 bg-primary-container text-on-primary-container rounded-full flex items-center justify-center font-title-md text-title-md">
+                                MV
+                            </div>
+<div class="absolute -bottom-1 -right-1 w-4 h-4 bg-secondary border-2 border-surface-container-low rounded-full" title="Active"></div>
+</div>
+<div>
+<h3 class="font-title-md text-title-md text-on-surface">Marcus Vane</h3>
+<span class="bg-secondary/10 text-secondary font-label-caps text-[10px] px-2 py-0.5 rounded-full border border-secondary/20 uppercase">Bursar</span>
+</div>
+</div>
+<div class="flex flex-col items-end gap-1">
+<span class="text-primary font-label-caps text-[10px] bg-primary/10 px-2 py-0.5 rounded-full font-bold">FULL ACCESS</span>
+</div>
+</div>
+<div class="space-y-2 mb-md border-t border-outline-variant/30 pt-md">
+<div class="flex items-center gap-2 text-on-surface-variant font-body-sm">
+<span class="material-symbols-outlined text-sm" data-icon="mail">mail</span>
+                        m.vane@school.edu
+                    </div>
+<div class="flex items-center gap-2 text-on-surface-variant font-body-sm">
+<span class="material-symbols-outlined text-sm" data-icon="call">call</span>
+                        +1 (555) 012-3456
+                    </div>
+</div>
+<div class="flex items-center gap-sm mt-auto">
+<button class="flex-1 bg-transparent border border-outline-variant text-on-surface-variant font-label-caps text-label-caps py-2 rounded-lg hover:bg-surface-container-high transition-colors">Edit</button>
+<button class="flex-1 bg-transparent border border-outline-variant text-on-surface-variant font-label-caps text-label-caps py-2 rounded-lg hover:bg-error/10 hover:text-error hover:border-error transition-colors">Suspend</button>
+</div>
+</div>
+<!-- User Card 2 -->
+<div class="bg-surface-container-low border border-outline-variant p-md rounded-xl hover:border-primary/50 transition-colors group relative overflow-hidden">
+<div class="flex items-start justify-between mb-md">
+<div class="flex items-center gap-md">
+<div class="relative">
+<div class="w-12 h-12 bg-surface-container-highest text-on-surface rounded-full flex items-center justify-center font-title-md text-title-md">
+                                JL
+                            </div>
+<div class="absolute -bottom-1 -right-1 w-4 h-4 bg-secondary border-2 border-surface-container-low rounded-full" title="Active"></div>
+</div>
+<div>
+<h3 class="font-title-md text-title-md text-on-surface">Jenna Lee</h3>
+<span class="bg-primary/10 text-primary font-label-caps text-[10px] px-2 py-0.5 rounded-full border border-primary/20 uppercase">Finance Officer</span>
+</div>
+</div>
+<div class="flex flex-col items-end gap-1">
+<span class="text-primary font-label-caps text-[10px] bg-primary/10 px-2 py-0.5 rounded-full font-bold">FULL ACCESS</span>
+</div>
+</div>
+<div class="space-y-2 mb-md border-t border-outline-variant/30 pt-md">
+<div class="flex items-center gap-2 text-on-surface-variant font-body-sm">
+<span class="material-symbols-outlined text-sm" data-icon="mail">mail</span>
+                        j.lee@school.edu
+                    </div>
+<div class="flex items-center gap-2 text-on-surface-variant font-body-sm">
+<span class="material-symbols-outlined text-sm" data-icon="call">call</span>
+                        +1 (555) 012-9876
+                    </div>
+</div>
+<div class="flex items-center gap-sm mt-auto">
+<button class="flex-1 bg-transparent border border-outline-variant text-on-surface-variant font-label-caps text-label-caps py-2 rounded-lg hover:bg-surface-container-high transition-colors">Edit</button>
+<button class="flex-1 bg-transparent border border-outline-variant text-on-surface-variant font-label-caps text-label-caps py-2 rounded-lg hover:bg-error/10 hover:text-error hover:border-error transition-colors">Suspend</button>
+</div>
+</div>
+<!-- User Card 3 -->
+<div class="bg-surface-container-low border border-outline-variant p-md rounded-xl hover:border-primary/50 transition-colors group relative overflow-hidden opacity-80">
+<div class="flex items-start justify-between mb-md">
+<div class="flex items-center gap-md">
+<div class="relative">
+<div class="w-12 h-12 bg-surface-container-highest text-on-surface-variant rounded-full flex items-center justify-center font-title-md text-title-md">
+                                RK
+                            </div>
+<div class="absolute -bottom-1 -right-1 w-4 h-4 bg-tertiary border-2 border-surface-container-low rounded-full" title="Suspended"></div>
+</div>
+<div>
+<h3 class="font-title-md text-title-md text-on-surface">Robert King</h3>
+<span class="bg-surface-container-highest text-on-surface-variant font-label-caps text-[10px] px-2 py-0.5 rounded-full border border-outline-variant uppercase">Accounts Clerk</span>
+</div>
+</div>
+<div class="flex flex-col items-end gap-1">
+<span class="text-on-surface-variant font-label-caps text-[10px] bg-surface-container-highest px-2 py-0.5 rounded-full">READ ONLY</span>
+</div>
+</div>
+<div class="space-y-2 mb-md border-t border-outline-variant/30 pt-md">
+<div class="flex items-center gap-2 text-on-surface-variant font-body-sm line-through decoration-error/50">
+<span class="material-symbols-outlined text-sm" data-icon="mail">mail</span>
+                        r.king@school.edu
+                    </div>
+<div class="flex items-center gap-2 text-on-surface-variant font-body-sm">
+<span class="material-symbols-outlined text-sm" data-icon="call">call</span>
+                        +1 (555) 012-4455
+                    </div>
+</div>
+<div class="flex items-center gap-sm mt-auto">
+<button class="flex-1 bg-transparent border border-outline-variant text-on-surface-variant font-label-caps text-label-caps py-2 rounded-lg hover:bg-surface-container-high transition-colors">Edit</button>
+<button class="flex-1 bg-secondary text-on-secondary font-label-caps text-label-caps py-2 rounded-lg active:opacity-90 transition-all">Reactivate</button>
+</div>
+</div>
+</div>
+<!-- Add Finance User Form Section -->
+<section class="bg-surface-container border border-outline-variant rounded-xl overflow-hidden shadow-2xl">
+<div class="p-md bg-surface-container-high border-b border-outline-variant flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary" data-icon="app_registration">app_registration</span>
+<h2 class="font-title-md text-title-md text-on-surface">Register New User</h2>
+</div>
+<form class="p-lg">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md mb-lg">
+<!-- Column 1 -->
+<div class="space-y-md">
+<div>
+<label class="block font-label-caps text-label-caps text-on-surface-variant mb-2">Full Name</label>
+<input class="w-full bg-background border border-outline-variant rounded-lg px-4 py-2.5 text-on-surface focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all font-body-sm" placeholder="e.g. Marcus Vane" type="text"/>
+</div>
+<div>
+<label class="block font-label-caps text-label-caps text-on-surface-variant mb-2">Email Address</label>
+<input class="w-full bg-background border border-outline-variant rounded-lg px-4 py-2.5 text-on-surface focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all font-body-sm" placeholder="m.vane@school.edu" type="email"/>
+</div>
+</div>
+<!-- Column 2 -->
+<div class="space-y-md">
+<div>
+<label class="block font-label-caps text-label-caps text-on-surface-variant mb-2">Phone Number</label>
+<input class="w-full bg-background border border-outline-variant rounded-lg px-4 py-2.5 text-on-surface focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all font-body-sm" placeholder="+1 (555) 000-0000" type="tel"/>
+</div>
+<div>
+<label class="block font-label-caps text-label-caps text-on-surface-variant mb-2">Username</label>
+<input class="w-full bg-background border border-outline-variant rounded-lg px-4 py-2.5 text-on-surface focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all font-body-sm" placeholder="mvane_finance" type="text"/>
+</div>
+</div>
+<!-- Column 3 -->
+<div class="space-y-md">
+<div class="grid grid-cols-2 gap-md">
+<div>
+<label class="block font-label-caps text-label-caps text-on-surface-variant mb-2">Role</label>
+<select class="w-full bg-background border border-outline-variant rounded-lg px-4 py-2.5 text-on-surface focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all font-body-sm appearance-none">
+<option>Bursar</option>
+<option>Finance Officer</option>
+<option>Accounts Clerk</option>
+</select>
+</div>
+<div>
+<label class="block font-label-caps text-label-caps text-on-surface-variant mb-2">Access</label>
+<select class="w-full bg-background border border-outline-variant rounded-lg px-4 py-2.5 text-on-surface focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all font-body-sm appearance-none">
+<option>Full Access</option>
+<option>Read Only</option>
+</select>
+</div>
+</div>
+<div>
+<label class="block font-label-caps text-label-caps text-on-surface-variant mb-2">Temporary Password</label>
+<div class="relative">
+<input class="w-full bg-background border border-outline-variant rounded-lg px-4 py-2.5 text-on-surface focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all font-body-sm" type="password" value="••••••••"/>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant cursor-pointer hover:text-primary transition-colors text-sm" data-icon="visibility">visibility</span>
+</div>
+</div>
+</div>
+</div>
+<div class="flex flex-col md:flex-row items-center justify-between border-t border-outline-variant pt-lg gap-md">
+<div class="flex items-center gap-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-sm" data-icon="info">info</span>
+<p class="font-body-sm">User will be required to change password on first login</p>
+</div>
+<div class="flex gap-md w-full md:w-auto">
+<button class="flex-1 md:flex-none px-xl py-3 border border-outline-variant rounded-xl text-on-surface-variant font-label-caps text-label-caps hover:bg-surface-container-high transition-colors" type="reset">Cancel</button>
+<button class="flex-1 md:flex-none px-xl py-3 bg-secondary text-on-secondary rounded-xl font-label-caps text-label-caps hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-secondary/10" type="submit">Create User</button>
+</div>
+</div>
+</form>
+</section>
+</main>
+<!-- Bottom Navigation Bar (Shared Component - Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 h-20 bg-surface-container-low border-t border-outline-variant flex justify-around items-center px-sm pb-safe">
+<div class="flex flex-col items-center justify-center text-on-surface-variant hover:text-secondary transition-colors active:scale-95 transition-transform duration-150">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-label-caps text-label-caps mt-1">Dashboard</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant hover:text-secondary transition-colors active:scale-95 transition-transform duration-150">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+<span class="font-label-caps text-label-caps mt-1">Payments</span>
+</div>
+<div class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-4 py-1 active:scale-95 transition-transform duration-150">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+<span class="font-label-caps text-label-caps mt-1">Team</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant hover:text-secondary transition-colors active:scale-95 transition-transform duration-150">
+<span class="material-symbols-outlined" data-icon="assessment">assessment</span>
+<span class="font-label-caps text-label-caps mt-1">Reports</span>
+</div>
+</nav>
+<!-- Floating Atmosphere Elements -->
+<div class="fixed inset-0 -z-10 pointer-events-none opacity-20 overflow-hidden">
+<div class="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/20 blur-[120px] rounded-full translate-x-1/2 -translate-y-1/2"></div>
+<div class="absolute bottom-0 left-0 w-[500px] h-[500px] bg-secondary/10 blur-[120px] rounded-full -translate-x-1/2 translate-y-1/2"></div>
+</div>
+</body></html>

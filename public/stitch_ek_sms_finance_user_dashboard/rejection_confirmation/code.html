@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Payment Rejected - EK-SMS</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-secondary": "#003824",
+                        "on-tertiary": "#68000a",
+                        "secondary": "#4edea3",
+                        "on-primary-fixed-variant": "#004395",
+                        "on-primary-container": "#00285d",
+                        "tertiary": "#ffb3ad",
+                        "on-tertiary-fixed-variant": "#930013",
+                        "tertiary-fixed": "#ffdad7",
+                        "primary-container": "#4d8eff",
+                        "primary": "#adc6ff",
+                        "on-secondary-container": "#00311f",
+                        "on-secondary-fixed-variant": "#005236",
+                        "surface-container": "#171f33",
+                        "surface-variant": "#2d3449",
+                        "background": "#0b1326",
+                        "on-background": "#dae2fd",
+                        "outline-variant": "#424754",
+                        "secondary-fixed": "#6ffbbe",
+                        "primary-fixed": "#d8e2ff",
+                        "surface-container-low": "#131b2e",
+                        "on-surface": "#dae2fd",
+                        "tertiary-fixed-dim": "#ffb3ad",
+                        "surface": "#0b1326",
+                        "secondary-fixed-dim": "#4edea3",
+                        "on-error-container": "#ffdad6",
+                        "error-container": "#93000a",
+                        "surface-container-high": "#222a3d",
+                        "primary-fixed-dim": "#adc6ff",
+                        "surface-bright": "#31394d",
+                        "on-tertiary-container": "#5c0008",
+                        "surface-tint": "#adc6ff",
+                        "on-secondary-fixed": "#002113",
+                        "inverse-surface": "#dae2fd",
+                        "inverse-on-surface": "#283044",
+                        "on-error": "#690005",
+                        "error": "#ffb4ab",
+                        "surface-dim": "#0b1326",
+                        "on-tertiary-fixed": "#410004",
+                        "on-surface-variant": "#c2c6d6",
+                        "secondary-container": "#00a572",
+                        "inverse-primary": "#005ac2",
+                        "on-primary-fixed": "#001a42",
+                        "tertiary-container": "#ff5451",
+                        "on-primary": "#002e6a",
+                        "surface-container-lowest": "#060e20",
+                        "surface-container-highest": "#2d3449",
+                        "outline": "#8c909f"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "gutter": "24px",
+                        "container-max": "1440px",
+                        "base": "4px",
+                        "xs": "8px",
+                        "sm": "16px",
+                        "xl": "48px",
+                        "lg": "32px",
+                        "md": "24px"
+                    },
+                    "fontFamily": {
+                        "display-lg": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "title-md": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "body-sm": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "label-caps": ["Inter"],
+                        "body-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "title-md": ["18px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "data-mono": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background min-h-screen flex flex-col font-body-md selection:bg-primary selection:text-on-primary">
+<!-- TopAppBar (From JSON, modified for Transactional intent - hiding nav elements but keeping header style) -->
+<header class="bg-surface-container border-b border-outline-variant flex items-center w-full px-sm h-16 docked full-width top-0 z-40 transition-colors duration-200">
+<button aria-label="Go back" class="text-primary hover:bg-surface-variant p-2 rounded-full transition-colors duration-200 active:opacity-80 flex items-center justify-center mr-xs">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">arrow_back</span>
+</button>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile md:font-headline-lg md:text-headline-lg font-semibold text-on-surface">Reject Payment</h1>
+</header>
+<!-- Main Canvas (Transactional Intent - Hiding Bottom Nav, Centered Content) -->
+<main class="flex-grow flex items-center justify-center p-sm md:p-lg w-full max-w-container-max mx-auto relative overflow-hidden">
+<!-- Background Atmospheric Effect -->
+<div class="absolute inset-0 pointer-events-none overflow-hidden flex items-center justify-center opacity-20">
+<div class="w-[800px] h-[800px] bg-error rounded-full blur-[150px] mix-blend-screen opacity-10"></div>
+</div>
+<div class="relative z-10 w-full max-w-md bg-surface-container border border-outline-variant rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.5)] overflow-hidden animate-[slideUp_0.4s_ease-out_forwards]">
+<!-- Hero / Status Banner -->
+<div class="p-lg flex flex-col items-center text-center border-b border-outline-variant bg-surface-container-high relative overflow-hidden">
+<!-- Warning Pattern Background -->
+<div class="absolute inset-0 opacity-5" style="background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, #ffb4ab 10px, #ffb4ab 20px);"></div>
+<div class="w-20 h-20 bg-error-container/20 border border-error/30 rounded-full flex items-center justify-center mb-md relative z-10">
+<span class="material-symbols-outlined text-error text-[40px]" style="font-variation-settings: 'FILL' 1;">warning</span>
+</div>
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile md:font-headline-lg md:text-headline-lg text-error mb-xs relative z-10">Payment Rejected</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant relative z-10">The student and parent will be notified immediately to re-upload their proof of payment.</p>
+</div>
+<!-- Details Card -->
+<div class="p-md bg-surface-container">
+<h3 class="font-label-caps text-label-caps text-outline mb-sm tracking-[0.05em] uppercase">Transaction Details</h3>
+<div class="space-y-sm">
+<div class="flex justify-between items-center py-xs border-b border-surface-variant">
+<span class="font-body-sm text-body-sm text-on-surface-variant">Receipt #</span>
+<span class="font-data-mono text-data-mono text-on-surface">RCP-9021</span>
+</div>
+<div class="flex justify-between items-center py-xs border-b border-surface-variant">
+<span class="font-body-sm text-body-sm text-on-surface-variant">Student</span>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-primary" style="font-variation-settings: 'FILL' 0;">person</span>
+<span class="font-title-md text-title-md text-on-surface text-[14px]">Alex Johnson</span>
+</div>
+</div>
+<div class="flex justify-between items-start py-xs">
+<span class="font-body-sm text-body-sm text-on-surface-variant mt-1">Reason</span>
+<div class="bg-error/10 border border-error/20 px-xs py-base rounded text-right">
+<span class="font-body-sm text-body-sm text-error font-medium">Illegible Receipt</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Actions -->
+<div class="p-md bg-surface-container-low border-t border-outline-variant flex flex-col gap-sm">
+<button class="w-full bg-primary hover:bg-primary-fixed-dim text-on-primary font-title-md text-[16px] py-3 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2 group">
+<span>Back to Dashboard</span>
+<span class="material-symbols-outlined group-hover:translate-x-1 transition-transform" style="font-variation-settings: 'FILL' 0;">arrow_forward</span>
+</button>
+<button class="w-full bg-transparent border border-outline-variant hover:border-primary hover:text-primary text-on-surface-variant font-body-sm text-body-sm py-3 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2" id="undo-btn">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 0;">undo</span>
+<span>Undo Action (<span id="undo-timer">10</span>s)</span>
+</button>
+</div>
+<!-- Progress Bar for Undo -->
+<div class="h-1 w-full bg-surface-variant">
+<div class="h-full bg-outline-variant transition-all ease-linear" id="undo-progress" style="width: 100%;"></div>
+</div>
+</div>
+</main>
+<style>
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+<script>
+        // Simple undo timer logic
+        document.addEventListener('DOMContentLoaded', () => {
+            const timerEl = document.getElementById('undo-timer');
+            const progressEl = document.getElementById('undo-progress');
+            const undoBtn = document.getElementById('undo-btn');
+            
+            let timeLeft = 10;
+            const totalTime = 10;
+            
+            progressEl.style.transitionDuration = '1s';
+            
+            const interval = setInterval(() => {
+                timeLeft -= 1;
+                if (timeLeft >= 0) {
+                    timerEl.textContent = timeLeft;
+                    progressEl.style.width = `${(timeLeft / totalTime) * 100}%`;
+                }
+                
+                if (timeLeft <= 0) {
+                    clearInterval(interval);
+                    undoBtn.disabled = true;
+                    undoBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    undoBtn.innerHTML = `<span>Action Finalized</span>`;
+                }
+            }, 1000);
+            
+            undoBtn.addEventListener('click', () => {
+                if(timeLeft > 0) {
+                    clearInterval(interval);
+                    undoBtn.innerHTML = `<span class="material-symbols-outlined text-[18px]">check</span><span>Undoing...</span>`;
+                    undoBtn.classList.add('text-secondary', 'border-secondary');
+                    setTimeout(() => {
+                        alert('Action undone. Returning to previous state.');
+                    }, 500);
+                }
+            });
+        });
+    </script>
+</body></html>

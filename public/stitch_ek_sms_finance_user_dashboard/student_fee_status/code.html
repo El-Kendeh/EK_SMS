@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Student Fee Status - EK-SMS</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "outline-variant": "#424754",
+                        "surface-container-highest": "#2d3449",
+                        "surface-container-lowest": "#060e20",
+                        "secondary-fixed-dim": "#4edea3",
+                        "inverse-surface": "#dae2fd",
+                        "inverse-primary": "#005ac2",
+                        "secondary-container": "#00a572",
+                        "primary": "#adc6ff",
+                        "on-primary": "#002e6a",
+                        "on-secondary": "#003824",
+                        "on-primary-fixed": "#001a42",
+                        "tertiary-fixed": "#ffdad7",
+                        "error": "#ffb4ab",
+                        "error-container": "#93000a",
+                        "secondary-fixed": "#6ffbbe",
+                        "primary-container": "#4d8eff",
+                        "surface": "#0b1326",
+                        "on-secondary-fixed": "#002113",
+                        "surface-variant": "#2d3449",
+                        "on-secondary-container": "#00311f",
+                        "background": "#0b1326",
+                        "on-tertiary-container": "#5c0008",
+                        "surface-container-low": "#131b2e",
+                        "surface-container": "#171f33",
+                        "on-error": "#690005",
+                        "on-primary-container": "#00285d",
+                        "on-error-container": "#ffdad6",
+                        "on-background": "#dae2fd",
+                        "primary-fixed-dim": "#adc6ff",
+                        "surface-container-high": "#222a3d",
+                        "tertiary": "#ffb3ad",
+                        "surface-bright": "#31394d",
+                        "on-primary-fixed-variant": "#004395",
+                        "tertiary-fixed-dim": "#ffb3ad",
+                        "outline": "#8c909f",
+                        "on-surface": "#dae2fd",
+                        "secondary": "#4edea3",
+                        "on-tertiary-fixed-variant": "#930013",
+                        "on-tertiary-fixed": "#410004",
+                        "on-tertiary": "#68000a",
+                        "primary-fixed": "#d8e2ff",
+                        "inverse-on-surface": "#283044",
+                        "surface-dim": "#0b1326",
+                        "on-secondary-fixed-variant": "#005236",
+                        "on-surface-variant": "#c2c6d6",
+                        "tertiary-container": "#ff5451",
+                        "surface-tint": "#adc6ff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "gutter": "24px",
+                        "md": "24px",
+                        "xl": "48px",
+                        "lg": "32px",
+                        "base": "4px",
+                        "sm": "16px",
+                        "container-max": "1440px",
+                        "xs": "8px",
+                        "safe": "env(safe-area-inset-bottom)"
+                    },
+                    "fontFamily": {
+                        "display-lg": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "title-md": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "label-caps": ["Inter"],
+                        "data-mono": ["JetBrains Mono"]
+                    },
+                    "fontSize": {
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "title-md": ["18px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700"}],
+                        "data-mono": ["14px", {"lineHeight": "20px", "fontWeight": "500"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom, 20px); }
+        .circular-chart { display: block; margin: 0 auto; max-width: 80%; max-height: 250px; }
+        .circle-bg { fill: none; stroke: theme('colors.surface-container-high'); stroke-width: 3.8; }
+        .circle { fill: none; stroke-width: 2.8; stroke-linecap: round; animation: progress 1s ease-out forwards; }
+        @keyframes progress { 0% { stroke-dasharray: 0 100; } }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface font-body-md antialiased min-h-screen flex flex-col">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-surface border-b border-outline-variant flat no shadows flex items-center justify-between px-sm h-16 transition-colors hover:bg-surface-container-high md:px-md md:hidden">
+<button class="text-primary hover:bg-surface-container-high rounded-full p-2 transition-transform active:scale-95">
+<span class="material-symbols-outlined text-[24px]">arrow_back</span>
+</button>
+<h1 class="font-title-md text-title-md font-bold text-on-surface truncate px-4">Student Fee Status</h1>
+<button class="text-on-surface-variant hover:bg-surface-container-high rounded-full p-2 transition-transform active:scale-95">
+<span class="material-symbols-outlined text-[24px]">more_vert</span>
+</button>
+</header>
+<!-- Main Content Area -->
+<main class="flex-grow pt-16 pb-24 px-sm md:px-md max-w-container-max mx-auto w-full flex flex-col gap-sm">
+<!-- Summary Card -->
+<section class="bg-surface-container rounded-xl p-sm border border-outline-variant mt-sm">
+<div class="flex justify-between items-start mb-sm">
+<div>
+<h2 class="font-title-md text-title-md text-on-surface mb-base">Grade 10 - Section A</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Collection Progress</p>
+</div>
+</div>
+<div class="flex items-center justify-between bg-surface-container-low rounded-lg p-sm border border-outline-variant">
+<div class="w-24 h-24 relative">
+<svg class="circular-chart text-secondary" viewbox="0 0 36 36">
+<path class="circle-bg" d="M18 2.0845
+                            a 15.9155 15.9155 0 0 1 0 31.831
+                            a 15.9155 15.9155 0 0 1 0 -31.831"></path>
+<path class="circle stroke-current" d="M18 2.0845
+                            a 15.9155 15.9155 0 0 1 0 31.831
+                            a 15.9155 15.9155 0 0 1 0 -31.831" stroke-dasharray="78, 100"></path>
+</svg>
+<div class="absolute inset-0 flex items-center justify-center">
+<span class="font-data-mono text-data-mono text-secondary">78%</span>
+</div>
+</div>
+<div class="flex flex-col gap-xs flex-grow ml-sm">
+<div class="flex justify-between">
+<span class="font-body-sm text-body-sm text-on-surface-variant">Total Due</span>
+<span class="font-data-mono text-data-mono text-on-surface">$45,000</span>
+</div>
+<div class="flex justify-between">
+<span class="font-body-sm text-body-sm text-on-surface-variant">Collected</span>
+<span class="font-data-mono text-data-mono text-secondary">$35,100</span>
+</div>
+<div class="h-px w-full bg-outline-variant my-xs"></div>
+<div class="flex justify-between">
+<span class="font-body-sm text-body-sm text-on-surface-variant">Outstanding</span>
+<span class="font-data-mono text-data-mono text-error">$9,900</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Search and Filters -->
+<section class="flex flex-col gap-xs">
+<div class="relative w-full">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="w-full bg-surface-container-low border border-outline-variant rounded-lg py-2 pl-10 pr-4 font-body-sm text-body-sm text-on-surface placeholder:text-outline focus:border-primary focus:ring-1 focus:ring-primary transition-colors" placeholder="Search students..." type="text"/>
+</div>
+<div class="flex overflow-x-auto gap-xs pb-2 scrollbar-hide">
+<button class="flex-shrink-0 bg-primary-container text-on-primary-container font-label-caps text-label-caps px-4 py-1.5 rounded-full border border-transparent">All</button>
+<button class="flex-shrink-0 bg-surface-container border border-outline-variant text-on-surface font-label-caps text-label-caps px-4 py-1.5 rounded-full hover:border-primary/50 transition-colors">Paid</button>
+<button class="flex-shrink-0 bg-surface-container border border-outline-variant text-on-surface font-label-caps text-label-caps px-4 py-1.5 rounded-full hover:border-primary/50 transition-colors">Partial</button>
+<button class="flex-shrink-0 bg-surface-container border border-outline-variant text-on-surface font-label-caps text-label-caps px-4 py-1.5 rounded-full hover:border-primary/50 transition-colors">Overdue</button>
+</div>
+</section>
+<!-- Student List -->
+<section class="flex flex-col gap-xs pb-xl">
+<!-- Paid Item -->
+<div class="bg-surface-container rounded-lg p-sm border border-outline-variant flex items-center justify-between hover:border-primary/50 transition-colors active:scale-[0.98]">
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-on-surface">Alex Johnson</span>
+<span class="font-data-mono text-[12px] text-on-surface-variant mt-1">STU-2024-001</span>
+</div>
+<div class="flex items-center gap-sm">
+<div class="flex flex-col items-end">
+<span class="bg-secondary/10 text-secondary font-label-caps text-label-caps px-2 py-0.5 rounded uppercase">Paid</span>
+<span class="font-data-mono text-data-mono text-on-surface-variant mt-1">$0.00</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant">chevron_right</span>
+</div>
+</div>
+<!-- Partial Item -->
+<div class="bg-surface-container rounded-lg p-sm border border-outline-variant flex items-center justify-between hover:border-primary/50 transition-colors active:scale-[0.98]">
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-on-surface">Maria Garcia</span>
+<span class="font-data-mono text-[12px] text-on-surface-variant mt-1">STU-2024-015</span>
+</div>
+<div class="flex items-center gap-sm">
+<div class="flex flex-col items-end">
+<span class="bg-tertiary-container/20 text-tertiary-container font-label-caps text-label-caps px-2 py-0.5 rounded uppercase">Partial</span>
+<span class="font-data-mono text-data-mono text-on-surface mt-1">$450.00</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant">chevron_right</span>
+</div>
+</div>
+<!-- Overdue Item -->
+<div class="bg-surface-container rounded-lg p-sm border border-outline-variant flex items-center justify-between hover:border-primary/50 transition-colors active:scale-[0.98]">
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-on-surface">James Smith</span>
+<span class="font-data-mono text-[12px] text-on-surface-variant mt-1">STU-2024-042</span>
+</div>
+<div class="flex items-center gap-sm">
+<div class="flex flex-col items-end">
+<span class="bg-error/10 text-error font-label-caps text-label-caps px-2 py-0.5 rounded uppercase">Overdue</span>
+<span class="font-data-mono text-data-mono text-error mt-1">$1,250.00</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant">chevron_right</span>
+</div>
+</div>
+<!-- Paid Item -->
+<div class="bg-surface-container rounded-lg p-sm border border-outline-variant flex items-center justify-between hover:border-primary/50 transition-colors active:scale-[0.98]">
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-on-surface">Linda Lee</span>
+<span class="font-data-mono text-[12px] text-on-surface-variant mt-1">STU-2024-088</span>
+</div>
+<div class="flex items-center gap-sm">
+<div class="flex flex-col items-end">
+<span class="bg-secondary/10 text-secondary font-label-caps text-label-caps px-2 py-0.5 rounded uppercase">Paid</span>
+<span class="font-data-mono text-data-mono text-on-surface-variant mt-1">$0.00</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant">chevron_right</span>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 bg-surface-container-low border-t-0 shadow-lg lg:hidden flex justify-around items-center h-20 px-sm pb-safe">
+<!-- Active: Home (Finance focus) -->
+<button class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-xl px-4 py-1 hover:bg-surface-variant active:scale-90 transition-transform duration-150">
+<span class="material-symbols-outlined text-[24px]">home</span>
+<span class="font-label-caps text-label-caps mt-1">Home</span>
+</button>
+<!-- Inactive -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant rounded-xl px-4 py-1 active:scale-90 transition-transform duration-150">
+<span class="material-symbols-outlined text-[24px]">assessment</span>
+<span class="font-label-caps text-label-caps mt-1">Reports</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant rounded-xl px-4 py-1 active:scale-90 transition-transform duration-150">
+<span class="material-symbols-outlined text-[24px]">file_download</span>
+<span class="font-label-caps text-label-caps mt-1">Export</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant rounded-xl px-4 py-1 active:scale-90 transition-transform duration-150">
+<span class="material-symbols-outlined text-[24px]">person</span>
+<span class="font-label-caps text-label-caps mt-1">Profile</span>
+</button>
+</nav>
+<script>
+        // Simple JS to handle horizontal scroll hiding for filters if needed, 
+        // though CSS handles it mostly. 
+    </script>
+</body></html>

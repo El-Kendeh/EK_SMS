@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Budget Allocation - Kinetic Ledger</title>
+<!-- Google Fonts & Material Symbols -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "on-secondary-fixed-variant": "#005236",
+                        "tertiary-container": "#ff5451",
+                        "on-tertiary-fixed": "#410004",
+                        "background": "#0b1326",
+                        "on-primary-fixed": "#001a42",
+                        "on-tertiary-fixed-variant": "#930013",
+                        "on-tertiary-container": "#5c0008",
+                        "surface-container-lowest": "#060e20",
+                        "error": "#ffb4ab",
+                        "on-secondary": "#003824",
+                        "surface-container-highest": "#2d3449",
+                        "secondary-fixed-dim": "#4edea3",
+                        "inverse-on-surface": "#283044",
+                        "on-primary": "#002e6a",
+                        "on-error-container": "#ffdad6",
+                        "secondary": "#4edea3",
+                        "on-primary-fixed-variant": "#004395",
+                        "outline-variant": "#424754",
+                        "on-surface-variant": "#c2c6d6",
+                        "surface-container-high": "#222a3d",
+                        "on-surface": "#dae2fd",
+                        "outline": "#8c909f",
+                        "inverse-surface": "#dae2fd",
+                        "surface-dim": "#0b1326",
+                        "secondary-container": "#00a572",
+                        "on-secondary-container": "#00311f",
+                        "surface-variant": "#2d3449",
+                        "tertiary-fixed": "#ffdad7",
+                        "primary-container": "#4d8eff",
+                        "tertiary": "#ffb3ad",
+                        "on-error": "#690005",
+                        "tertiary-fixed-dim": "#ffb3ad",
+                        "surface": "#0b1326",
+                        "secondary-fixed": "#6ffbbe",
+                        "primary": "#adc6ff",
+                        "surface-tint": "#adc6ff",
+                        "primary-fixed": "#d8e2ff",
+                        "on-background": "#dae2fd",
+                        "surface-container": "#171f33",
+                        "on-secondary-fixed": "#002113",
+                        "on-primary-container": "#00285d",
+                        "surface-container-low": "#131b2e",
+                        "surface-bright": "#31394d",
+                        "on-tertiary": "#68000a",
+                        "primary-fixed-dim": "#adc6ff",
+                        "error-container": "#93000a",
+                        "inverse-primary": "#005ac2"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    spacing: {
+                        "xs": "8px",
+                        "container-max": "1440px",
+                        "xl": "48px",
+                        "md": "24px",
+                        "sm": "16px",
+                        "base": "4px",
+                        "lg": "32px",
+                        "gutter": "24px"
+                    },
+                    fontFamily: {
+                        "title-md": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "label-caps": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "body-md": ["Inter"]
+                    },
+                    fontSize: {
+                        "title-md": ["18px", { lineHeight: "28px", fontWeight: "600" }],
+                        "headline-lg-mobile": ["24px", { lineHeight: "32px", fontWeight: "600" }],
+                        "headline-lg": ["32px", { lineHeight: "40px", letterSpacing: "-0.01em", fontWeight: "600" }],
+                        "data-mono": ["14px", { lineHeight: "20px", fontWeight: "500" }],
+                        "label-caps": ["12px", { lineHeight: "16px", letterSpacing: "0.05em", fontWeight: "700" }],
+                        "display-lg": ["48px", { lineHeight: "56px", letterSpacing: "-0.02em", fontWeight: "700" }],
+                        "body-sm": ["14px", { lineHeight: "20px", fontWeight: "400" }],
+                        "body-md": ["16px", { lineHeight: "24px", fontWeight: "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #424754;
+            border-radius: 4px;
+        }
+        /* Hide scrollbar for clean mobile look but allow scrolling */
+        .hide-scroll {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .hide-scroll::-webkit-scrollbar {
+            display: none;
+        }
+        
+        /* Custom Range Slider */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #adc6ff; /* primary */
+            cursor: pointer;
+            margin-top: -6px;
+            box-shadow: 0 0 0 4px rgba(173, 198, 255, 0.2);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #424754; /* outline-variant */
+            border-radius: 2px;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-sm antialiased flex flex-col h-screen overflow-hidden selection:bg-primary-container selection:text-on-primary-container">
+<!-- TopAppBar -->
+<header class="w-full sticky top-0 z-50 border-b border-outline-variant dark:border-outline-variant bg-background dark:bg-background">
+<div class="flex items-center justify-between px-md h-16 w-full max-w-container-max mx-auto">
+<button class="text-primary dark:text-primary active:opacity-80 transition-opacity hover:bg-surface-container-highest dark:hover:bg-surface-container-highest transition-colors rounded-full p-2 flex items-center justify-center">
+<span class="material-symbols-outlined text-[24px]">arrow_back</span>
+</button>
+<h1 class="font-display-lg text-display-lg text-primary dark:text-primary tracking-tighter text-[24px] leading-tight">Kinetic Ledger</h1>
+<button class="active:opacity-80 transition-opacity hover:bg-surface-container-highest dark:hover:bg-surface-container-highest transition-colors rounded-full overflow-hidden w-8 h-8 border border-outline-variant flex items-center justify-center bg-surface-container-low text-primary">
+<span class="material-symbols-outlined text-[18px]">person</span>
+</button>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 overflow-y-auto hide-scroll pb-[180px] w-full max-w-2xl mx-auto flex flex-col gap-md p-sm relative">
+<!-- Context Header -->
+<div class="flex flex-col gap-xs">
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">Budget Allocation</h2>
+<div class="inline-flex items-center gap-2 bg-surface-container-low border border-outline-variant rounded-full px-4 py-2 w-max cursor-pointer hover:border-primary transition-colors">
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant">calendar_month</span>
+<span class="font-title-md text-title-md text-[14px] text-on-surface">Term 2, 2024 - Planning</span>
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant">arrow_drop_down</span>
+</div>
+</div>
+<!-- Total Budget Overview -->
+<section class="bg-surface-container-low border border-outline-variant rounded-xl p-md flex items-center justify-between shadow-[0_4px_24px_rgba(0,0,0,0.2)]">
+<div class="flex flex-col gap-sm">
+<div>
+<p class="font-label-caps text-label-caps text-on-surface-variant uppercase">Total Allocated Budget</p>
+<p class="font-data-mono text-data-mono text-[24px] leading-[32px] text-on-surface font-bold mt-1">$5,000,000</p>
+</div>
+<div>
+<p class="font-label-caps text-label-caps text-primary uppercase">Remaining to Allocate</p>
+<p class="font-data-mono text-data-mono text-[18px] text-primary font-bold mt-1">$1,240,500</p>
+</div>
+</div>
+<!-- Circular Progress Indicator -->
+<div class="relative w-24 h-24 flex items-center justify-center">
+<svg class="transform -rotate-90 w-24 h-24">
+<circle class="text-surface-variant" cx="48" cy="48" fill="transparent" r="40" stroke="currentColor" stroke-width="8"></circle>
+<circle class="text-primary" cx="48" cy="48" fill="transparent" r="40" stroke="currentColor" stroke-dasharray="251.2" stroke-dashoffset="62.8" stroke-width="8"></circle>
+</svg>
+<div class="absolute inset-0 flex items-center justify-center flex-col">
+<span class="font-data-mono text-data-mono text-[16px] text-on-surface font-bold">75%</span>
+</div>
+</div>
+</section>
+<!-- Departmental Allocation List -->
+<div class="flex flex-col gap-xs mt-2">
+<h3 class="font-label-caps text-label-caps text-on-surface-variant uppercase mb-2">Department Allocations</h3>
+<!-- Dept Card 1: Academics -->
+<article class="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 flex flex-col gap-4 focus-within:border-primary/50 transition-colors">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">school</span>
+</div>
+<div>
+<h4 class="font-title-md text-title-md text-on-surface">Academics</h4>
+<p class="font-data-mono text-data-mono text-[12px] text-on-surface-variant mt-0.5">Prev: $1,800,000</p>
+</div>
+</div>
+<div class="bg-secondary-container/20 border border-secondary-container rounded-full px-2 py-1 flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-secondary">trending_up</span>
+<span class="font-data-mono text-data-mono text-[12px] text-secondary">+5.2%</span>
+</div>
+</div>
+<div class="flex flex-col gap-3">
+<div class="flex justify-between items-center border border-outline-variant bg-surface-container-low rounded-lg p-2 focus-within:border-primary transition-colors">
+<span class="font-data-mono text-data-mono text-on-surface-variant pl-2">$</span>
+<input class="w-full bg-transparent border-none text-right font-data-mono text-data-mono text-[16px] text-on-surface focus:ring-0 p-0 pr-2" type="text" value="1,893,600"/>
+</div>
+<input class="w-full" max="3000000" min="1000000" type="range" value="1893600"/>
+</div>
+</article>
+<!-- Dept Card 2: Athletics -->
+<article class="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 flex flex-col gap-4 focus-within:border-primary/50 transition-colors">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">sports_basketball</span>
+</div>
+<div>
+<h4 class="font-title-md text-title-md text-on-surface">Athletics</h4>
+<p class="font-data-mono text-data-mono text-[12px] text-on-surface-variant mt-0.5">Prev: $850,000</p>
+</div>
+</div>
+<div class="bg-surface-variant border border-outline-variant rounded-full px-2 py-1 flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-on-surface-variant">trending_flat</span>
+<span class="font-data-mono text-data-mono text-[12px] text-on-surface-variant">0.0%</span>
+</div>
+</div>
+<div class="flex flex-col gap-3">
+<div class="flex justify-between items-center border border-outline-variant bg-surface-container-low rounded-lg p-2 focus-within:border-primary transition-colors">
+<span class="font-data-mono text-data-mono text-on-surface-variant pl-2">$</span>
+<input class="w-full bg-transparent border-none text-right font-data-mono text-data-mono text-[16px] text-on-surface focus:ring-0 p-0 pr-2" type="text" value="850,000"/>
+</div>
+<input class="w-full" max="1500000" min="500000" type="range" value="850000"/>
+</div>
+</article>
+<!-- Dept Card 3: Facilities -->
+<article class="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 flex flex-col gap-4 focus-within:border-primary/50 transition-colors">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">domain</span>
+</div>
+<div>
+<h4 class="font-title-md text-title-md text-on-surface">Facilities</h4>
+<p class="font-data-mono text-data-mono text-[12px] text-on-surface-variant mt-0.5">Prev: $1,200,000</p>
+</div>
+</div>
+<div class="bg-error-container/20 border border-error-container rounded-full px-2 py-1 flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-error">trending_down</span>
+<span class="font-data-mono text-data-mono text-[12px] text-error">-15.3%</span>
+</div>
+</div>
+<div class="flex flex-col gap-3">
+<div class="flex justify-between items-center border border-outline-variant bg-surface-container-low rounded-lg p-2 focus-within:border-primary transition-colors">
+<span class="font-data-mono text-data-mono text-on-surface-variant pl-2">$</span>
+<input class="w-full bg-transparent border-none text-right font-data-mono text-data-mono text-[16px] text-on-surface focus:ring-0 p-0 pr-2" type="text" value="1,015,900"/>
+</div>
+<input class="w-full" max="2000000" min="800000" type="range" value="1015900"/>
+</div>
+</article>
+</div>
+</main>
+<!-- Fixed Action Bar -->
+<div class="fixed bottom-20 left-0 w-full px-sm py-4 bg-surface-container-lowest/95 backdrop-blur-md border-t border-outline-variant z-40 flex justify-between gap-4 max-w-container-max mx-auto shadow-[0_-8px_32px_rgba(0,0,0,0.4)]">
+<button class="px-4 py-3 rounded-lg border border-primary text-primary font-title-md text-[14px] hover:bg-primary/10 transition-colors flex items-center justify-center gap-2 whitespace-nowrap">
+<span class="material-symbols-outlined text-[18px]">undo</span>
+            Reset
+        </button>
+<button class="flex-1 bg-primary text-on-primary font-title-md text-[14px] px-6 py-3 rounded-lg hover:bg-primary-fixed transition-colors flex items-center justify-center gap-2 shadow-[0_0_16px_rgba(173,198,255,0.2)]">
+<span class="material-symbols-outlined text-[18px]">check_circle</span>
+            Confirm Allocation
+        </button>
+</div>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 rounded-t-xl bg-surface-container-low dark:bg-surface-container-low border-t border-outline-variant dark:border-outline-variant shadow-lg dark:shadow-none">
+<div class="flex justify-around items-center px-sm pb-safe h-20 w-full max-w-container-max mx-auto">
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-sm py-xs hover:text-secondary dark:hover:text-secondary scale-95 transition-transform duration-100 w-16">
+<span class="material-symbols-outlined mb-1">dashboard</span>
+<span class="font-label-caps text-label-caps text-[10px]">Dashboard</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-sm py-xs hover:text-secondary dark:hover:text-secondary scale-95 transition-transform duration-100 w-16">
+<span class="material-symbols-outlined mb-1">payments</span>
+<span class="font-label-caps text-label-caps text-[10px]">Spending</span>
+</button>
+<!-- Active Tab -->
+<button class="flex flex-col items-center justify-center bg-secondary-container dark:bg-secondary-container text-on-secondary-container dark:text-on-secondary-container rounded-full px-sm py-xs scale-95 transition-transform duration-100 w-16">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 1;">account_balance_wallet</span>
+<span class="font-label-caps text-label-caps text-[10px]">Budgets</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-sm py-xs hover:text-secondary dark:hover:text-secondary scale-95 transition-transform duration-100 w-16">
+<span class="material-symbols-outlined mb-1">analytics</span>
+<span class="font-label-caps text-label-caps text-[10px]">Reports</span>
+</button>
+</div>
+</nav>
+</body></html>
