@@ -48,27 +48,60 @@ export const principalApi = {
   async overview() {
     return apiClient.get('/api/principal/overview/');
   },
-  async listGradeApprovals() {
-    return apiClient.get('/api/principal/grade-approvals/');
+  async getDashboard() {
+    return apiClient.get('/api/principal/dashboard/');
   },
-  async reviewGradeChange({ modId, action, comment }) {
+  async getClassPerformance() {
+    return apiClient.get('/api/principal/class-performance/');
+  },
+  async getTeacherInsights() {
+    return apiClient.get('/api/principal/teacher-insights/');
+  },
+  async getFinanceSnapshot() {
+    return apiClient.get('/api/principal/finance-snapshot/');
+  },
+  async getActivityFeed() {
+    return apiClient.get('/api/principal/activity-feed/');
+  },
+  async getSyllabusProgress() {
+    return apiClient.get('/api/principal/syllabus-progress/');
+  },
+  async getAttendanceReport(days) {
+    return apiClient.get(`/api/principal/attendance-report/${days ? `?days=${days}` : ''}`);
+  },
+
+  async listGradeApprovals(params = {}) {
+    const qs = new URLSearchParams(params).toString();
+    return apiClient.get(`/api/principal/grade-approvals/${qs ? `?${qs}` : ''}`);
+  },
+  async reviewGradeChange({ gradeIds, action, comment }) {
     return apiClient.post('/api/principal/grade-approvals/', {
-      mod_id: modId, action, comment,
+      grade_ids: gradeIds, action, comment,
     });
   },
+
   async listReportCards() {
     return apiClient.get('/api/principal/report-cards/');
   },
-  async publishReportCard({ cardId, principalComment }) {
+  async publishReportCards({ studentIds, termId }) {
     return apiClient.post('/api/principal/report-cards/', {
-      card_id: cardId, action: 'publish',
-      principal_comment: principalComment || '',
+      student_ids: studentIds, term_id: termId,
     });
   },
-  async commentReportCard({ cardId, principalComment }) {
-    return apiClient.post('/api/principal/report-cards/', {
-      card_id: cardId, principal_comment: principalComment,
+  async commentReportCard({ gradeId, comment }) {
+    return apiClient.post('/api/principal/report-cards/comment/', {
+      grade_id: gradeId, comment,
     });
+  },
+
+  async getPrincipalUsers() {
+    return apiClient.get('/api/principal/principal-users/');
+  },
+  async createPrincipalUser(payload) {
+    return apiClient.post('/api/principal/principal-users/', payload);
+  },
+  async updatePrincipalUser(id, payload) {
+    return apiClient.put(`/api/principal/principal-users/${id}/`, payload);
   },
 };
 

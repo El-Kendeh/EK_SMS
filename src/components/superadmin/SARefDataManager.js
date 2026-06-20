@@ -166,6 +166,7 @@ export default function SARefDataManager({
 
   const [fkOptions,     setFkOptions]     = useState({});
   const [actionErr,     setActionErr]     = useState('');
+  const [query,         setQuery]         = useState('');
 
   /* ── Load list ── */
   const loadItems = useCallback(async () => {
@@ -602,6 +603,13 @@ export default function SARefDataManager({
     );
   };
 
+  /* ── Search filter (client-side, across all configured fields) ── */
+  const q = query.trim().toLowerCase();
+  const visibleItems = q
+    ? items.filter(i =>
+        fields.some(f => String(displayVal(i, f)).toLowerCase().includes(q)))
+    : items;
+
   /* ── Render ── */
   return (
     <div className="sard-wrap">
@@ -653,7 +661,29 @@ export default function SARefDataManager({
           <p className="sard-empty">No {itemLabel}s yet — add one above to get started.</p>
         )}
 
-        {!loading && items.length > 0 && (
+        {!loading && !loadErr && items.length > 3 && (
+          <div className="sard-search-bar">
+            <input
+              className="sard-input sard-input--search"
+              type="search"
+              placeholder={`Search ${title.toLowerCase()}…`}
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              aria-label={`Search ${title}`}
+            />
+            {q && (
+              <span className="sard-search-count">
+                {visibleItems.length} of {items.length}
+              </span>
+            )}
+          </div>
+        )}
+
+        {!loading && items.length > 0 && visibleItems.length === 0 && (
+          <p className="sard-empty">No {itemLabel} matches “{query}”.</p>
+        )}
+
+        {!loading && visibleItems.length > 0 && (
           <div className="sard-table">
             {/* Header */}
             <div className="sard-thead" style={{ '--data-cols': fields.length }}>
@@ -664,7 +694,7 @@ export default function SARefDataManager({
             </div>
 
             {/* Rows */}
-            {items.map(item => (
+            {visibleItems.map(item => (
               <div
                 key={item.id}
                 className={[

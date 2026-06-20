@@ -151,6 +151,16 @@ async function handleSchoolAction(req, res) {
       school.rejection_reason = note || 'Rejected by superadmin';
       school.changes_requested = false;
       await school.save({ transaction });
+
+      // Revoke dashboard access for the school's admins (covers schools
+      // that were approved earlier and are being rejected now).
+      for (const adminLink of school.schoolAdmins || []) {
+        const user = await User.findByPk(adminLink.user_id, { transaction });
+        if (user && user.is_active) {
+          user.is_active = false;
+          await user.save({ transaction });
+        }
+      }
       await transaction.commit();
 
       // Send rejection email to school admin(s)
@@ -235,13 +245,16 @@ async function impersonate(req, res) {
     }
 
     const user = adminLink.user;
-    // Generate token for the school admin
+    // Generate token for the school admin. school_id is required so the
+    // impersonated session is tenant-scoped exactly like a real admin login.
     const token = generateToken({
       id: user.id,
       username: user.username,
+      email: user.email,
       role: 'school_admin',
       is_superuser: false,
-      is_staff: false
+      is_staff: false,
+      school_id: adminLink.school_id,
     });
 
     await appendSecurityAuditLog({
@@ -253,15 +266,16 @@ async function impersonate(req, res) {
       metadata: { target_user: user.username },
     });
 
-    return res.json(successResponse({ 
-      token, 
-      user: { 
+    return res.json(successResponse({
+      token,
+      user: {
         id: user.id,
-        username: user.username, 
+        username: user.username,
         email: user.email,
         role: 'school_admin',
-        is_active: user.is_active
-      } 
+        is_active: user.is_active,
+        school_id: adminLink.school_id
+      }
     }));
   } catch (err) {
     console.error(err);

@@ -16,8 +16,16 @@ const IcEdit = () => <svg viewBox="0 0 24 24" width="14" height="14" fill="none"
 const IcTrash = () => <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>;
 const IcBook = () => <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>;
 const IcTeacher = () => <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 10l-10-6-10 6 10 6 10-6z"/><path d="M6 12v5c0 2 3 3 6 3s6-1 6-3v-5"/></svg>;
+const IcToggleOn  = () => <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="5" width="22" height="14" rx="7"/><circle cx="16" cy="12" r="3" fill="currentColor"/></svg>;
+const IcToggleOff = () => <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="5" width="22" height="14" rx="7"/><circle cx="8" cy="12" r="3" fill="currentColor"/></svg>;
+
+function getCurrentUser() {
+  try { return JSON.parse(localStorage.getItem('user') || 'null'); } catch { return null; }
+}
 
 export default function SASubjects() {
+  const isSuper = getCurrentUser()?.role === 'superadmin';
+  const [schools, setSchools] = useState([]);
   const [list, setList] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -43,6 +51,16 @@ export default function SASubjects() {
   }, [page, showToast]); // eslint-disable-line
   useEffect(() => { load(); }, [load]);
 
+  useEffect(() => {
+    if (!isSuper) return;
+    req('GET', '/api/schools/').then(d => setSchools((d.schools || []).filter(s => s.is_approved))).catch(() => {});
+  }, [isSuper]);
+
+  const q = search.trim().toLowerCase();
+  const visible = q
+    ? list.filter(p => [p.name, p.code, p.description, p.school_name].some(v => String(v || '').toLowerCase().includes(q)))
+    : list;
+
   async function handleSave(form) {
     try {
       if (editItem) { await req('PUT', `/api/subjects/${editItem.id}/`, form); showToast('Updated', 'success'); }
@@ -61,28 +79,28 @@ export default function SASubjects() {
       <div className="sa-page-head">
         <div>
           <h1 className="sa-page-title">Subjects</h1>
-          <p className="sa-page-sub">Manage subjects across all schools</p>
+          <p className="sa-page-sub">{isSuper ? 'Manage subjects across all schools' : 'Manage your school\'s subjects'}</p>
         </div>
         <button className="sa-btn sa-btn--primary" onClick={() => { setEditItem(null); setShowModal(true); }}><IcPlus /> Add Subject</button>
       </div>
       <div className="sa-toolbar">
         <div className="sa-search-bar">
-          <input className="sa-search-input" placeholder="Search subjects..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
+          <input className="sa-search-input" placeholder="Search subjects by name, code, description..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
       </div>
       {loading ? <div className="sa-loading">Loading...</div> : (
         <>
           <div className="sa-table-wrap">
             <table className="sa-table">
-              <thead><tr><th>Name</th><th>Code</th><th>School</th><th>Description</th><th>Status</th><th>Actions</th></tr></thead>
+              <thead><tr><th>Name</th><th>Code</th>{isSuper && <th>School</th>}<th>Description</th><th>Status</th><th>Actions</th></tr></thead>
               <tbody>
-                {list.length === 0 ? (
-                  <tr><td colSpan={6} style={{ textAlign: 'center', padding: 40, color: 'var(--sa-text-3)' }}>No subjects found</td></tr>
-                ) : list.map(p => (
+                {visible.length === 0 ? (
+                  <tr><td colSpan={isSuper ? 6 : 5} style={{ textAlign: 'center', padding: 40, color: 'var(--sa-text-3)' }}>{list.length === 0 ? 'No subjects yet — click "Add Subject" to create one.' : 'No subjects match your search.'}</td></tr>
+                ) : visible.map(p => (
                   <tr key={p.id}>
                     <td><div className="sa-table-school-name">{p.name}</div></td>
                     <td><span className="sa-table-school-id">{p.code || '—'}</span></td>
-                    <td style={{ fontSize: 12, color: 'var(--sa-text-3)' }}>{p.school_name || `ID: ${p.school_id}`}</td>
+                    {isSuper && <td style={{ fontSize: 12, color: 'var(--sa-text-3)' }}>{p.school_name || `ID: ${p.school_id}`}</td>}
                     <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.description || '—'}</td>
                     <td>{p.is_active ? <span className="sa-badge sa-badge--approved">Active</span> : <span className="sa-badge sa-badge--inactive">Inactive</span>}</td>
                     <td>
@@ -90,7 +108,7 @@ export default function SASubjects() {
                         <button className="sa-btn sa-btn--ghost sa-btn--sm" title="Assign Classes" onClick={() => { setAssignId(p.id); setAssignType('classes'); }}><IcBook /></button>
                         <button className="sa-btn sa-btn--ghost sa-btn--sm" title="Assign Teacher" onClick={() => { setAssignId(p.id); setAssignType('teacher'); }}><IcTeacher /></button>
                         <button className="sa-btn sa-btn--ghost sa-btn--sm" title="Edit" onClick={() => { setEditItem(p); setShowModal(true); }}><IcEdit /></button>
-                        <button className="sa-btn sa-btn--ghost sa-btn--sm" title="Toggle" onClick={() => handleToggle(p)}><span style={{ fontSize: 12 }}>{p.is_active ? '🔴' : '🟢'}</span></button>
+                        <button className="sa-btn sa-btn--ghost sa-btn--sm" title={p.is_active ? 'Deactivate' : 'Activate'} onClick={() => handleToggle(p)}>{p.is_active ? <IcToggleOn /> : <IcToggleOff />}</button>
                         <button className="sa-btn sa-btn--ghost sa-btn--sm" title="Delete" onClick={() => setDeleting(p.id)}><IcTrash /></button>
                       </div>
                     </td>
@@ -111,7 +129,7 @@ export default function SASubjects() {
         </>
       )}
       {showModal && (
-        <SubjectForm editItem={editItem} onSave={handleSave} onClose={() => { setShowModal(false); setEditItem(null); }} />
+        <SubjectForm editItem={editItem} isSuper={isSuper} schools={schools} onSave={handleSave} onClose={() => { setShowModal(false); setEditItem(null); }} />
       )}
       {assignType === 'classes' && assignId && (
         <AssignClassesModal subjectId={assignId} onClose={() => { setAssignType(null); setAssignId(null); load(); }} showToast={showToast} />
@@ -135,31 +153,57 @@ export default function SASubjects() {
   );
 }
 
-const subjectFields = [
+const subjectTextFields = [
   { key: 'name', label: 'Subject Name', type: 'text', required: true, placeholder: 'e.g. Mathematics' },
   { key: 'code', label: 'Code', type: 'text', placeholder: 'e.g. MATH' },
-  { key: 'school_id', label: 'School ID', type: 'number', required: true },
-  { key: 'description', label: 'Description', type: 'text', placeholder: 'e.g. Advanced Mathematics' },
+  { key: 'description', label: 'Description', type: 'text', placeholder: 'e.g. Advanced Mathematics', full: true },
 ];
 
-function SubjectForm({ editItem, onSave, onClose }) {
+function SubjectForm({ editItem, isSuper, schools = [], onSave, onClose }) {
   const [form, setForm] = useState({});
-  useEffect(() => { if (editItem) { const f = {}; subjectFields.forEach(({ key }) => { f[key] = editItem[key] !== undefined && editItem[key] !== null ? String(editItem[key]) : ''; }); setForm(f); } }, [editItem]);
+  const [err, setErr] = useState('');
+  useEffect(() => {
+    if (editItem) {
+      const f = {};
+      [...subjectTextFields, { key: 'school_id' }].forEach(({ key }) => { f[key] = editItem[key] !== undefined && editItem[key] !== null ? String(editItem[key]) : ''; });
+      setForm(f);
+    }
+  }, [editItem]);
   function set(k, v) { setForm(p => ({ ...p, [k]: v })); }
+  function submit(e) {
+    e.preventDefault();
+    setErr('');
+    if (!String(form.name || '').trim()) { setErr('Subject name is required.'); return; }
+    if (isSuper && !editItem && !form.school_id) { setErr('Please select a school.'); return; }
+    const data = {};
+    subjectTextFields.forEach(({ key }) => { if (form[key] !== '' && form[key] !== undefined) data[key] = form[key]; });
+    if (isSuper && form.school_id) data.school_id = Number(form.school_id);
+    onSave(data);
+  }
   return (
     <div className="sa-modal-overlay" onClick={onClose}>
       <div className="sa-modal" onClick={e => e.stopPropagation()}>
         <h3>{editItem ? 'Edit Subject' : 'Create Subject'}</h3>
-        <form onSubmit={e => { e.preventDefault(); const data = {}; Object.entries(form).forEach(([k, v]) => { if (v !== '' && v !== null && v !== undefined) data[k] = k === 'school_id' ? Number(v) : v; }); onSave(data); }}>
+        <form onSubmit={submit}>
           <div className="sa-modal-body">
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-              {subjectFields.map(f => (
-                <div key={f.key} className="sa-field">
+              {isSuper && (
+                <div className="sa-field" style={{ gridColumn: '1 / -1' }}>
+                  <label>School {editItem ? '' : '*'}</label>
+                  <select value={form.school_id || ''} onChange={e => set('school_id', e.target.value)} disabled={!!editItem}>
+                    <option value="">— select school —</option>
+                    {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                </div>
+              )}
+              {subjectTextFields.map(f => (
+                <div key={f.key} className="sa-field" style={f.full ? { gridColumn: '1 / -1' } : undefined}>
                   <label>{f.label}{f.required ? ' *' : ''}</label>
-                  <input type={f.type === 'number' ? 'number' : 'text'} value={form[f.key] !== undefined ? form[f.key] : ''} onChange={e => set(f.key, e.target.value)} placeholder={f.placeholder || ''} />
+                  <input type="text" value={form[f.key] !== undefined ? form[f.key] : ''} onChange={e => set(f.key, e.target.value)} placeholder={f.placeholder || ''} />
                 </div>
               ))}
             </div>
+            {err && <p style={{ color: 'var(--sa-red, #f87171)', fontSize: 13, marginTop: 12 }}>{err}</p>}
           </div>
           <div className="sa-modal-footer">
             <button type="button" className="sa-btn sa-btn--ghost" onClick={onClose}>Cancel</button>

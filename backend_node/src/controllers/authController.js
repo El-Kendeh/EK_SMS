@@ -6,6 +6,8 @@ const School = require('../models/School');
 const SchoolAdmin = require('../models/SchoolAdmin');
 const Teacher = require('../models/Teacher');
 const Student = require('../models/Student');
+const CorePrincipal = require('../models/CorePrincipal');
+const CoreBursar = require('../models/CoreBursar');
 const OTP = require('../models/OTP');
 const sequelize = require('../config/db');
 const { Resend } = require('resend');
@@ -92,7 +94,19 @@ async function login(req, res) {
     // School admins (and other non-superusers) stay gated until superadmin approval.
     // Superadmin accounts must always be able to sign in even if is_active is false in DB.
     if (!user.is_active && !isPortalSuper) {
-      return res.status(403).json(errorResponse("Your account is pending approval by the Superadmin.", 403));
+      let gateMessage = "Your account is pending approval by the Superadmin.";
+      try {
+        const link = await SchoolAdmin.findOne({ where: { user_id: user.id } });
+        const school = link ? await School.findByPk(link.school_id) : null;
+        if (school && !school.is_approved) {
+          if (school.changes_requested) {
+            gateMessage = "The Superadmin requested changes to your school registration. Please check your email for details.";
+          } else if (school.rejection_reason) {
+            gateMessage = `Your school registration was rejected. Reason: ${school.rejection_reason}`;
+          }
+        }
+      } catch { /* fall back to the generic pending message */ }
+      return res.status(403).json(errorResponse(gateMessage, 403));
     }
 
     let schoolAdminLink = null;
@@ -118,6 +132,28 @@ async function login(req, res) {
     let schoolId = schoolAdminLink ? schoolAdminLink.school_id : null;
     if (isPortalSuper) {
       role = 'superadmin';
+    } else if (portalRoleCode === 'principal') {
+      // Principal accounts also carry a SchoolAdmin link (leadership record),
+      // so this check must come before the generic school_admin fallback.
+      role = 'principal';
+      if (!schoolId) {
+        try {
+          const principalLink = await CorePrincipal.findOne({ where: { user_id: user.id } });
+          schoolId = principalLink?.school_id || null;
+        } catch (findErr) {
+          console.warn('[LOGIN DEBUG] CorePrincipal lookup failed:', findErr.message);
+        }
+      }
+    } else if (portalRoleCode === 'bursar') {
+      role = 'bursar';
+      if (!schoolId) {
+        try {
+          const bursarLink = await CoreBursar.findOne({ where: { user_id: user.id } });
+          schoolId = bursarLink?.school_id || null;
+        } catch (findErr) {
+          console.warn('[LOGIN DEBUG] CoreBursar lookup failed:', findErr.message);
+        }
+      }
     } else if (schoolAdminLink) {
       role = 'school_admin';
     } else if (teacherLink) {
@@ -128,10 +164,6 @@ async function login(req, res) {
       schoolId = studentLink.school_id;
     } else if (portalRoleCode === 'teacher') {
       role = 'teacher';
-    } else if (portalRoleCode === 'principal') {
-      role = 'principal';
-    } else if (portalRoleCode === 'bursar') {
-      role = 'bursar';
     } else if (portalRoleCode === 'parent') {
       role = 'parent';
     } else if (['schooladmin'].includes(portalRoleCode)) {

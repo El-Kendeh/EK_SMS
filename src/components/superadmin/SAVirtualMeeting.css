@@ -1,0 +1,199 @@
+/* ── SAVirtualMeeting ── */
+
+.savm-wrap { display: flex; flex-direction: column; gap: 20px; }
+
+.savm-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.savm-title { margin: 0 0 4px; font-size: 1.375rem; font-weight: 800; color: var(--sa-text-1); }
+.savm-sub   { margin: 0; font-size: 0.8125rem; color: var(--sa-text-3); max-width: 580px; line-height: 1.55; }
+
+/* Buttons */
+.savm-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 18px;
+  min-height: 42px;
+  border-radius: 10px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+}
+.savm-btn--sm { padding: 6px 12px; min-height: 34px; font-size: 0.75rem; }
+.savm-btn--primary { background: linear-gradient(120deg, #1B3FAF, #2563eb); color: #fff; box-shadow: 0 4px 14px rgba(27, 63, 175, 0.35); }
+.savm-btn--primary:hover { filter: brightness(1.08); }
+.savm-btn--ghost { background: transparent; border-color: var(--sa-border); color: var(--sa-text-2); }
+.savm-btn--ghost:hover { border-color: #1B3FAF; color: var(--sa-text-1); }
+.savm-btn--danger { background: #dc2626; color: #fff; }
+
+/* States */
+.savm-state {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  padding: 52px 20px;
+  border-radius: 14px;
+  border: 1px solid var(--sa-border);
+  background: var(--sa-card);
+  color: var(--sa-text-3);
+  font-size: 0.875rem;
+}
+.savm-state--err { color: #f87171; }
+.savm-spinner {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid currentColor; border-top-color: transparent;
+  animation: savmSpin 0.8s linear infinite;
+}
+@keyframes savmSpin { to { transform: rotate(360deg); } }
+
+.savm-empty {
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  padding: 56px 24px;
+  border-radius: 16px;
+  border: 1.5px dashed var(--sa-border);
+  background: var(--sa-card);
+}
+.savm-empty-icon {
+  width: 54px; height: 54px; border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(27, 63, 175, 0.14); color: #5b8def; margin-bottom: 14px;
+}
+.savm-empty-icon svg { width: 24px; height: 24px; }
+.savm-empty h3 { margin: 0 0 6px; font-size: 1.0625rem; font-weight: 800; color: var(--sa-text-1); }
+.savm-empty p { margin: 0; font-size: 0.8125rem; color: var(--sa-text-3); }
+
+/* Sections */
+.savm-section { margin-top: 4px; }
+.savm-section-title {
+  display: flex; align-items: center; gap: 9px;
+  margin: 0 0 14px;
+  font-size: 0.9375rem; font-weight: 800; color: var(--sa-text-1);
+}
+.savm-count {
+  font-size: 0.6875rem; font-weight: 800;
+  padding: 2px 9px; border-radius: 999px;
+  background: rgba(27, 63, 175, 0.14); color: #5b8def;
+}
+.savm-section-empty { margin: 0; font-size: 0.8125rem; color: var(--sa-text-3); padding: 8px 0; }
+
+.savm-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px;
+}
+
+/* Card */
+.savm-card {
+  display: flex; flex-direction: column;
+  padding: 16px 18px;
+  border-radius: 14px;
+  border: 1px solid var(--sa-border);
+  background: var(--sa-card);
+  border-left: 3px solid var(--accent, #3b82f6);
+}
+.savm-card--blue   { --accent: #3b82f6; }
+.savm-card--violet { --accent: #a78bfa; }
+.savm-card--green  { --accent: #34d399; }
+
+.savm-card-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px;
+}
+.savm-status {
+  font-size: 0.6563rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase;
+  padding: 4px 10px; border-radius: 999px;
+}
+.savm-status--live   { color: #34d399; background: rgba(52, 211, 153, 0.12); border: 1px solid rgba(52, 211, 153, 0.3); }
+.savm-status--done   { color: var(--sa-text-3); background: rgba(120, 140, 200, 0.1); border: 1px solid var(--sa-border); }
+.savm-status--cancel { color: #f87171; background: rgba(248, 113, 113, 0.1); border: 1px solid rgba(248, 113, 113, 0.3); }
+
+.savm-card-tools { display: flex; gap: 2px; }
+.savm-icon-btn {
+  width: 30px; height: 30px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 8px; border: 1px solid transparent;
+  background: transparent; color: var(--sa-text-3); cursor: pointer;
+  transition: all 0.15s ease;
+}
+.savm-icon-btn:hover { border-color: var(--sa-border); color: var(--sa-text-1); }
+.savm-icon-btn--danger:hover { color: #f87171; border-color: rgba(248, 113, 113, 0.4); }
+
+.savm-card-title { margin: 0 0 4px; font-size: 0.9375rem; font-weight: 800; color: var(--sa-text-1); }
+.savm-card-desc { margin: 0 0 12px; font-size: 0.78rem; line-height: 1.5; color: var(--sa-text-3); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+.savm-card-meta { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.savm-card-meta span { display: inline-flex; align-items: center; gap: 7px; font-size: 0.75rem; color: var(--sa-text-2); }
+.savm-card-school { color: var(--sa-text-3) !important; font-style: italic; }
+
+.savm-card-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: auto; align-items: center; }
+.savm-join {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 7px 16px; min-height: 34px;
+  border-radius: 9px;
+  background: linear-gradient(120deg, #1B3FAF, #2563eb);
+  color: #fff; font-size: 0.75rem; font-weight: 700;
+  text-decoration: none;
+}
+.savm-join:hover { filter: brightness(1.08); }
+
+/* Modal */
+.savm-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+  padding: 18px;
+  background: rgba(2, 6, 23, 0.7);
+  backdrop-filter: blur(4px);
+}
+.savm-modal {
+  width: 100%; max-width: 440px;
+  max-height: 90vh; overflow-y: auto;
+  border-radius: 18px;
+  border: 1px solid var(--sa-border);
+  background: var(--sa-card, #0f172a);
+  padding: 22px;
+}
+.savm-modal--lg { max-width: 600px; }
+.savm-modal-title { margin: 0 0 16px; font-size: 1.0625rem; font-weight: 800; color: var(--sa-text-1); }
+.savm-modal-text { margin: 0 0 18px; font-size: 0.8125rem; color: var(--sa-text-3); line-height: 1.5; }
+.savm-modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+
+.savm-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.savm-field { display: flex; flex-direction: column; gap: 6px; }
+.savm-field--full { grid-column: 1 / -1; }
+.savm-field label { font-size: 0.6875rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: var(--sa-text-3); }
+.savm-field input,
+.savm-field select,
+.savm-field textarea {
+  padding: 10px 12px; min-height: 42px;
+  border-radius: 9px; border: 1px solid var(--sa-border);
+  background: var(--sa-bg, transparent); color: var(--sa-text-1);
+  font-size: 0.8125rem; font-family: inherit;
+}
+.savm-field textarea { min-height: 70px; resize: vertical; }
+.savm-field input:focus, .savm-field select:focus, .savm-field textarea:focus { outline: none; border-color: #1B3FAF; }
+.savm-link-input { position: relative; display: flex; align-items: center; }
+.savm-link-input svg { position: absolute; left: 12px; color: var(--sa-text-3); }
+.savm-link-input input { padding-left: 34px; width: 100%; }
+
+.savm-form-err {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 14px; padding: 10px 14px;
+  border-radius: 10px; font-size: 0.78rem; font-weight: 600;
+  color: #f87171; background: rgba(248, 113, 113, 0.1); border: 1px solid rgba(248, 113, 113, 0.3);
+}
+
+/* ── Mobile ── */
+@media (max-width: 600px) {
+  .savm-head { flex-direction: column; align-items: stretch; }
+  .savm-head .savm-btn--primary { width: 100%; justify-content: center; min-height: 46px; }
+  .savm-grid { grid-template-columns: 1fr; }
+  .savm-form-grid { grid-template-columns: 1fr; }
+  .savm-modal { padding: 16px; }
+  .savm-modal-actions { flex-direction: column-reverse; }
+  .savm-modal-actions .savm-btn { width: 100%; justify-content: center; min-height: 46px; }
+}

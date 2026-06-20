@@ -76,6 +76,42 @@
   --ska-shadow-card-hover:   0 4px 16px rgba(0,0,0,0.4), 0 8px 24px rgba(0,0,0,0.25);
 }
 
+/* ---- Light theme overrides (theme toggled via data-theme on <html>) ---- */
+[data-theme="light"] {
+  --ska-surface:             #f4f6fb;
+  --ska-surface-low:         #ffffff;
+  --ska-surface-card:        #ffffff;
+  --ska-surface-high:        #eef1f8;
+  --ska-surface-highest:     #e2e7f2;
+  --ska-surface-lowest:      #ffffff;
+
+  --ska-primary:             #1B3FAF;
+  --ska-primary-dim:         rgba(27,63,175,0.10);
+  --ska-primary-container:   #1B3FAF;
+  --ska-on-primary:          #ffffff;
+
+  --ska-secondary:           #0e7490;
+  --ska-secondary-dim:       rgba(14,116,144,0.10);
+  --ska-on-secondary:        #ffffff;
+
+  --ska-tertiary:            #b45309;
+  --ska-tertiary-dim:        rgba(180,83,9,0.10);
+
+  --ska-error:               #dc2626;
+  --ska-error-dim:           rgba(220,38,38,0.10);
+  --ska-green:               #15803d;
+  --ska-green-dim:           rgba(21,128,61,0.10);
+
+  --ska-text:                #1e2433;
+  --ska-text-2:              #475067;
+  --ska-text-3:              #6b7280;
+  --ska-border:              rgba(20,30,60,0.12);
+  --ska-border-hover:        rgba(20,30,60,0.28);
+
+  --ska-shadow-card:         0 1px 3px rgba(16,24,40,0.06), 0 4px 12px rgba(16,24,40,0.06);
+  --ska-shadow-card-hover:   0 4px 16px rgba(16,24,40,0.10), 0 8px 24px rgba(16,24,40,0.08);
+}
+
 /* ============================================================
    SHELL LAYOUT
    ============================================================ */

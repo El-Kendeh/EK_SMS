@@ -12,6 +12,10 @@ function getToken() {
   try { return localStorage.getItem('token') || ''; } catch { return ''; }
 }
 
+function getCurrentUser() {
+  try { return JSON.parse(localStorage.getItem('user') || 'null'); } catch { return null; }
+}
+
 /* ---- API helpers ---- */
 async function apiGet(path) {
   const res = await fetch(`${NODE_URL}${path}`, {
@@ -172,6 +176,12 @@ function emptyStudentForm() {
    SAStudents — default export
    ============================================================ */
 export default function SAStudents() {
+  /* School admins are locked to their own school: the school selector is
+     hidden, the form is pre-filled, and the backend enforces the same. */
+  const currentUser  = getCurrentUser();
+  const isSchoolAdmin = currentUser?.role === 'school_admin';
+  const ownSchoolId   = currentUser?.school_id != null ? String(currentUser.school_id) : '';
+
   const [students,    setStudents]    = useState([]);
   const [schools,     setSchools]     = useState([]);
   const [loading,     setLoading]     = useState(true);
@@ -209,11 +219,12 @@ export default function SAStudents() {
   }, []);
 
   const loadSchools = useCallback(async () => {
+    if (isSchoolAdmin) return; // /api/schools/ is superadmin-only; not needed when locked to own school
     try {
       const d = await apiGet('/api/schools/');
       if (d.success) setSchools(d.schools || []);
     } catch { /* silently ignore */ }
-  }, []);
+  }, [isSchoolAdmin]);
 
   useEffect(() => {
     loadStudents();
@@ -233,7 +244,7 @@ export default function SAStudents() {
     setDrawerOpen(true);
     setEditId(null);
     setActiveTab('account');
-    setFormData(emptyStudentForm());
+    setFormData({ ...emptyStudentForm(), school_id: isSchoolAdmin ? ownSchoolId : '' });
     setPhotoFile(null);
     setPhotoPreview(null);
     setSaveErr('');
@@ -324,7 +335,7 @@ export default function SAStudents() {
     setSaveErr('');
     if (!formData.first_name.trim()) { setSaveErr('First name is required.'); setActiveTab('account'); return; }
     if (!formData.last_name.trim())  { setSaveErr('Last name is required.');  setActiveTab('account'); return; }
-    if (!formData.school_id)         { setSaveErr('Please select a school.'); setActiveTab('account'); return; }
+    if (!isSchoolAdmin && !formData.school_id) { setSaveErr('Please select a school.'); setActiveTab('account'); return; }
 
     const fd = new FormData();
     Object.entries(formData).forEach(([k, v]) => {
@@ -516,19 +527,21 @@ export default function SAStudents() {
 
             <div className="sast-grid-2" style={{ marginBottom: 12 }}>
               <Field label={editId ? 'New Password (leave blank to keep)' : 'Password'} name="password" type="password" placeholder="Auto-generated if blank" />
-              <div className="sast-field">
-                <label className="sast-label">School *</label>
-                <select
-                  className={`sast-select${saveErr && !formData.school_id ? ' sast-select--err' : ''}`}
-                  value={formData.school_id}
-                  onChange={e => setField('school_id', e.target.value)}
-                >
-                  <option value="">— select school —</option>
-                  {schools.map(sc => (
-                    <option key={sc.id} value={sc.id}>{sc.name}</option>
-                  ))}
-                </select>
-              </div>
+              {!isSchoolAdmin && (
+                <div className="sast-field">
+                  <label className="sast-label">School *</label>
+                  <select
+                    className={`sast-select${saveErr && !formData.school_id ? ' sast-select--err' : ''}`}
+                    value={formData.school_id}
+                    onChange={e => setField('school_id', e.target.value)}
+                  >
+                    <option value="">— select school —</option>
+                    {schools.map(sc => (
+                      <option key={sc.id} value={sc.id}>{sc.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
           </div>
         );
@@ -834,16 +847,16 @@ export default function SAStudents() {
         )}
         {!loading && !loadErr && filteredStudents.length > 0 && (
           <div className="sard-table">
-            <div className="sard-thead" style={{ '--data-cols': 4 }}>
+            <div className="sard-thead" style={{ '--data-cols': isSchoolAdmin ? 3 : 4 }}>
               <span className="sard-th">NAME</span>
               <span className="sard-th">ADMISSION NO</span>
               <span className="sard-th">STATUS</span>
-              <span className="sard-th">SCHOOL</span>
+              {!isSchoolAdmin && <span className="sard-th">SCHOOL</span>}
               <span className="sard-th sard-th--date">ADDED</span>
               <span className="sard-th sard-th--actions">ACTIONS</span>
             </div>
             {filteredStudents.map(s => (
-              <div key={s.id} className="sard-tr" style={{ '--data-cols': 4 }}>
+              <div key={s.id} className="sard-tr" style={{ '--data-cols': isSchoolAdmin ? 3 : 4 }}>
                 <span className="sard-td">
                   {s.first_name} {s.last_name}
                 </span>
@@ -856,9 +869,11 @@ export default function SAStudents() {
                     <span className="sast-badge sast-badge--blocked" style={{ marginLeft: 4 }}>Blocked</span>
                   )}
                 </span>
-                <span className="sard-td">
-                  {schools.find(sc => String(sc.id) === String(s.school_id))?.name || '—'}
-                </span>
+                {!isSchoolAdmin && (
+                  <span className="sard-td">
+                    {schools.find(sc => String(sc.id) === String(s.school_id))?.name || '—'}
+                  </span>
+                )}
                 <span className="sard-td sard-td--date">{fmtDate(s.created_at)}</span>
                 <span className="sard-td sard-td--actions">
                   {deleteId === s.id ? (

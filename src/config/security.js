@@ -80,7 +80,7 @@ export const SECURITY_CONFIG = {
     'style-src': ["'self'", "'unsafe-inline'"],
     'img-src': ["'self'", 'data:', 'blob:', 'https:'],
     'font-src': ["'self'", "https://fonts.gstatic.com", "https://*.tawk.to", "https://vercel.live"],
-    'connect-src': ["'self'", API_ORIGIN, 'https://backend.pruhsms.africa', 'https://pruhsms.africa','https://*.vercel.app','wss://*.pusher.com', 'wss://ws-us3.pusher.com', 'https://*.pusher.com', 'blob:'],
+    'connect-src': ["'self'", API_ORIGIN, 'https://backend.pruhsms.africa', 'https://pruhsms.africa','https://*.vercel.app','wss://*.pusher.com', 'wss://ws-us3.pusher.com', 'https://*.pusher.com', 'blob:', 'https://api.bigdatacloud.net', 'https://ipapi.co'],
     'frame-ancestors': ["'none'"],
     'base-uri': ["'self'"],
     'form-action': ["'self'"],

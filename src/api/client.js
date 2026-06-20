@@ -74,6 +74,19 @@ class ApiClient {
     if (base.endsWith('/api') && path.startsWith('/api/')) {
       path = path.replace(/^\/api/, '');
     }
+    /* Superadmin "view as school" context (set by the dashboard school
+       picker). School-scoped endpoint families resolve their tenant from
+       ?school_id — the backend only honours it for superadmin tokens. */
+    try {
+      const saSchoolId = sessionStorage.getItem('ek-sms-sa-school-id');
+      if (
+        saSchoolId &&
+        /^\/(principal|finance|school)\//.test(path.replace(/^\/api/, '')) &&
+        !path.includes('school_id=')
+      ) {
+        path += (path.includes('?') ? '&' : '?') + `school_id=${encodeURIComponent(saSchoolId)}`;
+      }
+    } catch (e) { /* sessionStorage unavailable — skip */ }
     const url = `${base}${path}`;
     const headers = this.buildHeaders(options);
 

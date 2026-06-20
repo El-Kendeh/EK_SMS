@@ -142,6 +142,11 @@ sa.post('/institution-types/', data.createInstitutionType);
 sa.put('/institution-types/:id/', data.updateInstitutionType);
 sa.delete('/institution-types/:id/', data.deleteInstitutionType);
 sa.patch('/institution-types/:id/toggle/', data.toggleInstitutionTypeStatus);
+sa.get('/lesson-plan-types/', data.getLessonPlanTypes);
+sa.post('/lesson-plan-types/', data.createLessonPlanType);
+sa.put('/lesson-plan-types/:id/', data.updateLessonPlanType);
+sa.delete('/lesson-plan-types/:id/', data.deleteLessonPlanType);
+sa.patch('/lesson-plan-types/:id/toggle/', data.toggleLessonPlanTypeStatus);
 sa.get('/capacity-categories/', data.getCapacityCategories);
 sa.post('/capacity-categories/', data.createCapacityCategory);
 sa.put('/capacity-categories/:id/', data.updateCapacityCategory);
@@ -198,7 +203,11 @@ sa.get('/users/', data.getUsers);
 sa.get('/get-users/', data.getUsersShort);
 sa.post('/users/', data.postUsers);
 
-router.use(sa);
+/* NOTE: the superadmin-only `sa` sub-router is mounted at the END of this file
+   (see `router.use(sa)` before module.exports). It carries a blanket
+   requireRole(['superadmin']) gate, so it MUST come after the school-level
+   routes below — otherwise it would 403 school_admins before they reach the
+   shared `sla` routes (e.g. creating principals/bursars/students). */
 
 /* ── School-level routes (accessible by superadmin + school_admin) ── */
 const sla = requireRole(['superadmin', 'school_admin']);
@@ -302,6 +311,12 @@ const principalStorage = multer.diskStorage({
 });
 const principalUpload = multer({ storage: principalStorage, limits: { fileSize: 5 * 1024 * 1024 } });
 
+/* Virtual Meetings CRUD (superadmin + school_admin) */
+router.get('/virtual-meetings/', sla, data.getVirtualMeetings);
+router.post('/virtual-meetings/', sla, data.createVirtualMeeting);
+router.put('/virtual-meetings/:id/', sla, data.updateVirtualMeeting);
+router.delete('/virtual-meetings/:id/', sla, data.deleteVirtualMeeting);
+
 /* Principal CRUD */
 router.get('/principals/', sla, data.getSuperPrincipals);
 router.post('/principals/', sla, principalUpload.single('profile_picture'), data.createSuperPrincipal);
@@ -309,5 +324,9 @@ router.put('/principals/:id/', sla, principalUpload.single('profile_picture'), d
 router.delete('/principals/:id/', sla, data.deleteSuperPrincipal);
 router.patch('/principals/:id/toggle/', sla, data.toggleSuperPrincipalStatus);
 router.patch('/principals/:id/block/', sla, data.blockSuperPrincipal);
+
+/* Superadmin-only routes — mounted LAST so the school-level routes above
+   (shared with school_admin) are matched first. */
+router.use(sa);
 
 module.exports = router;

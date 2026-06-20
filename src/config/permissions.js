@@ -54,8 +54,10 @@ export const PAGE_PERMISSIONS = {
   teachers:        [ROLES.SUPERADMIN, ROLES.SCHOOL_ADMIN],
   students:        [ROLES.SUPERADMIN, ROLES.SCHOOL_ADMIN],
   parents:         [ROLES.SUPERADMIN, ROLES.SCHOOL_ADMIN],
-  principal:       [ROLES.SUPERADMIN],
-  bursar:          [ROLES.SUPERADMIN],
+  /* School admins create + manage their own school's leadership and finance
+     accounts; the backend pins them to their school_id from the token. */
+  principal:       [ROLES.SUPERADMIN, ROLES.SCHOOL_ADMIN],
+  bursar:          [ROLES.SUPERADMIN, ROLES.SCHOOL_ADMIN],
   'finance-users': [ROLES.SUPERADMIN, ROLES.SCHOOL_ADMIN],
 
   /* ── Account-management nav (same as underlying model) ── */
@@ -66,6 +68,7 @@ export const PAGE_PERMISSIONS = {
   /* ── Grades section ── */
   'grade-entry':       [ROLES.TEACHER],
   'grade-approvals':   [ROLES.PRINCIPAL, ROLES.SUPERADMIN],
+  'principal-users':   [ROLES.PRINCIPAL, ROLES.SUPERADMIN],
   'grade-integrity':   [ROLES.SUPERADMIN],
   'grades-accumulation':[ROLES.SUPERADMIN],
   'my-grades':         [ROLES.STUDENT],
@@ -81,7 +84,9 @@ export const PAGE_PERMISSIONS = {
   'attendance-record':   [ROLES.TEACHER],
   'attendance-report':   [ROLES.SCHOOL_ADMIN, ROLES.PRINCIPAL, ROLES.SUPERADMIN],
   'attendance-teachers': [ROLES.TEACHER],
-  'attendance-students': [ROLES.STUDENT],
+  /* Students use 'my-attendance' (Student section); 'attendance-students'
+     was a redundant, unbuilt duplicate — removed from the student sidebar. */
+  'attendance-students': [],
   'my-attendance':       [ROLES.STUDENT],
   'children-attendance': [ROLES.PARENT],
 
@@ -93,24 +98,33 @@ export const PAGE_PERMISSIONS = {
   'lesson-plans':        [ROLES.TEACHER],
   'lesson-plan-type':    [ROLES.SUPERADMIN],
   'lesson-plan-generation':[ROLES.TEACHER],
-  timetable:             [ROLES.TEACHER, ROLES.STUDENT],
+  /* Students use 'my-timetable' (Student section); the generic 'timetable'
+     stays teacher-only to avoid a duplicate blank entry in the student nav. */
+  timetable:             [ROLES.TEACHER],
   'timetable-mgr':       [ROLES.SCHOOL_ADMIN],
 
   /* ── Fees & Finance section ── */
+  /* Finance endpoints resolve the school from the token's school_id;
+     superadmins target a school via the SASchoolScope picker (?school_id=). */
   'fee-dashboard':      [ROLES.BURSAR, ROLES.SCHOOL_ADMIN, ROLES.SUPERADMIN],
   'fee-categories':     [ROLES.BURSAR, ROLES.SCHOOL_ADMIN],
-  'fees-structure':     [ROLES.BURSAR, ROLES.SCHOOL_ADMIN],
-  'fees-payment':       [ROLES.BURSAR],
+  'student-fees':       [ROLES.BURSAR],
+  'finance-team':       [ROLES.BURSAR],
+  'finance-reports':    [ROLES.BURSAR],
+  /* Stub-only pages — removed from BURSAR (real pages cover these flows);
+     kept for SCHOOL_ADMIN until its own finance pages are built. */
+  'fees-structure':     [ROLES.SCHOOL_ADMIN],
+  'fees-payment':       [],
   payments:             [ROLES.BURSAR],
   expenses:             [ROLES.BURSAR],
-  'receipt-generator':  [ROLES.BURSAR],
-  'school-financial-report': [ROLES.BURSAR, ROLES.SCHOOL_ADMIN, ROLES.SUPERADMIN],
+  'receipt-generator':  [],
+  'school-financial-report': [ROLES.SCHOOL_ADMIN, ROLES.SUPERADMIN],
   'my-fees':            [ROLES.STUDENT, ROLES.PARENT],
 
   /* ── Report Cards section ── */
   'report-card-generator':      [ROLES.SCHOOL_ADMIN],
   'report-card-approval':       [ROLES.PRINCIPAL, ROLES.SUPERADMIN],
-  'report-cards-published':     [ROLES.PRINCIPAL, ROLES.SCHOOL_ADMIN],
+  'report-cards-published':     [ROLES.PRINCIPAL, ROLES.SCHOOL_ADMIN, ROLES.SUPERADMIN],
   'my-report-cards':            [ROLES.STUDENT],
   'children-report-cards':      [ROLES.PARENT],
 

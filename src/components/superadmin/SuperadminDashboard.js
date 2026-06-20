@@ -1,61 +1,108 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useTheme } from '../../context/ThemeContext';
+import React, { useState, useEffect, useCallback, useRef, Suspense, lazy } from 'react';
 import './SA.css';
 import './SuperadminDashboard.css';
 import ApiClient from '../../api/client';
 import { canAccess, ROLE_LABELS } from '../../config/permissions';
 import PruhLogo from '../PruhLogo';
-import SAOverview       from './SAOverview';
-import SAApplications   from './SAApplications';
-import SAReview         from './SAReview';
-import SASchools        from './SASchools';
-import SAAppHistory     from './SAAppHistory';
-import SAVersionCompare from './SAVersionCompare';
-import SARejected       from './SARejected';
-import SARejectionAudit from './SARejectionAudit';
-import SASecurityLogs    from './SASecurityLogs';
-import SAForensics       from './SAForensics';
-import SAAlertBroadcast  from './SAAlertBroadcast';
-import SASystemHealth    from './SASystemHealth';
-import SAGradeReport     from './SAGradeReport';
-import SAGradeIntegrity  from './SAGradeIntegrity';
-import SAGradeAuditDetail from './SAGradeAuditDetail';
-import SAGovernance      from './SAGovernance';
-import SASettings        from './SASettings';
-import SAAnalytics       from './SAAnalytics';
-import SABenchmarks      from './SABenchmarks';
-import SAOnboarding      from './SAOnboarding';
-import SAUsers           from './SAUsers';
-import SANotifications, { INITIAL_UNREAD_COUNT } from './SANotifications';
-import SAProfile         from './SAProfile';
-import SAChangeAlerts    from './SAChangeAlerts';
-import SACreateTerm       from './SACreateTerm';
-import SARefDataManager   from './SARefDataManager';
-import SASchoolCapacity   from './SASchoolCapacity';
-import SAPrincipal        from './SAPrincipal';
-import SABursar           from './SABursar';
-import SATeachers         from './SATeachers';
-import SAStudents         from './SAStudents';
-import SAParents          from './SAParents';
-import SAClasses          from './SAClasses';
-import SASubjects         from './SASubjects';
-import SAAcademicSystem   from './SAAcademicSystem';
-import SAGradingSystem    from './SAGradingSystem';
+import SASchoolScope      from './SASchoolScope';
 
-/* ═══ Role-specific page components ═══ */
-import GradeEntry          from '../teacher/GradeEntry';
-import MyClasses           from '../teacher/MyClasses';
-import StudentGrades       from '../student/StudentGrades';
-import StudentAttendance   from '../student/StudentAttendance';
-import StudentTimetable    from '../student/StudentTimetable';
-import ParentGrades        from '../parent/ParentGrades';
-import ParentAttendance    from '../parent/ParentAttendance';
-import BursarOverview      from '../bursar/BursarOverview';
-import FeeCategories       from '../bursar/FeeCategories';
-import Payments            from '../bursar/Payments';
-import Expenses            from '../bursar/Expenses';
-import GradeApprovals      from '../principal/GradeApprovals';
-import ReportCardApproval  from '../principal/ReportCardApproval';
+/* ── Page components are code-split (React.lazy) so each role downloads only the
+   screens it uses, not the whole product. Every lazy component renders inside a
+   <Suspense> boundary — the page <main> below and the role-portal early returns.
+   `named` adapts a module's named export into a default for lazy(). ── */
+const named = (loader, key) => lazy(() => loader().then(m => ({ default: m[key] })));
+
+const SAOverview        = lazy(() => import('./SAOverview'));
+const SAApplications    = lazy(() => import('./SAApplications'));
+const SAReview          = lazy(() => import('./SAReview'));
+const SASchools         = lazy(() => import('./SASchools'));
+const SAAppHistory      = lazy(() => import('./SAAppHistory'));
+const SAVersionCompare  = lazy(() => import('./SAVersionCompare'));
+const SARejected        = lazy(() => import('./SARejected'));
+const SARejectionAudit  = lazy(() => import('./SARejectionAudit'));
+const SASecurityLogs    = lazy(() => import('./SASecurityLogs'));
+const SAForensics       = lazy(() => import('./SAForensics'));
+const SAAlertBroadcast  = lazy(() => import('./SAAlertBroadcast'));
+const SASystemHealth    = lazy(() => import('./SASystemHealth'));
+const SAGradeReport     = lazy(() => import('./SAGradeReport'));
+const SAGradeIntegrity  = lazy(() => import('./SAGradeIntegrity'));
+const SAGradeAuditDetail = lazy(() => import('./SAGradeAuditDetail'));
+const SAGovernance      = lazy(() => import('./SAGovernance'));
+const SASettings        = lazy(() => import('./SASettings'));
+const SAAnalytics       = lazy(() => import('./SAAnalytics'));
+const SABenchmarks      = lazy(() => import('./SABenchmarks'));
+const SAOnboarding      = lazy(() => import('./SAOnboarding'));
+const SAUsers           = lazy(() => import('./SAUsers'));
+const SANotifications   = lazy(() => import('./SANotifications'));
+const SAProfile         = lazy(() => import('./SAProfile'));
+const SAChangeAlerts    = lazy(() => import('./SAChangeAlerts'));
+const SACreateTerm      = lazy(() => import('./SACreateTerm'));
+const SARefDataManager  = lazy(() => import('./SARefDataManager'));
+const SASchoolCapacity  = lazy(() => import('./SASchoolCapacity'));
+const SAPrincipal       = lazy(() => import('./SAPrincipal'));
+const SABursar          = lazy(() => import('./SABursar'));
+const SATeachers        = lazy(() => import('./SATeachers'));
+const SAStudents        = lazy(() => import('./SAStudents'));
+const SAParents         = lazy(() => import('./SAParents'));
+const SAClasses         = lazy(() => import('./SAClasses'));
+const SASubjects        = lazy(() => import('./SASubjects'));
+const SAAcademicSystem  = lazy(() => import('./SAAcademicSystem'));
+const SAGradingSystem   = lazy(() => import('./SAGradingSystem'));
+const SAGradesAccumulation = lazy(() => import('./SAGradesAccumulation'));
+const SABatchTransfer   = lazy(() => import('./SABatchTransfer'));
+const SAReportsHub      = lazy(() => import('./SAReportsHub'));
+const SAVirtualMeeting  = lazy(() => import('./SAVirtualMeeting'));
+
+/* ═══ Role-specific page components (rendered in the SA shell for superadmin) ═══ */
+const GradeEntry         = lazy(() => import('../teacher/GradeEntry'));
+const MyClasses          = lazy(() => import('../teacher/MyClasses'));
+const StudentGrades      = lazy(() => import('../student/StudentGrades'));
+const StudentAttendance  = lazy(() => import('../student/StudentAttendance'));
+const StudentTimetable   = lazy(() => import('../student/StudentTimetable'));
+const StudentHome        = lazy(() => import('../student/StudentHome'));
+const StudentReportCards = lazy(() => import('../student/StudentReportCards'));
+const StudentFinancials  = lazy(() => import('../student/StudentFinancials'));
+const StudentAssignments = lazy(() => import('../student/StudentAssignments'));
+const StudentLiveClasses = lazy(() => import('../student/StudentLiveClasses'));
+const StudentProfile     = lazy(() => import('../student/StudentProfile'));
+const StudentNotifications = lazy(() => import('../student/StudentNotifications'));
+const ParentGrades       = lazy(() => import('../parent/ParentGrades'));
+const ParentAttendance   = lazy(() => import('../parent/ParentAttendance'));
+const BursarOverview     = lazy(() => import('../bursar/BursarOverview'));
+const BursarHome         = lazy(() => import('../bursar/BursarHome'));
+const StudentFees        = lazy(() => import('../bursar/StudentFees'));
+const FeeCategories      = lazy(() => import('../bursar/FeeCategories'));
+const Payments           = lazy(() => import('../bursar/Payments'));
+const Expenses           = lazy(() => import('../bursar/Expenses'));
+const FinanceTeam        = lazy(() => import('../bursar/FinanceTeam'));
+const FinanceReports     = lazy(() => import('../bursar/Reports'));
+const GradeApprovals     = lazy(() => import('../principal/GradeApprovals'));
+const ReportCardApproval = lazy(() => import('../principal/ReportCardApproval'));
+const PrincipalHome      = lazy(() => import('../principal/PrincipalHome'));
+const PrincipalUsers     = lazy(() => import('../principal/PrincipalUsers'));
+const SyllabusProgress   = lazy(() => import('../principal/SyllabusProgress'));
+const AttendanceReport   = lazy(() => import('../principal/AttendanceReport'));
+const PublishedReportCards = lazy(() => import('../principal/PublishedReportCards'));
+
+/* Self-contained role portals — own providers, nav, router and design system.
+   Teachers, parents and students render their full dedicated dashboard instead
+   of the SA shell (each is its own code-split chunk). */
+const TeacherDashboard   = lazy(() => import('../teacher/TeacherDashboard'));
+const ParentDashboard    = lazy(() => import('../parent/ParentDashboard'));
+const StudentDashboard   = lazy(() => import('../student/StudentDashboard'));
+
+/* School-admin suite pages (named exports) — fill the previously-blank admin
+   nav items. Token-scoped fetches; superadmin scopes via SASchoolScope. */
+const ExamsPage              = named(() => import('../schooladmin/NewPages'), 'ExamsPage');
+const TimetablePage          = named(() => import('../schooladmin/NewPages'), 'TimetablePage');
+const FinanceUsersPage       = named(() => import('../schooladmin/NewPages'), 'FinanceUsersPage');
+const RoomsPage              = named(() => import('../schooladmin/SAExtraPages'), 'RoomsPage');
+const GradingSchemePage      = named(() => import('../schooladmin/SAExtraPages'), 'GradingSchemePage');
+const AcademicCalendarPage   = named(() => import('../schooladmin/SAExtraPages'), 'AcademicCalendarPage');
+const StudentPromotionPage   = named(() => import('../schooladmin/SAExtraPages'), 'StudentPromotionPage');
+const TeacherAssignmentsPage = named(() => import('../schooladmin/SAExtraPages'), 'TeacherAssignmentsPage');
+const ExamOfficersPage       = named(() => import('../schooladmin/SAExtraPages'), 'ExamOfficersPage');
+const AIDocumentCapture      = lazy(() => import('../schooladmin/AIDocumentCapture'));
 
 
 
@@ -253,6 +300,7 @@ function getTitle(page, school) {
     examination:           'Examination',
     'attendance-teachers': 'Record Attendance',
     'attendance-students': 'Attendance View',
+    'attendance-report':   'Attendance Report',
     'lesson-plan-type':    'Lesson Plan Type',
     'lesson-plan-generation': 'Lesson Plan Generation',
     'grade-entry':            'Grade Entry',
@@ -264,8 +312,11 @@ function getTitle(page, school) {
     'children-attendance':    "Children's Attendance",
     'fee-dashboard':          'Fee Dashboard',
     'fee-categories':         'Fee Categories',
+    'student-fees':           'Student Fees',
     'payments':               'Payments',
     'expenses':               'Expenses',
+    'finance-team':           'Finance Team',
+    'finance-reports':        'Reports & Analytics',
     'grade-approvals':        'Grade Approvals',
     'batch-grades':        'Grades',
     'batch-students':      'Students',
@@ -307,6 +358,46 @@ function getTitle(page, school) {
   return map[page] || page.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
+/* Page keys that have a real render block above the StubPage fallback.
+   Anything not in this Set falls through to StubPage. Keep in sync with the
+   render blocks in <main>. */
+const HANDLED_PAGES = new Set([
+  'overview', 'applications', 'review', 'app-history', 'version-compare', 'rejected',
+  'rejection-audit', 'grade-report', 'grade-requests', 'grade-audit', 'security-logs',
+  'forensics', 'alert-broadcast', 'change-alerts', 'system-health', 'schools', 'analytics',
+  'benchmarks', 'onboarding', 'governance', 'users', 'notifications', 'settings', 'profile',
+  'academic-terms', 'academic-year', 'institution-type', 'school-capacity', 'countries',
+  'regions', 'cities', 'school-type', 'syllabus-type', 'class-subtype', 'academic-system',
+  'grading-system', 'classes', 'subjects', 'principal', 'bursar', 'account-teachers',
+  'account-students', 'account-parents', 'grade-entry', 'my-classes', 'my-grades',
+  'my-attendance', 'my-timetable', 'children-grades', 'children-attendance', 'fee-dashboard',
+  'fee-categories', 'student-fees', 'payments', 'expenses', 'finance-team', 'finance-reports',
+  'grade-approvals', 'report-card-approval', 'principal-users', 'lesson-plans', 'timetable',
+  'timetable-mgr', 'my-fees', 'my-report-cards', 'children-report-cards', 'attendance-teachers',
+  'attendance-students', 'report-cards-published', 'syllabus-progress', 'attendance-report',
+  'finance-users', 'exam-schedule', 'rooms', 'grading-scheme', 'academic-calendar', 'promotions',
+  'teacher-assignments', 'exam-officers', 'ai-capture',
+  /* Newly wired pages */
+  'lesson-plan-type', 'grade-integrity', 'grades-accumulation',
+  'batch-students', 'batch-grades', 'batch-image-data',
+  'reports', 'school-financial-report', 'system-audits',
+  'vm-parents', 'vm-staffs', 'vm-students',
+  /* Student pages */
+  'assignment', 'live-class',
+]);
+
+/* StudentHome emits its own short nav keys; map them to this shell's
+   activePage keys so a student's home links land on the right pages. */
+const STUDENT_NAV_MAP = {
+  grades: 'my-grades',
+  'report-cards': 'my-report-cards',
+  timetable: 'my-timetable',
+  attendance: 'my-attendance',
+  assignments: 'assignment',
+  fees: 'my-fees',
+  notifications: 'notifications',
+};
+
 function StubPage({ title }) {
   return (
     <div style={{ padding: '40px', textAlign: 'center' }}>
@@ -317,11 +408,27 @@ function StubPage({ title }) {
   );
 }
 
+/* Suspense fallbacks for the lazy-loaded chunks. */
+function PageFallback() {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '80px 0' }}>
+      <div className="sa-loader-ring" />
+    </div>
+  );
+}
+function FullFallback() {
+  return (
+    <div className="sa-fullscreen-loader">
+      <div className="sa-loader-ring" />
+      <p className="sa-loader-text">Loading EK-SMS…</p>
+    </div>
+  );
+}
+
 /* ================================================================
    Main Dashboard Component
    ================================================================ */
 export default function Dashboard({ onNavigate }) {
-  const { theme, toggleTheme } = useTheme();
   const [user,            setUser]            = useState(null);
   const schoolId   = user?.school_id;
   const teacherId  = user?.id;
@@ -337,7 +444,7 @@ export default function Dashboard({ onNavigate }) {
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [sidebarOpen,     setSidebarOpen]     = useState(false);
   const [toast,           setToast]           = useState(null);
-  const [unreadNotifCount, setUnreadNotifCount] = useState(INITIAL_UNREAD_COUNT);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
   const [searchOpen,       setSearchOpen]       = useState(false);
   const [secLogFilter,     setSecLogFilter]     = useState('');
   const [profileAvatar,    setProfileAvatar]    = useState(() => {
@@ -514,8 +621,26 @@ export default function Dashboard({ onNavigate }) {
     );
   }
 
+  /* ---- Dedicated role portals (teacher / parent / student) ----
+     These ship their own providers, sidebar, routing and design system, so they
+     replace the SA shell entirely rather than rendering inside <main>. Each is a
+     lazy chunk, so it loads only for that role. */
+  if (user?.role === 'teacher') return <Suspense fallback={<FullFallback />}><TeacherDashboard onNavigate={onNavigate} /></Suspense>;
+  if (user?.role === 'parent')  return <Suspense fallback={<FullFallback />}><ParentDashboard  onNavigate={onNavigate} /></Suspense>;
+  if (user?.role === 'student') return <Suspense fallback={<FullFallback />}><StudentDashboard onNavigate={onNavigate} /></Suspense>;
+
   const pendingCount      = schools.filter(s => !s.is_approved && !s.changes_requested).length;
   const rejectedCount     = schools.filter(s => !s.is_approved && !s.is_active).length;
+
+  /* School-scoped pages (finance / approvals / attendance / report cards)
+     resolve their tenant from the token's school_id. Superadmins carry none,
+     so wrap those pages in the SASchoolScope picker; school staff render
+     directly against their own school. */
+  const scoped = (node, hint) => (
+    user?.role === 'superadmin'
+      ? <SASchoolScope schools={schools} hint={hint}>{node}</SASchoolScope>
+      : node
+  );
 
   const isAppRelated   = ['applications', 'review', 'app-history', 'version-compare'].includes(activePage);
   const isRejRelated   = ['rejected', 'rejection-audit'].includes(activePage);
@@ -605,6 +730,9 @@ export default function Dashboard({ onNavigate }) {
     /* Grades Approval (no section) */
     { key: 'grade-approvals',   label: 'Grade Approvals', icon: <IcGen />, badge: 0, section: null },
 
+    /* Leadership Team (Principal users) */
+    { key: 'principal-users',   label: 'Leadership Team', icon: <IcGen />, badge: 0, section: null },
+
     /* Report Cards */
     { key: 'report-card-generator', label: 'Report Card Generator', icon: <IcGen />, badge: 0, section: 'Report Cards' },
     { key: 'report-card-approval',  label: 'Report Card Approval',  icon: <IcGen />, badge: 0, section: 'Report Cards' },
@@ -636,7 +764,37 @@ export default function Dashboard({ onNavigate }) {
     { key: 'reports',         label: 'Reports',       icon: <IcGen />, badge: 0, section: null },
     { key: 'settings', label: 'System Settings',icon: <IcGen />, badge: 0, section: null },
   ];
-  const navItems = ALL_NAV_ITEMS.filter(item => canAccess(item.key, user?.role));
+  /* Principal gets a purpose-built, ordered sidebar instead of the
+     superadmin item order (which would scatter their pages across
+     unrelated section headers). Keys must stay valid in permissions.js. */
+  const PRINCIPAL_NAV_ITEMS = [
+    { key: 'overview',               label: 'Command Center',         icon: <IcHome />, badge: 0, section: null },
+    { key: 'grade-approvals',        label: 'Grade Approvals',        icon: <IcGen />,  badge: 0, section: 'Approvals' },
+    { key: 'report-card-approval',   label: 'Report Card Approval',   icon: <IcGen />,  badge: 0, section: 'Approvals' },
+    { key: 'report-cards-published', label: 'Published Report Cards', icon: <IcGen />,  badge: 0, section: 'Approvals' },
+    { key: 'syllabus-progress',      label: 'Syllabus Progress',      icon: <IcGen />,  badge: 0, section: 'Academics' },
+    { key: 'attendance-report',      label: 'Attendance Report',      icon: <IcGen />,  badge: 0, section: 'Academics' },
+    { key: 'principal-users',        label: 'Leadership Team',        icon: <IcGen />,  badge: 0, section: 'Team' },
+    { key: 'notifications',          label: 'Notifications',          icon: <IcBell />, badge: 0, section: null },
+  ];
+
+  /* Bursar gets a purpose-built, ordered sidebar too — only real,
+     fully-functional finance pages (no stub keys, no duplicates). */
+  const BURSAR_NAV_ITEMS = [
+    { key: 'overview',       label: 'Finance Center', icon: <IcHome />, badge: 0, section: null },
+    { key: 'student-fees',   label: 'Student Fees',   icon: <IcGen />,  badge: 0, section: 'Fees' },
+    { key: 'fee-categories', label: 'Fee Categories', icon: <IcGen />,  badge: 0, section: 'Fees' },
+    { key: 'payments',        label: 'Payments',            icon: <IcGen />,  badge: 0, section: 'Money' },
+    { key: 'expenses',        label: 'Expenses',            icon: <IcGen />,  badge: 0, section: 'Money' },
+    { key: 'finance-reports', label: 'Reports & Analytics', icon: <IcGen />,  badge: 0, section: 'Insights' },
+    { key: 'finance-team',    label: 'Finance Team',        icon: <IcGen />,  badge: 0, section: 'Team' },
+    { key: 'notifications',  label: 'Notifications',  icon: <IcBell />, badge: 0, section: null },
+  ];
+
+  const navItems = (user?.role === 'principal' ? PRINCIPAL_NAV_ITEMS
+    : user?.role === 'bursar' ? BURSAR_NAV_ITEMS
+    : ALL_NAV_ITEMS)
+    .filter(item => canAccess(item.key, user?.role));
 
   return (
     <div className={`sa-wrap${sidebarOpen ? ' sidebar-open' : ''}`}>
@@ -732,17 +890,6 @@ export default function Dashboard({ onNavigate }) {
             >
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             </button>
-            <button
-              className="sa-notif-btn"
-              onClick={toggleTheme}
-              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-              title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
-            >
-              {theme === 'dark'
-                ? <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-                : <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
-              }
-            </button>
             <button className="sa-notif-btn" onClick={() => goTo('notifications')}>
               <IcBell />
               {(pendingCount > 0 || unreadNotifCount > 0) && <span className="sa-notif-dot" />}
@@ -761,14 +908,23 @@ export default function Dashboard({ onNavigate }) {
 
         {/* Page content */}
         <main className="sa-content">
+          <Suspense fallback={<PageFallback />}>
 
           {activePage === 'overview' && (
-            <SAOverview
-              schools={schools}
-              user={user}
-              onReview={handleReview}
-              onNavigate={goTo}
-            />
+            user?.role === 'principal'
+              ? <PrincipalHome navigateTo={goTo} schoolId={schoolId} />
+              : user?.role === 'bursar'
+              ? <BursarHome navigateTo={goTo} schoolId={schoolId} />
+              : user?.role === 'student'
+              ? <StudentHome navigateTo={(k) => goTo(STUDENT_NAV_MAP[k] || k)} />
+              : (
+                <SAOverview
+                  schools={schools}
+                  user={user}
+                  onReview={handleReview}
+                  onNavigate={goTo}
+                />
+              )
           )}
 
           {activePage === 'applications' && (
@@ -908,12 +1064,14 @@ export default function Dashboard({ onNavigate }) {
           )}
 
           {activePage === 'notifications' && (
-            <SANotifications
-              onNavigate={goTo}
-              onUnreadChange={setUnreadNotifCount}
-              schools={schools}
-              gradeAlerts={gradeAlerts}
-            />
+            user?.role === 'student'
+              ? <StudentNotifications />
+              : <SANotifications
+                  onNavigate={goTo}
+                  onUnreadChange={setUnreadNotifCount}
+                  schools={schools}
+                  gradeAlerts={gradeAlerts}
+                />
           )}
 
           {activePage === 'settings' && (
@@ -921,7 +1079,9 @@ export default function Dashboard({ onNavigate }) {
           )}
 
           {activePage === 'profile' && (
-            <SAProfile user={user} onBack={() => goTo('overview')} onAvatarChange={setProfileAvatar} />
+            user?.role === 'student'
+              ? <StudentProfile />
+              : <SAProfile user={user} onBack={() => goTo('overview')} onAvatarChange={setProfileAvatar} />
           )}
 
           {activePage === 'academic-terms' && (
@@ -1049,28 +1209,80 @@ export default function Dashboard({ onNavigate }) {
 
           {activePage === 'subjects' && <SASubjects />}
 
+          {activePage === 'lesson-plan-type' && (
+            <SARefDataManager
+              title="Lesson Plan Types"
+              subtitle="Categories of lesson plans teachers can create, e.g. Weekly, Unit, Daily, Scheme of Work."
+              endpoint="/api/lesson-plan-types/"
+              listKey="lessonplantypes"
+              itemLabel="lesson plan type"
+              fields={[
+                { key: 'name',        label: 'Type Name',   type: 'text', required: true, placeholder: 'e.g. Weekly Plan' },
+                { key: 'description', label: 'Description',  type: 'text', placeholder: 'Short description (optional)' },
+              ]}
+            />
+          )}
+
+          {/* ── Grades section ── */}
+          {activePage === 'grade-integrity'     && <SAGradeIntegrity onDetail={handleGradeDetail} />}
+          {activePage === 'grades-accumulation' && <SAGradesAccumulation onNavigate={goTo} />}
+
+          {/* ── Batch Transfer ── */}
+          {activePage === 'batch-students'   && <SABatchTransfer mode="students" />}
+          {activePage === 'batch-grades'     && <SABatchTransfer mode="grades" />}
+          {activePage === 'batch-image-data' && <SABatchTransfer mode="images" />}
+
+          {/* ── Virtual Meeting (per audience) ── */}
+          {activePage === 'vm-parents'  && <SAVirtualMeeting audience="parents" />}
+          {activePage === 'vm-staffs'   && <SAVirtualMeeting audience="staffs" />}
+          {activePage === 'vm-students' && <SAVirtualMeeting audience="students" />}
+
+          {/* ── Reports hub ── */}
+          {activePage === 'reports' && <SAReportsHub onNavigate={goTo} />}
+
+          {/* ── System Audits → security audit log ── */}
+          {activePage === 'system-audits' && (
+            <SASecurityLogs
+              onForensic={handleForensic}
+              initialSearch={secLogFilter}
+              onMount={() => setSecLogFilter('')}
+            />
+          )}
+
           {/* ── Teacher pages ── */}
           {activePage === 'grade-entry' && <GradeEntry navigateTo={goTo} schoolId={schoolId} teacherId={teacherId} />}
           {activePage === 'my-classes'  && <MyClasses  navigateTo={goTo} schoolId={schoolId} teacherId={teacherId} />}
 
           {/* ── Student pages ── */}
-          {activePage === 'my-grades'     && <StudentGrades     navigateTo={goTo} studentId={studentId} schoolId={schoolId} />}
-          {activePage === 'my-attendance' && <StudentAttendance studentId={studentId} />}
-          {activePage === 'my-timetable'  && <StudentTimetable  studentId={studentId} />}
+          {activePage === 'my-grades'       && <StudentGrades      navigateTo={goTo} studentId={studentId} schoolId={schoolId} />}
+          {activePage === 'my-attendance'   && <StudentAttendance  studentId={studentId} />}
+          {activePage === 'my-timetable'    && <StudentTimetable   studentId={studentId} />}
+          {activePage === 'my-report-cards' && <StudentReportCards />}
+          {activePage === 'my-fees'         && <StudentFinancials  />}
+          {activePage === 'assignment'      && <StudentAssignments />}
+          {activePage === 'live-class'      && <StudentLiveClasses />}
 
           {/* ── Parent pages ── */}
           {activePage === 'children-grades'     && <ParentGrades     parentId={parentId} />}
           {activePage === 'children-attendance' && <ParentAttendance parentId={parentId} />}
 
-          {/* ── Bursar pages ── */}
-          {activePage === 'fee-dashboard'  && <BursarOverview schoolId={schoolId} />}
-          {activePage === 'fee-categories' && <FeeCategories  schoolId={schoolId} />}
-          {activePage === 'payments'       && <Payments       schoolId={schoolId} />}
-          {activePage === 'expenses'       && <Expenses       schoolId={schoolId} />}
+          {/* ── Bursar / Finance pages (school-scoped) ── */}
+          {activePage === 'fee-dashboard'  && scoped(<BursarOverview navigateTo={goTo} schoolId={schoolId} />, 'Pick a school to view its finance command center.')}
+          {activePage === 'student-fees'   && scoped(<StudentFees    schoolId={schoolId} />)}
+          {activePage === 'fee-categories' && scoped(<FeeCategories  schoolId={schoolId} />)}
+          {activePage === 'payments'       && scoped(<Payments       schoolId={schoolId} />)}
+          {activePage === 'expenses'       && scoped(<Expenses       schoolId={schoolId} />)}
+          {activePage === 'finance-team'   && scoped(<FinanceTeam    schoolId={schoolId} />)}
+          {activePage === 'finance-reports' && scoped(<FinanceReports navigateTo={goTo} schoolId={schoolId} />)}
+          {activePage === 'school-financial-report' && scoped(<FinanceReports navigateTo={goTo} schoolId={schoolId} />, 'Pick a school to view its financial report.')}
 
-          {/* ── Principal pages ── */}
-          {activePage === 'grade-approvals'      && <GradeApprovals     schoolId={schoolId} />}
-          {activePage === 'report-card-approval' && <ReportCardApproval schoolId={schoolId} />}
+          {/* ── Principal / academic-leadership pages (school-scoped) ── */}
+          {activePage === 'grade-approvals'        && scoped(<GradeApprovals      schoolId={schoolId} />, 'Pick a school to review its grade-change requests.')}
+          {activePage === 'report-card-approval'   && scoped(<ReportCardApproval  schoolId={schoolId} />, 'Pick a school to review its report cards.')}
+          {activePage === 'report-cards-published' && scoped(<PublishedReportCards schoolId={schoolId} />, 'Pick a school to view its published report cards.')}
+          {activePage === 'principal-users'        && scoped(<PrincipalUsers      schoolId={schoolId} />)}
+          {activePage === 'syllabus-progress'      && scoped(<SyllabusProgress    schoolId={schoolId} />)}
+          {activePage === 'attendance-report'      && scoped(<AttendanceReport    schoolId={schoolId} />, 'Pick a school to view its attendance report.')}
 
           {activePage === 'principal' && <SAPrincipal />}
 
@@ -1082,16 +1294,61 @@ export default function Dashboard({ onNavigate }) {
 
           {activePage === 'account-parents' && <SAParents />}
 
-          {!['overview','applications','review','app-history','version-compare','rejected','rejection-audit','grade-report','grade-requests','grade-audit','security-logs','forensics','alert-broadcast','change-alerts','system-health','schools','analytics','benchmarks','onboarding','governance','users','notifications','settings','profile','academic-terms','academic-year','institution-type','school-capacity','countries','regions','cities','school-type','syllabus-type','class-subtype','academic-system','grading-system','classes','subjects','principal','bursar','account-teachers','account-students','account-parents','grade-entry','my-classes','my-grades','my-attendance','my-timetable','children-grades','children-attendance','fee-dashboard','fee-categories','payments','expenses','grade-approvals','report-card-approval','lesson-plans','timetable','timetable-mgr','my-fees','my-report-cards','children-report-cards','attendance-teachers','attendance-students','my-fees','report-cards-published','syllabus-progress','finance-users','exam-schedule','rooms','grading-scheme','academic-calendar','promotions','teacher-assignments','exam-officers','ai-capture','settings'].includes(activePage) && (
+          {/* ── School-admin suite (previously-blank admin nav items) ──
+             School staff are token-scoped; superadmins pick a school first. */}
+          {activePage === 'exam-schedule'       && scoped(<ExamsPage school={schools[0]} />,        'Pick a school to manage its exam schedule.')}
+          {activePage === 'timetable-mgr'       && scoped(<TimetablePage school={schools[0]} />,    'Pick a school to manage its timetable.')}
+          {activePage === 'rooms'               && scoped(<RoomsPage />,               'Pick a school to manage its rooms.')}
+          {activePage === 'grading-scheme'      && scoped(<GradingSchemePage />,       'Pick a school to manage its grading scheme.')}
+          {activePage === 'academic-calendar'   && scoped(<AcademicCalendarPage />,    'Pick a school to manage its academic calendar.')}
+          {activePage === 'promotions'          && scoped(<StudentPromotionPage />,    'Pick a school to manage student promotions.')}
+          {activePage === 'teacher-assignments' && scoped(<TeacherAssignmentsPage />,  'Pick a school to manage teacher assignments.')}
+          {activePage === 'exam-officers'       && scoped(<ExamOfficersPage />,        'Pick a school to manage its exam officers.')}
+          {activePage === 'ai-capture'          && scoped(<AIDocumentCapture />,       'Pick a school to use AI document capture.')}
+          {activePage === 'finance-users'       && scoped(<FinanceUsersPage school={schools[0]} />, 'Pick a school to manage its finance users.')}
+
+          {!HANDLED_PAGES.has(activePage) && (
             <StubPage title={getTitle(activePage, selectedSchool)} />
           )}
 
+          </Suspense>
         </main>
       </div>
 
-      {/* Mobile bottom nav — Dashboard, Applications, Analytics, Grade Integrity, System Health */}
+      {/* Mobile bottom nav — role-aware shortcut keys */}
       <nav className="sa-mobile-nav">
-        {['overview', 'applications', 'analytics', 'grade-report', 'system-health'].map(key => navItems.find(n => n.key === key)).filter(Boolean).map(item => {
+        {(user?.role === 'principal'
+          ? [
+              { key: 'overview',             short: 'Home' },
+              { key: 'grade-approvals',      short: 'Grades' },
+              { key: 'report-card-approval', short: 'Reports' },
+              { key: 'attendance-report',    short: 'Attendance' },
+              { key: 'principal-users',      short: 'Team' },
+            ]
+          : user?.role === 'bursar'
+          ? [
+              { key: 'overview',        short: 'Home' },
+              { key: 'student-fees',    short: 'Fees' },
+              { key: 'payments',        short: 'Payments' },
+              { key: 'expenses',        short: 'Expenses' },
+              { key: 'finance-reports', short: 'Reports' },
+            ]
+          : user?.role === 'student'
+          ? [
+              { key: 'overview',        short: 'Home' },
+              { key: 'my-grades',       short: 'Grades' },
+              { key: 'my-attendance',   short: 'Attendance' },
+              { key: 'my-timetable',    short: 'Timetable' },
+              { key: 'my-fees',         short: 'Fees' },
+            ]
+          : [
+              { key: 'overview' }, { key: 'applications' }, { key: 'analytics' },
+              { key: 'grade-report' }, { key: 'system-health' },
+            ]
+        ).map(({ key, short }) => {
+          const found = navItems.find(n => n.key === key);
+          return found ? { ...found, label: short || found.label } : null;
+        }).filter(Boolean).map(item => {
           const isAnalyticsRelated = ['analytics', 'benchmarks', 'onboarding'].includes(activePage);
           const isActive =
             activePage === item.key ||

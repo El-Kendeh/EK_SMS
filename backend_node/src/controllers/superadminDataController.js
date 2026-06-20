@@ -11,6 +11,8 @@ const ForensicEvent = require('../models/ForensicEvent');
 const SystemAcademicYear = require('../models/SystemAcademicYear');
 const SystemTerm = require('../models/SystemTerm');
 const InstitutionType = require('../models/InstitutionType');
+const LessonPlanType = require('../models/LessonPlanType');
+const VirtualMeeting = require('../models/VirtualMeeting');
 const CapacityCategory = require('../models/CapacityCategory');
 const SchoolCapacity = require('../models/SchoolCapacity');
 const Country = require('../models/Country');
@@ -44,6 +46,32 @@ function clientIp(req) {
   const xf = req.headers['x-forwarded-for'];
   if (xf && typeof xf === 'string') return xf.split(',')[0].trim().slice(0, 64);
   return (req.socket?.remoteAddress || '—').slice(0, 64);
+}
+
+/* Tenant scope for the shared superadmin/school_admin CRUD routes.
+   Superadmin → null (unrestricted). Everyone else is pinned to their own
+   school; -1 when the token carries no school_id so queries match nothing
+   instead of leaking other schools' data. */
+function scopedSchoolId(req) {
+  if (req.user?.role === 'superadmin') return null;
+  const sid = req.schoolId || req.user?.school_id;
+  const parsed = parseInt(sid, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : -1;
+}
+
+function outsideScope(forcedSchool, rowSchoolId) {
+  return forcedSchool !== null && Number(rowSchoolId) !== forcedSchool;
+}
+
+/* Parents have no school_id column — they belong to a school through the
+   students they are linked to. */
+async function parentInSchool(parentId, schoolId) {
+  const links = await StudentParent.findAll({ where: { parent_id: parentId }, attributes: ['student_id'] });
+  if (!links.length) return false;
+  const count = await Student.count({
+    where: { id: links.map((l) => l.student_id), school_id: schoolId },
+  });
+  return count > 0;
 }
 
 async function loadSettings() {
@@ -368,16 +396,59 @@ async function getSchoolStats(req, res) {
 
 async function getGradeStats(req, res) {
   try {
+    const Grade = require('../models/Grade');
+    const sequelizeDb = require('../config/db');
     const schoolCount = await School.count();
+
+    const totalGrades = await Grade.count();
+    const pendingReviews = await Grade.count({ where: { approval_status: 'pending' } });
+    const approvedGrades = await Grade.count({ where: { approval_status: 'approved' } });
+    const rejectedGrades = await Grade.count({ where: { approval_status: 'rejected' } });
+    const avgRow = await Grade.findOne({
+      attributes: [[sequelizeDb.fn('AVG', sequelizeDb.col('total')), 'avg_total']],
+      raw: true,
+    });
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000);
+    const gradeEvents30d = await Grade.count({ where: { created_at: { [Op.gte]: thirtyDaysAgo } } });
+
+    /* Per-school accumulation breakdown */
+    const perSchoolRaw = await Grade.findAll({
+      attributes: [
+        'school_id',
+        [sequelizeDb.fn('COUNT', sequelizeDb.col('id')), 'grades'],
+        [sequelizeDb.fn('AVG', sequelizeDb.col('total')), 'avg_total'],
+        [sequelizeDb.fn('SUM', sequelizeDb.literal("CASE WHEN approval_status = 'approved' THEN 1 ELSE 0 END")), 'approved'],
+        [sequelizeDb.fn('SUM', sequelizeDb.literal("CASE WHEN approval_status = 'pending' THEN 1 ELSE 0 END")), 'pending'],
+      ],
+      group: ['school_id'],
+      raw: true,
+    });
+    const schoolNames = await School.findAll({ attributes: ['id', 'name'], raw: true });
+    const nameById = Object.fromEntries(schoolNames.map(s => [String(s.id), s.name]));
+    const perSchool = perSchoolRaw.map(r => ({
+      school_id: r.school_id,
+      school_name: nameById[String(r.school_id)] || `School #${r.school_id}`,
+      grades: Number(r.grades) || 0,
+      avg_total: r.avg_total != null ? Math.round(Number(r.avg_total) * 10) / 10 : null,
+      approved: Number(r.approved) || 0,
+      pending: Number(r.pending) || 0,
+    })).sort((a, b) => b.grades - a.grades);
+
+    const integrityScore = totalGrades > 0
+      ? Math.round(((totalGrades - pendingReviews) / totalGrades) * 100)
+      : 100;
+
     return res.json(successResponse({
       schools: schoolCount,
-      grade_events_30d: 0,
-      integrity_score: 100,
-      pending_reviews: 0,
-      total_grades: 0,
-      locked_grades: 0,
-      unlocked_grades: 0,
-      average_score: null,
+      grade_events_30d: gradeEvents30d,
+      integrity_score: integrityScore,
+      pending_reviews: pendingReviews,
+      total_grades: totalGrades,
+      locked_grades: approvedGrades,
+      unlocked_grades: totalGrades - approvedGrades,
+      rejected_grades: rejectedGrades,
+      average_score: avgRow?.avg_total != null ? Math.round(Number(avgRow.avg_total) * 10) / 10 : null,
+      per_school: perSchool,
     }));
   } catch (err) {
     console.error(err);
@@ -973,6 +1044,162 @@ async function toggleInstitutionTypeStatus(req, res) {
     row.updated_at = new Date();
     await row.save();
     return res.json(successResponse({ is_active: row.is_active }, `Status changed to ${row.is_active ? 'active' : 'inactive'}`));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+/* ---------- Lesson Plan Types CRUD ---------- */
+async function getLessonPlanTypes(req, res) {
+  try {
+    const rows = await LessonPlanType.findAll({ order: [['created_at', 'DESC']] });
+    const lessonplantypes = rows.map(r => ({
+      id: r.id, name: r.name, description: r.description,
+      is_active: Boolean(r.is_active), created_at: r.created_at, updated_at: r.updated_at,
+    }));
+    return res.json(successResponse({ lessonplantypes }));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function createLessonPlanType(req, res) {
+  try {
+    const { name, description } = req.body;
+    if (!name) return res.status(400).json(errorResponse('Name is required'));
+    const row = await LessonPlanType.create({
+      name: String(name).slice(0, 100),
+      description: description ? String(description).slice(0, 255) : null,
+    });
+    return res.json(successResponse({ id: row.id }, 'Lesson plan type created'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function updateLessonPlanType(req, res) {
+  try {
+    const row = await LessonPlanType.findByPk(req.params.id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    if (req.body.name !== undefined) row.name = String(req.body.name).slice(0, 100);
+    if (req.body.description !== undefined) row.description = req.body.description ? String(req.body.description).slice(0, 255) : null;
+    row.updated_at = new Date();
+    await row.save();
+    return res.json(successResponse({}, 'Lesson plan type updated'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function deleteLessonPlanType(req, res) {
+  try {
+    const row = await LessonPlanType.findByPk(req.params.id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    await row.destroy();
+    return res.json(successResponse({}, 'Lesson plan type deleted'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function toggleLessonPlanTypeStatus(req, res) {
+  try {
+    const row = await LessonPlanType.findByPk(req.params.id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    row.is_active = !row.is_active;
+    row.updated_at = new Date();
+    await row.save();
+    return res.json(successResponse({ is_active: row.is_active }, `Status changed to ${row.is_active ? 'active' : 'inactive'}`));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+/* ---------- Virtual Meetings CRUD (superadmin + school_admin) ---------- */
+const VM_AUDIENCES = ['parents', 'staffs', 'students'];
+
+async function getVirtualMeetings(req, res) {
+  try {
+    const { audience } = req.query;
+    const forcedSchool = scopedSchoolId(req);
+    const where = {};
+    if (forcedSchool !== null) where.school_id = forcedSchool;
+    if (audience && VM_AUDIENCES.includes(audience)) where.audience = audience;
+    const rows = await VirtualMeeting.findAll({ where, order: [['scheduled_at', 'DESC']], limit: 300 });
+    const meetings = rows.map(r => ({
+      id: r.id, school_id: r.school_id, audience: r.audience,
+      title: r.title, description: r.description, meeting_url: r.meeting_url,
+      host: r.host, scheduled_at: r.scheduled_at, duration_minutes: r.duration_minutes,
+      status: r.status, created_at: r.created_at,
+    }));
+    return res.json(successResponse({ meetings }));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function createVirtualMeeting(req, res) {
+  try {
+    const data = req.body || {};
+    if (!data.title || !String(data.title).trim()) return res.status(400).json(errorResponse('Title is required'));
+    const audience = VM_AUDIENCES.includes(data.audience) ? data.audience : 'parents';
+    const forcedSchool = scopedSchoolId(req);
+    let schoolId = forcedSchool !== null && forcedSchool !== -1 ? forcedSchool : (data.school_id || null);
+    if (forcedSchool === -1) return res.status(403).json(errorResponse('No school is linked to your account', 403));
+    const row = await VirtualMeeting.create({
+      school_id: schoolId,
+      audience,
+      title: String(data.title).slice(0, 255),
+      description: data.description || null,
+      meeting_url: data.meeting_url || null,
+      host: data.host || null,
+      scheduled_at: data.scheduled_at || null,
+      duration_minutes: data.duration_minutes ? parseInt(data.duration_minutes, 10) : 60,
+      status: 'scheduled',
+      created_by: req.user?.id || null,
+    });
+    return res.json(successResponse({ id: row.id }, 'Meeting scheduled'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function updateVirtualMeeting(req, res) {
+  try {
+    const row = await VirtualMeeting.findByPk(req.params.id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    if (outsideScope(scopedSchoolId(req), row.school_id)) return res.status(404).json(errorResponse('Not found', 404));
+    const data = req.body || {};
+    ['title', 'description', 'meeting_url', 'host', 'scheduled_at'].forEach(k => {
+      if (data[k] !== undefined) row[k] = data[k];
+    });
+    if (data.audience !== undefined && VM_AUDIENCES.includes(data.audience)) row.audience = data.audience;
+    if (data.duration_minutes !== undefined) row.duration_minutes = parseInt(data.duration_minutes, 10) || 60;
+    if (data.status !== undefined && ['scheduled', 'completed', 'cancelled'].includes(data.status)) row.status = data.status;
+    row.updated_at = new Date();
+    await row.save();
+    return res.json(successResponse({}, 'Meeting updated'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function deleteVirtualMeeting(req, res) {
+  try {
+    const row = await VirtualMeeting.findByPk(req.params.id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    if (outsideScope(scopedSchoolId(req), row.school_id)) return res.status(404).json(errorResponse('Not found', 404));
+    await row.destroy();
+    return res.json(successResponse({}, 'Meeting deleted'));
   } catch (err) {
     console.error(err);
     return res.status(500).json(errorResponse('Internal server error', 500));
@@ -1576,8 +1803,10 @@ async function toggleClassSubtypeStatus(req, res) {
 async function getSuperClasses(req, res) {
   try {
     const { school_id, page = 1, limit = 100 } = req.query;
+    const forcedSchool = scopedSchoolId(req);
     const where = {};
-    if (school_id) where.school_id = school_id;
+    if (forcedSchool !== null) where.school_id = forcedSchool;
+    else if (school_id) where.school_id = school_id;
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const { rows, count } = await ClassModel.findAndCountAll({ where, order: [['created_at', 'DESC']], offset, limit: parseInt(limit) });
     const classes = await Promise.all(rows.map(async r => {
@@ -1621,6 +1850,9 @@ async function createSuperClass(req, res) {
   try {
     const data = req.body;
     if (!data.name) return res.status(400).json(errorResponse('name is required'));
+    const forcedSchool = scopedSchoolId(req);
+    if (forcedSchool === -1) return res.status(403).json(errorResponse('No school is linked to your account', 403));
+    if (forcedSchool !== null) data.school_id = forcedSchool;
     if (!data.school_id) return res.status(400).json(errorResponse('school_id is required'));
     const row = await ClassModel.create({
       school_id: data.school_id, name: data.name, code: data.code || null,
@@ -1671,8 +1903,10 @@ async function toggleSuperClassStatus(req, res) {
 async function getSuperSubjects(req, res) {
   try {
     const { school_id, page = 1, limit = 100 } = req.query;
+    const forcedSchool = scopedSchoolId(req);
     const where = {};
-    if (school_id) where.school_id = school_id;
+    if (forcedSchool !== null) where.school_id = forcedSchool;
+    else if (school_id) where.school_id = school_id;
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const { rows, count } = await Subject.findAndCountAll({ where, order: [['created_at', 'DESC']], offset, limit: parseInt(limit) });
     const subjects = await Promise.all(rows.map(async r => {
@@ -1687,6 +1921,9 @@ async function createSuperSubject(req, res) {
   try {
     const data = req.body;
     if (!data.name) return res.status(400).json(errorResponse('name is required'));
+    const forcedSchool = scopedSchoolId(req);
+    if (forcedSchool === -1) return res.status(403).json(errorResponse('No school is linked to your account', 403));
+    if (forcedSchool !== null) data.school_id = forcedSchool;
     if (!data.school_id) return res.status(400).json(errorResponse('school_id is required'));
     const row = await Subject.create({
       school_id: data.school_id, name: data.name,
@@ -2116,8 +2353,10 @@ async function toggleBursarStatus(req, res) {
 async function getSuperStudents(req, res) {
   try {
     const { school_id, status, page = 1, limit = 100 } = req.query;
+    const forcedSchool = scopedSchoolId(req);
     const where = {};
-    if (school_id) where.school_id = school_id;
+    if (forcedSchool !== null) where.school_id = forcedSchool;
+    else if (school_id) where.school_id = school_id;
     if (status) where.status = status;
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const { rows, count } = await Student.findAndCountAll({
@@ -2178,6 +2417,9 @@ async function createSuperStudent(req, res) {
   try {
     const data = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
     if (!data.first_name || !data.last_name) return res.status(400).json(errorResponse('first_name and last_name are required'));
+    const forcedSchool = scopedSchoolId(req);
+    if (forcedSchool === -1) return res.status(403).json(errorResponse('No school is linked to your account', 403));
+    if (forcedSchool !== null) data.school_id = forcedSchool;
     if (!data.school_id) return res.status(400).json(errorResponse('school_id is required'));
     const school = await School.findByPk(data.school_id);
     if (!school) return res.status(400).json(errorResponse('School not found'));
@@ -2295,6 +2537,7 @@ async function updateSuperStudent(req, res) {
   try {
     const student = await Student.findByPk(req.params.id);
     if (!student) return res.status(404).json(errorResponse('Not found', 404));
+    if (outsideScope(scopedSchoolId(req), student.school_id)) return res.status(404).json(errorResponse('Not found', 404));
     const data = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
     const user = await User.findByPk(student.user_id);
     if (user) {
@@ -2330,6 +2573,7 @@ async function deleteSuperStudent(req, res) {
   try {
     const student = await Student.findByPk(req.params.id);
     if (!student) return res.status(404).json(errorResponse('Not found', 404));
+    if (outsideScope(scopedSchoolId(req), student.school_id)) return res.status(404).json(errorResponse('Not found', 404));
     await Student.destroy({ where: { id: student.id }, transaction });
     await User.destroy({ where: { id: student.user_id }, transaction });
     await transaction.commit();
@@ -2341,6 +2585,7 @@ async function toggleSuperStudentStatus(req, res) {
   try {
     const student = await Student.findByPk(req.params.id);
     if (!student) return res.status(404).json(errorResponse('Not found', 404));
+    if (outsideScope(scopedSchoolId(req), student.school_id)) return res.status(404).json(errorResponse('Not found', 404));
     student.is_active = !student.is_active;
     await student.save();
     return res.json(successResponse({ is_active: student.is_active }, `Status changed to ${student.is_active ? 'active' : 'inactive'}`));
@@ -2351,6 +2596,7 @@ async function blockSuperStudent(req, res) {
   try {
     const student = await Student.findByPk(req.params.id);
     if (!student) return res.status(404).json(errorResponse('Not found', 404));
+    if (outsideScope(scopedSchoolId(req), student.school_id)) return res.status(404).json(errorResponse('Not found', 404));
     student.status = student.status === 'blocked' ? 'active' : 'blocked';
     await student.save();
     return res.json(successResponse({ status: student.status }, `Student ${student.status === 'blocked' ? 'blocked' : 'unblocked'}`));
@@ -2361,8 +2607,17 @@ async function blockSuperStudent(req, res) {
 async function getSuperParents(req, res) {
   try {
     const { status } = req.query;
+    const forcedSchool = scopedSchoolId(req);
     const where = {};
     if (status) where.status = status;
+    if (forcedSchool !== null) {
+      const schoolStudents = await Student.findAll({ where: { school_id: forcedSchool }, attributes: ['id'] });
+      const links = await StudentParent.findAll({
+        where: { student_id: schoolStudents.map((s) => s.id) },
+        attributes: ['parent_id'],
+      });
+      where.id = [...new Set(links.map((l) => l.parent_id))];
+    }
     const rows = await Parent.findAll({ where, order: [['id', 'DESC']], limit: 500 });
     const parents = await Promise.all(rows.map(async p => {
       let user = null, linkedStudents = [];
@@ -2399,6 +2654,13 @@ async function createSuperParent(req, res) {
   try {
     const data = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
     if (!data.first_name || !data.last_name) return res.status(400).json(errorResponse('first_name and last_name are required'));
+    const forcedSchool = scopedSchoolId(req);
+    if (forcedSchool === -1) { await transaction.rollback(); return res.status(403).json(errorResponse('No school is linked to your account', 403)); }
+    if (forcedSchool !== null && Array.isArray(data.student_ids) && data.student_ids.length) {
+      const ids = data.student_ids.map((s) => (typeof s === 'object' ? s.student_id : s));
+      const owned = await Student.count({ where: { id: ids, school_id: forcedSchool } });
+      if (owned !== ids.length) { await transaction.rollback(); return res.status(403).json(errorResponse('You can only link parents to students of your own school', 403)); }
+    }
 
     const username = data.username || `parent.${data.first_name.toLowerCase()}.${data.last_name.toLowerCase()}_${Date.now()}`;
     const hashedPassword = await bcrypt.hash(data.password || 'Parent@123', 10);
@@ -2437,6 +2699,10 @@ async function updateSuperParent(req, res) {
   try {
     const parent = await Parent.findByPk(req.params.id);
     if (!parent) return res.status(404).json(errorResponse('Not found', 404));
+    {
+      const forcedSchool = scopedSchoolId(req);
+      if (forcedSchool !== null && !(await parentInSchool(parent.id, forcedSchool))) return res.status(404).json(errorResponse('Not found', 404));
+    }
     const data = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
     const user = await User.findByPk(parent.user_id);
     if (user) {
@@ -2460,6 +2726,10 @@ async function deleteSuperParent(req, res) {
   try {
     const parent = await Parent.findByPk(req.params.id);
     if (!parent) return res.status(404).json(errorResponse('Not found', 404));
+    {
+      const forcedSchool = scopedSchoolId(req);
+      if (forcedSchool !== null && !(await parentInSchool(parent.id, forcedSchool))) return res.status(404).json(errorResponse('Not found', 404));
+    }
     await StudentParent.destroy({ where: { parent_id: parent.id }, transaction });
     await Parent.destroy({ where: { id: parent.id }, transaction });
     await User.destroy({ where: { id: parent.user_id }, transaction });
@@ -2472,6 +2742,10 @@ async function toggleSuperParentStatus(req, res) {
   try {
     const parent = await Parent.findByPk(req.params.id);
     if (!parent) return res.status(404).json(errorResponse('Not found', 404));
+    {
+      const forcedSchool = scopedSchoolId(req);
+      if (forcedSchool !== null && !(await parentInSchool(parent.id, forcedSchool))) return res.status(404).json(errorResponse('Not found', 404));
+    }
     parent.is_active = !parent.is_active;
     await parent.save();
     return res.json(successResponse({ is_active: parent.is_active }, `Status changed to ${parent.is_active ? 'active' : 'inactive'}`));
@@ -2482,6 +2756,10 @@ async function blockSuperParent(req, res) {
   try {
     const parent = await Parent.findByPk(req.params.id);
     if (!parent) return res.status(404).json(errorResponse('Not found', 404));
+    {
+      const forcedSchool = scopedSchoolId(req);
+      if (forcedSchool !== null && !(await parentInSchool(parent.id, forcedSchool))) return res.status(404).json(errorResponse('Not found', 404));
+    }
     parent.status = parent.status === 'blocked' ? 'active' : 'blocked';
     await parent.save();
     return res.json(successResponse({ status: parent.status }, `Parent ${parent.status === 'blocked' ? 'blocked' : 'unblocked'}`));
@@ -2495,6 +2773,7 @@ async function linkParentToStudent(req, res) {
     if (!student_id || !parent_id) return res.status(400).json(errorResponse('student_id and parent_id are required'));
     const student = await Student.findByPk(student_id);
     if (!student) return res.status(404).json(errorResponse('Student not found'));
+    if (outsideScope(scopedSchoolId(req), student.school_id)) return res.status(404).json(errorResponse('Student not found'));
     const parent = await Parent.findByPk(parent_id);
     if (!parent) return res.status(404).json(errorResponse('Parent not found'));
     const existing = await StudentParent.findOne({ where: { student_id, parent_id } });
@@ -2508,6 +2787,11 @@ async function unlinkParentFromStudent(req, res) {
   try {
     const { student_id, parent_id } = req.body;
     if (!student_id || !parent_id) return res.status(400).json(errorResponse('student_id and parent_id are required'));
+    const forcedSchool = scopedSchoolId(req);
+    if (forcedSchool !== null) {
+      const student = await Student.findByPk(student_id);
+      if (!student || outsideScope(forcedSchool, student.school_id)) return res.status(404).json(errorResponse('Student not found'));
+    }
     await StudentParent.destroy({ where: { student_id, parent_id } });
     return res.json(successResponse({}, 'Parent unlinked from student'));
   } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
@@ -2515,6 +2799,11 @@ async function unlinkParentFromStudent(req, res) {
 
 async function getStudentParents(req, res) {
   try {
+    const forcedSchool = scopedSchoolId(req);
+    if (forcedSchool !== null) {
+      const student = await Student.findByPk(req.params.id);
+      if (!student || outsideScope(forcedSchool, student.school_id)) return res.status(404).json(errorResponse('Student not found', 404));
+    }
     const links = await StudentParent.findAll({ where: { student_id: req.params.id } });
     const parents = await Promise.all(links.map(async l => {
       const p = await Parent.findByPk(l.parent_id);
@@ -2532,8 +2821,11 @@ async function getStudentParents(req, res) {
 async function uploadStudentDocument(req, res) {
   try {
     if (!req.file) return res.status(400).json(errorResponse('No file uploaded'));
+    const student = await Student.findByPk(req.params.id);
+    if (!student) return res.status(404).json(errorResponse('Student not found', 404));
+    if (outsideScope(scopedSchoolId(req), student.school_id)) return res.status(404).json(errorResponse('Student not found', 404));
     const doc = await Document.create({
-      school_id: req.body.school_id || 0,
+      school_id: student.school_id || req.body.school_id || 0,
       student_id: req.params.id,
       title: req.body.title || req.file.originalname,
       file_path: `/uploads/documents/${req.file.filename}`,
@@ -2547,6 +2839,11 @@ async function uploadStudentDocument(req, res) {
 
 async function getStudentDocuments(req, res) {
   try {
+    const forcedSchool = scopedSchoolId(req);
+    if (forcedSchool !== null) {
+      const student = await Student.findByPk(req.params.id);
+      if (!student || outsideScope(forcedSchool, student.school_id)) return res.status(404).json(errorResponse('Student not found', 404));
+    }
     const docs = await Document.findAll({ where: { student_id: req.params.id }, order: [['created_at', 'DESC']] });
     return res.json(successResponse({ documents: docs }));
   } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
@@ -2556,6 +2853,11 @@ async function deleteStudentDocument(req, res) {
   try {
     const doc = await Document.findByPk(req.params.docId);
     if (!doc) return res.status(404).json(errorResponse('Document not found'));
+    const forcedSchool = scopedSchoolId(req);
+    if (forcedSchool !== null) {
+      const student = await Student.findByPk(doc.student_id);
+      if (!student || outsideScope(forcedSchool, student.school_id)) return res.status(404).json(errorResponse('Document not found', 404));
+    }
     await doc.destroy();
     return res.json(successResponse({}, 'Document deleted'));
   } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
@@ -2565,8 +2867,10 @@ async function deleteStudentDocument(req, res) {
 async function getSuperTeachers(req, res) {
   try {
     const { school_id, status, page = 1, limit = 100 } = req.query;
+    const forcedSchool = scopedSchoolId(req);
     const where = {};
-    if (school_id) where.school_id = school_id;
+    if (forcedSchool !== null) where.school_id = forcedSchool;
+    else if (school_id) where.school_id = school_id;
     if (status) where.status = status;
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const { rows, count } = await Teacher.findAndCountAll({
@@ -2619,6 +2923,9 @@ async function createSuperTeacher(req, res) {
     const data = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
     if (!data.first_name || !data.last_name) return res.status(400).json(errorResponse('first_name and last_name are required'));
     if (!data.employee_id) return res.status(400).json(errorResponse('employee_id is required'));
+    const forcedSchool = scopedSchoolId(req);
+    if (forcedSchool === -1) return res.status(403).json(errorResponse('No school is linked to your account', 403));
+    if (forcedSchool !== null) data.school_id = forcedSchool;
 
     const username = data.username || `teacher.${data.first_name.toLowerCase()}.${data.last_name.toLowerCase()}_${Date.now()}`;
     const teacherPw = data.password || 'Teacher@123';
@@ -2674,6 +2981,7 @@ async function updateSuperTeacher(req, res) {
   try {
     const teacher = await Teacher.findByPk(req.params.id);
     if (!teacher) return res.status(404).json(errorResponse('Not found', 404));
+    if (outsideScope(scopedSchoolId(req), teacher.school_id)) return res.status(404).json(errorResponse('Not found', 404));
     const data = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
     const user = await User.findByPk(teacher.user_id);
     if (user) {
@@ -2705,6 +3013,7 @@ async function deleteSuperTeacher(req, res) {
   try {
     const teacher = await Teacher.findByPk(req.params.id);
     if (!teacher) return res.status(404).json(errorResponse('Not found', 404));
+    if (outsideScope(scopedSchoolId(req), teacher.school_id)) return res.status(404).json(errorResponse('Not found', 404));
     await Teacher.destroy({ where: { id: teacher.id } });
     await User.destroy({ where: { id: teacher.user_id } });
     return res.json(successResponse({}, 'Teacher deleted'));
@@ -2715,6 +3024,7 @@ async function toggleSuperTeacherStatus(req, res) {
   try {
     const teacher = await Teacher.findByPk(req.params.id);
     if (!teacher) return res.status(404).json(errorResponse('Not found', 404));
+    if (outsideScope(scopedSchoolId(req), teacher.school_id)) return res.status(404).json(errorResponse('Not found', 404));
     teacher.is_active = !teacher.is_active;
     await teacher.save();
     return res.json(successResponse({ is_active: teacher.is_active }, `Status changed to ${teacher.is_active ? 'active' : 'inactive'}`));
@@ -2725,6 +3035,7 @@ async function blockSuperTeacher(req, res) {
   try {
     const teacher = await Teacher.findByPk(req.params.id);
     if (!teacher) return res.status(404).json(errorResponse('Not found', 404));
+    if (outsideScope(scopedSchoolId(req), teacher.school_id)) return res.status(404).json(errorResponse('Not found', 404));
     teacher.status = teacher.status === 'blocked' ? 'active' : 'blocked';
     await teacher.save();
     return res.json(successResponse({ status: teacher.status }, `Teacher ${teacher.status === 'blocked' ? 'blocked' : 'unblocked'}`));
@@ -2735,8 +3046,10 @@ async function blockSuperTeacher(req, res) {
 async function getSuperBursars(req, res) {
   try {
     const { school_id, status, page = 1, limit = 100 } = req.query;
+    const forcedSchool = scopedSchoolId(req);
     const where = {};
-    if (school_id) where.school_id = school_id;
+    if (forcedSchool !== null) where.school_id = forcedSchool;
+    else if (school_id) where.school_id = school_id;
     if (status) where.status = status;
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const { rows, count } = await CoreBursar.findAndCountAll({ where, order: [['id', 'DESC']], offset, limit: parseInt(limit) });
@@ -2777,6 +3090,9 @@ async function createSuperBursar(req, res) {
     const data = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
     if (!data.first_name || !data.last_name) return res.status(400).json(errorResponse('first_name and last_name are required'));
     if (!data.employee_id) return res.status(400).json(errorResponse('employee_id is required'));
+    const forcedSchool = scopedSchoolId(req);
+    if (forcedSchool === -1) return res.status(403).json(errorResponse('No school is linked to your account', 403));
+    if (forcedSchool !== null) data.school_id = forcedSchool;
     const username = data.username || `bursar.${data.first_name.toLowerCase()}.${data.last_name.toLowerCase()}_${Date.now()}`;
     const pw = data.password || 'Bursar@123';
     const hashedPassword = await bcrypt.hash(pw, 10);
@@ -2816,6 +3132,7 @@ async function updateSuperBursar(req, res) {
   try {
     const bursar = await CoreBursar.findByPk(req.params.id);
     if (!bursar) return res.status(404).json(errorResponse('Not found', 404));
+    if (outsideScope(scopedSchoolId(req), bursar.school_id)) return res.status(404).json(errorResponse('Not found', 404));
     const data = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
     const user = await User.findByPk(bursar.user_id);
     if (user) {
@@ -2844,6 +3161,7 @@ async function deleteSuperBursar(req, res) {
   try {
     const bursar = await CoreBursar.findByPk(req.params.id);
     if (!bursar) return res.status(404).json(errorResponse('Not found', 404));
+    if (outsideScope(scopedSchoolId(req), bursar.school_id)) return res.status(404).json(errorResponse('Not found', 404));
     await CoreBursar.destroy({ where: { id: bursar.id } });
     await User.destroy({ where: { id: bursar.user_id } });
     return res.json(successResponse({}, 'Bursar deleted'));
@@ -2854,6 +3172,7 @@ async function toggleSuperBursarStatus(req, res) {
   try {
     const bursar = await CoreBursar.findByPk(req.params.id);
     if (!bursar) return res.status(404).json(errorResponse('Not found', 404));
+    if (outsideScope(scopedSchoolId(req), bursar.school_id)) return res.status(404).json(errorResponse('Not found', 404));
     bursar.is_active = !bursar.is_active; await bursar.save();
     return res.json(successResponse({ is_active: bursar.is_active }, `Status changed to ${bursar.is_active ? 'active' : 'inactive'}`));
   } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
@@ -2863,6 +3182,7 @@ async function blockSuperBursar(req, res) {
   try {
     const bursar = await CoreBursar.findByPk(req.params.id);
     if (!bursar) return res.status(404).json(errorResponse('Not found', 404));
+    if (outsideScope(scopedSchoolId(req), bursar.school_id)) return res.status(404).json(errorResponse('Not found', 404));
     bursar.status = bursar.status === 'blocked' ? 'active' : 'blocked'; await bursar.save();
     return res.json(successResponse({ status: bursar.status }, `Bursar ${bursar.status === 'blocked' ? 'blocked' : 'unblocked'}`));
   } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
@@ -2872,8 +3192,10 @@ async function blockSuperBursar(req, res) {
 async function getSuperPrincipals(req, res) {
   try {
     const { school_id, status, page = 1, limit = 100 } = req.query;
+    const forcedSchool = scopedSchoolId(req);
     const where = {};
-    if (school_id) where.school_id = school_id;
+    if (forcedSchool !== null) where.school_id = forcedSchool;
+    else if (school_id) where.school_id = school_id;
     if (status) where.status = status;
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const { rows, count } = await CorePrincipal.findAndCountAll({ where, order: [['id', 'DESC']], offset, limit: parseInt(limit) });
@@ -2907,6 +3229,9 @@ async function createSuperPrincipal(req, res) {
     const data = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
     if (!data.first_name || !data.last_name) return res.status(400).json(errorResponse('first_name and last_name are required'));
     if (!data.employee_id) return res.status(400).json(errorResponse('employee_id is required'));
+    const forcedSchool = scopedSchoolId(req);
+    if (forcedSchool === -1) return res.status(403).json(errorResponse('No school is linked to your account', 403));
+    if (forcedSchool !== null) data.school_id = forcedSchool;
     const username = data.username || `principal.${data.first_name.toLowerCase()}.${data.last_name.toLowerCase()}_${Date.now()}`;
     const pw = data.password || 'Principal@123';
     const user = await User.create({
@@ -2937,6 +3262,7 @@ async function updateSuperPrincipal(req, res) {
   try {
     const principal = await CorePrincipal.findByPk(req.params.id);
     if (!principal) return res.status(404).json(errorResponse('Not found', 404));
+    if (outsideScope(scopedSchoolId(req), principal.school_id)) return res.status(404).json(errorResponse('Not found', 404));
     const data = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
     const user = await User.findByPk(principal.user_id);
     if (user) {
@@ -2964,6 +3290,7 @@ async function deleteSuperPrincipal(req, res) {
   try {
     const principal = await CorePrincipal.findByPk(req.params.id);
     if (!principal) return res.status(404).json(errorResponse('Not found', 404));
+    if (outsideScope(scopedSchoolId(req), principal.school_id)) return res.status(404).json(errorResponse('Not found', 404));
     await CorePrincipal.destroy({ where: { id: principal.id } });
     await User.destroy({ where: { id: principal.user_id } });
     return res.json(successResponse({}, 'Principal deleted'));
@@ -2974,6 +3301,7 @@ async function toggleSuperPrincipalStatus(req, res) {
   try {
     const principal = await CorePrincipal.findByPk(req.params.id);
     if (!principal) return res.status(404).json(errorResponse('Not found', 404));
+    if (outsideScope(scopedSchoolId(req), principal.school_id)) return res.status(404).json(errorResponse('Not found', 404));
     principal.is_active = !principal.is_active; await principal.save();
     return res.json(successResponse({ is_active: principal.is_active }, `Status changed to ${principal.is_active ? 'active' : 'inactive'}`));
   } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
@@ -2983,6 +3311,7 @@ async function blockSuperPrincipal(req, res) {
   try {
     const principal = await CorePrincipal.findByPk(req.params.id);
     if (!principal) return res.status(404).json(errorResponse('Not found', 404));
+    if (outsideScope(scopedSchoolId(req), principal.school_id)) return res.status(404).json(errorResponse('Not found', 404));
     principal.status = principal.status === 'blocked' ? 'active' : 'blocked'; await principal.save();
     return res.json(successResponse({ status: principal.status }, `Principal ${principal.status === 'blocked' ? 'blocked' : 'unblocked'}`));
   } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
@@ -3030,6 +3359,15 @@ module.exports = {
   updateInstitutionType,
   deleteInstitutionType,
   toggleInstitutionTypeStatus,
+  getLessonPlanTypes,
+  createLessonPlanType,
+  updateLessonPlanType,
+  deleteLessonPlanType,
+  toggleLessonPlanTypeStatus,
+  getVirtualMeetings,
+  createVirtualMeeting,
+  updateVirtualMeeting,
+  deleteVirtualMeeting,
   getCapacityCategories,
   createCapacityCategory,
   updateCapacityCategory,

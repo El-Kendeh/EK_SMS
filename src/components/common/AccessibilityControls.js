@@ -2,20 +2,10 @@ import { useTheme } from '../../context/ThemeContext';
 import './AccessibilityControls.css';
 
 export default function AccessibilityControls({ compact = false }) {
-  const { theme, toggleTheme, contrast, toggleContrast, colorBlind, toggleColorBlind } = useTheme();
+  const { contrast, toggleContrast, colorBlind, toggleColorBlind } = useTheme();
 
   return (
     <div className={`a11y ${compact ? 'a11y--compact' : ''}`} role="group" aria-label="Display preferences">
-      <button
-        className={`a11y__btn a11y__btn--theme`}
-        onClick={toggleTheme}
-        title={theme === 'dark' ? 'Switch to light' : 'Switch to dark'}
-        aria-pressed={theme === 'light'}
-      >
-        <span className="material-symbols-outlined">{theme === 'dark' ? 'light_mode' : 'dark_mode'}</span>
-        {!compact && <span>{theme === 'dark' ? 'Light' : 'Dark'}</span>}
-      </button>
-
       <button
         className={`a11y__btn ${contrast === 'high' ? 'is-active' : ''}`}
         onClick={toggleContrast}

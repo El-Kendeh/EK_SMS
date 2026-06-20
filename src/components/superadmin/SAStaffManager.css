@@ -1,0 +1,355 @@
+/* ── SAStaffManager — shared Principal / Bursar page ── */
+
+.sasm-wrap { display: flex; flex-direction: column; gap: 16px; }
+
+.sasm-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.sasm-title { margin: 0 0 4px; font-size: 1.375rem; font-weight: 800; color: var(--sa-text-1); }
+.sasm-sub   { margin: 0; font-size: 0.8125rem; color: var(--sa-text-3); max-width: 560px; }
+
+/* Buttons */
+.sasm-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 18px;
+  min-height: 42px;
+  border-radius: 10px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+}
+.sasm-btn--primary {
+  background: linear-gradient(120deg, #1B3FAF, #2563eb);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(27, 63, 175, 0.35);
+}
+.sasm-btn--primary:hover { filter: brightness(1.08); }
+.sasm-btn--ghost { background: transparent; border-color: var(--sa-border); color: var(--sa-text-2); }
+.sasm-btn--ghost:hover:not(:disabled) { border-color: #1B3FAF; color: var(--sa-text-1); }
+.sasm-btn--danger { background: #dc2626; color: #fff; }
+.sasm-btn:disabled { opacity: 0.55; cursor: default; }
+
+/* Toolbar */
+.sasm-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.sasm-search {
+  flex: 1;
+  min-width: 220px;
+  max-width: 380px;
+  padding: 10px 14px;
+  min-height: 44px;
+  border-radius: 10px;
+  border: 1px solid var(--sa-border);
+  background: var(--sa-card);
+  color: var(--sa-text-1);
+  font-size: 0.8125rem;
+}
+.sasm-search:focus { outline: none; border-color: #1B3FAF; }
+
+.sasm-filters { display: flex; gap: 6px; flex-wrap: wrap; }
+.sasm-filter {
+  padding: 8px 15px;
+  min-height: 38px;
+  border-radius: 999px;
+  border: 1px solid var(--sa-border);
+  background: transparent;
+  color: var(--sa-text-3);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.sasm-filter.active { background: #1B3FAF; border-color: #1B3FAF; color: #fff; }
+
+/* States */
+.sasm-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 52px 20px;
+  border-radius: 14px;
+  border: 1px solid var(--sa-border);
+  background: var(--sa-card);
+  color: var(--sa-text-3);
+  font-size: 0.875rem;
+}
+.sasm-spinner {
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  animation: sasmSpin 0.8s linear infinite;
+}
+@keyframes sasmSpin { to { transform: rotate(360deg); } }
+
+.sasm-empty {
+  padding: 48px 20px;
+  text-align: center;
+  border-radius: 14px;
+  border: 1.5px dashed var(--sa-border);
+  background: var(--sa-card);
+  color: var(--sa-text-3);
+  font-size: 0.8438rem;
+  line-height: 1.6;
+}
+
+/* Table */
+.sasm-table-wrap {
+  border: 1px solid var(--sa-border);
+  border-radius: 14px;
+  background: var(--sa-card);
+  overflow-x: auto;
+}
+.sasm-table { width: 100%; border-collapse: collapse; min-width: 720px; }
+.sasm-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 0.6563rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sa-text-3);
+  border-bottom: 1px solid var(--sa-border);
+}
+.sasm-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--sa-border);
+  font-size: 0.8125rem;
+  color: var(--sa-text-2);
+  vertical-align: middle;
+}
+.sasm-table tr:last-child td { border-bottom: none; }
+.sasm-table tbody tr { transition: background 0.12s ease; }
+.sasm-table tbody tr:hover { background: rgba(27, 63, 175, 0.05); }
+
+.sasm-name-cell { display: flex; align-items: center; gap: 10px; }
+.sasm-avatar {
+  width: 34px; height: 34px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(27, 63, 175, 0.18);
+  color: #5b8def;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.sasm-name { font-weight: 700; color: var(--sa-text-1); }
+.sasm-username { font-size: 0.6875rem; color: var(--sa-text-3); margin-top: 1px; }
+
+.sasm-emp-id {
+  font-family: ui-monospace, monospace;
+  font-size: 0.75rem;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(120, 140, 200, 0.12);
+  color: var(--sa-text-2);
+}
+.sasm-school { font-size: 0.78rem; }
+.sasm-contact { display: flex; flex-direction: column; }
+.sasm-contact-sub { font-size: 0.6875rem; color: var(--sa-text-3); }
+
+.sasm-badge {
+  display: inline-block;
+  padding: 4px 11px;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+.sasm-badge--active   { color: #34d399; background: rgba(52, 211, 153, 0.12); border: 1px solid rgba(52, 211, 153, 0.3); }
+.sasm-badge--inactive { color: var(--sa-text-3); background: rgba(120, 140, 200, 0.1); border: 1px solid var(--sa-border); }
+.sasm-badge--blocked  { color: #f87171; background: rgba(248, 113, 113, 0.1); border: 1px solid rgba(248, 113, 113, 0.3); }
+
+.sasm-actions { display: flex; gap: 4px; }
+.sasm-icon-btn {
+  width: 34px; height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--sa-text-3);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.sasm-icon-btn:hover { border-color: var(--sa-border); color: var(--sa-text-1); background: rgba(120, 140, 200, 0.08); }
+.sasm-icon-btn--danger:hover { color: #f87171; border-color: rgba(248, 113, 113, 0.4); }
+
+/* Pagination */
+.sasm-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.75rem;
+  color: var(--sa-text-3);
+  flex-wrap: wrap;
+}
+.sasm-pagination-btns { display: flex; gap: 8px; }
+
+/* Modals */
+.sasm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(2, 6, 23, 0.7);
+  backdrop-filter: blur(4px);
+}
+.sasm-modal {
+  width: 100%;
+  max-width: 440px;
+  max-height: 90vh;
+  overflow-y: auto;
+  border-radius: 18px;
+  border: 1px solid var(--sa-border);
+  background: var(--sa-card, #0f172a);
+  padding: 22px;
+}
+.sasm-modal--lg { max-width: 720px; }
+.sasm-modal-title { margin: 0 0 10px; font-size: 1.0625rem; font-weight: 800; color: var(--sa-text-1); }
+.sasm-modal-text {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 18px;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--sa-text-3);
+}
+.sasm-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+
+/* Form */
+.sasm-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--sa-border);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.sasm-tab {
+  padding: 9px 14px;
+  min-height: 40px;
+  border: none;
+  background: transparent;
+  color: var(--sa-text-3);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+}
+.sasm-tab.active { color: #5b8def; border-bottom-color: #1B3FAF; }
+
+.sasm-form-body { min-height: 220px; }
+.sasm-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.sasm-field { display: flex; flex-direction: column; gap: 6px; }
+.sasm-field--full { grid-column: 1 / -1; margin-bottom: 14px; }
+.sasm-field label {
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--sa-text-3);
+}
+.sasm-field input,
+.sasm-field select {
+  padding: 10px 12px;
+  min-height: 42px;
+  border-radius: 9px;
+  border: 1px solid var(--sa-border);
+  background: var(--sa-bg, transparent);
+  color: var(--sa-text-1);
+  font-size: 0.8125rem;
+}
+.sasm-field input:focus,
+.sasm-field select:focus { outline: none; border-color: #1B3FAF; }
+.sasm-hint { font-size: 0.6875rem; color: var(--sa-text-3); }
+
+.sasm-form-err {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.3);
+}
+
+/* Credentials modal */
+.sasm-modal--creds { text-align: center; }
+.sasm-creds-icon {
+  width: 52px; height: 52px;
+  margin: 0 auto 14px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(52, 211, 153, 0.14);
+  color: #34d399;
+}
+.sasm-creds-title { margin: 0 0 6px; font-size: 1.0625rem; font-weight: 800; color: var(--sa-text-1); }
+.sasm-creds-sub { margin: 0 0 16px; font-size: 0.78rem; line-height: 1.55; color: var(--sa-text-3); }
+.sasm-creds-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px dashed var(--sa-border);
+  background: rgba(27, 63, 175, 0.06);
+  text-align: left;
+}
+.sasm-creds-box div { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+.sasm-creds-box span { font-size: 0.6875rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--sa-text-3); }
+.sasm-creds-box strong { font-family: ui-monospace, monospace; font-size: 0.875rem; color: var(--sa-text-1); overflow-wrap: anywhere; }
+.sasm-modal--creds .sasm-modal-actions { justify-content: center; }
+
+/* ── Mobile ── */
+@media (max-width: 600px) {
+  .sasm-head { flex-direction: column; align-items: stretch; }
+  .sasm-head .sasm-btn--primary { width: 100%; justify-content: center; min-height: 46px; }
+  .sasm-search { max-width: none; }
+  .sasm-filters { width: 100%; }
+  .sasm-filter { flex: 1; min-height: 42px; }
+  .sasm-form-grid { grid-template-columns: 1fr; }
+  .sasm-modal { padding: 16px; }
+  .sasm-modal-actions { flex-direction: column-reverse; }
+  .sasm-modal-actions .sasm-btn { width: 100%; justify-content: center; min-height: 46px; }
+  .sasm-pagination { flex-direction: column; align-items: flex-start; }
+}

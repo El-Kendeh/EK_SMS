@@ -23,6 +23,15 @@ function clientIp(req) {
   return (req.socket?.remoteAddress || '—').slice(0, 64);
 }
 
+/* The pruh_core_school table has no approval_status column — status is
+   derived from the flags the approve/reject/request-changes actions set. */
+function deriveApprovalStatus(school) {
+  if (school.is_approved) return 'approved';
+  if (school.changes_requested) return 'changes_requested';
+  if (school.rejection_reason || school.is_active === false) return 'rejected';
+  return 'pending';
+}
+
 function normalizeBrandColorsForDb(raw) {
   if (raw == null || raw === '') return null;
   if (Array.isArray(raw)) return JSON.stringify(raw);
@@ -78,10 +87,12 @@ async function registerSchoolAdmin(req, res) {
     }
 
     // Check for duplicate school email
-    const existingSchool = await School.findOne({ where: { email: email?.toLowerCase() } }, { transaction });
-    if (existingSchool) {
-      await transaction.rollback();
-      return res.status(400).json(errorResponse("School email already registered"));
+    if (email?.trim()) {
+      const existingSchool = await School.findOne({ where: { email: email.toLowerCase() } }, { transaction });
+      if (existingSchool) {
+        await transaction.rollback();
+        return res.status(400).json(errorResponse("School email already registered"));
+      }
     }
 
     // Get schooladmin role
@@ -129,7 +140,6 @@ async function registerSchoolAdmin(req, res) {
       brand_colors: brandColorsText,
       badge_path: schoolBadge,
       is_approved: false,
-      approval_status: 'pending',
       is_active: true,
     }, { transaction });
 
@@ -193,10 +203,10 @@ async function getRegistrationStatus(req, res) {
     return res.json(successResponse({
       school_id: school.id,
       school_name: school.name,
-      status: school.approval_status,
+      status: deriveApprovalStatus(school),
       is_approved: school.is_approved,
       submitted_at: school.created_at,
-      approved_at: school.updated_at,
+      approved_at: school.is_approved ? (school.updated_at || school.created_at) : null,
       rejection_reason: school.rejection_reason,
       admin: admin ? {
         id: admin.id,
@@ -237,11 +247,11 @@ async function checkMySchoolStatus(req, res) {
     return res.json(successResponse({
       school_id: school.id,
       school_name: school.name,
-      status: school.approval_status,
+      status: deriveApprovalStatus(school),
       is_approved: school.is_approved,
       user_is_active: user.is_active,
       submitted_at: school.created_at,
-      approved_at: school.approval_status === 'approved' ? school.updated_at : null,
+      approved_at: school.is_approved ? (school.updated_at || school.created_at) : null,
       rejection_reason: school.rejection_reason,
       can_access_dashboard: school.is_approved && user.is_active,
     }));

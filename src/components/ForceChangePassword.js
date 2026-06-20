@@ -57,13 +57,8 @@ export default function ForceChangePassword({ onNavigate }) {
   const [success, setSuccess] = useState(false);
 
   const getDestination = () => {
-    const isSuper = user.is_superuser || ['superadmin', 'admin', 'superuser'].includes(user.role);
-    if (isSuper) return 'superadmindashboard';
-    if (user.role === 'school_admin') return 'sa-dashboard';
-    if (user.role === 'teacher') return 'teacher-dashboard';
-    if (user.role === 'student') return 'student-dashboard';
-    if (user.role === 'parent') return 'parentdashboard';
-    return 'login';
+    const hasDashboard = user.is_superuser || ['superadmin', 'admin', 'superuser', 'school_admin', 'principal', 'bursar', 'teacher', 'student', 'parent'].includes(user.role);
+    return hasDashboard ? 'superadmindashboard' : 'login';
   };
 
   const handleSubmit = async (e) => {
