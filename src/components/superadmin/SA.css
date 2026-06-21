@@ -399,16 +399,63 @@
   align-items: center;
   gap: 6px;
   font-size: 0.875rem;
+  min-width: 0;       /* allow flex children to shrink + truncate at any width */
+  overflow: hidden;
 }
 
 .sa-bc-parent { color: var(--sa-text-2); }
-.sa-bc-sep    { color: var(--sa-text-3); }
-.sa-bc-current { color: var(--sa-text); font-weight: 600; }
+.sa-bc-sep    { color: var(--sa-text-3); flex-shrink: 0; }
+.sa-bc-current {
+  color: var(--sa-text);
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* School identity in the header (badge + name) — shown for school-scoped roles
+   (school admin, principal, bursar). Mirrors the sidebar brand. */
+.sa-bc-school {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 42vw;
+}
+.sa-bc-badge {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--sa-border);
+  flex-shrink: 0;
+}
+.sa-bc-badge--fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, var(--sa-brand) 0%, var(--sa-accent) 100%);
+  border-color: transparent;
+}
+.sa-bc-school-name {
+  color: var(--sa-text-2);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
 
 .sa-topbar-actions {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;   /* keep action buttons; let the breadcrumb absorb shrink */
 }
 
 .sa-notif-btn {

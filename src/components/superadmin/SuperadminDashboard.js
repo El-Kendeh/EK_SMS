@@ -892,7 +892,16 @@ export default function Dashboard({ onNavigate }) {
             <IcMenu />
           </button>
           <div className="sa-breadcrumb">
-            <span className="sa-bc-parent">Admin</span>
+            {user?.role !== 'superadmin' ? (
+              <span className="sa-bc-school" title={schoolName}>
+                {badgeUrl
+                  ? <img className="sa-bc-badge" src={badgeUrl} alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                  : <span className="sa-bc-badge sa-bc-badge--fallback">{(schoolName || 'S')[0].toUpperCase()}</span>}
+                <span className="sa-bc-school-name">{schoolName}</span>
+              </span>
+            ) : (
+              <span className="sa-bc-parent">Admin</span>
+            )}
             <span className="sa-bc-sep">›</span>
             <span className="sa-bc-current">{getTitle(activePage, selectedSchool)}</span>
           </div>
