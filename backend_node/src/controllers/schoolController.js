@@ -56,8 +56,11 @@ async function getSchoolFromUser(req) {
       where: { user_id: req.user.id },
       include: [{ model: School, as: 'school' }],
     });
-    if (link?.School) {
-      return link.School;
+    // Association is aliased `as: 'school'` (lowercase), so Sequelize populates
+    // link.school — not link.School. Reading the capital-S property left this
+    // branch dead, forcing every lookup onto the JWT school_id fallback below.
+    if (link?.school) {
+      return link.school;
     }
 
     if ((req.schoolId || req.user.school_id)) {
@@ -71,8 +74,8 @@ async function getSchoolFromUser(req) {
       where: { user_id: req.user.id },
       include: [{ model: School, as: 'school' }],
     });
-    if (teacherLink?.School) {
-      return teacherLink.School;
+    if (teacherLink?.school) {
+      return teacherLink.school;
     }
 
     const studentLink = await Student.findOne({
