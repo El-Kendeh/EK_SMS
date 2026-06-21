@@ -1083,20 +1083,117 @@ function Field({ id, label, required, hint, error, children }) {
 }
 
 /* ================================================================
+   Draft auto-save (localStorage) — survives accidental close, refresh,
+   or even a browser restart (sessionStorage would not).
+   ================================================================ */
+const DRAFT_KEY = 'ek_reg_draft';
+const DRAFT_BADGE_KEY = 'ek_reg_badge';
+const DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000; // discard drafts older than 7 days
+/* Never persist secrets to disk — the user re-enters these on return. */
+const DRAFT_OMIT_FIELDS = ['password', 'confirmPassword'];
+
+function clearRegDraft() {
+  try {
+    localStorage.removeItem(DRAFT_KEY);
+    localStorage.removeItem(DRAFT_BADGE_KEY);
+  } catch { /* storage unavailable */ }
+}
+
+function loadRegDraft() {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    const draft = JSON.parse(raw);
+    if (!draft || typeof draft !== 'object' || !draft.form) return null;
+    if (draft.savedAt && Date.now() - draft.savedAt > DRAFT_TTL_MS) {
+      clearRegDraft();
+      return null;
+    }
+    return draft;
+  } catch {
+    return null;
+  }
+}
+
+function saveRegDraft(form, step) {
+  try {
+    const safeForm = { ...form };
+    DRAFT_OMIT_FIELDS.forEach((k) => { delete safeForm[k]; });
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ v: 1, form: safeForm, step, savedAt: Date.now() }));
+  } catch { /* quota / unavailable — ignore */ }
+}
+
+function loadRegBadge() {
+  try { return localStorage.getItem(DRAFT_BADGE_KEY) || ''; } catch { return ''; }
+}
+
+/* Badge persistence is best-effort: a large image may exceed the localStorage
+   quota, in which case the field draft (stored under a separate key) is unaffected. */
+function saveRegBadge(dataUrl) {
+  try {
+    if (dataUrl) localStorage.setItem(DRAFT_BADGE_KEY, dataUrl);
+    else localStorage.removeItem(DRAFT_BADGE_KEY);
+  } catch { /* quota exceeded — skip badge, keep field draft */ }
+}
+
+/* Rebuild a File from a persisted data URL so a restored badge still uploads. */
+function dataUrlToFile(dataUrl, baseName) {
+  try {
+    const [head, b64] = String(dataUrl).split(',');
+    if (!b64) return null;
+    const mime = (head.match(/data:(.*?);base64/) || [])[1] || 'image/png';
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const ext = mime.includes('png') ? 'png'
+      : mime.includes('webp') ? 'webp'
+      : mime.includes('gif') ? 'gif' : 'jpg';
+    return new File([bytes], `${baseName}.${ext}`, { type: mime });
+  } catch {
+    return null;
+  }
+}
+
+/* Hex → rgba string, with a brand-blue fallback for non-hex values. */
+function hexToRgba(hex, alpha) {
+  const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(String(hex).trim());
+  if (!m) return `rgba(27,63,175,${alpha})`;
+  let h = m[1];
+  if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+/* CSS custom properties that drive the printable PDF's accent colour, derived
+   from the school's first brand colour (falls back to the platform blue). */
+function pdfAccentStyle(brandColors) {
+  const first = brandColors && brandColors[0];
+  const accent = first && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(first) ? first : '#1B3FAF';
+  return {
+    '--pdf-accent': accent,
+    '--pdf-accent-soft': hexToRgba(accent, 0.08),
+    '--pdf-accent-mid': hexToRgba(accent, 0.16),
+    '--pdf-accent-line': hexToRgba(accent, 0.38),
+  };
+}
+
+/* ================================================================
    Main Register Component
    ================================================================ */
 function Register({ onNavigate }) {
-  /* ── Restore step + form from sessionStorage on mount ── */
+  /* ── Restore step + form from a saved draft (localStorage) on mount ── */
   const [step, setStep] = useState(() => {
-    try { const s = sessionStorage.getItem('ek_reg_step'); return s ? parseInt(s, 10) : 1; }
-    catch { return 1; }
+    const d = loadRegDraft();
+    return d?.step ? d.step : 1;
   });
   const [form, setForm] = useState(() => {
-    try {
-      const saved = sessionStorage.getItem('ek_reg_form');
-      return saved ? { ...DEFAULT_FORM, ...JSON.parse(saved) } : DEFAULT_FORM;
-    } catch { return DEFAULT_FORM; }
+    const d = loadRegDraft();
+    return d?.form ? { ...DEFAULT_FORM, ...d.form } : DEFAULT_FORM;
   });
+  /* True when this mount restored a previous draft — drives the restore notice. */
+  const [draftRestored, setDraftRestored] = useState(() => !!loadRegDraft());
 
   const [submitted, setSubmitted]       = useState(false);
   const [isLoading, setIsLoading]       = useState(false);
@@ -1104,6 +1201,12 @@ function Register({ onNavigate }) {
   const [error, setError]               = useState('');
   const [showPwd, setShowPwd]           = useState(false);
   const [showConfirm, setShowConfirm]   = useState(false);
+
+  /* School badge — a File can't be serialized, so the draft persists a data URL
+     (badgePreview) and we rebuild the File on submit when one was restored. */
+  const badgeInputRef = useRef(null);
+  const [badgeFile, setBadgeFile]       = useState(null);
+  const [badgePreview, setBadgePreview] = useState(() => loadRegBadge());
 
   /* Inline per-field validation */
   const [fieldErrors, setFieldErrors] = useState({});
@@ -1114,6 +1217,7 @@ function Register({ onNavigate }) {
   const [otpInput, setOtpInput]           = useState('');
   const [otpVerified, setOtpVerified]     = useState(false);
   const [otpError, setOtpError]           = useState('');
+  const [otpNotice, setOtpNotice]         = useState('');
   const [otpLoading, setOtpLoading]       = useState(false);
   const [otpResendTimer, setOtpResendTimer] = useState(0);
   const [otpSkipped, setOtpSkipped]       = useState(false);
@@ -1262,13 +1366,11 @@ function Register({ onNavigate }) {
     else onNavigate && onNavigate('home');
   };
 
-  /* ---- sessionStorage auto-save (form + step) ---- */
+  /* ---- Auto-save draft (form + step) to localStorage, debounced ---- */
   useEffect(() => {
-    try { sessionStorage.setItem('ek_reg_form', JSON.stringify(form)); } catch {}
-  }, [form]);
-  useEffect(() => {
-    try { sessionStorage.setItem('ek_reg_step', String(step)); } catch {}
-  }, [step]);
+    const id = setTimeout(() => saveRegDraft(form, step), 500);
+    return () => clearTimeout(id);
+  }, [form, step]);
 
   /* ---- Fetch reference data on mount ---- */
   useEffect(() => {
@@ -1380,17 +1482,27 @@ function Register({ onNavigate }) {
     setFieldErrors((p) => ({ ...p, [field]: validateFieldInline(field) }));
   };
 
+  /* ---- Build an honest notice from the OTP send/resend response ---- */
+  const otpNoticeFrom = (data) =>
+    data?.devMode
+      ? (data.devOtp
+          ? `Email service isn't configured on the server, so no email was sent. For testing, your code is ${data.devOtp}.`
+          : `Email service isn't configured on the server — the code was not emailed.`)
+      : '';
+
   /* ---- OTP: send initial code to adminEmail ---- */
   const sendOtp = async () => {
     setOtpLoading(true);
     setOtpError('');
+    setOtpNotice('');
     try {
-      await ApiClient.post('/api/send-otp/', {
+      const data = await ApiClient.post('/api/send-otp/', {
         email: form.adminEmail
       });
       // success: true whether newly sent or already sent — show the input
       setOtpSent(true);
       setOtpResendTimer(60);
+      setOtpNotice(otpNoticeFrom(data));
     } catch (err) {
       if (err.status === 429) {
         // CODE ALREADY SENT: Server has an active OTP but cooldown is on.
@@ -1414,13 +1526,15 @@ function Register({ onNavigate }) {
   const resendOtp = async () => {
     setOtpLoading(true);
     setOtpError('');
+    setOtpNotice('');
     setOtpInput('');
     try {
-      await ApiClient.post('/api/resend-otp/', {
+      const data = await ApiClient.post('/api/resend-otp/', {
         email: form.adminEmail
       });
       setOtpSent(true);
       setOtpResendTimer(60);
+      setOtpNotice(otpNoticeFrom(data));
     } catch (err) {
       // If server says cooldown is still active, sync the timer
       if (err.status === 429 && err.data?.retry_after) {
@@ -1449,6 +1563,7 @@ function Register({ onNavigate }) {
       if (!data.success) throw new Error(data.message || 'Invalid or expired code.');
       setOtpVerified(true);
       setOtpError('');
+      setOtpNotice('');
     } catch (err) {
       setOtpError(err.message || 'Verification failed. Check the code and try again.');
     } finally {
@@ -1554,6 +1669,51 @@ function Register({ onNavigate }) {
   const back = () => { setError(''); setStep((s) => Math.max(s - 1, 1)); };
 
   /* ---- Submit ---- */
+  /* ---- School badge: select / validate / clear ---- */
+  const handleBadgeChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const okType = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif'].includes(file.type);
+    if (!okType) { setError('School badge must be a PNG, JPG, WebP, or GIF image.'); return; }
+    if (file.size > 5 * 1024 * 1024) { setError('School badge must be 5 MB or smaller.'); return; }
+    setError('');
+    // Read as a data URL so the badge previews AND persists in the draft.
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result;
+      setBadgeFile(file);
+      setBadgePreview(dataUrl);
+      saveRegBadge(dataUrl);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleBadgeRemove = () => {
+    setBadgeFile(null);
+    setBadgePreview('');
+    saveRegBadge('');
+    if (badgeInputRef.current) badgeInputRef.current.value = '';
+  };
+
+  /* Discard the saved draft and reset the wizard to a clean slate. */
+  const handleStartOver = () => {
+    clearRegDraft();
+    setForm(DEFAULT_FORM);
+    setStep(1);
+    setBadgeFile(null);
+    setBadgePreview('');
+    setDraftRestored(false);
+    setError('');
+    setFieldErrors({});
+    setOtpSent(false);
+    setOtpInput('');
+    setOtpVerified(false);
+    setOtpError('');
+    setOtpNotice('');
+    setOtpSkipped(false);
+    if (badgeInputRef.current) badgeInputRef.current.value = '';
+  };
+
   const handleSubmit = async () => {
     if (!validate()) return;
     setError('');
@@ -1591,12 +1751,29 @@ function Register({ onNavigate }) {
       /* register-school-admin persists every wizard field (motto, website,
          region, academic/grading system…), runs duplicate checks, and sends
          the confirmation email — unlike the legacy /api/register/ endpoint. */
-      const data = await ApiClient.post('/api/registration/register-school-admin', payload);
+      // A school badge is a file, so switch to multipart when one is selected.
+      // The backend reads the same field names from req.body either way;
+      // arrays (brandColors) are JSON-encoded and decoded server-side.
+      // Use the freshly picked File, or rebuild one from a restored badge draft.
+      let badgeToSend = badgeFile;
+      if (!badgeToSend && badgePreview && badgePreview.startsWith('data:')) {
+        badgeToSend = dataUrlToFile(badgePreview, 'school-badge');
+      }
+      let body = payload;
+      if (badgeToSend) {
+        const fd = new FormData();
+        Object.entries(payload).forEach(([k, v]) => {
+          fd.append(k, Array.isArray(v) ? JSON.stringify(v) : (v ?? ''));
+        });
+        fd.append('schoolBadge', badgeToSend);
+        body = fd;
+      }
+      const data = await ApiClient.post('/api/registration/register-school-admin', body);
       if (!data.success) {
         throw new Error(data.message || 'Registration failed. Please try again.');
       }
       setSubmitted(true);
-      try { sessionStorage.removeItem('ek_reg_form'); sessionStorage.removeItem('ek_reg_step'); } catch {}
+      clearRegDraft();
     } catch (err) {
       console.error('Registration submission error:', err);
       // More helpful error message for "Failed to fetch"
@@ -1683,6 +1860,33 @@ function Register({ onNavigate }) {
           })}
         </div>
 
+        {/* Draft restored notice / autosave reassurance */}
+        {!submitted && draftRestored && (
+          <div className="reg-draft-banner" role="status">
+            <span className="reg-draft-banner__text">
+              <InfoIcon /> We saved your progress from last time and filled it back in.
+            </span>
+            <span className="reg-draft-banner__actions">
+              <button type="button" className="reg-draft-banner__btn" onClick={handleStartOver}>
+                Start over
+              </button>
+              <button
+                type="button"
+                className="reg-draft-banner__close"
+                onClick={() => setDraftRestored(false)}
+                aria-label="Dismiss"
+              >
+                &times;
+              </button>
+            </span>
+          </div>
+        )}
+        {!submitted && !draftRestored && isDirty && (
+          <p className="reg-autosave-hint">
+            <CheckIcon /> Your progress saves automatically — you can close this page and finish later.
+          </p>
+        )}
+
         {/* Error banner */}
         {error && (
           <div className="reg-error" role="alert" style={{ marginBottom: '16px' }}>
@@ -1762,6 +1966,20 @@ function Register({ onNavigate }) {
               <BrandColorPicker
                 value={form.brandColors}
                 onChange={(v) => setForm((p) => ({ ...p, brandColors: v }))}
+              />
+            </div>
+
+            {/* School Badge / Logo upload */}
+            <div className="form-field">
+              <label>
+                School Badge / Logo
+                <span className="field-tag">Optional · shown on your dashboard &amp; documents</span>
+              </label>
+              <LogoUpload
+                preview={badgePreview}
+                inputRef={badgeInputRef}
+                onChange={handleBadgeChange}
+                onRemove={handleBadgeRemove}
               />
             </div>
           </div>
@@ -2122,6 +2340,9 @@ function Register({ onNavigate }) {
             {/* OTP sent — show input */}
             {otpSent && !otpVerified && (
               <>
+                {otpNotice && (
+                  <div className="otp-dev-notice" role="status">⚙ {otpNotice}</div>
+                )}
                 <div className="otp-input-wrap">
                   <label className="otp-label" htmlFor="otpInput">Verification Code</label>
                   <input
@@ -2174,16 +2395,40 @@ function Register({ onNavigate }) {
 
         {/* ── STEP 8: Review ── */}
         {step === 8 && (
-          <div>
-            {form.brandColors && form.brandColors.length > 0 && (
-              <style>{`
-                @media print {
-                  .reg-print-brand-text .brand-title { color: ${form.brandColors[0]} !important; }
-                  .review-section-title { color: ${form.brandColors[0]} !important; border-bottom-color: ${form.brandColors[0]} !important; }
-                  .review-section-icon { background: ${form.brandColors[0]} !important; }
-                }
-              `}</style>
-            )}
+          <div style={pdfAccentStyle(form.brandColors)}>
+            {/* Print-only official document — hidden on screen, shown in the PDF */}
+            <div className="reg-print-doc" aria-hidden="true">
+              <div className="reg-print-bar" />
+              <div className="reg-print-letterhead">
+                <div className="reg-print-badge-frame">
+                  {badgePreview
+                    ? <img className="reg-print-badge" src={badgePreview} alt={`${form.institutionName || 'School'} badge`} />
+                    : <span className="reg-print-badge-mono">{(form.institutionName || 'EK').trim().slice(0, 2).toUpperCase()}</span>}
+                </div>
+                <div className="reg-print-identity">
+                  <h1 className="reg-print-school-name">{form.institutionName || 'Your Institution'}</h1>
+                  <p className="reg-print-school-type">{form.institutionType || 'Educational Institution'}</p>
+                  {form.motto ? <p className="reg-print-school-motto">“{form.motto}”</p> : null}
+                </div>
+                <div className="reg-print-docmeta">
+                  <span className="reg-print-kicker">Registration Summary</span>
+                  <span className="reg-print-status">Pending Review</span>
+                  <span className="reg-print-ref">
+                    {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                  </span>
+                </div>
+              </div>
+              {[form.city, form.country, form.email, form.phoneNumber].some(Boolean) && (
+                <p className="reg-print-contactline">
+                  {[
+                    [form.city, form.country].filter(Boolean).join(', '),
+                    form.email,
+                    [form.phoneCode, form.phoneNumber].filter(Boolean).join(' '),
+                  ].filter(Boolean).join('   ·   ')}
+                </p>
+              )}
+            </div>
+
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px', flexWrap: 'wrap', gap: 10 }}>
               <p className="step-intro" style={{ margin: 0 }}>
                 Review your information carefully before submitting. Go back to any step to make changes.
@@ -2198,23 +2443,7 @@ function Register({ onNavigate }) {
               </button>
             </div>
 
-            {/* Print-only official letterhead — hidden on screen */}
-            <div className="reg-print-header">
-              <div className="reg-print-letterhead-top">
-                <div className="reg-print-logo-wrap">
-                  <PruhLogo size={48} showText={false} />
-                  <div className="reg-print-brand-text">
-                    <h2 className="brand-title">PRUH Elkendeh School Management System</h2>
-                    <p className="brand-contact">Email: admin@elkendeh.com &nbsp;&nbsp;|&nbsp;&nbsp; Website: elkendeh.com</p>
-                  </div>
-                </div>
-              </div>
-              <div className="reg-print-title-area">
-                <h1 className="reg-print-title">Registration Summary: {form.institutionName || 'Institution'}</h1>
-                <p className="reg-print-sub">Generated on {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} at {new Date().toLocaleTimeString('en-GB')}</p>
-              </div>
-            </div>
-
+            <div className="reg-print-sections">
             <ReviewSection title="Basic Information" icon={<InfoIcon />}>
               <ReviewRow label="Institution Name"    value={form.institutionName} />
               <ReviewRow label="Type"                value={form.institutionType || '—'} />
@@ -2267,6 +2496,28 @@ function Register({ onNavigate }) {
               <ReviewRow label="Data Protection" value="Agreed" />
               <ReviewRow label="Authorization"   value="Confirmed" />
             </ReviewSection>
+            </div>
+
+            {/* Print-only footer — hidden on screen */}
+            <div className="reg-print-footer" aria-hidden="true">
+              <div className="reg-print-sign-row">
+                <div className="reg-print-sign">
+                  <span className="reg-print-sign-line" />
+                  <span className="reg-print-sign-cap">Applicant Signature</span>
+                </div>
+                <div className="reg-print-sign">
+                  <span className="reg-print-sign-line" />
+                  <span className="reg-print-sign-cap">Date</span>
+                </div>
+              </div>
+              <p className="reg-print-footer-note">
+                This summary reflects the information submitted for institutional registration on EK-SMS.
+                It is confidential and subject to verification and approval.
+              </p>
+              <p className="reg-print-footer-brand">
+                EK-SMS · El-Kendeh School Management System · elkendeh.com · admin@elkendeh.com
+              </p>
+            </div>
           </div>
         )}
 
