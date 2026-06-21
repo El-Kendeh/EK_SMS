@@ -13,12 +13,22 @@ node_modules/
 
 # misc
 .DS_Store
+
+# ── Environment / secrets — ignore ALL .env variants, keep only templates ──
+# Catches .env, .env.render, .env.save, .env.*.local, and any future secret env file.
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
+!.env.example
+!.env.*.example
+!.env.sample
+!.env.template
+# Public CRA build config (REACT_APP_* only, no secrets) — intentionally tracked:
+!.env.frontend
+!.env.production
 DEVELOPER_CREDENTIALS.md
+# Local maintenance / debug scripts that embed credentials or reset passwords
+backend_node/reset_*_passwords.js
+backend_node/debug_*.js
 
 # Claude Code (local AI tooling - never push to repo)
 .claude/

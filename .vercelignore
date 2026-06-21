@@ -7,9 +7,21 @@ eksms/staticfiles
 eksms/db.sqlite3
 eksms/media
 venv
-.env
 *.pyc
 *.pyo
+
+# ── Environment files — never upload to the deploy/build env ───────────
+.env
+.env.*
+
+# ── Backend (deployed separately; keep it out of the frontend bundle) ──
+backend_node
+
+# ── Internal docs that must NOT be served at the public site root ──────
+# (everything under public/ is copied into build/ and served by Vercel)
+public/memory
+SYSTEM_DOCS.md
+public/EK-SMS-Complete-System-Workflow.md
 
 # Reference/design assets — not needed in production bundle
 public/docu
@@ -17,3 +29,7 @@ public/image/adds-on
 public/school-admin-refrence-UI
 public/stich-refrence
 public/student_portal_ui
+public/stitch_ek_sms_finance_user_dashboard
+public/ek_sms_student_dashboard
+public/ek_sms_teacher_dashboard_ui
+public/stitch_ek_sms_parent_dashboard
