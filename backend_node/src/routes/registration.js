@@ -33,9 +33,18 @@ function assertHandler(fn, name) {
   return fn;
 }
 
-// Configure multer for file uploads
+// Configure multer for school badge uploads. Save into EK_SMS/uploads/badges —
+// the SAME root index.js serves at /uploads. (The old `dest: ../../uploads`
+// wrote under backend_node/uploads, which is never served → broken images.)
+const badgeStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, path.join(__dirname, '../../../uploads/badges/')),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname) || '';
+    cb(null, `badge-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
+  },
+});
 const upload = multer({
-  dest: path.join(__dirname, '../../uploads/badges/'),
+  storage: badgeStorage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
   fileFilter: (req, file, cb) => {
     const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
@@ -47,13 +56,26 @@ const upload = multer({
   },
 });
 
+// Wrap multer so a bad/oversized badge returns a clean 400 instead of crashing.
+function badgeUpload(req, res, next) {
+  upload.single('schoolBadge')(req, res, (err) => {
+    if (err) {
+      const msg = err.code === 'LIMIT_FILE_SIZE'
+        ? 'School badge is too large. Maximum size is 5 MB.'
+        : (err.message || 'Badge upload failed. Please use a valid image.');
+      return res.status(400).json({ success: false, message: msg });
+    }
+    next();
+  });
+}
+
 /**
  * POST /api/registration/register-school-admin
  * Register a new school with admin account
  */
 router.post(
   '/register-school-admin',
-  upload.single('schoolBadge'),
+  badgeUpload,
   assertHandler(registrationController.registerSchoolAdmin, 'registerSchoolAdmin')
 );
 

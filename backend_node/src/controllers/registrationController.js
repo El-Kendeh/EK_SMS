@@ -59,7 +59,9 @@ async function registerSchoolAdmin(req, res) {
       estimatedTeachers, gradingSystem, language
     } = req.body;
 
-    const schoolBadge = req.file ? req.file.path : null;
+    // Store a web-servable path (matches /uploads static mount), not the
+    // absolute filesystem path, so the badge renders on the dashboard.
+    const schoolBadge = req.file ? `/uploads/badges/${req.file.filename}` : null;
 
     // Validation
     if (!institutionName?.trim() || !adminUsername?.trim() || !adminEmail?.trim() || !password?.trim()) {

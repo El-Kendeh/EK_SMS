@@ -32,6 +32,9 @@ router.post('/register/', upload.single('schoolBadge'), register);
 // POST /api/send-otp/
 router.post('/send-otp/', sendOtp);
 
+// POST /api/resend-otp/  (frontend "Resend Code" button — same handler + cooldown as send)
+router.post('/resend-otp/', sendOtp);
+
 // POST /api/verify-otp/
 router.post('/verify-otp/', verifyOtp);
 

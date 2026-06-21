@@ -318,6 +318,18 @@ async function sendOtp(req, res) {
   const { email } = req.body;
   if (!email) return res.status(400).json(errorResponse("Email is required"));
 
+  const emailConfigured = !!resend;
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  // Production must never silently skip delivery: if the email service isn't
+  // configured, fail loudly instead of returning a fake "sent" success.
+  if (!emailConfigured && isProduction) {
+    console.error('[OTP] RESEND_API_KEY not configured — cannot send verification email.');
+    return res.status(503).json(errorResponse(
+      "Email verification is temporarily unavailable. Please try again later or contact support.", 503
+    ));
+  }
+
   const code = Math.floor(100000 + Math.random() * 900000).toString();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
@@ -332,8 +344,8 @@ async function sendOtp(req, res) {
 
     await OTP.create({ email, code, expires_at: expiresAt });
 
-    if (resend) {
-      const { data, error } = await resend.emails.send({
+    if (emailConfigured) {
+      const { error } = await resend.emails.send({
         from: process.env.DEFAULT_FROM_EMAIL || 'EK-SMS <noreply@elkendeh.com>',
         to: [email],
         subject: 'Your Verification Code - EK-SMS',
@@ -349,13 +361,19 @@ async function sendOtp(req, res) {
 
       if (error) {
         console.error('Resend Error:', error);
-        return res.status(500).json(errorResponse("Failed to send email"));
+        return res.status(502).json(errorResponse("Failed to send verification email. Please try again.", 502));
       }
-    } else {
-      console.log(`[DEV MODE] OTP for ${email}: ${code}`);
+
+      return res.json(successResponse({ delivered: true }, "OTP sent successfully"));
     }
 
-    return res.json(successResponse({}, "OTP sent successfully"));
+    // Dev only (non-production, email service not configured): be honest —
+    // the code was NOT emailed. Surface it here so local testing can proceed.
+    console.warn(`[OTP][DEV MODE] Email service not configured. OTP for ${email}: ${code}`);
+    return res.json(successResponse(
+      { delivered: false, devMode: true, devOtp: code },
+      "Email service is not configured — code shown for development only; it was NOT emailed."
+    ));
   } catch (err) {
     console.error(err);
     return res.status(500).json(errorResponse("Internal server error"));
