@@ -5,6 +5,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ApiClient from '../../api/client';
 import { BrandColorPicker, LogoUpload } from '../BrandingComponents';
+import { useSchoolBranding } from '../../context/SchoolBrandingContext';
 
 /* ── Shared icon helper ───────────────────────────────────── */
 const Ic = ({ name, size, className = '', style }) => (
@@ -1523,7 +1524,8 @@ export function ReportsPage({ school }) {
          SETTINGS PAGE  — real data
          ============================================================ */
       export function SettingsPage({school: schoolProp, onSchoolUpdate }) {
-  const [school,     setSchool]     = useState(schoolProp || { });
+  const { setBranding, refresh } = useSchoolBranding();
+      const [school,     setSchool]     = useState(schoolProp || { });
       const [years,      setYears]      = useState([]);
       const [loading,    setLoading]    = useState(true);
       const [saving,     setSaving]     = useState(false);
@@ -1571,6 +1573,11 @@ export function ReportsPage({ school }) {
       setMsg({type: 'ok', text: 'Settings saved successfully.' });
       if (onSchoolUpdate) onSchoolUpdate(res.school);
       setSchool(s => ({...s, ...res.school }));
+      // Re-theme the dashboard live (badge / name / brand colours) without a reload.
+      // setBranding applies the new colours instantly; refresh() then re-pulls the
+      // canonical record (normalised badge URL) from /api/school/info/.
+      if (res.school) setBranding(res.school);
+      refresh();
     } catch (e) {
         setMsg({ type: 'error', text: e.message || 'Failed to save settings.' });
     }

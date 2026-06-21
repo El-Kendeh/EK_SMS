@@ -2,6 +2,7 @@ const School = require('../models/School');
 const SchoolAdmin = require('../models/SchoolAdmin');
 const Student = require('../models/Student');
 const Teacher = require('../models/Teacher');
+const Parent = require('../models/Parent');
 const Class = require('../models/Class');
 const Subject = require('../models/Subject');
 const ClassSubject = require('../models/ClassSubject');
@@ -78,8 +79,26 @@ async function getSchoolFromUser(req) {
       where: { user_id: req.user.id },
       include: [{ model: School, as: 'school' }],
     });
-    if (studentLink?.School) {
-      return studentLink.School;
+    if (studentLink?.school || studentLink?.School) {
+      return studentLink.school || studentLink.School;
+    }
+    if (studentLink?.school_id) {
+      const s = await School.findByPk(studentLink.school_id);
+      if (s) return s;
+    }
+
+    // Parents have no direct school link — resolve via a child's school.
+    const parentLink = await Parent.findOne({
+      where: { user_id: req.user.id },
+      include: [{ model: Student, as: 'students', include: [{ model: School, as: 'school' }] }],
+    });
+    const child = parentLink?.students?.[0];
+    if (child?.school || child?.School) {
+      return child.school || child.School;
+    }
+    if (child?.school_id) {
+      const s = await School.findByPk(child.school_id);
+      if (s) return s;
     }
 
     console.warn(`getSchoolFromUser: No school link found for user_id ${req.user.id} and fallback school_id ${(req.schoolId || req.user.school_id)}`);

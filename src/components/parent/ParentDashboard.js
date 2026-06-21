@@ -5,6 +5,7 @@ import { I18nProvider } from '../../context/I18nContext';
 import { ChildProvider, useActiveChild } from '../../context/ChildContext';
 import { ParentNotificationProvider, useParentNotifyCtx } from '../../context/ParentNotificationContext';
 import SchoolContextBanner from '../common/SchoolContextBanner';
+import { useSchoolBranding } from '../../context/SchoolBrandingContext';
 
 import ParentHome from './ParentHome';
 import ParentChildren from './ParentChildren';
@@ -120,6 +121,7 @@ function ParentInner({ onNavigate }) {
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 768);
   const [collapsedGroups, setCollapsedGroups] = useState({});
   const { theme, toggleTheme } = useTheme();
+  const { schoolName, badgeUrl } = useSchoolBranding();
   const { unreadCount } = useParentNotifyCtx();
   const { children = [], activeChild } = useActiveChild();
 
@@ -185,8 +187,11 @@ function ParentInner({ onNavigate }) {
       {/* Sidebar */}
       <aside className={`par-sidebar ${sidebarOpen ? 'par-sidebar--open' : ''}`}>
         <div className="par-sidebar__brand">
-          <span className="par-sidebar__logo">EK-SMS</span>
-          <p className="par-sidebar__tagline">Parent Portal</p>
+          {badgeUrl && <img className="par-sidebar__badge" src={badgeUrl} alt="" />}
+          <div className="par-sidebar__brand-text">
+            <span className="par-sidebar__logo">{schoolName}</span>
+            <p className="par-sidebar__tagline">Parent Portal</p>
+          </div>
         </div>
 
         <nav className="par-sidebar__nav">
@@ -234,7 +239,7 @@ function ParentInner({ onNavigate }) {
             <button className="par-header__menu-btn" onClick={() => setSidebarOpen((p) => !p)}>
               <span className="material-symbols-outlined">{sidebarOpen ? 'menu_open' : 'menu'}</span>
             </button>
-            <h2 className="par-header__title">Parent Portal</h2>
+            <h2 className="par-header__title">{schoolName}</h2>
           </div>
 
           <div className="par-header__center">

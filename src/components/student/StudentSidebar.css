@@ -74,6 +74,20 @@
   font-size: 18px;
   color: #fff;
 }
+.stu-sidebar__badge {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+  background: #fff;
+}
+/* Real school names render mixed-case and may wrap to a second line. */
+.stu-sidebar__brand-title {
+  white-space: normal;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  line-height: 1.3;
+}
 
 /* ── Nav ── */
 .stu-sidebar__nav {

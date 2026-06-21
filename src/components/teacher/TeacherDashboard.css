@@ -101,6 +101,28 @@
 
 .tch-sidebar__brand {
   padding: 28px 24px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.tch-sidebar__badge {
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  object-fit: contain;
+  background: #fff;
+  padding: 3px;
+  flex-shrink: 0;
+}
+.tch-sidebar__brand-text { min-width: 0; }
+.tch-sidebar__brand-text .tch-sidebar__logo {
+  font-size: 15px;
+  line-height: 1.25;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .tch-sidebar__logo {
   display: block;

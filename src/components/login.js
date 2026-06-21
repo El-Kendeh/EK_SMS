@@ -150,6 +150,9 @@ function Login({ onNavigate }) {
       const user = { ...data.user, must_change_password: !!data.must_change_password };
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(user));
+      // Let the SchoolBranding provider (and other listeners) re-init for the
+      // newly logged-in user so the school theme/badge applies immediately.
+      window.dispatchEvent(new Event('ek-sms-auth-changed'));
       const displayName = user.first_name || user.username || identifier.trim();
       setSuccessName(displayName);
       setSuccessRole(user.role);

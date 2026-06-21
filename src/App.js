@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import { ThemeProvider } from './context/ThemeContext';
+import { SchoolBrandingProvider } from './context/SchoolBrandingContext';
 import Login from './components/login';
 import Landing from './components/Landing';
 import Register from './components/Register';
@@ -171,6 +172,7 @@ function App() {
 
   return (
     <ThemeProvider>
+      <SchoolBrandingProvider>
       <div className="App">
         <ImpersonationBanner />
         {(currentPage === 'home' || currentPage === 'landing') && <Landing onNavigate={setCurrentPage} />}
@@ -185,6 +187,7 @@ function App() {
           />
         )}
       </div>
+      </SchoolBrandingProvider>
     </ThemeProvider>
   );
 }

@@ -7,6 +7,7 @@ import { I18nProvider } from '../../context/I18nContext';
 import { useTeacherClasses } from '../../hooks/useTeacherClasses';
 import { useTeacherProfile } from '../../hooks/useTeacherProfile';
 import { useSchoolContext } from '../../hooks/useSchoolContext';
+import { useSchoolBranding } from '../../context/SchoolBrandingContext';
 
 // Existing sections
 import TeacherHome from './TeacherHome';
@@ -176,6 +177,7 @@ function TeacherDashboardInner({ onNavigate }) {
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 768);
   const [collapsedGroups, setCollapsedGroups] = useState({});
   const { theme, toggleTheme } = useTheme();
+  const { schoolName, badgeUrl } = useSchoolBranding();
   const { unreadCount } = useTeacherNotifyCtx();
   const { pendingCounts, selectedClass, currentTerm } = useTeacher();
   const { academicYear, term: schoolTerm } = useSchoolContext();
@@ -293,8 +295,11 @@ function TeacherDashboardInner({ onNavigate }) {
     <div className="tch-shell">
       <aside className={`tch-sidebar ${sidebarOpen ? 'tch-sidebar--open' : ''}`}>
         <div className="tch-sidebar__brand">
-          <span className="tch-sidebar__logo">EK-SMS</span>
-          <p className="tch-sidebar__tagline">Teacher Portal</p>
+          {badgeUrl && <img className="tch-sidebar__badge" src={badgeUrl} alt="" />}
+          <div className="tch-sidebar__brand-text">
+            <span className="tch-sidebar__logo">{schoolName}</span>
+            <p className="tch-sidebar__tagline">Teacher Portal</p>
+          </div>
         </div>
 
         <div className="tch-sidebar__user">
@@ -356,7 +361,7 @@ function TeacherDashboardInner({ onNavigate }) {
             <button className="tch-header__menu-btn" onClick={() => setSidebarOpen(p => !p)}>
               <span className="material-symbols-outlined">{sidebarOpen ? 'menu_open' : 'menu'}</span>
             </button>
-            <h2 className="tch-header__title">EK-SMS</h2>
+            <h2 className="tch-header__title">{schoolName}</h2>
             <span className="tch-header__divider" />
             <p className="tch-header__sub">Welcome, {profile?.fullName || 'Teacher'}</p>
           </div>

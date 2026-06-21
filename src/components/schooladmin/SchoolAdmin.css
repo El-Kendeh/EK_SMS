@@ -155,7 +155,7 @@
 .ska-brand-mark {
   width: 36px;
   height: 36px;
-  background: linear-gradient(135deg, #1B3FAF 0%, #4cd7f6 100%);
+  background: var(--brand-gradient, linear-gradient(135deg, var(--ska-primary-container) 0%, var(--ska-secondary) 100%));
   border-radius: 9px;
   display: flex;
   align-items: center;

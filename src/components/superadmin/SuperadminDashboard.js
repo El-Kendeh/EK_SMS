@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, Suspense, lazy } from 
 import './SA.css';
 import './SuperadminDashboard.css';
 import ApiClient from '../../api/client';
+import { useSchoolBranding } from '../../context/SchoolBrandingContext';
 import { canAccess, ROLE_LABELS } from '../../config/permissions';
 import PruhLogo from '../PruhLogo';
 import SASchoolScope      from './SASchoolScope';
@@ -450,6 +451,9 @@ export default function Dashboard({ onNavigate }) {
   const [profileAvatar,    setProfileAvatar]    = useState(() => {
     try { return JSON.parse(localStorage.getItem('ek-sms-profile') || '{}').avatarSrc || null; } catch { return null; }
   });
+  /* The signed-in user's own school (name + badge) — shown as ownership in the
+     sidebar brand for school-scoped roles (school admin, principal, bursar). */
+  const { schoolName, badgeUrl } = useSchoolBranding();
 
   /* ---- Data ---- */
   const fetchGradeAlerts = useCallback(async () => {
@@ -806,9 +810,20 @@ export default function Dashboard({ onNavigate }) {
       <aside className="sa-sidebar">
         <div className="sa-sidebar-head">
           <div className="sa-brand">
-            <PruhLogo size={38} variant="white" />
+            {user?.role !== 'superadmin' && badgeUrl ? (
+              <img
+                className="sa-brand-badge"
+                src={badgeUrl}
+                alt={`${schoolName} badge`}
+                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+              />
+            ) : (
+              <PruhLogo size={38} variant="white" />
+            )}
             <div>
-              <p className="sa-brand-name">EK-SMS</p>
+              <p className="sa-brand-name">
+                {user?.role !== 'superadmin' ? schoolName : 'EK-SMS'}
+              </p>
               <p className="sa-brand-role">{ROLE_LABELS[user?.role] || 'Super Admin'}</p>
             </div>
           </div>

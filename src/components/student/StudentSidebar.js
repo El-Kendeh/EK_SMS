@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNotifications } from '../../context/NotificationContext';
 import { useLowData } from '../../context/LowDataContext';
 import AccessibilityControls from '../common/AccessibilityControls';
+import { useSchoolBranding } from '../../context/SchoolBrandingContext';
 import './StudentSidebar.css';
 
 const NAV_GROUPS = [
@@ -50,6 +51,7 @@ const NAV_GROUPS = [
 export default function StudentSidebar({ activeSection, navigateTo, isOpen, onToggle, onLogout, msgUnread = 0 }) {
   const { unreadCount } = useNotifications();
   const { lowData, toggleLowData } = useLowData();
+  const { schoolName, badgeUrl } = useSchoolBranding();
   const [collapsedGroups, setCollapsedGroups] = useState({});
 
   const isMobile = window.innerWidth < 768;
@@ -78,11 +80,13 @@ export default function StudentSidebar({ activeSection, navigateTo, isOpen, onTo
 
       <div className="stu-sidebar__brand">
         <div className="stu-sidebar__brand-icon">
-          <span className="material-symbols-outlined">school</span>
+          {badgeUrl
+            ? <img className="stu-sidebar__badge" src={badgeUrl} alt="" />
+            : <span className="material-symbols-outlined">school</span>}
         </div>
         {!collapsed && (
           <div style={{ marginTop: '10px' }}>
-            <div className="stu-sidebar__brand-title">EK-SMS</div>
+            <div className="stu-sidebar__brand-title">{schoolName}</div>
             <div className="stu-sidebar__brand-sub">Student Portal</div>
           </div>
         )}
