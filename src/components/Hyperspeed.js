@@ -594,6 +594,13 @@ const Hyperspeed = ({ effectOptions = DEFAULT_EFFECT_OPTIONS }) => {
       setSize(w, h, updateStyles) { this.composer.setSize(w, h, updateStyles); }
 
       tick() {
+        // Respect prefers-reduced-motion: render a single static frame of the
+        // road instead of running the continuous rAF animation loop (CSS media
+        // queries can't pause a WebGL/requestAnimationFrame loop).
+        const reduceMotion = typeof window !== 'undefined'
+          && typeof window.matchMedia === 'function'
+          && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
         let lastTime = 0;
         const animate = (time) => {
           if (this.disposed) return;
@@ -607,7 +614,7 @@ const Hyperspeed = ({ effectOptions = DEFAULT_EFFECT_OPTIONS }) => {
           }
           this.composer.render(delta);
           this.update(delta);
-          requestAnimationFrame(animate);
+          if (!reduceMotion) requestAnimationFrame(animate);
         };
         requestAnimationFrame(animate);
       }
@@ -624,9 +631,16 @@ const Hyperspeed = ({ effectOptions = DEFAULT_EFFECT_OPTIONS }) => {
           this.container.removeEventListener('touchcancel', this._onTouchEnd);
           this.container.removeEventListener('contextmenu', this._onContextMenu);
         }
-        if (this.renderer) this.renderer.dispose();
         if (this.composer) this.composer.dispose();
         if (this.scene)    this.scene.clear();
+        if (this.renderer) {
+          this.renderer.dispose();
+          // Explicitly release the WebGL context and detach the canvas so a
+          // re-mount doesn't leak contexts or leave dead <canvas> nodes stacked
+          // in the container (browsers cap live WebGL contexts at ~16).
+          this.renderer.forceContextLoss?.();
+          this.renderer.domElement?.remove();
+        }
       }
     }
 

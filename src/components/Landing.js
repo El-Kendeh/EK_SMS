@@ -2165,6 +2165,49 @@ function ContactSection() {
 // ============================================================
 // CTA BANNER
 // ============================================================
+/* Static Hyperspeed config — defined once at module scope so its identity stays
+   stable across renders. An inline object literal here would hand <Hyperspeed> a
+   brand-new effectOptions reference on every CTABanner render (e.g. a language or
+   mobile-menu toggle re-renders the Landing tree), making its useEffect tear down
+   and rebuild the entire Three.js/WebGL app each time — stacking dead <canvas>
+   nodes and exhausting WebGL contexts until the background motion goes blank. A
+   stable reference makes that effect run exactly once. */
+const CTA_HYPERSPEED_OPTIONS = {
+  distortion: 'turbulentDistortion',
+  length: 400,
+  roadWidth: 10,
+  islandWidth: 2,
+  lanesPerRoad: 3,
+  fov: 90,
+  fovSpeedUp: 150,
+  speedUp: 2,
+  carLightsFade: 0.4,
+  totalSideLightSticks: 20,
+  lightPairsPerRoadWay: 40,
+  shoulderLinesWidthPercentage: 0.05,
+  brokenLinesWidthPercentage: 0.1,
+  brokenLinesLengthPercentage: 0.5,
+  lightStickWidth: [0.12, 0.5],
+  lightStickHeight: [1.3, 1.7],
+  movingAwaySpeed: [60, 80],
+  movingCloserSpeed: [-120, -160],
+  carLightsLength: [12, 80],
+  carLightsRadius: [0.05, 0.14],
+  carWidthPercentage: [0.3, 0.5],
+  carShiftX: [-0.8, 0.8],
+  carFloorSeparation: [0, 5],
+  colors: {
+    roadColor: 0x080808,
+    islandColor: 0x0a0a0a,
+    background: 0x000000,
+    shoulderLines: 0x131318,
+    brokenLines: 0x131318,
+    leftCars:  [0x0dccf2, 0x22D3A3, 0xA78BFA],
+    rightCars: [0x03b3c3, 0x0e5ea5, 0x1B3FAF],
+    sticks: 0x0dccf2,
+  },
+};
+
 function CTABanner({ onNavigate }) {
   const { t } = useLang();
   const scrollToContact = () => {
@@ -2175,41 +2218,7 @@ function CTABanner({ onNavigate }) {
     <section className="lp-cta-banner">
       {/* Hyperspeed road animation background */}
       <div className="lp-cta__hyperspeed">
-      <Hyperspeed effectOptions={{
-        distortion: 'turbulentDistortion',
-        length: 400,
-        roadWidth: 10,
-        islandWidth: 2,
-        lanesPerRoad: 3,
-        fov: 90,
-        fovSpeedUp: 150,
-        speedUp: 2,
-        carLightsFade: 0.4,
-        totalSideLightSticks: 20,
-        lightPairsPerRoadWay: 40,
-        shoulderLinesWidthPercentage: 0.05,
-        brokenLinesWidthPercentage: 0.1,
-        brokenLinesLengthPercentage: 0.5,
-        lightStickWidth: [0.12, 0.5],
-        lightStickHeight: [1.3, 1.7],
-        movingAwaySpeed: [60, 80],
-        movingCloserSpeed: [-120, -160],
-        carLightsLength: [12, 80],
-        carLightsRadius: [0.05, 0.14],
-        carWidthPercentage: [0.3, 0.5],
-        carShiftX: [-0.8, 0.8],
-        carFloorSeparation: [0, 5],
-        colors: {
-          roadColor: 0x080808,
-          islandColor: 0x0a0a0a,
-          background: 0x000000,
-          shoulderLines: 0x131318,
-          brokenLines: 0x131318,
-          leftCars:  [0x0dccf2, 0x22D3A3, 0xA78BFA],
-          rightCars: [0x03b3c3, 0x0e5ea5, 0x1B3FAF],
-          sticks: 0x0dccf2,
-        },
-      }} />
+      <Hyperspeed effectOptions={CTA_HYPERSPEED_OPTIONS} />
       </div>
       <div className="lp-cta-banner__glow" aria-hidden="true" />
       <div className="lp-container lp-cta-banner__inner">
