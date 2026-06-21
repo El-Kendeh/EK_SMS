@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import './Register.css';
 import ApiClient from '../api/client';
 import PruhLogo from './PruhLogo';
+import { fetchStates, fetchCities } from '../utils/geoApi';
 
 /* ================================================================
    SVG Icons
@@ -1233,6 +1234,8 @@ function Register({ onNavigate }) {
   const [countries, setCountries]               = useState([]);
   const [regions, setRegions]                   = useState([]);
   const [cities, setCities]                     = useState([]);
+  const [loadingRegions, setLoadingRegions]     = useState(false);
+  const [loadingCities, setLoadingCities]       = useState(false);
   const [academicSystems]                       = useState(DEFAULT_ACADEMIC_SYSTEMS);
   const [gradingSystems]                        = useState(DEFAULT_GRADING_SYSTEMS);
 
@@ -1393,32 +1396,56 @@ function Register({ onNavigate }) {
     fetchRefData();
   }, []);
 
-  /* ---- Fetch regions when country changes ---- */
+  /* ---- Region/state options for the selected country ----
+     Curated backend reference data wins (a superadmin may have entered it); if
+     none, fall back to the public geo API by country name; if that also fails,
+     the field degrades to a free-text input. */
   useEffect(() => {
-    const countryObj = countries.find((c) => c.name === form.country);
-    if (!countryObj) { setRegions([]); setCities([]); return; }
-    const fetchRegions = async () => {
-      try {
-        const res = await ApiClient.get(`/api/regions/?country_id=${countryObj.id}`);
-        if (res.success) setRegions((res.regions || []).filter((r) => r.is_active).map((r) => r.name));
-      } catch (e) { console.error('Failed to fetch regions:', e); }
-    };
-    fetchRegions();
-    setCities([]);
+    const country = form.country;
+    if (!country) { setRegions([]); setCities([]); setLoadingRegions(false); return; }
+    let cancelled = false;
+    const controller = new AbortController();
+    (async () => {
+      setLoadingRegions(true);
+      let names = [];
+      const countryObj = countries.find((c) => c.name === country);
+      if (countryObj) {
+        try {
+          const res = await ApiClient.get(`/api/regions/?country_id=${countryObj.id}`);
+          if (res.success) names = (res.regions || []).filter((r) => r.is_active).map((r) => r.name);
+        } catch (_) { /* fall through to the geo API */ }
+      }
+      if (names.length === 0) names = await fetchStates(country, controller.signal);
+      if (!cancelled) { setRegions(names); setLoadingRegions(false); }
+    })();
+    return () => { cancelled = true; controller.abort(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.country, countries]);
 
-  /* ---- Fetch cities when region changes ---- */
+  /* ---- City/town options for the selected country, narrowed by the chosen
+     region/state when one is picked (cascade). Same backend → geo API →
+     free-text precedence as regions. */
   useEffect(() => {
-    const countryObj = countries.find((c) => c.name === form.country);
-    if (!countryObj) { setCities([]); return; }
-    const fetchCities = async () => {
-      try {
-        const res = await ApiClient.get(`/api/cities/?country_id=${countryObj.id}`);
-        if (res.success) setCities((res.cities || []).filter((c) => c.is_active).map((c) => c.name));
-      } catch (e) { console.error('Failed to fetch cities:', e); }
-    };
-    fetchCities();
-  }, [form.country, countries, form.region]);
+    const country = form.country;
+    if (!country) { setCities([]); setLoadingCities(false); return; }
+    let cancelled = false;
+    const controller = new AbortController();
+    (async () => {
+      setLoadingCities(true);
+      let names = [];
+      const countryObj = countries.find((c) => c.name === country);
+      if (countryObj) {
+        try {
+          const res = await ApiClient.get(`/api/cities/?country_id=${countryObj.id}`);
+          if (res.success) names = (res.cities || []).filter((c) => c.is_active).map((c) => c.name);
+        } catch (_) { /* fall through to the geo API */ }
+      }
+      if (names.length === 0) names = await fetchCities(country, form.region, controller.signal);
+      if (!cancelled) { setCities(names); setLoadingCities(false); }
+    })();
+    return () => { cancelled = true; controller.abort(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.country, form.region, countries]);
 
   /* ---- OTP resend countdown ---- */
   useEffect(() => {
@@ -2000,29 +2027,30 @@ function Register({ onNavigate }) {
               </div>
             </Field>
             <div className="reg-form-grid">
-              <Field id="city" label="City / Town" required error={fieldErrors.city}>
-                {cities.length > 0 ? (
-                  <select id="city" className={`reg-select${fieldErrors.city ? ' has-error' : ''}`}
-                    value={form.city} onChange={set('city')} onBlur={blur('city')}>
-                    <option value="">Select city / town…</option>
-                    {cities.map((c) => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                ) : (
-                  <input id="city" className={`reg-input${fieldErrors.city ? ' has-error' : ''}`} type="text"
-                    placeholder="e.g. Capital City"
-                    value={form.city} onChange={set('city')} onBlur={blur('city')} />
+              <Field id="city" label="City / Town" required error={fieldErrors.city}
+                hint={cities.length > 0 ? 'Pick from the list or type your town' : undefined}>
+                {/* Searchable combobox: shows the selected country's cities as
+                    suggestions but still accepts a town not in the list. */}
+                <input id="city" className={`reg-input${fieldErrors.city ? ' has-error' : ''}`} type="text"
+                  list="reg-city-list" autoComplete="off" aria-busy={loadingCities}
+                  placeholder={loadingCities ? 'Loading cities…' : (cities.length ? 'Select or type your city / town' : 'e.g. Capital City')}
+                  value={form.city} onChange={set('city')} onBlur={blur('city')} />
+                {cities.length > 0 && (
+                  <datalist id="reg-city-list">
+                    {cities.slice(0, 1000).map((c) => <option key={c} value={c} />)}
+                  </datalist>
                 )}
               </Field>
               <Field id="region" label="Region / State">
                 {regions.length > 0 ? (
-                  <select id="region" className="reg-select"
+                  <select id="region" className="reg-select" aria-busy={loadingRegions}
                     value={form.region} onChange={set('region')}>
-                    <option value="">Select region / state…</option>
+                    <option value="">{loadingRegions ? 'Loading…' : 'Select region / state…'}</option>
                     {regions.map((r) => <option key={r} value={r}>{r}</option>)}
                   </select>
                 ) : (
-                  <input id="region" className="reg-input" type="text"
-                    placeholder="e.g. Central Region"
+                  <input id="region" className="reg-input" type="text" aria-busy={loadingRegions}
+                    placeholder={loadingRegions ? 'Loading regions…' : 'e.g. Central Region'}
                     value={form.region} onChange={set('region')} />
                 )}
               </Field>
