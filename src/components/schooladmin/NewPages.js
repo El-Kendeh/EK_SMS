@@ -681,7 +681,12 @@ export function TimetablePage({ school }) {
     if (!classId) { setSlots([]); return; }
     setLoading(true);
     ApiClient.get(`/api/school/timetable/?class_id=${classId}`)
-      .then(d => setSlots(d.slots || []))
+      .then(d => {
+        setSlots(d.slots || []);
+        // Reflect the persisted config so the grid renders the saved shape.
+        if (d.periods_per_day) setPpd(d.periods_per_day);
+        if (Array.isArray(d.break_periods)) setBreakPeriodsStr(d.break_periods.join(','));
+      })
       .catch(() => setSlots([]))
       .finally(() => setLoading(false));
   }, []);
@@ -730,9 +735,9 @@ export function TimetablePage({ school }) {
 
   const handleClear = async () => {
     try {
-      await ApiClient.delete('/api/school/timetable/');
+      await ApiClient.delete(`/api/school/timetable/${selClass ? `?class_id=${selClass}` : ''}`);
       setSlots([]); setGenStats(null);
-      setBanner({ type: 'ok', text: 'Timetable cleared.' });
+      setBanner({ type: 'ok', text: selClass ? 'Class timetable cleared.' : 'All timetables cleared.' });
     } catch (e) { setBanner({ type: 'err', text: 'Failed to clear.' }); }
   };
 

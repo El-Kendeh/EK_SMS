@@ -122,7 +122,10 @@ export const studentApi = {
   },
 
   async getTimetable() {
-    return apiClient.get('/api/student/timetable/');
+    // Backend returns { success, timetable: { Monday:[...], ... } };
+    // the screen consumes the day-keyed map directly.
+    const res = await apiClient.get('/api/student/timetable/');
+    return res?.timetable || {};
   },
 
   async getAssignments() {

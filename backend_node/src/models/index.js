@@ -11,6 +11,7 @@ require('./Class');
 require('./Subject');
 require('./ClassSubject');
 require('./ClassAssistantTeacher');
+require('./TimetableSlot');
 require('./AcademicYear');
 require('./Term');
 require('./Grade');

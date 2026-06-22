@@ -440,40 +440,34 @@ async function getTeacherTimetable(req, res) {
     const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
     if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
 
+    const TimetableSlot = require('../models/TimetableSlot');
     const Class = require('../models/Class');
-    const ClassSubject = require('../models/ClassSubject');
     const Subject = require('../models/Subject');
 
-    const classes = await Class.findAll({
-      where: { class_teacher_id: teacher.id },
-      attributes: ['id', 'name', 'form', 'room', 'start_time', 'end_time'],
-      include: [
-        {
-          model: ClassSubject,
-          as: 'classSubjects',
-          include: [{ model: Subject, as: 'subject', attributes: ['id', 'name', 'code'] }],
-        },
-      ],
+    // The teacher's own teaching slots, drawn from the persisted timetable.
+    const slots = await TimetableSlot.findAll({
+      where: { teacher_id: teacher.id, is_break: false },
+      order: [['day', 'ASC'], ['period', 'ASC']],
     });
 
-    const periods = [];
-    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
-    classes.forEach(cls => {
-      (cls.classSubjects || []).forEach(cs => {
-        days.forEach(day => {
-          periods.push({
-            id: `p-${cls.id}-${cs.subject_id}-${day}`,
-            day,
-            startTime: cls.start_time || '08:00',
-            endTime: cls.end_time || '09:00',
-            subject: cs.subject?.name || 'Unknown',
-            class: cls.name,
-            room: cls.room || 'TBD',
-            type: 'teaching',
-          });
-        });
-      });
-    });
+    const subjectIds = [...new Set(slots.map(s => s.subject_id).filter(Boolean))];
+    const classIds = [...new Set(slots.map(s => s.class_id).filter(Boolean))];
+    const subjects = subjectIds.length ? await Subject.findAll({ where: { id: subjectIds }, attributes: ['id', 'name'] }) : [];
+    const subjectName = Object.fromEntries(subjects.map(s => [String(s.id), s.name]));
+    const classes = classIds.length ? await Class.findAll({ where: { id: classIds }, attributes: ['id', 'name', 'room'] }) : [];
+    const classById = Object.fromEntries(classes.map(c => [String(c.id), c]));
+
+    const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+    const periods = slots.map(s => ({
+      id: `tt-${s.id}`,
+      day: DAYS[s.day] || 'monday',
+      startTime: s.start_time || '08:00',
+      endTime: s.end_time || '09:00',
+      subject: subjectName[String(s.subject_id)] || 'Lesson',
+      class: classById[String(s.class_id)]?.name || '',
+      room: s.room || classById[String(s.class_id)]?.room || 'TBD',
+      type: 'teaching',
+    }));
 
     return res.json(successResponse({
       timetable: {
@@ -484,7 +478,7 @@ async function getTeacherTimetable(req, res) {
     }));
   } catch (err) {
     console.error('getTeacherTimetable Error:', err);
-    return res.json(successResponse({ timetable: null }));
+    return res.json(successResponse({ timetable: { periods: [] } }));
   }
 }
 

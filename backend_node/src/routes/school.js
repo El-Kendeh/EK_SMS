@@ -47,7 +47,7 @@ const {
   // Parent
   createParent,
   // Timetable
-  generateTimetable, deleteTimetable,
+  generateTimetable, deleteTimetable, getSchoolTimetable,
   // Modification requests
   reviewModificationRequest,
 } = require('../controllers/schoolController');
@@ -273,6 +273,7 @@ router.post('/school/finance-users/', applyAuth, createFinanceUser);
 router.put('/school/finance-users/:id/', applyAuth, updateFinanceUser);
 
 // ==================== TIMETABLE ====================
+router.get('/school/timetable/', applyAuth, getSchoolTimetable);
 router.post('/school/timetable/generate/', applyAuth, generateTimetable);
 router.delete('/school/timetable/', applyAuth, deleteTimetable);
 

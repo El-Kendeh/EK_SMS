@@ -2059,40 +2059,144 @@ async function recordClassAttendance(req, res) {
   }
 }
 
-async function generateTimetable(req, res) {
+/* Period N (1-based) → { start, end } as 'HH:MM', 60-min periods from 08:00. */
+function timetablePeriodTime(p) {
+  const startMin = 8 * 60 + (p - 1) * 60;
+  const fmt = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+  return { start: fmt(startMin), end: fmt(startMin + 60) };
+}
+
+/* GET /api/school/timetable/?class_id= — persisted slots for the manager grid. */
+async function getSchoolTimetable(req, res) {
   try {
     const school = await getSchoolFromUser(req);
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
-    const { class_id } = req.body;
-    const classSubjects = await ClassSubject.findAll({
-      where: class_id ? { class_id } : {},
-      include: [
-        { model: Subject, as: 'subject', attributes: ['id', 'name', 'code'] },
-        { model: Teacher, as: 'teacher', attributes: ['id'], include: [{ model: User, as: 'user', attributes: ['first_name', 'last_name'] }] },
-        { model: Class, as: 'class', attributes: ['id', 'name'] },
-      ],
-    });
-    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-    const periods = ['08:00-09:00', '09:00-10:00', '10:30-11:30', '11:30-12:30', '14:00-15:00', '15:00-16:00'];
-    const timetable = days.map(day => ({
-      day,
-      periods: periods.map((period, idx) => {
-        const cs = classSubjects[idx % classSubjects.length];
-        return cs ? { period, subject: cs.subject?.name, teacher: `${cs.teacher?.user?.first_name} ${cs.teacher?.user?.last_name}`.trim(), class: cs.class?.name } : { period, subject: 'Free', teacher: '', class: '' };
-      }),
+    const TimetableSlot = require('../models/TimetableSlot');
+    const where = { school_id: school.id };
+    if (req.query.class_id) where.class_id = req.query.class_id;
+    const slots = await TimetableSlot.findAll({ where, order: [['day', 'ASC'], ['period', 'ASC']] });
+
+    const subjectIds = [...new Set(slots.map(s => s.subject_id).filter(Boolean))];
+    const teacherIds = [...new Set(slots.map(s => s.teacher_id).filter(Boolean))];
+    const subjects = subjectIds.length ? await Subject.findAll({ where: { id: subjectIds }, attributes: ['id', 'name'] }) : [];
+    const subjectName = Object.fromEntries(subjects.map(s => [String(s.id), s.name]));
+    const teachers = teacherIds.length ? await Teacher.findAll({ where: { id: teacherIds }, include: [{ model: User, as: 'user', attributes: ['first_name', 'last_name'] }] }) : [];
+    const teacherName = Object.fromEntries(teachers.map(t => [String(t.id), `${t.user?.first_name || ''} ${t.user?.last_name || ''}`.trim()]));
+
+    const out = slots.map(s => ({
+      id: s.id, class_id: s.class_id, day: s.day, period: s.period,
+      subject_id: s.subject_id,
+      subject: s.is_break ? 'Break' : (subjectName[String(s.subject_id)] || 'Free'),
+      teacher: teacherName[String(s.teacher_id)] || '',
+      room: s.room || '', start_time: s.start_time, end_time: s.end_time, is_break: !!s.is_break,
     }));
-    return res.json(successResponse({ timetable }, 'Timetable generated'));
+    const periodsPerDay = slots.reduce((m, s) => Math.max(m, s.period), 0);
+    const breakPeriods = [...new Set(slots.filter(s => s.is_break).map(s => s.period))].sort((a, b) => a - b);
+    return res.json(successResponse({ slots: out, periods_per_day: periodsPerDay, break_periods: breakPeriods }));
   } catch (err) {
+    console.error('getSchoolTimetable Error:', err);
+    return res.status(500).json(errorResponse('Failed to load timetable'));
+  }
+}
+
+/* POST /api/school/timetable/generate/ — greedy constraint-aware solver that
+   PERSISTS a weekly timetable for every active class in the school. */
+async function generateTimetable(req, res) {
+  const t = await sequelize.transaction();
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) { await t.rollback(); return res.status(401).json(errorResponse('Not authenticated')); }
+    const TimetableSlot = require('../models/TimetableSlot');
+
+    const ppd = Math.min(12, Math.max(1, parseInt(req.body.periods_per_day, 10) || 8));
+    const maxTeacherPerDay = Math.max(1, parseInt(req.body.max_teacher_per_day, 10) || 5);
+    const breakSet = new Set((Array.isArray(req.body.break_periods) ? req.body.break_periods : [])
+      .map(n => parseInt(n, 10)).filter(n => n >= 1 && n <= ppd));
+    const teachingPeriods = [];
+    for (let p = 1; p <= ppd; p++) if (!breakSet.has(p)) teachingPeriods.push(p);
+
+    const classes = await Class.findAll({ where: { school_id: school.id, is_active: true }, attributes: ['id', 'name', 'room'] });
+    const classIds = classes.map(c => c.id);
+    if (classIds.length === 0) { await t.rollback(); return res.status(400).json(errorResponse('No active classes to schedule. Add classes first.')); }
+
+    const classSubjects = await ClassSubject.findAll({ where: { class_id: classIds }, attributes: ['class_id', 'subject_id', 'teacher_id'] });
+    const subjectsByClass = {};
+    classSubjects.forEach(cs => {
+      (subjectsByClass[cs.class_id] = subjectsByClass[cs.class_id] || []).push({ subject_id: cs.subject_id, teacher_id: cs.teacher_id });
+    });
+
+    const days = [0, 1, 2, 3, 4];
+    const teacherBusy = new Map(); // `${day}-${period}` -> Set(teacher_id) (no double-booking across classes)
+    const teacherDay = new Map();  // `${teacher_id}-${day}` -> count (cap at maxTeacherPerDay)
+    const slotsToCreate = [];
+    let placed = 0, repaired = 0, skipped = 0, attempted = 0;
+
+    for (const cls of classes) {
+      // Persist break rows so students/teachers see them too.
+      for (const day of days) {
+        for (const p of breakSet) {
+          const { start, end } = timetablePeriodTime(p);
+          slotsToCreate.push({ school_id: school.id, class_id: cls.id, day, period: p, subject_id: null, teacher_id: null, start_time: start, end_time: end, room: cls.room || null, is_break: true });
+        }
+      }
+      const subs = subjectsByClass[cls.id] || [];
+      if (subs.length === 0) continue;
+      let rot = 0;
+      for (const day of days) {
+        for (const p of teachingPeriods) {
+          attempted++;
+          let chosen = null, hadToSkipFirst = false;
+          for (let k = 0; k < subs.length; k++) {
+            const cand = subs[(rot + k) % subs.length];
+            const tid = cand.teacher_id;
+            if (tid) {
+              const busy = teacherBusy.get(`${day}-${p}`);
+              if (busy && busy.has(tid)) { hadToSkipFirst = true; continue; }
+              if ((teacherDay.get(`${tid}-${day}`) || 0) >= maxTeacherPerDay) { hadToSkipFirst = true; continue; }
+            }
+            chosen = cand; rot = (rot + k + 1) % subs.length; break;
+          }
+          if (!chosen) { skipped++; continue; }
+          if (hadToSkipFirst) repaired++;
+          if (chosen.teacher_id) {
+            if (!teacherBusy.has(`${day}-${p}`)) teacherBusy.set(`${day}-${p}`, new Set());
+            teacherBusy.get(`${day}-${p}`).add(chosen.teacher_id);
+            teacherDay.set(`${chosen.teacher_id}-${day}`, (teacherDay.get(`${chosen.teacher_id}-${day}`) || 0) + 1);
+          }
+          const { start, end } = timetablePeriodTime(p);
+          slotsToCreate.push({ school_id: school.id, class_id: cls.id, day, period: p, subject_id: chosen.subject_id, teacher_id: chosen.teacher_id || null, start_time: start, end_time: end, room: cls.room || null, is_break: false });
+          placed++;
+        }
+      }
+    }
+
+    await TimetableSlot.destroy({ where: { class_id: classIds }, transaction: t });
+    if (slotsToCreate.length) await TimetableSlot.bulkCreate(slotsToCreate, { transaction: t });
+    await t.commit();
+    return res.json(successResponse({
+      total_slots: placed, repaired, skipped, attempted,
+      periods_per_day: ppd, break_periods: [...breakSet].sort((a, b) => a - b),
+    }, `Timetable generated — ${placed} periods placed across ${classes.length} class(es).`));
+  } catch (err) {
+    await t.rollback();
+    console.error('generateTimetable Error:', err);
     return res.status(500).json(errorResponse('Failed to generate timetable'));
   }
 }
 
+/* DELETE /api/school/timetable/?class_id= — clear a class's (or the whole
+   school's) persisted timetable. */
 async function deleteTimetable(req, res) {
   try {
     const school = await getSchoolFromUser(req);
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
-    return res.json(successResponse({ message: 'Timetable cleared' }, 'Timetable deleted'));
+    const TimetableSlot = require('../models/TimetableSlot');
+    const where = { school_id: school.id };
+    if (req.query.class_id) where.class_id = req.query.class_id;
+    const deleted = await TimetableSlot.destroy({ where });
+    return res.json(successResponse({ deleted }, 'Timetable cleared'));
   } catch (err) {
+    console.error('deleteTimetable Error:', err);
     return res.status(500).json(errorResponse('Failed to delete timetable'));
   }
 }
@@ -2334,7 +2438,7 @@ module.exports = {
   getExamOfficers, assignExamOfficer,
   getMessages, sendMessage, recordClassAttendance,
   createParent,
-  generateTimetable, deleteTimetable,
+  generateTimetable, deleteTimetable, getSchoolTimetable,
   reviewModificationRequest,
   getSyllabusTopics, createSyllabusTopic, updateSyllabusTopic, deleteSyllabusTopic, getSyllabusStats,
 };

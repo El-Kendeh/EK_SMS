@@ -122,9 +122,11 @@ export const teacherApi = {
   },
 
   async getTeacherTimetable() {
-    // This endpoint requires classroom_id parameter - return empty for now
-    // The actual timetable data comes from getAssignedClasses
-    return { success: true, timetable: [] };
+    // Reads the teacher's own slots from the persisted school timetable.
+    // The hook expects { periods: [...] }; backend returns { timetable: { periods } }.
+    const res = await fetch(`${API_BASE}/api/teacher/timetable/`, { headers: authHeaders() });
+    const data = await res.json().catch(() => null);
+    return data?.timetable || { periods: [] };
   },
 
   async getNotifications() {
