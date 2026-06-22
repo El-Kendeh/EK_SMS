@@ -641,7 +641,16 @@ export default function Dashboard({ onNavigate }) {
   if (user?.role === 'parent')  return <Suspense fallback={<FullFallback />}><ParentDashboard  onNavigate={onNavigate} /></Suspense>;
   if (user?.role === 'student') return <Suspense fallback={<FullFallback />}><StudentDashboard onNavigate={onNavigate} /></Suspense>;
 
-  const pendingCount      = schools.filter(s => !s.is_approved && !s.changes_requested).length;
+  /* Onboarding badge = schools awaiting a decision. Discriminate REJECTED schools by
+     rejection_reason (set by reject, cleared by approve) — NOT by changes_requested,
+     which reject leaves false, so the old formula counted rejected schools as pending
+     (N rejected + 0 pending showed "N"). Mirrors the Onboarding page (SAApplications),
+     so the badge always equals the Pending list shown on click. One const feeds the
+     sidebar badge, the mobile badge, and the header notification dot. */
+  const pendingCount      = schools.filter(s => !s.is_approved && !s.rejection_reason).length;
+  /* Rejected badge = the archived-rejected count; matches the Rejected page (SARejected)
+     in every state. is_active is false only after an explicit reject (new schools
+     register is_active=true), so pending schools never leak in. */
   const rejectedCount     = schools.filter(s => !s.is_approved && !s.is_active).length;
 
   /* School-scoped pages (finance / approvals / attendance / report cards)

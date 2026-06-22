@@ -190,7 +190,19 @@ async function handleSchoolAction(req, res) {
       });
       return res.json(successResponse({}, "School rejected."));
     } else if (action === 'request_changes') {
+      // This is also the "Reconsider a rejected school" path (handleReconsider →
+      // request_changes). A rejected school carries is_active=false + a stale
+      // rejection_reason; clear them so the school LEAVES the Rejected bucket
+      // (sidebar badge / SARejected / SAApplications all key off is_active +
+      // rejection_reason) and returns to the pending/onboarding queue awaiting the
+      // school's update. For an already-pending school these are no-ops (is_active
+      // already true, rejection_reason already null). The admin User's is_active is
+      // intentionally left unchanged — a pending school's admin stays blocked until
+      // approval, and the login gate now shows the "changes requested" message
+      // (changes_requested takes precedence over rejection_reason there).
       school.changes_requested = true;
+      school.is_active = true;
+      school.rejection_reason = null;
       await school.save({ transaction });
       await transaction.commit();
 
