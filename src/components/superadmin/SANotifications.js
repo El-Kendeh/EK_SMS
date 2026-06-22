@@ -1,11 +1,21 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import ApiClient from '../../api/client';
+
+const humanizeType = (t) => {
+  if (!t) return 'Security event';
+  const s = String(t).replace(/[_-]+/g, ' ').trim();
+  return s.charAt(0).toUpperCase() + s.slice(1);
+};
+/* Audit-log rows worth surfacing as security notifications. */
+const SECURITY_SIGNAL = /(login_fail|fail|threat|suspicious|impersonat|lockdown|password|unauthor|breach|block|reject)/i;
 
 /* ================================================================
-   Derive real notifications from schools + gradeAlerts props.
-   Static placeholders are kept for security/system types that
-   have no dedicated API endpoint yet.
+   Derive notifications entirely from REAL data:
+   schools (props) + grade alerts (props) + security audit log
+   (/api/security-logs/) + the last real backup (/api/admin-settings/).
+   No fabricated entries.
    ================================================================ */
-function buildNotifications(schools, gradeAlerts) {
+function buildNotifications(schools, gradeAlerts, securityLogs = [], backup = null) {
   const notifs = [];
 
   /* Application notifications — one per school, sorted by recency */
@@ -76,16 +86,46 @@ function buildNotifications(schools, gradeAlerts) {
     });
   });
 
-  /* Static system placeholder — no dedicated API endpoint */
-  notifs.push({
-    id: 'sys-backup',
-    type: 'system', severity: 'info',
-    title: 'System Backup Completed',
-    body: 'Daily automated snapshot completed successfully.',
-    school: null,
-    timestamp: new Date(Date.now() - 4 * 3600000).toISOString(),
-    read: true, actionLabel: 'View System Health', actionPage: 'system-health',
-  });
+  /* Security notifications — real rows from /api/security-logs/. We surface
+     genuinely security-relevant events (high/critical severity, or login
+     failures / impersonation / lockdown / password / rejection signals). */
+  const SEC_SEV = { critical: 'critical', high: 'warning', medium: 'warning', low: 'info', info: 'info' };
+  securityLogs
+    .filter(l => {
+      const sev = String(l.severity || '').toLowerCase();
+      return sev === 'high' || sev === 'critical' || SECURITY_SIGNAL.test(`${l.type || ''} ${l.action || ''}`);
+    })
+    .slice(0, 8)
+    .forEach(l => {
+      const sev = String(l.severity || 'info').toLowerCase();
+      notifs.push({
+        id: `sec-${l.id}`,
+        type: 'security',
+        severity: SEC_SEV[sev] || 'info',
+        title: humanizeType(l.type),
+        body: l.action || 'A security-relevant event was recorded in the audit log.',
+        school: null,
+        timestamp: l.ts,
+        read: !(sev === 'high' || sev === 'critical'), // serious ones arrive unread
+        actionLabel: 'View Security Logs',
+        actionPage: 'security-logs',
+      });
+    });
+
+  /* System backup — REAL last backup from admin settings (only if one exists). */
+  if (backup && backup.last_backup_at) {
+    const meta = backup.last_backup_meta || {};
+    const sizeKb = meta.size_bytes ? ` · ${(meta.size_bytes / 1024).toFixed(0)} KB` : '';
+    notifs.push({
+      id: `sys-backup-${backup.last_backup_at}`,
+      type: 'system', severity: 'success',
+      title: 'System backup completed',
+      body: `Snapshot ${meta.filename ? `"${meta.filename}" ` : ''}created successfully${sizeKb}.`,
+      school: null,
+      timestamp: backup.last_backup_at,
+      read: true, actionLabel: 'View Backups', actionPage: 'settings',
+    });
+  }
 
   return notifs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 }
@@ -164,7 +204,28 @@ function formatFull(iso) {
    Main Component
    ================================================================ */
 export default function SANotifications({ onNavigate, onUnreadChange, schools = [], gradeAlerts = [] }) {
-  const derived = useMemo(() => buildNotifications(schools, gradeAlerts), [schools, gradeAlerts]);
+  const [securityLogs, setSecurityLogs] = useState([]);
+  const [backup,       setBackup]       = useState(null);
+
+  /* Pull the real security audit log + last backup so the Security and System
+     categories show actual events instead of a placeholder. Best-effort. */
+  useEffect(() => {
+    let cancelled = false;
+    ApiClient.get('/api/security-logs/?limit=25').then(d => {
+      if (!cancelled && Array.isArray(d?.logs)) setSecurityLogs(d.logs);
+    }).catch(() => {});
+    ApiClient.get('/api/admin-settings/').then(d => {
+      if (!cancelled && d?.success && d.settings) {
+        setBackup({ last_backup_at: d.settings.last_backup_at, last_backup_meta: d.settings.last_backup_meta });
+      }
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  const derived = useMemo(
+    () => buildNotifications(schools, gradeAlerts, securityLogs, backup),
+    [schools, gradeAlerts, securityLogs, backup]
+  );
   const [notifications, setNotifications] = useState([]);
   const [filter, setFilter]               = useState('all');   // all | unread | application | security | grade | system
 
