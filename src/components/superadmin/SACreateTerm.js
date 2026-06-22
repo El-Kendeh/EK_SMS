@@ -92,7 +92,7 @@ const DESC_MAX = 300;
 /* ------------------------------------------------------------------ */
 /*  Component                                                           */
 /* ------------------------------------------------------------------ */
-export default function SACreateTerm({ onSave }) {
+export default function SACreateTerm({ onSave, initialYearId = null }) {
   /* form */
   const [yearId,      setYearId]      = useState('');
   const [termOrder,   setTermOrder]   = useState('');
@@ -147,6 +147,13 @@ export default function SACreateTerm({ onSave }) {
     } catch { /* ignore — existing terms is informational */ }
     finally { setTermsLoading(false); }
   }, [years]);
+
+  /* ---- preselect a year when deep-linked from the Academic Years page ---- */
+  useEffect(() => {
+    if (initialYearId && !yearId && years.some(y => String(y.id) === String(initialYearId))) {
+      handleYearChange(String(initialYearId));
+    }
+  }, [initialYearId, years, yearId, handleYearChange]);
 
   /* ---- derived ---- */
   const duration       = useMemo(() => calcDuration(startDate, endDate), [startDate, endDate]);

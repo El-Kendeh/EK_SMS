@@ -11,6 +11,7 @@ const Attendance = require('../models/Attendance');
 const Notification = require('../models/Notification');
 const SecurityAuditLog = require('../models/SecurityAuditLog');
 const SchoolAdmin = require('../models/SchoolAdmin');
+const { appendGradeEvent } = require('../utils/gradeEvent');
 
 const successResponse = (data = {}, message = 'Success') => ({ success: true, message, ...data });
 const errorResponse = (message) => ({ success: false, message });
@@ -138,26 +139,40 @@ async function reviewGradeChange(req, res) {
       where: { id: ids, school_id: school.id, approval_status: 'pending' },
     });
 
+    const newStatus = action === 'approve' ? 'approved' : 'rejected';
     let count = 0;
-    for (const g of grades) {
-      await g.update({
-        approval_status: action === 'approve' ? 'approved' : 'rejected',
-        approved_by: req.user?.id || null,
-        approved_at: new Date(),
-      });
+    // Approve/reject + their audit events commit atomically: a mid-batch
+    // failure rolls the whole review back rather than leaving a partial state.
+    await sequelize.transaction(async (t) => {
+      for (const g of grades) {
+        await g.update({
+          approval_status: newStatus,
+          approved_by: req.user?.id || null,
+          approved_at: new Date(),
+        }, { transaction: t });
 
-      if (action === 'approve') {
-        await Notification.create({
-          school_id: school.id,
-          title: 'Grade Approved',
-          message: `Grade for ${g.Subject?.name || 'subject'} has been approved by the principal.`,
-          type: 'info',
-          is_read: false,
-        });
+        await appendGradeEvent({
+          grade_id: g.id, school_id: school.id, student_id: g.student_id,
+          subject_id: g.subject_id, term_id: g.term_id,
+          actor_user_id: req.user?.id, actor_name: req.user?.username,
+          event_type: action, field: 'approval_status',
+          old_value: 'pending', new_value: newStatus,
+          approval_status_after: newStatus,
+        }, { transaction: t });
+
+        if (action === 'approve') {
+          await Notification.create({
+            school_id: school.id,
+            title: 'Grade Approved',
+            message: `Grade for ${g.Subject?.name || 'subject'} has been approved by the principal.`,
+            type: 'info',
+            is_read: false,
+          }, { transaction: t });
+        }
+
+        count++;
       }
-
-      count++;
-    }
+    });
 
     return res.json(successResponse({ count }, `${count} grade(s) ${action}d`));
   } catch (err) {
@@ -201,6 +216,7 @@ async function listReportCards(req, res) {
           admission_number: g.student?.admission_number || '',
           subjects: [],
           approved: true,
+          published: true,
         };
       }
       studentMap[sid].subjects.push({
@@ -216,6 +232,9 @@ async function listReportCards(req, res) {
       });
       if (g.approval_status !== 'approved') {
         studentMap[sid].approved = false;
+      }
+      if (!g.is_published) {
+        studentMap[sid].published = false;
       }
     }
 
@@ -245,18 +264,34 @@ async function publishReportCard(req, res) {
     const term = await Term.findByPk(term_id);
 
     const ids = student_ids && student_ids.length ? student_ids : null;
-    const where = { school_id: school.id, term_id, approval_status: 'approved' };
+    // Only approved grades can be published. Already-published rows are skipped.
+    const where = { school_id: school.id, term_id, approval_status: 'approved', is_published: false };
     if (ids) where.student_id = { [Op.in]: ids };
 
-    const grades = await Grade.findAll({ where });
-    const publishedStudents = new Set(grades.map(g => g.student_id));
+    const now = new Date();
+    const publishedStudents = new Set();
 
-    await Notification.create({
-      school_id: school.id,
-      title: 'Report Cards Published',
-      message: `Report cards for ${term?.name || 'the selected term'} have been published and are now available.`,
-      type: 'alert',
-      is_read: false,
+    await sequelize.transaction(async (t) => {
+      const grades = await Grade.findAll({ where, transaction: t });
+      for (const g of grades) {
+        await g.update({ is_published: true, published_at: now, published_by: req.user?.id || null }, { transaction: t });
+        publishedStudents.add(g.student_id);
+        await appendGradeEvent({
+          grade_id: g.id, school_id: school.id, student_id: g.student_id,
+          subject_id: g.subject_id, term_id: g.term_id,
+          actor_user_id: req.user?.id, actor_name: req.user?.username,
+          event_type: 'publish', field: 'is_published',
+          old_value: 'false', new_value: 'true', approval_status_after: 'approved',
+        }, { transaction: t });
+      }
+
+      await Notification.create({
+        school_id: school.id,
+        title: 'Report Cards Published',
+        message: `Report cards for ${term?.name || 'the selected term'} have been published and are now available.`,
+        type: 'alert',
+        is_read: false,
+      }, { transaction: t });
     });
 
     return res.json(successResponse({ published_count: publishedStudents.size }, 'Report cards published'));

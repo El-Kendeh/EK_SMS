@@ -1006,33 +1006,38 @@
 
 .sa-app-card-top {
   display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  margin-bottom: 14px;
-}
-
-.sa-app-avatar {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: 1.125rem;
-  font-weight: 800;
-  color: #fff;
-  flex-shrink: 0;
-  text-transform: uppercase;
-  overflow: hidden;
+  gap: 16px;
+  margin-bottom: 14px;
 }
 
 .sa-app-info { flex: 1; min-width: 0; }
 
 .sa-app-school-name {
-  font-size: 0.9375rem;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--sa-text);
   margin: 0 0 4px;
+}
+
+/* Hover lift + crest ring — gated to true pointer devices so mobile taps
+   never trigger sticky transforms. */
+@media (hover: hover) and (pointer: fine) {
+  .sa-app-card {
+    transition: border-color 0.15s, box-shadow 0.18s;
+  }
+  .sa-app-card:hover {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  }
+  .sa-app-card:hover .sa-crest {
+    box-shadow:
+      0 1px 3px rgba(0, 0, 0, 0.25),
+      0 6px 18px rgba(0, 0, 0, 0.18),
+      inset 0 0 0 2px var(--sa-accent-dim);
+  }
+  [data-theme="light"] .sa-app-card:hover {
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.10);
+  }
 }
 
 .sa-app-location {
@@ -1107,6 +1112,10 @@
 .sa-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .sa-btn:not(:disabled):hover { opacity: 0.88; }
 .sa-btn:not(:disabled):active { transform: scale(0.98); }
+.sa-btn:focus-visible { outline: 2px solid var(--sa-accent); outline-offset: 2px; }
+
+/* Keyboard focus for the clickable overview pending rows (div role="button"). */
+.sa-pending-row:focus-visible { outline: 2px solid var(--sa-accent); outline-offset: 2px; border-radius: 8px; }
 
 .sa-btn svg {
   width: 15px;
@@ -1294,8 +1303,69 @@
 
 /* ---- Detail sections (review page) ---- */
 /* ============================================================
-   APPLICATION REVIEW — Redesigned
+   APPLICATION REVIEW — Redesigned (Crest Ledger)
    ============================================================ */
+
+/* ── Crest: one canonical badge shell for the review hero, branding strip,
+   and dashboard cards. Wraps BOTH the loaded <img> and the monogram fallback
+   so the badge always reads as a minted crest, never a broken image. ── */
+.sa-crest {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #fff;
+  font-weight: 800;
+  border: 1px solid var(--sa-border);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.25),
+    0 6px 18px rgba(0, 0, 0, 0.18),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+/* Children (img OR monogram span) fill the shell so responsive resizing is clean
+   even though SchoolBadge renders them at a fixed inline pixel size. */
+.sa-crest > img,
+.sa-crest > span {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Monogram (no badge OR the image 404'd): the fallback <span> itself carries the
+   translucent diagonal gradient over the wrapper's solid colour, so a broken-image
+   badge degrades to the SAME premium monogram as a never-uploaded one. No
+   color-mix() dependency; identical in dark + light. */
+.sa-crest > span {
+  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.16), rgba(0, 0, 0, 0.24));
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  letter-spacing: -0.01em;
+}
+
+/* Loaded badge: a soft glassy top sheen so logos sit on the surface. */
+.sa-crest--img::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent 38%);
+  pointer-events: none;
+}
+
+/* Size + radius (radius ≈ 20% of size). The branding-strip crest is kept smaller
+   than the hero so the identity header reads as primary. */
+.sa-crest--hero  { width: 88px; height: 88px; border-radius: 18px; }
+.sa-crest--brand { width: 72px; height: 72px; border-radius: 15px; }
+.sa-crest--card  { width: 56px; height: 56px; border-radius: 14px; }
+
+/* Light theme: lower-alpha shadow so the crest never reads as a muddy halo
+   over the low-contrast light background. */
+[data-theme="light"] .sa-crest {
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.10),
+    0 6px 16px rgba(0, 0, 0, 0.08),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.04);
+}
 
 .sa-review-wrap {
   max-width: 900px;
@@ -1310,38 +1380,38 @@
   margin-bottom: 16px;
 }
 
-/* ── School identity header card ── */
+/* ── School identity header → hero band ── */
 .sa-review-id-card {
+  position: relative;
+  overflow: hidden;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 20px;
+  gap: 24px;
   background: var(--sa-card-bg);
   border: 1px solid var(--sa-border);
   border-radius: var(--sa-radius);
-  padding: 20px 24px;
-  margin-bottom: 16px;
+  padding: 24px 28px;
+  margin-bottom: 12px;
+}
+
+/* Brand → accent hairline marks this as the primary card. */
+.sa-review-id-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--sa-brand), var(--sa-accent));
 }
 
 .sa-review-id-left {
   display: flex;
-  align-items: flex-start;
-  gap: 16px;
+  align-items: center;
+  gap: 18px;
   flex: 1;
   min-width: 0;
-}
-
-.sa-review-id-avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.05rem;
-  font-weight: 800;
-  color: #fff;
-  flex-shrink: 0;
 }
 
 .sa-review-id-info {
@@ -1358,8 +1428,9 @@
 }
 
 .sa-review-id-name {
-  font-size: 1.0625rem;
+  font-size: 1.375rem;
   font-weight: 800;
+  letter-spacing: -0.01em;
   color: var(--sa-text);
   margin: 0;
   white-space: nowrap;
@@ -1408,7 +1479,7 @@
 .sa-review-id-risk {
   flex-shrink: 0;
   text-align: right;
-  padding-left: 20px;
+  padding-left: 24px;
   border-left: 1px solid var(--sa-border);
 }
 
@@ -1448,15 +1519,19 @@
 .sa-review-section-head {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px 16px;
+  gap: 10px;
+  padding: 14px 18px;
   border-bottom: 1px solid var(--sa-border);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-weight: 700;
   color: var(--sa-text);
 }
 
 .sa-review-section-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--sa-accent-dim);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1471,7 +1546,7 @@
 }
 
 .sa-review-section-body {
-  padding: 12px 16px;
+  padding: 6px 18px 12px;
 }
 
 /* ── Field rows ── */
@@ -1480,7 +1555,7 @@
   justify-content: space-between;
   align-items: flex-start;
   gap: 12px;
-  padding: 7px 0;
+  padding: 9px 0;
   border-bottom: 1px solid var(--sa-border);
 }
 
@@ -1496,7 +1571,7 @@
 .sa-review-field-val {
   font-size: 0.8125rem;
   color: var(--sa-text);
-  font-weight: 500;
+  font-weight: 600;
   text-align: right;
   word-break: break-word;
 }
@@ -1504,6 +1579,81 @@
 .sa-review-field-val--green  { color: var(--sa-green); }
 .sa-review-field-val--red    { color: var(--sa-red); }
 .sa-review-field-val--amber  { color: var(--sa-amber); }
+
+/* ── Faint sub-label that breaks long field lists into groups ── */
+.sa-review-sublabel {
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sa-text-2);
+  padding: 12px 0 4px;
+}
+
+/* ── Branding strip (full-width badge + brand colours) ── */
+.sa-review-brand-strip {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: var(--sa-card-bg);
+  border: 1px solid var(--sa-border);
+  border-radius: var(--sa-radius);
+  padding: 20px 24px;
+  margin-bottom: 12px;
+}
+
+.sa-review-brand-info { flex: 1; min-width: 0; }
+
+.sa-review-brand-title {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--sa-text);
+  margin: 0 0 4px;
+}
+
+.sa-review-brand-status {
+  font-size: 0.8125rem;
+  color: var(--sa-text-2);
+  margin: 0;
+}
+
+.sa-review-brand-colors { margin-top: 14px; }
+
+.sa-review-brand-swatches {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.sa-review-brand-swatch {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--sa-border);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.10);
+}
+
+.sa-review-brand-hexes {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.sa-review-brand-hex {
+  width: 36px;
+  font-size: 0.625rem;
+  color: var(--sa-text-2);
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.sa-review-brand-raw {
+  font-size: 0.75rem;
+  color: var(--sa-text-2);
+  margin: 12px 0 0;
+}
 
 /* ── Mobile risk card (hidden on desktop) ── */
 .sa-review-risk-mobile { display: none; }
@@ -1514,6 +1664,7 @@
   bottom: 0;
   background: var(--sa-sidebar-bg);
   border-top: 1px solid var(--sa-border);
+  box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.18);
   padding: 14px 20px;
   display: flex;
   gap: 10px;
@@ -1521,6 +1672,10 @@
   justify-content: flex-end;
   flex-wrap: wrap;
   margin: 16px -24px -24px;
+}
+
+[data-theme="light"] .sa-review-actions {
+  box-shadow: 0 -6px 16px rgba(0, 0, 0, 0.06);
 }
 
 /* ---- Risk score (used in mobile fallback) ---- */
@@ -1599,6 +1754,56 @@
   .sa-overview-grid  { grid-template-columns: 1fr; }
 }
 
+/* ── Responsive: crest sizing + stacked/centered branding ──
+   Placed AFTER the base .sa-crest / .sa-review-* rules so these overrides win
+   by source order (media queries add no specificity). ── */
+@media (max-width: 600px) {
+  .sa-review-id-card { padding: 22px 18px; }
+
+  .sa-review-id-left {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .sa-review-id-title-row,
+  .sa-review-id-chips { justify-content: center; }
+
+  .sa-crest--hero  { width: 76px; height: 76px; border-radius: 16px; }
+  .sa-crest--brand { width: 64px; height: 64px; border-radius: 13px; }
+
+  .sa-review-brand-strip {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 14px;
+  }
+
+  .sa-review-brand-swatches,
+  .sa-review-brand-hexes { justify-content: center; }
+
+  /* Touch targets ≥ 44px for every tappable control on these screens. */
+  .sa-review-actions .sa-btn,
+  .sa-review-nav .sa-btn,
+  .sa-app-card .sa-btn { min-height: 44px; }
+}
+
+@media (max-width: 400px) {
+  .sa-review-id-name { font-size: 1.125rem; white-space: normal; }
+  .sa-crest--hero  { width: 64px; height: 64px; border-radius: 13px; }
+  .sa-crest--brand { width: 56px; height: 56px; border-radius: 12px; }
+}
+
+@media (max-width: 360px) {
+  .sa-review-id-card { padding: 18px 14px; }
+  .sa-review-brand-strip { padding: 16px; }
+  .sa-review-brand-swatch,
+  .sa-review-brand-hex { width: 32px; }
+  .sa-crest--card { width: 48px; height: 48px; border-radius: 12px; }
+}
+
 @media (max-width: 768px) {
   .sa-sidebar {
     position: fixed;
@@ -1637,22 +1842,9 @@
     gap: 14px;
   }
 
-  .sa-review-id-risk {
-    border-left: none;
-    border-top: 1px solid var(--sa-border);
-    padding-left: 0;
-    padding-top: 14px;
-    text-align: left;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    width: 100%;
-  }
-
-  .sa-review-id-risk > div {
-    /* progress bar */
-    width: 100px;
-  }
+  /* On mobile the dedicated risk card below is the single risk presentation,
+     so hide the desktop hero trust block to avoid showing the score twice. */
+  .sa-review-id-risk { display: none; }
 
   .sa-review-risk-mobile { display: block; }
 

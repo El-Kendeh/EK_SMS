@@ -1,5 +1,30 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import ApiClient from '../../api/client';
+import SECURITY_CONFIG from '../../config/security';
+
+/* ---- School badge (image with graceful monogram fallback) ---- */
+const getBadgeUrl = (badgePath) => {
+  if (!badgePath) return '';
+  if (badgePath.startsWith('http') || badgePath.startsWith('data:')) return badgePath;
+  const baseUrl = SECURITY_CONFIG.API_URL.replace(/\/$/, '');
+  return `${baseUrl}${badgePath.startsWith('/') ? '' : '/'}${badgePath}`;
+};
+
+function SchoolBadge({ badge, name, size = 36 }) {
+  const [failed, setFailed] = useState(false);
+  const initials = name?.trim().charAt(0).toUpperCase() || 'S';
+  if (!badge || failed) {
+    return <span style={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.4, fontWeight: 800 }}>{initials}</span>;
+  }
+  return (
+    <img
+      src={getBadgeUrl(badge)}
+      alt={`${name} logo`}
+      style={{ width: size, height: size, objectFit: 'cover', borderRadius: 'inherit' }}
+      onError={() => setFailed(true)}
+    />
+  );
+}
 
 /* ---- Icons ---- */
 const IcSchool   = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18M5 21V10.6M19 21V10.6M12 3L2 8h20L12 3z"/><rect x="9" y="13" width="6" height="8" rx="1"/></svg>;
@@ -308,11 +333,16 @@ export default function SAOverview({ schools, user, onNavigate, onReview }) {
                   return (
                     <div
                       key={s.id}
+                      className="sa-pending-row"
+                      role={onReview ? 'button' : undefined}
+                      tabIndex={onReview ? 0 : undefined}
+                      aria-label={onReview ? `Review application from ${s.name}` : undefined}
                       onClick={() => onReview && onReview(s)}
+                      onKeyDown={(e) => { if (onReview && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onReview(s); } }}
                       style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0', borderBottom: '1px solid var(--sa-border)', cursor: onReview ? 'pointer' : 'default' }}
                     >
-                      <div className="sa-app-avatar" style={{ background: color, width: 36, height: 36, fontSize: '0.875rem', borderRadius: 8 }}>
-                        {s.name[0].toUpperCase()}
+                      <div className={`sa-crest ${s.badge ? 'sa-crest--img' : ''}`} style={{ backgroundColor: color, width: 36, height: 36, borderRadius: 9 }}>
+                        <SchoolBadge badge={s.badge} name={s.name} size={36} />
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <p style={{ margin: 0, fontSize: '0.875rem', fontWeight: 600, color: 'var(--sa-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</p>

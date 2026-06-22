@@ -135,6 +135,12 @@ const IcUser = () => (
     <circle cx="12" cy="7" r="4" />
   </svg>
 );
+const IcCopy = () => (
+  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="9" y="9" width="13" height="13" rx="2" />
+    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+  </svg>
+);
 
 /* ============================================================
    Drawer tabs definition
@@ -199,6 +205,7 @@ export default function SAStudents() {
   const [saveErr,     setSaveErr]     = useState('');
   const [saving,      setSaving]      = useState(false);
   const [savedCreds,  setSavedCreds]  = useState(null);
+  const [copiedCreds, setCopiedCreds] = useState(false);
 
   /* Delete confirm */
   const [deleteId,    setDeleteId]    = useState(null);
@@ -323,6 +330,24 @@ export default function SAStudents() {
     setDrawerOpen(false);
     setEditId(null);
     setSavedCreds(null);
+    setCopiedCreds(false);
+  }
+
+  /* ---- Copy student + parent credentials ---- */
+  function copyAllCreds() {
+    if (!savedCreds) return;
+    const lines = ['Student Login', `Username: ${savedCreds.username || '—'}`, `Password: ${savedCreds.password || '—'}`];
+    (savedCreds.parents || []).forEach((p, i) => {
+      const heading = `Parent ${savedCreds.parents.length > 1 ? i + 1 : ''} — ${p.relationship || 'Guardian'}`.replace(/\s+—/, ' —').trim();
+      lines.push('', heading, `Username: ${p.username || '—'}`, `Password: ${p.password || '—'}`);
+    });
+    try {
+      navigator.clipboard.writeText(lines.join('\n'));
+      setCopiedCreds(true);
+      setTimeout(() => setCopiedCreds(false), 2000);
+    } catch {
+      setActionErr('Copy failed — please record the credentials manually.');
+    }
   }
 
   /* ---- Field change helpers ---- */
@@ -976,10 +1001,16 @@ export default function SAStudents() {
             <p className="sast-hint" style={{ marginTop: 12 }}>
               These credentials will not be shown again. Make sure to record them before closing.
             </p>
-            <div style={{ paddingTop: 16 }}>
+            <div style={{ paddingTop: 16, display: 'flex', gap: 10 }}>
+              <button
+                className="sard-btn sard-btn--ghost"
+                onClick={copyAllCreds}
+              >
+                {copiedCreds ? <><IcCheck /> Copied</> : <><IcCopy /> Copy credentials</>}
+              </button>
               <button
                 className="sard-btn sard-btn--primary"
-                onClick={() => { setDrawerOpen(false); setSavedCreds(null); }}
+                onClick={() => { setDrawerOpen(false); setSavedCreds(null); setCopiedCreds(false); }}
               >
                 Done
               </button>

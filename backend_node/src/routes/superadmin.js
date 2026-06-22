@@ -11,6 +11,7 @@ const {
   getAllSchools,
   handleSchoolAction,
   impersonate,
+  endImpersonation,
   getGradeAlerts,
   getSystemHealth,
   resetUserPassword,
@@ -96,6 +97,9 @@ router.use(schoolScope);
 /* ── Shared routes (accessible by multiple roles) ── */
 router.get('/dashboard/', getDashboard);
 router.get('/grade-alerts/', getGradeAlerts);
+/* Shared (NOT superadmin-gated): the caller holds a school_admin impersonation
+   token here, so closing the session can't sit behind requireRole(['superadmin']). */
+router.post('/impersonate/end/', endImpersonation);
 router.get('/profile/', data.getProfile);
 router.patch('/profile/', data.patchProfile);
 router.post('/change-password/', data.postChangePassword);
@@ -131,6 +135,12 @@ sa.put('/academic-years/:id/', data.updateAcademicYear);
 sa.delete('/academic-years/:id/', data.deleteAcademicYear);
 sa.patch('/academic-years/:id/toggle/', data.toggleAcademicYearStatus);
 sa.post('/academic-years/:id/rollout/', data.rolloutAcademicYear);
+sa.get('/academic-years/:id/rollout-preview/', data.getRolloutPreview);
+sa.post('/academic-years/:id/restore/', data.restoreAcademicYear);
+sa.post('/academic-years/:id/clone/', data.cloneAcademicYear);
+sa.post('/academic-years/:id/close/', data.closeAcademicYear);
+sa.get('/academic-years/:id/adoption/', data.getAcademicYearAdoption);
+sa.get('/academic-years/:id/history/', data.getAcademicYearHistory);
 sa.get('/system-terms/', data.getSystemTerms);
 sa.post('/system-terms/', data.createSystemTerm);
 sa.put('/system-terms/:id/', data.updateSystemTerm);

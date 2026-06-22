@@ -1,4 +1,31 @@
 import React, { useState, useMemo } from 'react';
+import SECURITY_CONFIG from '../../config/security';
+
+/* ---- School badge (real logo with letter fallback) ---- */
+const getBadgeUrl = (badgePath) => {
+  if (!badgePath) return '';
+  if (badgePath.startsWith('http') || badgePath.startsWith('data:')) return badgePath;
+  const baseUrl = SECURITY_CONFIG.API_URL.replace(/\/$/, '');
+  return `${baseUrl}${badgePath.startsWith('/') ? '' : '/'}${badgePath}`;
+};
+
+function SchoolBadge({ badge, name, size = 48 }) {
+  const [failed, setFailed] = useState(false);
+  const initials = name?.trim().charAt(0).toUpperCase() || 'S';
+
+  if (!badge || failed) {
+    return <span style={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.4, fontWeight: 800 }}>{initials}</span>;
+  }
+
+  return (
+    <img
+      src={getBadgeUrl(badge)}
+      alt={`${name} logo`}
+      style={{ width: size, height: size, objectFit: 'cover', borderRadius: 'inherit' }}
+      onError={() => setFailed(true)}
+    />
+  );
+}
 
 /* ---- Icons ---- */
 const IcSearch  = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>;
@@ -146,14 +173,14 @@ export default function SARejected({ schools, onAudit, onReconsider }) {
             return (
               <div key={school.id} className="sa-app-card sa-app-card--high">
                 <div className="sa-app-card-top">
-                  <div className="sa-app-avatar" style={{ background: color }}>
-                    {school.name[0].toUpperCase()}
+                  <div className={`sa-crest sa-crest--card ${school.badge ? 'sa-crest--img' : ''}`} style={{ backgroundColor: color }}>
+                    <SchoolBadge badge={school.badge} name={school.name} size={56} />
                   </div>
                   <div className="sa-app-info">
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
                       <p className="sa-app-school-name">{school.name}</p>
                       <span className="sa-badge sa-badge--rejected">Rejected</span>
-                      <span className="sa-badge" style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--sa-text-3)', border: '1px solid var(--sa-border)', fontSize: '0.6rem', letterSpacing: '0.06em' }}>
+                      <span className="sa-badge" style={{ background: 'var(--sa-ghost-bg)', color: 'var(--sa-text-3)', border: '1px solid var(--sa-border)', fontSize: '0.6rem', letterSpacing: '0.06em' }}>
                         Archived
                       </span>
                     </div>

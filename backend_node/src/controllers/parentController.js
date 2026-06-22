@@ -163,7 +163,8 @@ async function getChildReportCards(req, res) {
       return res.status(403).json(errorResponse('Access denied'));
     }
 
-    const where = { student_id: childId, approval_status: 'approved' };
+    // Published report cards only (publication implies approval; edits un-publish).
+    const where = { student_id: childId, is_published: true };
     if (term_id) where.term_id = term_id;
 
     const grades = await Grade.findAll({
@@ -224,7 +225,7 @@ async function downloadChildReportCard(req, res) {
       return res.status(403).json(errorResponse('Access denied'));
     }
 
-    const where = { student_id: childId, approval_status: 'approved' };
+    const where = { student_id: childId, is_published: true };
     if (term_id) where.term_id = term_id;
 
     const grades = await Grade.findAll({

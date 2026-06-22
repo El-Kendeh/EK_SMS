@@ -1,6 +1,15 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import ApiClient from '../../api/client';
 import SECURITY_CONFIG from '../../config/security';
+
+/* Compact number formatter for live platform counters (1,245 / 12.5k). */
+function fmtNum(n) {
+  if (n === null || n === undefined) return '—';
+  if (n >= 1000) return (n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, '') + 'k';
+  return String(n);
+}
+const TIMEZONES = ['Africa/Freetown', 'Africa/Lagos', 'Africa/Accra', 'Africa/Nairobi', 'UTC', 'Europe/London'];
+const LANGUAGES = ['English', 'French', 'Krio', 'Portuguese', 'Arabic'];
 
 /* ================================================================
    Constants
@@ -39,7 +48,6 @@ const IcBack      = ({size=20}) => <svg viewBox="0 0 24 24" width={size} height=
 const IcInfo      = ({size=18}) => <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>;
 const IcAlert     = ({size=20}) => <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>;
 const IcShieldLock = ({size=36}) => <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><rect x="9" y="11" width="6" height="6" rx="1"/><path d="M10 11V9a2 2 0 014 0v2"/></svg>;
-const IcArrow     = () => <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>;
 const IcPhone     = ({size=18}) => <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18" strokeWidth="2.5"/></svg>;
 const IcSuccess   = () => <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>;
 
@@ -148,16 +156,35 @@ function Toggle({ checked, onChange, ariaLabel }) {
 /* ================================================================
    Password Change sub-view
    ================================================================ */
-function PasswordView({ onBack, onNext }) {
+function PasswordView({ onBack, onSubmit }) {
+  const [current,      setCurrent]      = useState('');
   const [pw,           setPw]           = useState('');
   const [pwConfirm,    setPwConfirm]    = useState('');
+  const [showCurrent,  setShowCurrent]  = useState(false);
   const [showPw,       setShowPw]       = useState(false);
   const [showConfirm,  setShowConfirm]  = useState(false);
+  const [saving,       setSaving]       = useState(false);
+  const [err,          setErr]          = useState('');
 
   const strength     = calcStrength(pw);
   const strengthLvl  = strength.filter(Boolean).length;
   const mismatch     = pwConfirm.length > 0 && pw !== pwConfirm;
-  const canProceed   = strengthLvl >= 3 && pw === pwConfirm && pwConfirm.length > 0;
+  const sameAsOld    = current.length > 0 && pw.length > 0 && current === pw;
+  const canProceed   = current.length > 0 && strengthLvl >= 3 && pw === pwConfirm && pwConfirm.length > 0 && !sameAsOld;
+
+  const handleSave = async () => {
+    if (!canProceed || saving) return;
+    setErr('');
+    setSaving(true);
+    try {
+      await onSubmit(current, pw);
+      /* parent navigates away + toasts on success */
+    } catch (e) {
+      setErr(e?.message || 'Could not change password.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -166,17 +193,11 @@ function PasswordView({ onBack, onNext }) {
         <button className="sa-role-icon-btn" onClick={onBack} aria-label="Back"><IcBack /></button>
         <div>
           <p style={{ fontSize: '1.0625rem', fontWeight: 700, color: 'var(--sa-text)' }}>Change Password</p>
-          <p style={{ fontSize: '0.6875rem', color: 'var(--sa-text-2)' }}>Admin Setup — Step 1 of 2</p>
+          <p style={{ fontSize: '0.6875rem', color: 'var(--sa-text-2)' }}>Update your Super Admin sign-in password</p>
         </div>
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '24px 20px' }}>
-        {/* Step bar */}
-        <div className="sa-step-bar" style={{ marginBottom: 24 }}>
-          <div className="sa-step-seg sa-step-seg--done" />
-          <div className="sa-step-seg sa-step-seg--pending" />
-        </div>
-
         {/* Hero */}
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 48, height: 48, borderRadius: '50%', background: 'var(--sa-accent-dim)', color: 'var(--sa-accent)', marginBottom: 12 }}>
@@ -184,6 +205,18 @@ function PasswordView({ onBack, onNext }) {
           </div>
           <h2 style={{ fontSize: '1.375rem', fontWeight: 800, color: 'var(--sa-text)', marginBottom: 6 }}>Secure Your Account</h2>
           <p style={{ fontSize: '0.8125rem', color: 'var(--sa-text-2)', lineHeight: 1.5 }}>Create a robust password to protect sensitive student and faculty data.</p>
+        </div>
+
+        {/* Current password */}
+        <div style={{ marginBottom: 16 }}>
+          <label className="sa-field-label" htmlFor="pw-current">Current Password</label>
+          <div className="sa-input-wrap">
+            <input id="pw-current" type={showCurrent ? 'text' : 'password'} className="sa-text-input"
+              placeholder="Enter current password" value={current} onChange={e => setCurrent(e.target.value)} autoComplete="current-password" />
+            <button type="button" className="sa-input-toggle-btn" onClick={() => setShowCurrent(!showCurrent)} aria-label={showCurrent ? 'Hide password' : 'Show password'}>
+              {showCurrent ? <IcEyeOff /> : <IcEye />}
+            </button>
+          </div>
         </div>
 
         {/* New password */}
@@ -196,6 +229,7 @@ function PasswordView({ onBack, onNext }) {
               {showPw ? <IcEyeOff /> : <IcEye />}
             </button>
           </div>
+          {sameAsOld && <p style={{ fontSize: '0.6875rem', color: 'var(--sa-red)', marginTop: 4 }}>New password must differ from the current one</p>}
         </div>
 
         {/* Strength meter */}
@@ -245,6 +279,13 @@ function PasswordView({ onBack, onNext }) {
           {mismatch && <p style={{ fontSize: '0.6875rem', color: 'var(--sa-red)', marginTop: 4 }}>Passwords do not match</p>}
         </div>
 
+        {/* Error */}
+        {err && (
+          <div className="sa-info-callout" style={{ marginBottom: 14, borderColor: 'var(--sa-red)', color: 'var(--sa-red)' }}>
+            <IcAlert size={16} /><p style={{ color: 'var(--sa-red)' }}>{err}</p>
+          </div>
+        )}
+
         {/* Security tip */}
         <div className="sa-sec-tip">
           <IcShield />
@@ -258,11 +299,11 @@ function PasswordView({ onBack, onNext }) {
       {/* Footer */}
       <div style={{ padding: '14px 20px', borderTop: '1px solid var(--sa-border)', background: 'var(--sa-sidebar-bg)' }}>
         <button
-          style={{ width: '100%', height: 44, background: canProceed ? 'var(--sa-accent)' : 'var(--sa-card-bg2)', color: canProceed ? '#fff' : 'var(--sa-text-3)', border: 'none', borderRadius: 'var(--sa-radius-sm)', fontSize: '0.9375rem', fontWeight: 700, cursor: canProceed ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: canProceed ? '0 2px 10px rgba(14,165,233,0.3)' : 'none', transition: 'background 0.15s' }}
-          disabled={!canProceed}
-          onClick={onNext}
+          style={{ width: '100%', height: 44, background: canProceed && !saving ? 'var(--sa-accent)' : 'var(--sa-card-bg2)', color: canProceed && !saving ? '#fff' : 'var(--sa-text-3)', border: 'none', borderRadius: 'var(--sa-radius-sm)', fontSize: '0.9375rem', fontWeight: 700, cursor: canProceed && !saving ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: canProceed && !saving ? '0 2px 10px rgba(14,165,233,0.3)' : 'none', transition: 'background 0.15s' }}
+          disabled={!canProceed || saving}
+          onClick={handleSave}
         >
-          Next: Setup 2FA <IcArrow />
+          {saving ? 'Updating…' : <>Update Password <IcCheck size={18} /></>}
         </button>
       </div>
     </div>
@@ -505,11 +546,44 @@ export default function SASettings() {
   // eslint-disable-next-line no-unused-vars
   const [lockdownState, setLockdownState] = useState(null);
 
+  /* Live platform stats (realtime counters) */
+  const [liveStats, setLiveStats] = useState({ schools: null, users: null, activeUsers: null, grades: null, pendingReviews: null });
+  const [statsAt,   setStatsAt]   = useState(null);
+  const [statsLoading, setStatsLoading] = useState(false);
+
+  /* General / platform settings (persisted via admin-settings JSON) */
+  const [platform, setPlatform] = useState({
+    platform_name: '', support_email: '', timezone: 'Africa/Freetown',
+    default_language: 'English', maintenance_mode: false, allow_registrations: true,
+  });
+  const [savingGeneral, setSavingGeneral] = useState(false);
+
   const [toast, setToast] = useState(null);
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 4000);
   };
+
+  /* Pull live platform counters from real endpoints */
+  const fetchLiveStats = useCallback(async () => {
+    setStatsLoading(true);
+    try {
+      const [g, u] = await Promise.all([
+        ApiClient.get('/api/grade-stats/').catch(() => null),
+        ApiClient.get('/api/users/').catch(() => null),
+      ]);
+      const users = Array.isArray(u?.users) ? u.users : null;
+      setLiveStats({
+        schools:        g?.schools ?? null,
+        grades:         g?.total_grades ?? null,
+        pendingReviews: g?.pending_reviews ?? null,
+        users:          users ? users.length : null,
+        activeUsers:    users ? users.filter(x => x.status === 'active').length : null,
+      });
+      setStatsAt(Date.now());
+    } catch { /* leave previous values */ }
+    finally { setStatsLoading(false); }
+  }, []);
 
   /* Load admin settings on mount */
   useEffect(() => {
@@ -527,6 +601,14 @@ export default function SASettings() {
         if (s.last_backup_meta) setLastBackupMeta(s.last_backup_meta);
         if (s.branding_logo?.url)    setBrandingLogoUrl(s.branding_logo.url);
         if (s.branding_favicon?.url) setBrandingFaviconUrl(s.branding_favicon.url);
+        setPlatform(p => ({
+          platform_name:      s.platform_name      ?? p.platform_name,
+          support_email:      s.support_email      ?? p.support_email,
+          timezone:           s.timezone           ?? p.timezone,
+          default_language:   s.default_language   ?? p.default_language,
+          maintenance_mode:   s.maintenance_mode   ?? p.maintenance_mode,
+          allow_registrations: s.allow_registrations ?? p.allow_registrations,
+        }));
       }
     }).catch(() => {});
     ApiClient.get('/api/sa/lockdown/').then(d => {
@@ -538,6 +620,13 @@ export default function SASettings() {
       }
     }).catch(() => {});
   }, []);
+
+  /* Realtime counters: fetch on mount + refresh every 45s */
+  useEffect(() => {
+    fetchLiveStats();
+    const t = setInterval(fetchLiveStats, 45000);
+    return () => clearInterval(t);
+  }, [fetchLiveStats]);
 
   const saveSecuritySettings = async () => {
     try {
@@ -556,12 +645,43 @@ export default function SASettings() {
     }
   };
 
+  const saveGeneral = async () => {
+    setSavingGeneral(true);
+    try {
+      const res = await ApiClient.patch('/api/admin-settings/', { settings: { ...platform } });
+      if (res?.success === false) showToast(res.message || 'Failed to save general settings', 'error');
+      else showToast('General settings saved');
+    } catch (err) {
+      showToast(err?.message || 'Failed to save general settings', 'error');
+    } finally {
+      setSavingGeneral(false);
+    }
+  };
+
+  const saveAuditPolicy = async () => {
+    try {
+      const res = await ApiClient.patch('/api/admin-settings/', { settings: { auditRetention } });
+      if (res?.success === false) showToast(res.message || 'Failed to save audit policy', 'error');
+      else showToast('Audit retention policy saved');
+    } catch (err) {
+      showToast(err?.message || 'Failed to save audit policy', 'error');
+    }
+  };
+
+  /* Real password change → POST /api/change-password/ (throws so the sub-view shows the error) */
+  const changePassword = async (current, newPw) => {
+    const res = await ApiClient.post('/api/change-password/', { current_password: current, new_password: newPw });
+    if (res?.success === false) throw new Error(res.message || 'Could not change password');
+    showToast('Password updated successfully');
+    setSecView('main');
+  };
+
   /* ---- Sub-views ---- */
   if (secView === 'password') {
-    return <PasswordView onBack={() => setSecView('main')} onNext={() => setSecView('2fa')} />;
+    return <PasswordView onBack={() => setSecView('main')} onSubmit={changePassword} />;
   }
   if (secView === '2fa') {
-    return <TwoFAView onBack={() => setSecView('password')} onComplete={() => { setSecView('main'); showToast('2FA setup complete'); }} totpKey={totpKey} recoveryCodes={recoveryCodes} />;
+    return <TwoFAView onBack={() => setSecView('main')} onComplete={() => { setSecView('main'); showToast('2FA setup complete'); }} totpKey={totpKey} recoveryCodes={recoveryCodes} />;
   }
 
   /* ---- Main view ---- */
@@ -574,6 +694,20 @@ export default function SASettings() {
           <h1 className="sa-page-title">System Settings</h1>
           <p className="sa-page-sub">Configure platform security, compliance, and operations</p>
         </div>
+        <button
+          onClick={fetchLiveStats}
+          disabled={statsLoading}
+          title="Refresh live platform stats"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '7px 12px', borderRadius: 'var(--sa-radius-sm)', border: '1px solid var(--sa-border)', background: 'var(--sa-card-bg)', color: 'var(--sa-text-2)', fontSize: '0.75rem', fontWeight: 600, cursor: statsLoading ? 'wait' : 'pointer' }}
+        >
+          <span style={{ width: 7, height: 7, borderRadius: '50%', background: statsLoading ? 'var(--sa-amber)' : 'var(--sa-green)', boxShadow: statsLoading ? 'none' : '0 0 6px var(--sa-green)' }} />
+          {statsLoading
+            ? 'Refreshing…'
+            : statsAt
+              ? `Live · updated ${new Date(statsAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`
+              : 'Live data'}
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+        </button>
       </div>
 
       {/* Tabs */}
@@ -693,7 +827,7 @@ export default function SASettings() {
                           </span>
                           <h3 className="sa-lcc-status-heading">SYSTEM ACTIVE</h3>
                         </div>
-                        <p className="sa-lcc-status-sub">Operations normal. Monitoring 42 school nodes. Ready for transition.</p>
+                        <p className="sa-lcc-status-sub">Operations normal. Monitoring {liveStats.schools ?? '—'} school node{liveStats.schools === 1 ? '' : 's'}. Ready for transition.</p>
                         <div className="sa-lcc-net-bar"><div className="sa-lcc-net-bar-fill" /></div>
                       </div>
                     </div>
@@ -701,8 +835,8 @@ export default function SASettings() {
                     {/* Impact grid */}
                     <div className="sa-lcc-impact-grid">
                       {[
-                        { icon: <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18M5 21V10.6M19 21V10.6M12 3L2 8h20L12 3z"/><rect x="9" y="13" width="6" height="8" rx="1"/></svg>, value: '42',    label: 'Affected Schools' },
-                        { icon: <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>, value: '12.5k', label: 'Active Users' },
+                        { icon: <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18M5 21V10.6M19 21V10.6M12 3L2 8h20L12 3z"/><rect x="9" y="13" width="6" height="8" rx="1"/></svg>, value: fmtNum(liveStats.schools),     label: 'Affected Schools' },
+                        { icon: <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>, value: fmtNum(liveStats.activeUsers ?? liveStats.users), label: 'Active Users' },
                       ].map(stat => (
                         <div key={stat.label} className="sa-lcc-impact-item">
                           <span className="sa-lcc-impact-icon">{stat.icon}</span>
@@ -801,6 +935,11 @@ export default function SASettings() {
                   <IcInfo />
                   <p>Logs older than this period will be automatically archived to cold storage.</p>
                 </div>
+                <div style={{ marginTop: 14, display: 'flex', justifyContent: 'flex-end' }}>
+                  <button className="sa-btn sa-btn--primary sa-btn--sm" onClick={saveAuditPolicy}>
+                    Apply Audit Policy
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -813,10 +952,10 @@ export default function SASettings() {
                 </p>
                 <p className="sa-field-label" style={{ marginBottom: 10 }}>Select Datasets</p>
                 {[
-                  { id: 'schools', label: 'Schools Master List', sub: '1,245 school records'     },
-                  { id: 'grades',  label: 'Grade Records',       sub: 'All terms — anonymisable' },
+                  { id: 'schools', label: 'Schools Master List', sub: liveStats.schools != null ? `${liveStats.schools.toLocaleString()} school record${liveStats.schools === 1 ? '' : 's'}` : 'School registry' },
+                  { id: 'grades',  label: 'Grade Records',       sub: liveStats.grades != null ? `${liveStats.grades.toLocaleString()} grades — anonymisable` : 'All terms — anonymisable' },
                   { id: 'audit',   label: 'Audit Logs',          sub: 'Immutable event trail'    },
-                  { id: 'users',   label: 'User Accounts',       sub: 'Admins & staff only'      },
+                  { id: 'users',   label: 'User Accounts',       sub: liveStats.users != null ? `${liveStats.users.toLocaleString()} accounts` : 'Admins & staff only' },
                 ].map(ds => (
                   <label key={ds.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', marginBottom: 8, background: 'var(--sa-card-bg2)', border: `1px solid ${exportSets[ds.id] ? 'var(--sa-accent)' : 'var(--sa-border)'}`, borderRadius: 'var(--sa-radius-sm)', cursor: 'pointer', transition: 'border-color 0.15s' }}>
                     <input type="checkbox" checked={exportSets[ds.id]}
@@ -861,6 +1000,69 @@ export default function SASettings() {
 
         {/* ===== GENERAL ===== */}
         {activeTab === 'general' && (
+          <>
+          <div className="sa-settings-section">
+            <h2 className="sa-settings-section-title">Platform Configuration</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
+              <div>
+                <label className="sa-field-label" htmlFor="pf-name">Platform Name</label>
+                <input id="pf-name" className="sa-text-input" placeholder="EK-SMS" value={platform.platform_name}
+                  onChange={e => setPlatform(p => ({ ...p, platform_name: e.target.value }))} />
+              </div>
+              <div>
+                <label className="sa-field-label" htmlFor="pf-email">Support Email</label>
+                <input id="pf-email" type="email" className="sa-text-input" placeholder="support@elkendeh.com" value={platform.support_email}
+                  onChange={e => setPlatform(p => ({ ...p, support_email: e.target.value }))} />
+              </div>
+              <div>
+                <label className="sa-field-label" htmlFor="pf-tz">Default Timezone</label>
+                <div className="sa-select-wrap">
+                  <select id="pf-tz" className="sa-select" value={platform.timezone} onChange={e => setPlatform(p => ({ ...p, timezone: e.target.value }))}>
+                    {TIMEZONES.map(tz => <option key={tz} value={tz}>{tz}</option>)}
+                  </select>
+                  <span className="sa-select-chevron"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="6 9 12 15 18 9"/></svg></span>
+                </div>
+              </div>
+              <div>
+                <label className="sa-field-label" htmlFor="pf-lang">Default Language</label>
+                <div className="sa-select-wrap">
+                  <select id="pf-lang" className="sa-select" value={platform.default_language} onChange={e => setPlatform(p => ({ ...p, default_language: e.target.value }))}>
+                    {LANGUAGES.map(l => <option key={l} value={l}>{l}</option>)}
+                  </select>
+                  <span className="sa-select-chevron"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="6 9 12 15 18 9"/></svg></span>
+                </div>
+              </div>
+            </div>
+
+            <div className="sa-toggle-item" style={{ marginTop: 16 }}>
+              <div className="sa-toggle-item-left">
+                <div className="sa-toggle-item-icon"><IcGlobe /></div>
+                <div>
+                  <p className="sa-toggle-item-title">Allow New School Registrations</p>
+                  <p className="sa-toggle-item-sub">When off, the public registration form is closed.</p>
+                </div>
+              </div>
+              <Toggle checked={platform.allow_registrations} onChange={() => setPlatform(p => ({ ...p, allow_registrations: !p.allow_registrations }))} ariaLabel="Toggle new school registrations" />
+            </div>
+
+            <div className="sa-toggle-item">
+              <div className="sa-toggle-item-left">
+                <div className="sa-toggle-item-icon"><IcAlert /></div>
+                <div>
+                  <p className="sa-toggle-item-title">Maintenance Mode</p>
+                  <p className="sa-toggle-item-sub">Show a maintenance banner and pause non-admin access.</p>
+                </div>
+              </div>
+              <Toggle checked={platform.maintenance_mode} onChange={() => setPlatform(p => ({ ...p, maintenance_mode: !p.maintenance_mode }))} ariaLabel="Toggle maintenance mode" />
+            </div>
+
+            <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
+              <button className="sa-btn sa-btn--primary sa-btn--sm" disabled={savingGeneral} onClick={saveGeneral}>
+                {savingGeneral ? 'Saving…' : 'Save General Settings'}
+              </button>
+            </div>
+          </div>
+
           <div className="sa-settings-section">
             <h2 className="sa-settings-section-title">Branding</h2>
             <div className="sa-upload-grid">
@@ -886,6 +1088,7 @@ export default function SASettings() {
               />
             </div>
           </div>
+          </>
         )}
 
         {/* ===== BACKUPS ===== */}

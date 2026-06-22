@@ -7,6 +7,7 @@ import Landing from './components/Landing';
 import Register from './components/Register';
 import SuperadminDashboard from './components/superadmin/SuperadminDashboard';
 import ForceChangePassword from './components/ForceChangePassword';
+import ApiClient from './api/client';
 
 const PAGE_TO_PATH = {
   home: '/',
@@ -32,7 +33,11 @@ function ImpersonationBanner() {
   let info = {};
   try { info = JSON.parse(raw); } catch { return null; }
 
-  const handleReturn = () => {
+  const handleReturn = async () => {
+    // Close the audited impersonation session server-side while we still hold the
+    // impersonation token (ApiClient reads it from localStorage). Best-effort — the
+    // UI restore proceeds regardless of network outcome.
+    try { await ApiClient.post('/api/impersonate/end/', {}); } catch { /* ignore */ }
     const prevToken = sessionStorage.getItem('ek-sms-prev-token');
     const prevUser  = sessionStorage.getItem('ek-sms-prev-user');
     sessionStorage.removeItem('ek-sms-impersonating');

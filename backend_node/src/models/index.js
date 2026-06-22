@@ -14,6 +14,7 @@ require('./ClassAssistantTeacher');
 require('./AcademicYear');
 require('./Term');
 require('./Grade');
+require('./GradeEvent');
 require('./Attendance');
 require('./GradingScheme');
 require('./Room');

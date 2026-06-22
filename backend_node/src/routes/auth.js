@@ -2,13 +2,19 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 
 const { login, logout, register, sendOtp, verifyOtp } = require('../controllers/authController');
 
-// Multer config for school badge uploads
+// Multer config for school badge uploads.
+// Save into EK_SMS/uploads/badges — the SAME root index.js serves at /uploads
+// (path.join(__dirname,'../../uploads')). The old cwd-relative `'uploads/badges/'`
+// wrote under backend_node/uploads, which is never served → broken badge images.
+const badgeDir = path.join(__dirname, '../../../uploads/badges/');
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads/badges/');
+    try { fs.mkdirSync(badgeDir, { recursive: true }); } catch { /* already exists */ }
+    cb(null, badgeDir);
   },
   filename: (req, file, cb) => {
     cb(null, `${Date.now()}-${file.originalname}`);

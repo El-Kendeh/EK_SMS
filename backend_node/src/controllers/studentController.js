@@ -969,7 +969,9 @@ async function getReportCards(req, res) {
     if (!student) return res.status(404).json(errorResponse('Student not found'));
 
     const grades = await Grade.findAll({
-      where: { student_id: student.id, approval_status: 'approved' },
+      // Report cards become visible only once the principal PUBLISHES them
+      // (publication implies prior approval; an edit un-publishes the grade).
+      where: { student_id: student.id, is_published: true },
       include: [
         { model: Subject, as: 'subject', attributes: ['id', 'name', 'code'] },
         { model: Term, as: 'term', attributes: ['id', 'name'] },
@@ -1015,7 +1017,7 @@ async function downloadReportCard(req, res) {
     if (!student) return res.status(404).json(errorResponse('Student not found'));
 
     const { term_id } = req.params;
-    const where = { student_id: student.id, approval_status: 'approved' };
+    const where = { student_id: student.id, is_published: true };
     if (term_id) where.term_id = term_id;
 
     const grades = await Grade.findAll({

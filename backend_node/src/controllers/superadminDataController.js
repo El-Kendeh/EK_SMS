@@ -742,18 +742,110 @@ async function getSaExport(req, res) {
 }
 
 /* ---------- System Academic Years CRUD ---------- */
+
+const sequelize = require('../config/db');
+const AcademicYear = require('../models/AcademicYear');
+const Term = require('../models/Term');
+
+/**
+ * Validate name + date fields for create/update.
+ * excludeId: the row's own id when updating (null for create).
+ */
+async function validateYearPayload({ name, start_date, end_date }, { excludeId } = {}) {
+  const fieldErrors = {};
+
+  // name
+  if (!name || !String(name).trim()) {
+    fieldErrors.name = 'Name is required.';
+  } else if (String(name).trim().length > 100) {
+    fieldErrors.name = 'Name must be 100 characters or fewer.';
+  } else {
+    // duplicate check (case-insensitive, non-soft-deleted, excluding self)
+    const dupWhere = {
+      [Op.and]: [
+        sequelize.where(sequelize.fn('LOWER', sequelize.col('name')), String(name).trim().toLowerCase()),
+        { deleted_at: null },
+      ],
+    };
+    if (excludeId) dupWhere[Op.and].push({ id: { [Op.ne]: excludeId } });
+    const dup = await SystemAcademicYear.findOne({ where: dupWhere });
+    if (dup) fieldErrors.name = 'An academic year with this name already exists.';
+  }
+
+  // dates: both or neither
+  const hasStart = start_date != null && start_date !== '';
+  const hasEnd = end_date != null && end_date !== '';
+  if (hasStart && !hasEnd) {
+    fieldErrors.end_date = 'Set both start and end dates, or neither.';
+  } else if (!hasStart && hasEnd) {
+    fieldErrors.start_date = 'Set both start and end dates, or neither.';
+  } else if (hasStart && hasEnd) {
+    if (new Date(end_date) <= new Date(start_date)) {
+      fieldErrors.end_date = 'End date must be after the start date.';
+    } else {
+      // overlap check
+      const overlapWhere = {
+        [Op.and]: [
+          { deleted_at: null },
+          { start_date: { [Op.lt]: end_date } },
+          { end_date: { [Op.gt]: start_date } },
+        ],
+      };
+      if (excludeId) overlapWhere[Op.and].push({ id: { [Op.ne]: excludeId } });
+      const overlap = await SystemAcademicYear.findOne({ where: overlapWhere });
+      if (overlap) fieldErrors._form = 'These dates overlap an existing academic year.';
+    }
+  }
+
+  return { ok: Object.keys(fieldErrors).length === 0, fieldErrors };
+}
+
 async function getAcademicYears(req, res) {
   try {
-    const rows = await SystemAcademicYear.findAll({ order: [['created_at', 'DESC']] });
+    const includeArchived = req.query.include_archived === '1';
+    const where = includeArchived ? {} : { deleted_at: null };
+
+    const rows = await SystemAcademicYear.findAll({ where, order: [['created_at', 'DESC']] });
+    if (!rows.length) return res.json(successResponse({ years: [] }));
+
+    const yearIds = rows.map(r => r.id);
+
+    // batch term counts
+    const countRows = await SystemTerm.findAll({
+      attributes: [
+        'system_academic_year_id',
+        [sequelize.fn('COUNT', sequelize.col('id')), 'cnt'],
+      ],
+      where: { system_academic_year_id: yearIds },
+      group: ['system_academic_year_id'],
+      raw: true,
+    });
+    const countMap = {};
+    for (const c of countRows) countMap[String(c.system_academic_year_id)] = Number(c.cnt);
+
+    // batch active term names
+    const activeTerms = await SystemTerm.findAll({
+      where: { system_academic_year_id: yearIds, is_active: true },
+      attributes: ['system_academic_year_id', 'name'],
+      raw: true,
+    });
+    const activeMap = {};
+    for (const t of activeTerms) activeMap[String(t.system_academic_year_id)] = t.name;
+
     const years = rows.map(r => ({
       id: r.id,
       name: r.name,
       start_date: r.start_date,
       end_date: r.end_date,
       is_active: Boolean(r.is_active),
+      status: r.status,
+      deleted_at: r.deleted_at || null,
+      term_count: countMap[String(r.id)] || 0,
+      active_term_name: activeMap[String(r.id)] || null,
       created_at: r.created_at,
       updated_at: r.updated_at,
     }));
+
     return res.json(successResponse({ years }));
   } catch (err) {
     console.error(err);
@@ -764,18 +856,26 @@ async function getAcademicYears(req, res) {
 async function createAcademicYear(req, res) {
   try {
     const { name, start_date, end_date } = req.body;
-    if (!name) return res.status(400).json(errorResponse('Name is required'));
+    const { ok, fieldErrors } = await validateYearPayload(
+      { name, start_date, end_date },
+      { excludeId: null },
+    );
+    if (!ok) {
+      return res.status(400).json({ success: false, message: 'Please fix the highlighted fields.', fieldErrors });
+    }
     const row = await SystemAcademicYear.create({
-      name: String(name).slice(0, 100),
+      name: String(name).trim().slice(0, 100),
       start_date: start_date || null,
       end_date: end_date || null,
+      status: 'draft',
+      is_active: false,
     });
     await appendSecurityAuditLog({
       type: 'config_change',
       severity: 'medium',
       actor: req.user.username,
       ip: clientIp(req),
-      action: `Created academic year: ${name}`,
+      action: `Created academic year: ${row.name}`,
       metadata: { id: row.id, model: 'SystemAcademicYear' },
     });
     return res.json(successResponse({ id: row.id }, 'Academic year created'));
@@ -788,14 +888,47 @@ async function createAcademicYear(req, res) {
 async function updateAcademicYear(req, res) {
   try {
     const { id } = req.params;
-    const { name, start_date, end_date } = req.body;
     const row = await SystemAcademicYear.findByPk(id);
     if (!row) return res.status(404).json(errorResponse('Not found', 404));
-    if (name !== undefined) row.name = String(name).slice(0, 100);
-    if (start_date !== undefined) row.start_date = start_date || null;
-    if (end_date !== undefined) row.end_date = end_date || null;
+
+    const incomingName = req.body.name !== undefined ? req.body.name : row.name;
+    const incomingStart = req.body.start_date !== undefined ? req.body.start_date : row.start_date;
+    const incomingEnd = req.body.end_date !== undefined ? req.body.end_date : row.end_date;
+
+    const { ok, fieldErrors } = await validateYearPayload(
+      { name: incomingName, start_date: incomingStart, end_date: incomingEnd },
+      { excludeId: id },
+    );
+    if (!ok) {
+      return res.status(400).json({ success: false, message: 'Please fix the highlighted fields.', fieldErrors });
+    }
+
+    // Guard: warn if changing dates of the currently-active year without force
+    const datesChanging =
+      String(incomingStart || '') !== String(row.start_date || '') ||
+      String(incomingEnd || '') !== String(row.end_date || '');
+    if (row.is_active && datesChanging && req.body.force !== true) {
+      return res.status(409).json({
+        success: false,
+        message: 'You are changing the dates of the active year. This re-bases the calendar for every school.',
+        requiresForce: true,
+      });
+    }
+
+    row.name = String(incomingName).trim().slice(0, 100);
+    row.start_date = incomingStart || null;
+    row.end_date = incomingEnd || null;
     row.updated_at = new Date();
     await row.save();
+
+    await appendSecurityAuditLog({
+      type: 'config_change',
+      severity: 'medium',
+      actor: req.user.username,
+      ip: clientIp(req),
+      action: `Updated academic year: ${row.name}`,
+      metadata: { id: row.id, model: 'SystemAcademicYear' },
+    });
     return res.json(successResponse({}, 'Academic year updated'));
   } catch (err) {
     console.error(err);
@@ -808,8 +941,38 @@ async function deleteAcademicYear(req, res) {
     const { id } = req.params;
     const row = await SystemAcademicYear.findByPk(id);
     if (!row) return res.status(404).json(errorResponse('Not found', 404));
-    await row.destroy();
-    return res.json(successResponse({}, 'Academic year deleted'));
+
+    if (row.is_active) {
+      return res.status(400).json({ success: false, message: 'Cannot archive the active year. Roll out another year first.' });
+    }
+
+    const term_count = await SystemTerm.count({ where: { system_academic_year_id: id } });
+    const forceQuery = req.query.force === '1';
+    const forceBody = req.body && req.body.force === true;
+    if (term_count > 0 && !forceQuery && !forceBody) {
+      return res.status(409).json({
+        success: false,
+        message: `This year has ${term_count} term(s). Archiving it will hide them too.`,
+        requiresForce: true,
+        term_count,
+      });
+    }
+
+    row.deleted_at = new Date();
+    row.status = 'archived';
+    row.is_active = false;
+    row.updated_at = new Date();
+    await row.save();
+
+    await appendSecurityAuditLog({
+      type: 'config_change',
+      severity: 'high',
+      actor: req.user.username,
+      ip: clientIp(req),
+      action: `Archived academic year: ${row.name}`,
+      metadata: { id: row.id, model: 'SystemAcademicYear' },
+    });
+    return res.json(successResponse({}, 'Academic year archived'));
   } catch (err) {
     console.error(err);
     return res.status(500).json(errorResponse('Internal server error', 500));
@@ -821,10 +984,37 @@ async function toggleAcademicYearStatus(req, res) {
     const { id } = req.params;
     const row = await SystemAcademicYear.findByPk(id);
     if (!row) return res.status(404).json(errorResponse('Not found', 404));
-    row.is_active = !row.is_active;
-    row.updated_at = new Date();
-    await row.save();
-    return res.json(successResponse({ is_active: row.is_active }, `Status changed to ${row.is_active ? 'active' : 'inactive'}`));
+
+    const now = new Date();
+    if (!row.is_active) {
+      // activate: demote any current active, then set this one active
+      await sequelize.transaction(async (t) => {
+        await SystemAcademicYear.update(
+          { is_active: false, status: 'closed', updated_at: now },
+          { where: { is_active: true }, transaction: t },
+        );
+        row.is_active = true;
+        row.status = 'active';
+        row.updated_at = now;
+        await row.save({ transaction: t });
+      });
+    } else {
+      // deactivate
+      row.is_active = false;
+      row.status = 'draft';
+      row.updated_at = now;
+      await row.save();
+    }
+
+    await appendSecurityAuditLog({
+      type: 'config_change',
+      severity: 'medium',
+      actor: req.user.username,
+      ip: clientIp(req),
+      action: `Toggled academic year status: ${row.name} → ${row.status}`,
+      metadata: { id: row.id, model: 'SystemAcademicYear' },
+    });
+    return res.json(successResponse({ is_active: row.is_active, status: row.status }));
   } catch (err) {
     console.error(err);
     return res.status(500).json(errorResponse('Internal server error', 500));
@@ -836,19 +1026,351 @@ async function rolloutAcademicYear(req, res) {
     const { id } = req.params;
     const row = await SystemAcademicYear.findByPk(id);
     if (!row) return res.status(404).json(errorResponse('Not found', 404));
-    await SystemAcademicYear.update({ is_active: false, updated_at: new Date() }, { where: { is_active: true } });
-    row.is_active = true;
-    row.updated_at = new Date();
-    await row.save();
+
+    const cascade = req.body && req.body.cascade === true;
+    const now = new Date();
+    let cascadeCounts = null;
+
+    await sequelize.transaction(async (t) => {
+      // demote current active year
+      await SystemAcademicYear.update(
+        { is_active: false, status: 'closed', updated_at: now },
+        { where: { is_active: true }, transaction: t },
+      );
+      row.is_active = true;
+      row.status = 'active';
+      row.updated_at = now;
+      await row.save({ transaction: t });
+
+      if (cascade) {
+        const schools = await School.findAll({ attributes: ['id', 'name'], transaction: t });
+        const systemTerms = await SystemTerm.findAll({
+          where: { system_academic_year_id: row.id },
+          transaction: t,
+        });
+
+        let years_created = 0;
+        let terms_created = 0;
+        let schools_updated = 0;
+
+        for (const school of schools) {
+          // find or create per-school academic year matching this name
+          const [schoolYear, createdYear] = await AcademicYear.findOrCreate({
+            where: {
+              school_id: school.id,
+              [Op.and]: [
+                sequelize.where(sequelize.fn('LOWER', sequelize.col('name')), row.name.toLowerCase()),
+              ],
+            },
+            defaults: {
+              school_id: school.id,
+              name: row.name,
+              start_date: row.start_date || null,
+              end_date: row.end_date || null,
+              is_active: true,
+            },
+            transaction: t,
+          });
+          if (createdYear) years_created++;
+
+          // deactivate other academic years for this school
+          await AcademicYear.update(
+            { is_active: false },
+            { where: { school_id: school.id, id: { [Op.ne]: schoolYear.id } }, transaction: t },
+          );
+          // set this one active
+          schoolYear.is_active = true;
+          await schoolYear.save({ transaction: t });
+
+          // propagate system terms to school terms
+          for (const st of systemTerms) {
+            const [, createdTerm] = await Term.findOrCreate({
+              where: {
+                school_id: school.id,
+                academic_year_id: schoolYear.id,
+                [Op.and]: [
+                  sequelize.where(sequelize.fn('LOWER', sequelize.col('name')), st.name.toLowerCase()),
+                ],
+              },
+              defaults: {
+                school_id: school.id,
+                academic_year_id: schoolYear.id,
+                name: st.name,
+                start_date: st.start_date || null,
+                end_date: st.end_date || null,
+                is_active: Boolean(st.is_active),
+              },
+              transaction: t,
+            });
+            if (createdTerm) terms_created++;
+          }
+
+          schools_updated++;
+        }
+
+        cascadeCounts = { schools_updated, years_created, terms_created };
+      }
+    });
+
     await appendSecurityAuditLog({
       type: 'config_change',
       severity: 'medium',
       actor: req.user.username,
       ip: clientIp(req),
       action: `Rolled out academic year: ${row.name}`,
-      metadata: { id: row.id, model: 'SystemAcademicYear', rolled_out: true },
+      metadata: { id: row.id, model: 'SystemAcademicYear', rolled_out: true, cascade: cascadeCounts },
     });
-    return res.json(successResponse({ id: row.id, name: row.name, is_active: true }, 'Academic year rolled out'));
+    return res.json(successResponse({
+      id: row.id,
+      name: row.name,
+      is_active: true,
+      status: 'active',
+      cascade: cascadeCounts,
+    }, 'Academic year rolled out'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+/* --- New endpoints --- */
+
+async function getRolloutPreview(req, res) {
+  try {
+    const { id } = req.params;
+    const row = await SystemAcademicYear.findByPk(id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+
+    const term_count = await SystemTerm.count({ where: { system_academic_year_id: id } });
+    const total = await School.count();
+
+    // schools that already have a per-school academic year matching this name (case-insensitive)
+    const alreadyRows = await AcademicYear.findAll({
+      attributes: [[sequelize.fn('COUNT', sequelize.fn('DISTINCT', sequelize.col('school_id'))), 'cnt']],
+      where: sequelize.where(sequelize.fn('LOWER', sequelize.col('name')), row.name.toLowerCase()),
+      raw: true,
+    });
+    const already = Number((alreadyRows[0] || {}).cnt || 0);
+    const missing = total - already;
+
+    return res.json(successResponse({
+      preview: { term_count, schools: { total, already, missing } },
+    }));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function restoreAcademicYear(req, res) {
+  try {
+    const { id } = req.params;
+    const row = await SystemAcademicYear.findByPk(id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+
+    row.deleted_at = null;
+    row.status = 'draft';
+    row.updated_at = new Date();
+    await row.save();
+
+    await appendSecurityAuditLog({
+      type: 'config_change',
+      severity: 'medium',
+      actor: req.user.username,
+      ip: clientIp(req),
+      action: `Restored academic year: ${row.name}`,
+      metadata: { id: row.id, model: 'SystemAcademicYear' },
+    });
+    return res.json(successResponse({}, 'Academic year restored'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function cloneAcademicYear(req, res) {
+  try {
+    const { id } = req.params;
+    const source = await SystemAcademicYear.findByPk(id);
+    if (!source) return res.status(404).json(errorResponse('Not found', 404));
+
+    // compute new name
+    let newName;
+    const yearMatch = source.name.match(/^(\d{4})\s*\/\s*(\d{4})$/);
+    if (yearMatch) {
+      const y1 = parseInt(yearMatch[1], 10);
+      const y2 = parseInt(yearMatch[2], 10);
+      newName = `${y1 + 1}/${y2 + 1}`;
+    } else {
+      newName = `${source.name} (copy)`;
+    }
+
+    // shift dates +12 months if present
+    function addOneYear(dateStr) {
+      if (!dateStr) return null;
+      const d = new Date(dateStr);
+      d.setFullYear(d.getFullYear() + 1);
+      return d.toISOString().slice(0, 10);
+    }
+
+    const newStart = addOneYear(source.start_date);
+    const newEnd = addOneYear(source.end_date);
+
+    const newYear = await SystemAcademicYear.create({
+      name: newName.slice(0, 100),
+      start_date: newStart,
+      end_date: newEnd,
+      status: 'draft',
+      is_active: false,
+    });
+
+    // clone terms
+    const sourceTerms = await SystemTerm.findAll({ where: { system_academic_year_id: source.id } });
+    for (const st of sourceTerms) {
+      await SystemTerm.create({
+        system_academic_year_id: newYear.id,
+        name: st.name,
+        start_date: addOneYear(st.start_date),
+        end_date: addOneYear(st.end_date),
+        is_active: false,
+      });
+    }
+
+    await appendSecurityAuditLog({
+      type: 'config_change',
+      severity: 'medium',
+      actor: req.user.username,
+      ip: clientIp(req),
+      action: `Cloned academic year ${newName} from ${source.name}`,
+      metadata: { id: newYear.id, source_id: source.id, model: 'SystemAcademicYear' },
+    });
+    return res.json(successResponse({ id: newYear.id, name: newYear.name }, 'Academic year cloned'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function closeAcademicYear(req, res) {
+  try {
+    const { id } = req.params;
+    const row = await SystemAcademicYear.findByPk(id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+
+    row.is_active = false;
+    row.status = 'closed';
+    row.updated_at = new Date();
+    await row.save();
+
+    await appendSecurityAuditLog({
+      type: 'config_change',
+      severity: 'medium',
+      actor: req.user.username,
+      ip: clientIp(req),
+      action: `Closed academic year: ${row.name}`,
+      metadata: { id: row.id, model: 'SystemAcademicYear' },
+    });
+    return res.json(successResponse({}, 'Academic year closed'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function getAcademicYearAdoption(req, res) {
+  try {
+    const { id } = req.params;
+    const row = await SystemAcademicYear.findByPk(id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+
+    const total_schools = await School.count();
+    const lowerName = row.name.toLowerCase();
+
+    // all schools
+    const allSchools = await School.findAll({ attributes: ['id', 'name'] });
+
+    // per-school academic years matching this name
+    const matchingYears = await AcademicYear.findAll({
+      where: sequelize.where(sequelize.fn('LOWER', sequelize.col('name')), lowerName),
+      attributes: ['id', 'school_id', 'is_active'],
+    });
+    const matchMap = {};
+    for (const y of matchingYears) matchMap[String(y.school_id)] = y;
+
+    // count terms per matching per-school academic year
+    const matchingYearIds = matchingYears.map(y => y.id);
+    const termCountRows = matchingYearIds.length
+      ? await Term.findAll({
+          attributes: ['academic_year_id', [sequelize.fn('COUNT', sequelize.col('id')), 'cnt']],
+          where: { academic_year_id: matchingYearIds },
+          group: ['academic_year_id'],
+          raw: true,
+        })
+      : [];
+    const termCountMap = {};
+    for (const tc of termCountRows) termCountMap[String(tc.academic_year_id)] = Number(tc.cnt);
+
+    let adopted = 0;
+    let not_yet = 0;
+    let no_terms = 0;
+    const lagging = [];
+
+    for (const school of allSchools) {
+      const sid = String(school.id);
+      const schoolYear = matchMap[sid];
+      if (!schoolYear) {
+        not_yet++;
+        if (lagging.length < 50) lagging.push({ id: school.id, name: school.name });
+      } else if (!schoolYear.is_active) {
+        // exists but not active — counts as not_yet for lagging purposes
+        not_yet++;
+        if (lagging.length < 50) lagging.push({ id: school.id, name: school.name });
+      } else {
+        const tc = termCountMap[String(schoolYear.id)] || 0;
+        if (tc === 0) {
+          no_terms++;
+          adopted++; // year is active but no terms yet
+        } else {
+          adopted++;
+        }
+      }
+    }
+
+    return res.json(successResponse({
+      adoption: { total_schools, adopted, not_yet, no_terms, lagging },
+    }));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function getAcademicYearHistory(req, res) {
+  try {
+    const { id } = req.params;
+    const row = await SystemAcademicYear.findByPk(id);
+    if (!row) return res.status(404).json(errorResponse('Not found', 404));
+
+    // metadata_json is TEXT storing JSON. Query recent config_change rows and filter in JS.
+    const candidates = await SecurityAuditLog.findAll({
+      where: { type: 'config_change' },
+      order: [['ts', 'DESC']],
+      limit: 500,
+      attributes: ['id', 'action', 'actor', 'severity', 'ts', 'metadata_json'],
+    });
+
+    const numericId = Number(id);
+    const history = [];
+    for (const c of candidates) {
+      if (history.length >= 50) break;
+      let meta = null;
+      try { meta = c.metadata_json ? JSON.parse(c.metadata_json) : null; } catch { /* skip */ }
+      if (meta && Number(meta.id) === numericId && meta.model === 'SystemAcademicYear') {
+        history.push({ id: c.id, action: c.action, actor: c.actor, severity: c.severity, created_at: c.ts });
+      }
+    }
+
+    return res.json(successResponse({ history }));
   } catch (err) {
     console.error(err);
     return res.status(500).json(errorResponse('Internal server error', 500));
@@ -2354,6 +2876,12 @@ async function getSuperStudents(req, res) {
   try {
     const { school_id, status, page = 1, limit = 100 } = req.query;
     const forcedSchool = scopedSchoolId(req);
+    // Cross-tenant lockdown: a superadmin (forcedSchool === null) must scope to a
+    // single school via ?school_id=. The bare route must never bulk-return other
+    // tenants' student PII (medical/SEN/disciplinary/guardian). View per-school only.
+    if (forcedSchool === null && !school_id) {
+      return res.json(successResponse({ students: [], total: 0, page: parseInt(page), limit: parseInt(limit) }, 'Select a school to view its students.'));
+    }
     const where = {};
     if (forcedSchool !== null) where.school_id = forcedSchool;
     else if (school_id) where.school_id = school_id;
@@ -2606,12 +3134,19 @@ async function blockSuperStudent(req, res) {
 /* ---------- Parent CRUD (superadmin) ---------- */
 async function getSuperParents(req, res) {
   try {
-    const { status } = req.query;
+    const { status, school_id } = req.query;
     const forcedSchool = scopedSchoolId(req);
+    // Cross-tenant lockdown: parents have no school_id column (they belong to a
+    // school via their linked students). A superadmin must scope to one school via
+    // ?school_id=; the bare route never bulk-returns every tenant's parent PII.
+    const targetSchool = forcedSchool !== null ? forcedSchool : (school_id ? parseInt(school_id, 10) : null);
+    if (targetSchool === null) {
+      return res.json(successResponse({ parents: [] }, 'Select a school to view its parents.'));
+    }
     const where = {};
     if (status) where.status = status;
-    if (forcedSchool !== null) {
-      const schoolStudents = await Student.findAll({ where: { school_id: forcedSchool }, attributes: ['id'] });
+    {
+      const schoolStudents = await Student.findAll({ where: { school_id: targetSchool }, attributes: ['id'] });
       const links = await StudentParent.findAll({
         where: { student_id: schoolStudents.map((s) => s.id) },
         attributes: ['parent_id'],
@@ -2868,6 +3403,12 @@ async function getSuperTeachers(req, res) {
   try {
     const { school_id, status, page = 1, limit = 100 } = req.query;
     const forcedSchool = scopedSchoolId(req);
+    // Cross-tenant lockdown: a superadmin must scope to a single school via
+    // ?school_id=; the bare route never bulk-returns every tenant's teacher PII
+    // (national ID/passport/bank/salary). View per-school only.
+    if (forcedSchool === null && !school_id) {
+      return res.json(successResponse({ teachers: [], total: 0, page: parseInt(page), limit: parseInt(limit) }, 'Select a school to view its teachers.'));
+    }
     const where = {};
     if (forcedSchool !== null) where.school_id = forcedSchool;
     else if (school_id) where.school_id = school_id;
@@ -3348,6 +3889,12 @@ module.exports = {
   deleteAcademicYear,
   toggleAcademicYearStatus,
   rolloutAcademicYear,
+  getRolloutPreview,
+  restoreAcademicYear,
+  cloneAcademicYear,
+  closeAcademicYear,
+  getAcademicYearAdoption,
+  getAcademicYearHistory,
   getSystemTerms,
   createSystemTerm,
   updateSystemTerm,

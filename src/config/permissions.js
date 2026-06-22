@@ -23,7 +23,10 @@ export const PAGE_PERMISSIONS = {
   overview:        [ROLES.SUPERADMIN, ROLES.SCHOOL_ADMIN, ROLES.PRINCIPAL, ROLES.BURSAR, ROLES.TEACHER, ROLES.STUDENT, ROLES.PARENT],
   profile:         [ROLES.SUPERADMIN, ROLES.SCHOOL_ADMIN, ROLES.PRINCIPAL, ROLES.BURSAR, ROLES.TEACHER, ROLES.STUDENT, ROLES.PARENT],
   notifications:   [ROLES.SUPERADMIN, ROLES.SCHOOL_ADMIN, ROLES.PRINCIPAL, ROLES.BURSAR, ROLES.TEACHER, ROLES.STUDENT, ROLES.PARENT],
-  settings:        [ROLES.SUPERADMIN, ROLES.SCHOOL_ADMIN],
+  /* Platform-wide operator controls (Emergency Lockdown, global backups, platform
+     branding/compliance via /api/sa/* — all superadmin-only on the backend). Tenant
+     admins must not see these, so settings is SUPERADMIN-only. */
+  settings:        [ROLES.SUPERADMIN],
 
   /* ── Superadmin only: school management ── */
   applications:    [ROLES.SUPERADMIN],
@@ -162,6 +165,10 @@ export const PAGE_PERMISSIONS = {
   governance:       [ROLES.SUPERADMIN],
   'system-audits':  [ROLES.SUPERADMIN],
   reports:          [ROLES.SUPERADMIN],
+  /* Platform-wide user directory (SAUsers) — operator-only support tool */
+  users:            [ROLES.SUPERADMIN],
+  /* Billing & Subscriptions operator console (vendor-side) */
+  billing:          [ROLES.SUPERADMIN],
 };
 
 export function canAccess(pageKey, role) {

@@ -245,25 +245,42 @@ async function impersonate(req, res) {
     }
 
     const user = adminLink.user;
-    // Generate token for the school admin. school_id is required so the
-    // impersonated session is tenant-scoped exactly like a real admin login.
-    const token = generateToken({
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      role: 'school_admin',
-      is_superuser: false,
-      is_staff: false,
-      school_id: adminLink.school_id,
-    });
+    // Time-boxed, auditable impersonation session. The short-lived token carries
+    // impersonation claims so the auth layer can (a) expire it server-side via the
+    // JWT exp and (b) attribute every write back to the real operator. The matching
+    // close is endImpersonation (POST /api/impersonate/end/).
+    const IMPERSONATION_TTL = '30m';
+    const impSessionId = require('crypto').randomUUID();
+    const impStarted = Date.now();
+    const token = generateToken(
+      {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: 'school_admin',
+        is_superuser: false,
+        is_staff: false,
+        school_id: adminLink.school_id,
+      },
+      {
+        expiresIn: IMPERSONATION_TTL,
+        extraClaims: {
+          imp: true,
+          imp_actor: req.user?.username || 'superadmin',
+          imp_actor_id: req.user?.id ?? null,
+          imp_sid: impSessionId,
+          imp_started: impStarted,
+        },
+      }
+    );
 
     await appendSecurityAuditLog({
       type: 'impersonation',
-      severity: 'medium',
+      severity: 'high',
       actor: req.user?.username || 'superadmin',
       ip: req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || '—',
-      action: `Impersonate school admin for school_id ${school_id}`,
-      metadata: { target_user: user.username },
+      action: `Started impersonating school admin '${user.username}' (school_id ${school_id})`,
+      metadata: { imp_sid: impSessionId, target_user: user.username, school_id: adminLink.school_id, ttl: IMPERSONATION_TTL },
     });
 
     return res.json(successResponse({
@@ -280,6 +297,33 @@ async function impersonate(req, res) {
   } catch (err) {
     console.error(err);
     return res.status(500).json(errorResponse("Internal server error", 500));
+  }
+}
+
+// POST /api/impersonate/end/
+// Called by the operator's "Return to Superadmin" action. The caller still holds
+// the impersonation token, so we read its claims to close the audited session.
+// Mounted as a SHARED route (the caller's role is school_admin during impersonation,
+// so it cannot sit behind requireRole(['superadmin'])).
+async function endImpersonation(req, res) {
+  try {
+    if (!req.user?.imp) {
+      return res.status(400).json(errorResponse('Not an impersonation session', 400));
+    }
+    const startedMs = Number(req.user.imp_started) || null;
+    const durationS = startedMs ? Math.max(0, Math.round((Date.now() - startedMs) / 1000)) : null;
+    await appendSecurityAuditLog({
+      type: 'impersonation_end',
+      severity: 'high',
+      actor: req.user.imp_actor || 'superadmin',
+      ip: req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || '—',
+      action: `Ended impersonation of '${req.user.username}' (school_id ${req.user.school_id})${durationS != null ? ` after ${durationS}s` : ''}`,
+      metadata: { imp_sid: req.user.imp_sid || null, acting_as: req.user.username, school_id: req.user.school_id ?? null, duration_s: durationS },
+    });
+    return res.json(successResponse({ ended: true }));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
   }
 }
 
@@ -457,6 +501,7 @@ module.exports = {
   getAllSchools,
   handleSchoolAction,
   impersonate,
+  endImpersonation,
   getGradeAlerts,
   getSystemHealth,
   resetUserPassword,

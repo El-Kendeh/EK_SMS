@@ -1,0 +1,31 @@
+/* Parent-specific extras layered on top of the shared SAStaffManager.css.
+   Linked-student chips shown in the parents table. */
+
+.sapr-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 340px;
+}
+
+.sapr-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--sa-text-2);
+  background: rgba(27, 63, 175, 0.12);
+  border: 1px solid rgba(27, 63, 175, 0.25);
+  white-space: nowrap;
+}
+
+.sapr-chip em {
+  font-style: normal;
+  font-weight: 500;
+  font-size: 0.625rem;
+  color: var(--sa-text-3);
+  text-transform: capitalize;
+}

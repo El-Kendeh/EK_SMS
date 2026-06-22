@@ -34,6 +34,7 @@ const SAAnalytics       = lazy(() => import('./SAAnalytics'));
 const SABenchmarks      = lazy(() => import('./SABenchmarks'));
 const SAOnboarding      = lazy(() => import('./SAOnboarding'));
 const SAUsers           = lazy(() => import('./SAUsers'));
+const SABilling         = lazy(() => import('./SABilling'));
 const SANotifications   = lazy(() => import('./SANotifications'));
 const SAProfile         = lazy(() => import('./SAProfile'));
 const SAChangeAlerts    = lazy(() => import('./SAChangeAlerts'));
@@ -436,6 +437,7 @@ export default function Dashboard({ onNavigate }) {
   const studentId  = user?.id;
   const parentId   = user?.id;
   const [activePage,      setActivePage]      = useState('overview');
+  const [preselectYearId, setPreselectYearId] = useState(null);
   const [selectedSchool,  setSelectedSchool]  = useState(null);
   const [forensicEvent,   setForensicEvent]   = useState(null);
   const [selectedRequest, setSelectedRequest] = useState(null);
@@ -444,6 +446,12 @@ export default function Dashboard({ onNavigate }) {
   const [isLoading,       setIsLoading]       = useState(true);
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [sidebarOpen,     setSidebarOpen]     = useState(false);
+  /* Collapsed sidebar groups (progressive disclosure). Default expanded. */
+  const [collapsedGroups, setCollapsedGroups] = useState({});
+  const toggleGroup = (section) => setCollapsedGroups(g => ({ ...g, [section]: !g[section] }));
+  /* "Enter a school" impersonation launcher (operator → school console). */
+  const [enterSchoolOpen,  setEnterSchoolOpen]  = useState(false);
+  const [enterSchoolQuery, setEnterSchoolQuery] = useState('');
   const [toast,           setToast]           = useState(null);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
   const [searchOpen,       setSearchOpen]       = useState(false);
@@ -795,10 +803,98 @@ export default function Dashboard({ onNavigate }) {
     { key: 'notifications',  label: 'Notifications',  icon: <IcBell />, badge: 0, section: null },
   ];
 
+  /* Impersonate ("enter") a school: save the operator session so it can be
+     restored on exit, swap to the school's token, and re-render as that
+     school's console. Shared by the sidebar launcher + Analytics "Login as". */
+  const enterSchool = async (school) => {
+    if (!school) return;
+    try {
+      const data = await ApiClient.post('/api/impersonate/', { school_id: school.id });
+      if (!data.success) { showToast(data.message || 'Could not enter school.', 'error'); return; }
+      sessionStorage.setItem('ek-sms-prev-token', localStorage.getItem('token') || '');
+      sessionStorage.setItem('ek-sms-prev-user',  localStorage.getItem('user')  || '');
+      sessionStorage.setItem('ek-sms-impersonating', JSON.stringify({ schoolName: school.name }));
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user',  JSON.stringify(data.user));
+      setEnterSchoolOpen(false);
+      window.dispatchEvent(new Event('storage'));
+    } catch (err) {
+      showToast(err.message || 'Could not enter school.', 'error');
+    }
+  };
+
+  /* Super Admin gets a LEAN, platform/operator-only sidebar. The school's
+     day-to-day pages (attendance, lessons, grades entry, fees, report cards,
+     virtual meetings, per-school people, etc.) are intentionally NOT here —
+     a platform operator reaches a school's console by impersonating it from
+     the Schools list ("Enter as admin"). Those pages still route fine; they
+     just no longer clutter the operator menu. Groups collapse in the sidebar.
+     Note: Year/Terms live here (system-level templates in this product, not
+     per-school) — a deliberate deviation from the generic vendor/subscriber
+     split. Keys must stay permitted in permissions.js. */
+  const SUPERADMIN_NAV_ITEMS = [
+    { key: 'overview',          label: 'Dashboard',           icon: <IcHome />,         badge: 0,            section: null },
+
+    /* Schools — the tenant directory + onboarding pipeline (impersonate from here) */
+    { key: 'schools',           label: 'All Schools',         icon: <IcSchools />,      badge: 0,            section: 'Schools' },
+    { key: 'applications',      label: 'Onboarding',          icon: <IcApplications />, badge: pendingCount, section: 'Schools' },
+    { key: 'rejected',          label: 'Rejected',            icon: <IcRejected />,     badge: rejectedCount,section: 'Schools' },
+    { key: '__enter_school',    label: 'Enter a School',      icon: <IcSchools />,      badge: 0,            section: 'Schools', action: 'enter-school' },
+
+    /* Geography — platform location master data */
+    { key: 'countries',         label: 'Countries',           icon: <IcGen />, badge: 0, section: 'Geography' },
+    { key: 'regions',           label: 'Regions',             icon: <IcGen />, badge: 0, section: 'Geography' },
+    { key: 'cities',            label: 'Cities',              icon: <IcGen />, badge: 0, section: 'Geography' },
+
+    /* Master Data / Catalog — taxonomies + global templates schools inherit */
+    { key: 'institution-type',  label: 'Institution Types',   icon: <IcGen />, badge: 0, section: 'Master Data' },
+    { key: 'school-type',       label: 'School Types',        icon: <IcGen />, badge: 0, section: 'Master Data' },
+    { key: 'school-capacity',   label: 'Capacity Tiers',      icon: <IcGen />, badge: 0, section: 'Master Data' },
+    { key: 'syllabus-type',     label: 'Syllabus Types',      icon: <IcGen />, badge: 0, section: 'Master Data' },
+    { key: 'academic-system',   label: 'Academic Systems',    icon: <IcGen />, badge: 0, section: 'Master Data' },
+    { key: 'grading-system',    label: 'Grading Templates',   icon: <IcGen />, badge: 0, section: 'Master Data' },
+    { key: 'class-subtype',     label: 'Class Subtypes',      icon: <IcGen />, badge: 0, section: 'Master Data' },
+    { key: 'lesson-plan-type',  label: 'Lesson Plan Types',   icon: <IcGen />, badge: 0, section: 'Master Data' },
+    { key: 'academic-year',     label: 'Academic Years',      icon: <IcGen />, badge: 0, section: 'Master Data' },
+    /* Terms are managed per-year via the “Add Terms” action on a year. academic-terms
+       stays a routable drill-down target — no separate sidebar row (collapsed into Years). */
+
+    /* Billing & Subscriptions — the platform is FREE for now, so this group is
+       intentionally hidden. The SABilling scaffold + 'billing' route/permission
+       stay parked; re-add this one line when the platform starts charging. */
+    /* { key: 'billing', label: 'Billing & Subscriptions', icon: <IcGen />, badge: 0, section: 'Billing & Subscriptions' }, */
+
+    /* People & Access — platform users / support directory + governance */
+    { key: 'users',             label: 'Platform Users',      icon: <IcGen />, badge: 0, section: 'People & Access' },
+    { key: 'governance',        label: 'Governance',          icon: <IcGen />, badge: 0, section: 'People & Access' },
+
+    /* Reports & Analytics — cross-school benchmarking + integrity (the USP) */
+    { key: 'reports',           label: 'Reports',             icon: <IcGen />, badge: 0, section: 'Reports & Analytics' },
+    { key: 'analytics',         label: 'Analytics',           icon: <IcGen />, badge: 0, section: 'Reports & Analytics' },
+    { key: 'benchmarks',        label: 'Benchmarks',          icon: <IcGen />, badge: 0, section: 'Reports & Analytics' },
+    { key: 'grade-integrity',   label: 'Integrity Dashboard', icon: <IcGen />, badge: 0, section: 'Reports & Analytics' },
+    { key: 'grades-accumulation',label:'Grade Accumulation',  icon: <IcGen />, badge: 0, section: 'Reports & Analytics' },
+    { key: 'grade-report',      label: 'Grade Reports',       icon: <IcGen />, badge: 0, section: 'Reports & Analytics' },
+    /* grade-requests renders the same SAGradeIntegrity as the Integrity Dashboard;
+       it stays a drill-down target (from Grade Reports) but is no longer a duplicate row. */
+
+    /* System — infrequent operator/admin utilities, de-emphasized at the bottom */
+    { key: 'system-health',     label: 'Platform Health',     icon: <IcGen />, badge: 0, section: 'System' },
+    { key: 'system-audits',     label: 'Audit Log',           icon: <IcGen />, badge: 0, section: 'System' },
+    /* security-logs renders the identical SASecurityLogs as Audit Log; folded into it.
+       Still a routable target so forensic drill-throughs (handleForensic) resolve. */
+    { key: 'forensics',         label: 'Forensics',           icon: <IcGen />, badge: 0, section: 'System' },
+    { key: 'change-alerts',     label: 'Change Alerts',       icon: <IcGen />, badge: 0, section: 'System' },
+    { key: 'alert-broadcast',   label: 'Announcements',       icon: <IcGen />, badge: 0, section: 'System' },
+    { key: 'notifications',     label: 'Notifications',       icon: <IcBell />, badge: unreadNotifCount, section: 'System' },
+    { key: 'settings',          label: 'System Settings',     icon: <IcGen />, badge: 0, section: 'System' },
+  ];
+
   const navItems = (user?.role === 'principal' ? PRINCIPAL_NAV_ITEMS
     : user?.role === 'bursar' ? BURSAR_NAV_ITEMS
+    : user?.role === 'superadmin' ? SUPERADMIN_NAV_ITEMS
     : ALL_NAV_ITEMS)
-    .filter(item => canAccess(item.key, user?.role));
+    .filter(item => item.action || canAccess(item.key, user?.role));
 
   return (
     <div className={`sa-wrap${sidebarOpen ? ' sidebar-open' : ''}`}>
@@ -835,30 +931,42 @@ export default function Dashboard({ onNavigate }) {
               activePage === item.key ||
               (item.key === 'applications'  && isAppRelated) ||
               (item.key === 'rejected'      && isRejRelated) ||
-              (item.key === 'security-logs' && isSecRelated && activePage === 'security-logs') ||
+              (item.key === 'system-audits' && isSecRelated && activePage === 'security-logs') ||
               (item.key === 'forensics'     && activePage === 'forensics') ||
               (item.key === 'alert-broadcast' && activePage === 'alert-broadcast') ||
               (item.key === 'system-health' && activePage === 'system-health') ||
               (item.key === 'grade-report'   && activePage === 'grade-report') ||
-              (item.key === 'grade-requests' && (activePage === 'grade-requests' || activePage === 'grade-audit')) ||
+              (item.key === 'grade-integrity' && (activePage === 'grade-requests' || activePage === 'grade-audit')) ||
+              (item.key === 'academic-year'  && activePage === 'academic-terms') ||
               (item.key === 'governance'     && activePage === 'governance');
             const prevItem = navItems[idx - 1];
             const showHeader = item.section && (!prevItem || prevItem.section !== item.section);
+            const isCollapsed = item.section ? !!collapsedGroups[item.section] : false;
             return (
               <React.Fragment key={item.key}>
                 {showHeader && (
-                  <p style={{ fontSize: '0.5625rem', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--sa-text-3)', padding: '14px 16px 6px', margin: 0 }}>
-                    {item.section}
-                  </p>
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(item.section)}
+                    aria-expanded={!isCollapsed}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.5625rem', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--sa-text-3)', padding: '14px 16px 6px', margin: 0 }}
+                  >
+                    <span>{item.section}</span>
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: isCollapsed ? 'rotate(-90deg)' : 'none', transition: 'transform 0.15s', flexShrink: 0, opacity: 0.7 }}>
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </button>
                 )}
-                <button
-                  className={`sa-nav-btn${isActive ? ' active' : ''}`}
-                  onClick={() => goTo(item.key)}
-                >
-                  <span className="sa-nav-icon">{item.icon}</span>
-                  <span className="sa-nav-label">{item.label}</span>
-                  {item.badge > 0 && <span className="sa-nav-badge">{item.badge}</span>}
-                </button>
+                {!isCollapsed && (
+                  <button
+                    className={`sa-nav-btn${isActive ? ' active' : ''}`}
+                    onClick={() => item.action === 'enter-school' ? setEnterSchoolOpen(true) : goTo(item.key)}
+                  >
+                    <span className="sa-nav-icon">{item.icon}</span>
+                    <span className="sa-nav-label">{item.label}</span>
+                    {item.badge > 0 && <span className="sa-nav-badge">{item.badge}</span>}
+                  </button>
+                )}
               </React.Fragment>
             );
           })}
@@ -1054,21 +1162,11 @@ export default function Dashboard({ onNavigate }) {
           )}
 
           {activePage === 'analytics' && (
-            <SAAnalytics schools={schools} onLoginAs={async (school) => {
-              try {
-                const data = await ApiClient.post('/api/impersonate/', { school_id: school.id });
-                if (!data.success) { showToast(data.message || 'Could not impersonate admin.', 'error'); return; }
-                // Save superadmin session so App.js can restore it
-                sessionStorage.setItem('ek-sms-prev-token', localStorage.getItem('token') || '');
-                sessionStorage.setItem('ek-sms-prev-user',  localStorage.getItem('user')  || '');
-                sessionStorage.setItem('ek-sms-impersonating', JSON.stringify({ schoolName: school.name }));
-                localStorage.setItem('token', data.token);
-                localStorage.setItem('user',  JSON.stringify(data.user));
-                window.dispatchEvent(new Event('storage'));
-              } catch (err) {
-                showToast(err.message || 'Impersonation failed.', 'error');
-              }
-            }} />
+            <SAAnalytics schools={schools} onLoginAs={enterSchool} />
+          )}
+
+          {activePage === 'billing' && (
+            <SABilling />
           )}
 
           {activePage === 'benchmarks' && (
@@ -1109,7 +1207,10 @@ export default function Dashboard({ onNavigate }) {
           )}
 
           {activePage === 'academic-terms' && (
-            <SACreateTerm onSave={(payload) => showToast('Term saved (logic pending)', 'success')} />
+            <SACreateTerm
+              initialYearId={preselectYearId}
+              onSave={() => showToast('Term saved', 'success')}
+            />
           )}
 
           {activePage === 'academic-year' && (
@@ -1122,6 +1223,8 @@ export default function Dashboard({ onNavigate }) {
               hasRollout={true}
               hasHero={true}
               hasOverlapCheck={true}
+              onToast={showToast}
+              onAddTerms={(year) => { setPreselectYearId(year?.id ?? null); goTo('academic-terms'); }}
               fields={[
                 { key: 'name',       label: 'Name',       type: 'text', required: true, placeholder: 'e.g. 2024/2025' },
                 { key: 'start_date', label: 'Start Date', type: 'date' },
@@ -1402,6 +1505,68 @@ export default function Dashboard({ onNavigate }) {
           onClose={() => setSearchOpen(false)}
         />
       )}
+
+      {/* Enter-a-school launcher (impersonation) */}
+      {enterSchoolOpen && (() => {
+        const q = enterSchoolQuery.trim().toLowerCase();
+        const list = schools
+          .filter(s => s.is_approved && s.is_active !== false)
+          .filter(s => !q || `${s.name} ${s.city || ''} ${s.country || ''}`.toLowerCase().includes(q));
+        return (
+          <div
+            onClick={() => { setEnterSchoolOpen(false); setEnterSchoolQuery(''); }}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1200, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '10vh 16px' }}
+          >
+            <div
+              onClick={e => e.stopPropagation()}
+              style={{ width: '100%', maxWidth: 480, background: 'var(--sa-card-bg)', border: '1px solid var(--sa-border)', borderRadius: 14, overflow: 'hidden', maxHeight: '72vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 60px rgba(0,0,0,0.5)' }}
+            >
+              <div style={{ padding: '16px 18px', borderBottom: '1px solid var(--sa-border)' }}>
+                <p style={{ margin: 0, fontWeight: 800, color: 'var(--sa-text)', fontSize: '1rem' }}>Enter a school</p>
+                <p style={{ margin: '3px 0 0', fontSize: '0.75rem', color: 'var(--sa-text-2)', lineHeight: 1.5 }}>
+                  Open a school’s console as its admin. Your operator session is saved and restored when you exit. The action is audit-logged.
+                </p>
+              </div>
+              <div style={{ padding: '12px 18px' }}>
+                <input
+                  className="sa-search-input"
+                  autoFocus
+                  placeholder="Search approved schools…"
+                  value={enterSchoolQuery}
+                  onChange={e => setEnterSchoolQuery(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid var(--sa-border)', background: 'var(--sa-card-bg2)', color: 'var(--sa-text)', fontSize: '0.875rem' }}
+                />
+              </div>
+              <div style={{ overflowY: 'auto', padding: '0 10px 10px' }}>
+                {list.length === 0 ? (
+                  <p style={{ textAlign: 'center', color: 'var(--sa-text-3)', fontSize: '0.8125rem', padding: '24px 12px' }}>
+                    {schools.some(s => s.is_approved) ? 'No schools match your search.' : 'No approved schools to enter yet.'}
+                  </p>
+                ) : list.map(s => (
+                  <button
+                    key={s.id}
+                    onClick={() => { setEnterSchoolQuery(''); enterSchool(s); }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 11, width: '100%', textAlign: 'left', padding: '10px 12px', background: 'none', border: 'none', borderRadius: 8, cursor: 'pointer', color: 'var(--sa-text)' }}
+                    onMouseOver={e => { e.currentTarget.style.background = 'var(--sa-accent-dim)'; }}
+                    onMouseOut={e => { e.currentTarget.style.background = 'none'; }}
+                  >
+                    <span style={{ width: 32, height: 32, borderRadius: 8, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.8125rem', color: '#fff', background: 'rgba(27,63,175,0.6)' }}>
+                      {(s.name || '?')[0].toUpperCase()}
+                    </span>
+                    <span style={{ minWidth: 0 }}>
+                      <span style={{ display: 'block', fontWeight: 600, fontSize: '0.875rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.name}</span>
+                      <span style={{ display: 'block', fontSize: '0.6875rem', color: 'var(--sa-text-3)' }}>{[s.city, s.country].filter(Boolean).join(', ') || '—'}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <div style={{ padding: '12px 18px', borderTop: '1px solid var(--sa-border)', display: 'flex', justifyContent: 'flex-end' }}>
+                <button className="sa-btn sa-btn--ghost sa-btn--sm" onClick={() => { setEnterSchoolOpen(false); setEnterSchoolQuery(''); }}>Cancel</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

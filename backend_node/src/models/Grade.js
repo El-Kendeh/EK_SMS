@@ -17,6 +17,11 @@ const Grade = sequelize.define('Grade', {
   approval_status: { type: DataTypes.STRING, defaultValue: 'pending' },
   approved_by: { type: DataTypes.BIGINT },
   approved_at: { type: DataTypes.DATE },
+  // Report-card publication: approval makes a grade visible as a grade;
+  // publication releases the compiled report card to students/parents.
+  is_published: { type: DataTypes.BOOLEAN, defaultValue: false },
+  published_at: { type: DataTypes.DATE },
+  published_by: { type: DataTypes.BIGINT },
   created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
 }, {
   tableName: 'pruh_core_grade',

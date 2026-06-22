@@ -10,10 +10,10 @@ const getBadgeUrl = (badgePath) => {
 
 function SchoolBadge({ badge, name, size = 48 }) {
   const [failed, setFailed] = useState(false);
-  const initials = name?.trim().charAt(0).toUpperCase() || '🏫';
+  const initials = name?.trim().charAt(0).toUpperCase() || 'S';
 
   if (!badge || failed) {
-    return <span style={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.4, fontWeight: 700 }}>{initials}</span>;
+    return <span style={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.4, fontWeight: 800 }}>{initials}</span>;
   }
 
   return (
@@ -204,8 +204,8 @@ export default function SAApplications({ schools, onReview }) {
             return (
               <div key={school.id} className={`sa-app-card sa-app-card--${risk}`}>
                 <div className="sa-app-card-top">
-                  <div className="sa-app-avatar" style={{ background: school.badge ? 'transparent' : color }}>
-                    <SchoolBadge badge={school.badge} name={school.name} size={48} />
+                  <div className={`sa-crest sa-crest--card ${school.badge ? 'sa-crest--img' : ''}`} style={{ backgroundColor: color }}>
+                    <SchoolBadge badge={school.badge} name={school.name} size={56} />
                   </div>
                   <div className="sa-app-info">
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>

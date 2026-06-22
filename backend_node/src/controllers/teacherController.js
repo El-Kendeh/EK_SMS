@@ -14,6 +14,7 @@ const Exam = require('../models/Exam');
 const ForensicEvent = require('../models/ForensicEvent');
 const { Op } = require('sequelize');
 const sequelize = require('../config/db');
+const { appendGradeEvent, appendGradeEventSafe } = require('../utils/gradeEvent');
 
 const successResponse = (data = {}, message = "Success") => ({ success: true, message, ...data });
 const errorResponse = (message = "Error", status = 400) => ({ success: false, message, status });
@@ -233,6 +234,7 @@ async function saveGradeDraft(req, res) {
     });
 
     if (grade) {
+      const oldValue = grade[field];
       const updateData = {};
       updateData[field] = value;
       if (['ca', 'midterm', 'final'].includes(field)) {
@@ -241,7 +243,24 @@ async function saveGradeDraft(req, res) {
         const finalExam = field === 'final' ? parseFloat(value) : grade.final || 0;
         updateData.total = ca + midterm + finalExam;
       }
+      // Any edit to an already-reviewed grade invalidates its approval and any
+      // published report card — it must go back through the principal.
+      if (grade.approval_status !== 'pending') {
+        updateData.approval_status = 'pending';
+        updateData.approved_by = null;
+        updateData.approved_at = null;
+        updateData.is_published = false;
+        updateData.published_at = null;
+        updateData.published_by = null;
+      }
       await grade.update(updateData);
+      await appendGradeEventSafe({
+        grade_id: grade.id, school_id: grade.school_id, student_id: grade.student_id,
+        subject_id: grade.subject_id, term_id: grade.term_id,
+        actor_user_id: req.user?.id, actor_name: req.user?.username,
+        event_type: 'update', field, old_value: oldValue, new_value: value,
+        approval_status_after: updateData.approval_status || grade.approval_status,
+      });
     } else {
       const createData = {
         school_id: teacher.school_id,
@@ -257,7 +276,14 @@ async function saveGradeDraft(req, res) {
         const finalExam = field === 'final' ? parseFloat(value) : 0;
         createData.total = ca + midterm + finalExam;
       }
-      await Grade.create(createData);
+      const created = await Grade.create(createData);
+      await appendGradeEventSafe({
+        grade_id: created.id, school_id: created.school_id, student_id: created.student_id,
+        subject_id: created.subject_id, term_id: created.term_id,
+        actor_user_id: req.user?.id, actor_name: req.user?.username,
+        event_type: 'create', field, old_value: null, new_value: value,
+        approval_status_after: 'pending',
+      });
     }
 
     return res.json(successResponse({}, 'Draft saved successfully'));
@@ -302,7 +328,10 @@ async function submitGradesForLocking(req, res) {
       const midterm = parseFloat(gradeData.midterm) || 0;
       const finalExam = parseFloat(gradeData.final) || score;
 
-      await Grade.upsert({
+      // Submitting (or re-submitting) ALWAYS sends the grade to the principal:
+      // reset approval to pending and un-publish any prior report card so an
+      // edited grade can never stay silently approved/published.
+      const values = {
         school_id: teacher.school_id,
         student_id: sid,
         subject_id,
@@ -314,10 +343,36 @@ async function submitGradesForLocking(req, res) {
         total: score,
         grade_letter: gradeLetter,
         remarks: gradeData.remarks || '',
-      }, {
-        conflictFields: ['school_id', 'student_id', 'subject_id', 'term_id'],
+        approval_status: 'pending',
+        approved_by: null,
+        approved_at: null,
+        is_published: false,
+        published_at: null,
+        published_by: null,
+      };
+
+      const existing = await Grade.findOne({
+        where: { school_id: teacher.school_id, student_id: sid, subject_id, term_id },
         transaction,
       });
+      let gradeId;
+      let oldTotal = null;
+      if (existing) {
+        oldTotal = existing.total;
+        await existing.update(values, { transaction });
+        gradeId = existing.id;
+      } else {
+        const created = await Grade.create(values, { transaction });
+        gradeId = created.id;
+      }
+
+      await appendGradeEvent({
+        grade_id: gradeId, school_id: teacher.school_id, student_id: sid,
+        subject_id, term_id,
+        actor_user_id: req.user?.id, actor_name: req.user?.username,
+        event_type: 'submit', field: 'total',
+        old_value: oldTotal, new_value: score, approval_status_after: 'pending',
+      }, { transaction });
 
       count++;
     }

@@ -98,6 +98,7 @@ function Field({ label, value, chip }) {
 /* ---- Reject / Changes modal ---- */
 function ConfirmModal({ action, onConfirm, onCancel, isLoading }) {
   const [note, setNote] = useState('');
+  const [focused, setFocused] = useState(false);
   const config = {
     reject:          { title: 'Reject Application', colour: 'var(--sa-red)',   label: 'Confirm Rejection',   placeholder: 'Reason for rejection (optional)…' },
     request_changes: { title: 'Request Changes',    colour: 'var(--sa-amber)', label: 'Send Change Request', placeholder: 'Describe what changes are needed…' },
@@ -109,10 +110,12 @@ function ConfirmModal({ action, onConfirm, onCancel, isLoading }) {
         <h3 style={{ margin: '0 0 6px', color: 'var(--sa-text)', fontSize: '1rem', fontWeight: 700 }}>{cfg.title}</h3>
         <p style={{ margin: '0 0 16px', color: 'var(--sa-text-2)', fontSize: '0.8125rem' }}>This action will be logged in the audit trail.</p>
         <textarea
-          style={{ width: '100%', minHeight: 80, background: 'var(--sa-card-bg2)', border: '1px solid var(--sa-border)', borderRadius: 8, color: 'var(--sa-text)', fontSize: '0.875rem', padding: '10px 12px', fontFamily: 'var(--sa-font)', resize: 'vertical', boxSizing: 'border-box', outline: 'none' }}
+          style={{ width: '100%', minHeight: 80, background: 'var(--sa-card-bg2)', border: `1px solid ${focused ? 'var(--sa-accent)' : 'var(--sa-border)'}`, borderRadius: 8, color: 'var(--sa-text)', fontSize: '0.875rem', padding: '10px 12px', fontFamily: 'var(--sa-font)', resize: 'vertical', boxSizing: 'border-box', outline: 'none' }}
           placeholder={cfg.placeholder}
           value={note}
           onChange={e => setNote(e.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
         />
         <div style={{ display: 'flex', gap: 10, marginTop: 16, justifyContent: 'flex-end' }}>
           <button className="sa-btn sa-btn--ghost" onClick={onCancel} disabled={isLoading}>Cancel</button>
@@ -225,8 +228,8 @@ export default function SAReview({ school, onBack, onApprove, onReject, onReques
         {/* ── School identity header ── */}
         <div className="sa-review-id-card">
           <div className="sa-review-id-left">
-            <div className="sa-review-id-avatar" style={{ background: school.badge ? 'transparent' : color }}>
-              <SchoolBadge badge={school.badge} name={school.name} size={40} />
+            <div className={`sa-crest sa-crest--hero ${school.badge ? 'sa-crest--img' : ''}`} style={{ backgroundColor: color }}>
+              <SchoolBadge badge={school.badge} name={school.name} size={88} />
             </div>
             <div className="sa-review-id-info">
               <div className="sa-review-id-title-row">
@@ -264,6 +267,38 @@ export default function SAReview({ school, onBack, onApprove, onReject, onReques
           </div>
         </div>
 
+        {/* ── Branding strip (badge + brand colours, full width) ── */}
+        <div className="sa-review-brand-strip">
+          <div className={`sa-crest sa-crest--brand ${school.badge ? 'sa-crest--img' : ''}`} style={{ backgroundColor: color }}>
+            <SchoolBadge badge={school.badge} name={school.name} size={96} />
+          </div>
+          <div className="sa-review-brand-info">
+            <p className="sa-review-brand-title">School Badge &amp; Branding</p>
+            <p className="sa-review-brand-status">
+              {school.badge ? 'Badge uploaded — appears across the school portal.' : 'No badge uploaded — a monogram is shown as a placeholder.'}
+            </p>
+            {school.brand_colors && (() => {
+              let colors = null;
+              try { colors = JSON.parse(school.brand_colors); } catch { colors = null; }
+              if (!Array.isArray(colors) || colors.length === 0) {
+                return <p className="sa-review-brand-raw">{school.brand_colors}</p>;
+              }
+              return (
+                <div className="sa-review-brand-colors">
+                  <div className="sa-review-brand-swatches">
+                    {colors.map((c, i) => (
+                      <span key={i} className="sa-review-brand-swatch" style={{ background: c }} title={c} />
+                    ))}
+                  </div>
+                  <div className="sa-review-brand-hexes">
+                    {colors.map((c, i) => <span key={i} className="sa-review-brand-hex">{c}</span>)}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+
         {/* ── Content grid ── */}
         <div className="sa-review-grid">
 
@@ -273,20 +308,19 @@ export default function SAReview({ school, onBack, onApprove, onReject, onReques
             {/* Basic Information */}
             <Section icon={<IcInfo />} title="Basic Information">
               <Field label="Type"               value={school.institution_type} />
+              <Field label="Website"            value={school.website} />
+              <Field label="Motto"              value={school.motto} />
+              <div className="sa-review-sublabel">Academic</div>
               <Field label="Academic System"    value={school.academic_system} />
               <Field label="Grading System"     value={school.grading_system} />
               <Field label="Language"           value={school.language} />
               <Field label="Capacity"           value={school.capacity ? `${school.capacity.toLocaleString()} students` : null} />
-              <Field label="Website"            value={school.website} />
+              <Field label="Est. Teachers"      value={school.estimated_teachers ? `${school.estimated_teachers}` : null} />
+              <div className="sa-review-sublabel">Registration</div>
               <Field label="Established"        value={school.established} />
               <Field label="Registration No."   value={school.registration_number} />
-              <Field label="Est. Teachers"      value={school.estimated_teachers ? `${school.estimated_teachers}` : null} />
-              <Field label="Motto"              value={school.motto} />
               <Field label="Registered"         value={fmtDate(school.registration_date)} />
               <Field label="Code"               value={school.code} />
-              {school.brand_colors && (
-                <Field label="Brand Colors"     value={school.brand_colors} />
-              )}
             </Section>
 
             {/* Location */}
@@ -353,46 +387,6 @@ export default function SAReview({ school, onBack, onApprove, onReject, onReques
               />
               {school.rejection_reason && (
                 <Field label="Rejection Reason" value={school.rejection_reason} />
-              )}
-            </Section>
-
-            {/* School Badge & Branding */}
-            <Section icon={<IcShield />} title="School Badge & Branding">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
-                <div style={{ width: 80, height: 80, borderRadius: 12, background: school.badge ? 'transparent' : color, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--sa-border)', overflow: 'hidden' }}>
-                  <SchoolBadge badge={school.badge} name={school.name} size={80} />
-                </div>
-                <div>
-                  <p style={{ margin: '0 0 4px', fontSize: '0.875rem', fontWeight: 600, color: 'var(--sa-text)' }}>School Badge</p>
-                  <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--sa-text-2)' }}>
-                    {school.badge ? 'Badge uploaded and available' : 'No badge uploaded - showing initials'}
-                  </p>
-                </div>
-              </div>
-              {school.brand_colors && (
-                <div style={{ marginTop: 12 }}>
-                  <p style={{ margin: '0 0 8px', fontSize: '0.875rem', fontWeight: 600, color: 'var(--sa-text)' }}>Brand Colors</p>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {(() => {
-                      try {
-                        const colors = JSON.parse(school.brand_colors);
-                        return colors.map((color, i) => (
-                          <div key={i} style={{
-                            width: 32, height: 32, borderRadius: 6,
-                            background: color, border: '1px solid var(--sa-border)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center'
-                          }}>
-                            <span style={{ fontSize: '0.625rem', fontWeight: 700, color: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
-                              {i + 1}
-                            </span>
-                          </div>
-                        ));
-                      } catch {
-                        return <span style={{ fontSize: '0.75rem', color: 'var(--sa-text-2)' }}>{school.brand_colors}</span>;
-                      }
-                    })()}
-                  </div>
-                </div>
               )}
             </Section>
 

@@ -2,7 +2,8 @@ const jwt = require('jsonwebtoken');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_super_secret_key_change_in_production';
 
-function generateToken(user) {
+function generateToken(user, options = {}) {
+  const { expiresIn = '24h', extraClaims = {} } = options;
   return jwt.sign(
     {
       id: user.id,
@@ -18,9 +19,12 @@ function generateToken(user) {
       // scopedSchoolId). Without it, school_admin/teacher/etc. requests are
       // rejected with "No school is linked to your account".
       school_id: user.school_id ?? null,
+      // Optional impersonation claims (imp / imp_actor / imp_sid / imp_started)
+      // injected by impersonate() so the auth layer can time-box + audit the session.
+      ...extraClaims,
     },
     JWT_SECRET,
-    { expiresIn: '24h' }
+    { expiresIn }
   );
 }
 

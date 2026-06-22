@@ -7,6 +7,12 @@ const SystemAcademicYear = sequelize.define('SystemAcademicYear', {
   start_date: { type: DataTypes.DATEONLY, allowNull: true },
   end_date: { type: DataTypes.DATEONLY, allowNull: true },
   is_active: { type: DataTypes.BOOLEAN, defaultValue: false },
+  status: {
+    type: DataTypes.ENUM('draft', 'active', 'closed', 'archived'),
+    allowNull: false,
+    defaultValue: 'draft',
+  },
+  deleted_at: { type: DataTypes.DATE, allowNull: true },
   created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
   updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
 }, {
