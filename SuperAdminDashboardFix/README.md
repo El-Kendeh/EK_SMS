@@ -12,7 +12,14 @@ This folder documents the full audit of the EK-SMS **Super Admin** console (UI +
 > ## ⚠️ Independent verification (2026-06-23, post-fix)
 > A third workflow re-checked **all 84 findings against the deployed code**: **25 fixed · 15 partial · 43 open** (1 moot).
 > The **security-critical work IS done** (staff/student PII routes, class/subject IDOR, audited impersonation). **But the "trust-signal honesty pass" was NOT comprehensive** — it covered the components I happened to edit, and **missed several fabricated-signal components that still mislead in production**: **SAReview** (fake "Trust Score"/"Email Verified" on the approval screen — HIGH), **SABenchmarks Pass Rate** (false "0.0%" — HIGH), **SAChangeAlerts** (blank/"Invalid Date" cards — HIGH), **SAAnalytics** (compliance/coverage/KPI/grade-distribution), **SASchools** ("98%" health), **SASecurityLogs** ("Flagged IPs"), **SAAlertBroadcast** ("System: Optimal"), and the **SAUsers** per-card trend chips. Plus deferred design/feature items (A8 person pages, real enforcement, etc.) and 22 low cosmetic items.
-> A **follow-up sweep is closing the missed fabricated-signal components** (see commits below).
+> ### ✅ Follow-up sweep DONE — commit `01c1f44` (CI build verified)
+> Closed the missed fabricated-signal components:
+> - **SAReview** — "Trust Score" → "Profile Completeness"; false "Domain & IP checks passed" + "Email Verified" removed *(HIGH → fixed)*
+> - **SABenchmarks** — false "0.0%" Pass Rate now shows "—" (only computes when backend returns `passed`) *(HIGH → fixed)*
+> - **SASchools** — "System Health: 98%" card removed *(MED → fixed)* · **SASecurityLogs** — "Flagged IPs" removed *(MED → fixed)* · **SAAlertBroadcast** — "System: Optimal" pill removed *(MED → fixed)* · **SAUsers** — hardcoded trend chips removed *(HIGH-partial → fixed)*
+> - **SAAnalytics** — hardcoded Grade Distribution → "not tracked"; compliance flags + coverage bars caveated as placeholders; "Apr 2025" + fake "+5% MoM/+12% YTD" deltas removed *(MED → fixed; LOW leftovers: hardcoded sparklines, dead phone button, overview-tab compliance summary)*
+>
+> **Updated tally after the sweep: ~33 fixed · ~14 partial · ~36 open.** Still open by design/feature: **A8** (person pages — impersonation-only), real **enforcement** behind the honest labels (lockdown/backup/grade-hash/RBAC/2FA), **A9** Batch Import (held for credential fix), **SAChangeAlerts** field-contract (correctness), and the **22 low cosmetic** items (fallbacks, loading/empty states, a few dead buttons).
 
 ---
 
