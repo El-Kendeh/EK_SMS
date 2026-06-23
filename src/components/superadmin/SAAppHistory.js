@@ -1,11 +1,9 @@
 import React from 'react';
 
 /* ---- Icons ---- */
-const IcBack   = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>;
-const IcClock  = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>;
-const IcRotate = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>;
-const IcUser   = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>;
-const IcDiff   = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>;
+const IcBack  = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>;
+const IcClock = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>;
+const IcInfo  = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>;
 
 /* ---- Helpers ---- */
 function fmtDate(dateStr) {
@@ -17,61 +15,35 @@ function daysSince(dateStr) {
   return Math.max(0, Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000));
 }
 
-export default function SAAppHistory({ school, onBack, onCompare }) {
-  const days     = daysSince(school.registration_date);
-  const revisions = school.changes_requested ? 2 : 1;
-  const adminName = school.admin_full_name || school.principal_name || 'School Admin';
+/* SAAppHistory — reconstructed application timeline. EK-SMS records the
+   submission date but not a per-event audit timeline for registrations, so this
+   is honestly reconstructed from the application's current status: the only exact
+   timestamp is the submission date, and intermediate steps are shown without
+   fabricated dates/quotes. (The old version invented a full timeline, a reviewer
+   quote, and a v1-vs-v2 "Compare Versions" diff — all removed.) */
+export default function SAAppHistory({ school, onBack }) {
+  const days      = daysSince(school.registration_date);
+  const adminName = school.admin_full_name || school.principal_name || 'the school admin';
+  const isRejected = !school.is_approved && school.is_active === false;
+
+  const status = school.is_approved ? 'Approved'
+    : isRejected ? 'Rejected'
+    : school.changes_requested ? 'Changes Requested'
+    : 'Under Review';
 
   const events = [
-    {
-      id:    'submit',
-      dot:   'blue',
-      label: 'Initial Submission',
-      desc:  'Application submitted by ' + adminName,
-      date:  fmtDate(school.registration_date),
-    },
-    {
-      id:    'review',
-      dot:   'amber',
-      label: 'Review Started',
-      desc:  'Application picked up for review by Super Admin.',
-      date:  fmtDate(school.registration_date),
-    },
-    ...(school.changes_requested ? [
-      {
-        id:    'changes',
-        dot:   'purple',
-        label: 'Changes Requested',
-        desc:  'Reviewer requested additional information about school documentation and admin credentials.',
-        date:  fmtDate(school.registration_date),
-        quote: 'Please provide updated registration documents and confirm the admin email address.',
-      },
-      {
-        id:    'resubmit',
-        dot:   'blue',
-        label: 'Re-submitted',
-        desc:  'School admin updated the required fields and re-submitted the application.',
-        date:  fmtDate(school.registration_date),
-      },
-    ] : []),
-    ...(school.is_approved
-      ? [{
-          id:    'approved',
-          dot:   'green',
-          label: 'Application Approved',
-          desc:  'School was approved and credentials activated. Welcome email sent.',
-          date:  fmtDate(school.registration_date),
-        }]
-      : [{
-          id:      'pending',
-          dot:     'amber',
-          label:   'Under Review',
-          desc:    'Awaiting final decision from Super Admin.',
-          date:    'Now',
-          current: true,
-        }]
-    ),
+    { id: 'submit', dot: 'blue', label: 'Application Submitted', desc: `Submitted by ${adminName}.`, date: fmtDate(school.registration_date) },
   ];
+  if (school.changes_requested) {
+    events.push({ id: 'changes', dot: 'purple', label: 'Changes Requested', desc: 'The Super Admin requested changes to this application.', date: null });
+  }
+  if (isRejected) {
+    events.push({ id: 'rejected', dot: 'red', label: 'Application Rejected', desc: school.rejection_reason || 'No reason recorded.', date: null });
+  } else if (school.is_approved) {
+    events.push({ id: 'approved', dot: 'green', label: 'Application Approved', desc: 'The school account was activated.', date: null });
+  } else {
+    events.push({ id: 'pending', dot: 'amber', label: 'Under Review', desc: 'Awaiting a decision from the Super Admin.', date: 'Now', current: true });
+  }
 
   return (
     <div style={{ maxWidth: 640, margin: '0 auto' }}>
@@ -84,32 +56,33 @@ export default function SAAppHistory({ school, onBack, onCompare }) {
       <div className="sa-page-head" style={{ marginBottom: 16 }}>
         <div>
           <h1 className="sa-page-title">Application History</h1>
-          <p className="sa-page-sub">{school.name} · Review timeline</p>
+          <p className="sa-page-sub">{school.name}</p>
         </div>
+      </div>
+
+      {/* Honest disclaimer */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 14px', borderRadius: 10, marginBottom: 16, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)' }}>
+        <span style={{ flexShrink: 0, color: 'var(--sa-amber)', display: 'flex', width: 16, height: 16 }}><IcInfo /></span>
+        <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--sa-text-2)', lineHeight: 1.5 }}>
+          Reconstructed from the application's current status. Only the submission date is exact — per-event timestamps are not recorded for registrations.
+        </p>
       </div>
 
       {/* Review Summary Card */}
       <div className="sa-card" style={{ marginBottom: 16 }}>
-        <div className="sa-card-head">
-          <p className="sa-card-title">Review Summary</p>
-          {school.changes_requested && (
-            <button className="sa-btn sa-btn--ghost sa-btn--sm" style={{ gap: 6 }} onClick={onCompare}>
-              <IcDiff /> Compare Versions
-            </button>
-          )}
-        </div>
+        <div className="sa-card-head"><p className="sa-card-title">Review Summary</p></div>
         <div className="sa-card-body">
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
             {[
-              { icon: <IcClock />,  label: 'Days in Review', value: days,         cls: 'sa-stat-icon--amber'  },
-              { icon: <IcRotate />, label: 'Revisions',      value: revisions,    cls: 'sa-stat-icon--purple' },
-              { icon: <IcUser />,   label: 'Last Reviewer',  value: 'Super Admin', cls: 'sa-stat-icon--blue'  },
+              { icon: <IcClock />, label: 'Days Since Submission', value: days,                            cls: 'sa-stat-icon--amber' },
+              { icon: <IcInfo />,  label: 'Status',                value: status,                          cls: 'sa-stat-icon--blue'  },
+              { icon: <IcClock />, label: 'Submitted',             value: fmtDate(school.registration_date), cls: 'sa-stat-icon--purple' },
             ].map((s, i) => (
               <div key={i} style={{ textAlign: 'center' }}>
                 <div className={`sa-stat-icon ${s.cls}`} style={{ margin: '0 auto 8px', width: 36, height: 36 }}>
                   {s.icon}
                 </div>
-                <p style={{ fontSize: '1.375rem', fontWeight: 800, color: 'var(--sa-text)', margin: '0 0 4px', lineHeight: 1 }}>
+                <p style={{ fontSize: s.label === 'Status' || s.label === 'Submitted' ? '0.9375rem' : '1.375rem', fontWeight: 800, color: 'var(--sa-text)', margin: '0 0 4px', lineHeight: 1.1 }}>
                   {s.value}
                 </p>
                 <p style={{ fontSize: '0.6875rem', color: 'var(--sa-text-2)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>
@@ -139,18 +112,15 @@ export default function SAAppHistory({ school, onBack, onCompare }) {
                     <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9375rem', color: 'var(--sa-text)' }}>
                       {ev.label}
                     </p>
-                    <p style={{ margin: 0, fontSize: '0.6875rem', color: 'var(--sa-text-2)', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                      {ev.date}
-                    </p>
+                    {ev.date && (
+                      <p style={{ margin: 0, fontSize: '0.6875rem', color: 'var(--sa-text-2)', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                        {ev.date}
+                      </p>
+                    )}
                   </div>
                   <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--sa-text-2)', lineHeight: 1.55 }}>
                     {ev.desc}
                   </p>
-                  {ev.quote && (
-                    <blockquote className="sa-tl-quote">
-                      "{ev.quote}"
-                    </blockquote>
-                  )}
                 </div>
               </div>
             ))}
