@@ -99,8 +99,13 @@ function fmtRelative(ts) {
 export default function SAProfile({ user, onBack, onAvatarChange }) {
   const fileInputRef = useRef(null);
 
+  /* Profile (incl. the base64 avatar) is persisted in localStorage PER USER so it
+     never leaks across accounts sharing a browser — e.g. a super admin's photo
+     showing for a school admin after switching login. */
+  const profileKey = `ek-sms-profile-${user?.id ?? 'anon'}`;
+
   /* ---- Load persisted profile data ---- */
-  const saved = (() => { try { return JSON.parse(localStorage.getItem('ek-sms-profile') || '{}'); } catch { return {}; } })();
+  const saved = (() => { try { return JSON.parse(localStorage.getItem(profileKey) || '{}'); } catch { return {}; } })();
 
   const [avatarSrc,   setAvatarSrc]   = useState(saved.avatarSrc   || null);
   const [avatarColor, setAvatarColor] = useState(saved.avatarColor || 'blue');
@@ -182,13 +187,13 @@ export default function SAProfile({ user, onBack, onAvatarChange }) {
     fileInputRef.current && (fileInputRef.current.value = '');
     if (onAvatarChange) onAvatarChange(null);
     const localData = { avatarSrc: null, avatarColor, fullName, email, phone, bio, language, timezone };
-    localStorage.setItem('ek-sms-profile', JSON.stringify(localData));
+    localStorage.setItem(profileKey, JSON.stringify(localData));
   };
 
   /* ---- Save profile ---- */
   const handleSave = async () => {
     const localData = { avatarSrc, avatarColor, fullName, email, phone, bio, language, timezone };
-    localStorage.setItem('ek-sms-profile', JSON.stringify(localData));
+    localStorage.setItem(profileKey, JSON.stringify(localData));
     if (onAvatarChange) onAvatarChange(avatarSrc);
     try {
       const nameParts = fullName.trim().split(' ');

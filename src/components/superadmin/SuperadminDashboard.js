@@ -456,9 +456,10 @@ export default function Dashboard({ onNavigate }) {
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
   const [searchOpen,       setSearchOpen]       = useState(false);
   const [secLogFilter,     setSecLogFilter]     = useState('');
-  const [profileAvatar,    setProfileAvatar]    = useState(() => {
-    try { return JSON.parse(localStorage.getItem('ek-sms-profile') || '{}').avatarSrc || null; } catch { return null; }
-  });
+  /* Per-user avatar (see SAProfile). Not read at init because `user` isn't loaded
+     yet — the [user] effect below reads ek-sms-profile-<id> once the user is known,
+     so one account never shows another account's photo in a shared browser. */
+  const [profileAvatar,    setProfileAvatar]    = useState(null);
   /* The signed-in user's own school (name + badge) — shown as ownership in the
      sidebar brand for school-scoped roles (school admin, principal, bursar). */
   const { schoolName, badgeUrl } = useSchoolBranding();
@@ -516,6 +517,14 @@ export default function Dashboard({ onNavigate }) {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, []);
+
+  /* ---- Load THIS user's avatar (per-user localStorage key) ---- */
+  useEffect(() => {
+    if (!user?.id) { setProfileAvatar(null); return; }
+    try {
+      setProfileAvatar(JSON.parse(localStorage.getItem(`ek-sms-profile-${user.id}`) || '{}').avatarSrc || null);
+    } catch { setProfileAvatar(null); }
+  }, [user]);
 
   /* ---- Actions ---- */
   const handleAction = useCallback(async (schoolId, action, note = '') => {
@@ -603,6 +612,7 @@ export default function Dashboard({ onNavigate }) {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('ek-sms-profile'); // deprecated shared avatar key — clear the stale cross-account value
     onNavigate && onNavigate('home');
   };
 
