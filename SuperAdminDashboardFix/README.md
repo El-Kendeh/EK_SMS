@@ -18,8 +18,10 @@ This folder documents the full audit of the EK-SMS **Super Admin** console (UI +
 > - **SABenchmarks** — false "0.0%" Pass Rate now shows "—" (only computes when backend returns `passed`) *(HIGH → fixed)*
 > - **SASchools** — "System Health: 98%" card removed *(MED → fixed)* · **SASecurityLogs** — "Flagged IPs" removed *(MED → fixed)* · **SAAlertBroadcast** — "System: Optimal" pill removed *(MED → fixed)* · **SAUsers** — hardcoded trend chips removed *(HIGH-partial → fixed)*
 > - **SAAnalytics** — hardcoded Grade Distribution → "not tracked"; compliance flags + coverage bars caveated as placeholders; "Apr 2025" + fake "+5% MoM/+12% YTD" deltas removed *(MED → fixed; LOW leftovers: hardcoded sparklines, dead phone button, overview-tab compliance summary)*
+> - **SABenchmarks Pass Rate** — neutral (not downward) trend arrow on the "No data" state *(commit `26fc5e9`)*
+> - **SAChangeAlerts** — mapped the cards to the real `getSystemAlerts` contract: `created_at`/`body`/`notes` instead of the never-sent `triggered_at`/`description`; channel badges hidden until the backend reports delivery; date helpers hardened so "Invalid Date" can't render *(HIGH → fixed, commit `8e154fe`)*
 >
-> **Updated tally after the sweep: ~33 fixed · ~14 partial · ~36 open.** Still open by design/feature: **A8** (person pages — impersonation-only), real **enforcement** behind the honest labels (lockdown/backup/grade-hash/RBAC/2FA), **A9** Batch Import (held for credential fix), **SAChangeAlerts** field-contract (correctness), and the **22 low cosmetic** items (fallbacks, loading/empty states, a few dead buttons).
+> **Updated tally after the sweep: ~35 fixed · ~14 partial · ~34 open — all four open HIGH items now closed** (A8 is impersonation-only by design). Still open by design/feature: real **enforcement** behind the honest labels (lockdown/backup/grade-hash/RBAC/2FA), **A9** Batch Import (held for credential fix), and the **22 low cosmetic** items (fallbacks, loading/empty states, a few dead buttons, SAAnalytics sparklines/phone-button).
 
 ---
 
