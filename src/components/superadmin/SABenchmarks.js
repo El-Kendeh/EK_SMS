@@ -66,13 +66,14 @@ function CompareView({ onBack, schools = [] }) {
   const a = list.find(s => s.name === schoolA) || list[0];
   const b = list.find(s => s.name === schoolB) || list[1];
 
+  /* Grade Integrity & Attendance removed — no real per-school source (they were
+     hardcoded 100/90). The remaining metrics derive from real counts/scores;
+     null is formatted as "—" so nothing renders as the literal "null%". */
   const metrics = [
-    { key: 'integrity',  label: 'Grade Integrity', fmt: v => v + '%'           },
-    { key: 'perf',       label: 'Perf. Index',     fmt: v => v                 },
-    { key: 'passRate',   label: 'Pass Rate',       fmt: v => v + '%'           },
-    { key: 'attendance', label: 'Attendance',      fmt: v => v + '%'           },
-    { key: 'gpa',        label: 'Avg GPA',         fmt: v => v                 },
-    { key: 'students',   label: 'Students',        fmt: v => v.toLocaleString() },
+    { key: 'perf',     label: 'Perf. Index', fmt: v => (v == null ? '—' : v)                    },
+    { key: 'passRate', label: 'Pass Rate',   fmt: v => (v == null ? '—' : v + '%')              },
+    { key: 'gpa',      label: 'Avg GPA',     fmt: v => (v == null ? '—' : v)                    },
+    { key: 'students', label: 'Students',    fmt: v => (v == null ? '—' : v.toLocaleString())   },
   ];
 
   const aWins = metrics.filter(m => a[m.key] >= b[m.key]).length;
@@ -123,9 +124,9 @@ function CompareView({ onBack, schools = [] }) {
             <p style={{ margin: '0 0 6px', fontWeight: 800, fontSize: '0.875rem', color: 'var(--sa-text)', lineHeight: 1.3 }}>{s.name}</p>
             <span style={{
               display: 'inline-block', borderRadius: 20, padding: '2px 8px', fontSize: '0.625rem', fontWeight: 600,
-              background: s.type === 'Private' ? 'var(--sa-accent-dim)' : 'var(--sa-green-dim)',
-              color: s.type === 'Private' ? 'var(--sa-accent)' : 'var(--sa-green)',
-            }}>{s.type}</span>
+              background: s.type === 'Private' ? 'var(--sa-accent-dim)' : 'var(--sa-card-bg2)',
+              color: s.type === 'Private' ? 'var(--sa-accent)' : 'var(--sa-text-3)',
+            }}>{s.type || 'School'}</span>
           </div>
         ))}
       </div>
