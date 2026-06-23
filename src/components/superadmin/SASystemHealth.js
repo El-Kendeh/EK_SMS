@@ -2,21 +2,9 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import ApiClient from '../../api/client';
 
 /* ---- Icons ---- */
-const IcShield = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>;
-const IcCheck = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>;
-const IcHistory = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 102-.66" /></svg>;
 const IcCpu = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" /><rect x="9" y="9" width="6" height="6" /><line x1="9" y1="1" x2="9" y2="4" /><line x1="15" y1="1" x2="15" y2="4" /><line x1="9" y1="20" x2="9" y2="23" /><line x1="15" y1="20" x2="15" y2="23" /><line x1="20" y1="9" x2="23" y2="9" /><line x1="20" y1="14" x2="23" y2="14" /><line x1="1" y1="9" x2="4" y2="9" /><line x1="1" y1="14" x2="4" y2="14" /></svg>;
 
 /* ---- Helpers ---- */
-function genUptimeBars(uptimePct, slots = 30) {
-  return Array.from({ length: slots }, () => {
-    const r = Math.random();
-    if (r > uptimePct) return 'down';
-    if (r > uptimePct - 0.03) return 'degraded';
-    return 'up';
-  });
-}
-
 function getProgressColor(val) {
   if (val > 80) return 'var(--sa-red)';
   if (val > 60) return 'var(--sa-amber)';
@@ -36,6 +24,7 @@ export default function SASystemHealth() {
   const [metrics, setMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [uptimeSecs, setUptimeSecs] = useState(0);
+  const [lastChecked, setLastChecked] = useState(null);
 
   const fetchHealth = useCallback(async () => {
     try {
@@ -43,6 +32,7 @@ export default function SASystemHealth() {
       if (data.success) {
         setMetrics(data);
         setUptimeSecs(data.uptime);
+        setLastChecked(new Date());
       }
     } catch (err) {
       console.error('Health check failed', err);
@@ -63,13 +53,7 @@ export default function SASystemHealth() {
     return () => clearInterval(timer);
   }, []);
 
-  const services = useMemo(() => {
-    if (!metrics?.services) return [];
-    return metrics.services.map(s => ({
-      ...s,
-      bars: genUptimeBars(s.uptime)
-    }));
-  }, [metrics]);
+  const services = useMemo(() => metrics?.services || [], [metrics]);
 
   const resources = useMemo(() => metrics?.resources || [], [metrics]);
 
@@ -106,39 +90,14 @@ export default function SASystemHealth() {
               <h2 style={{ margin: '0 0 4px', fontSize: '1.75rem', fontWeight: 800, color: '#fff', lineHeight: 1.2 }}>
                 {hasIssue ? 'Minor Issues Detected' : 'All Systems Operational'}
               </h2>
-              <p style={{ margin: '0 0 18px', fontSize: '0.8125rem', color: 'rgba(255,255,255,0.65)' }}>Last updated: Just now</p>
+              <p style={{ margin: '0 0 18px', fontSize: '0.8125rem', color: 'rgba(255,255,255,0.65)' }}>
+                {lastChecked ? `Last checked: ${lastChecked.toLocaleTimeString()}` : 'Checking…'} · monitors DB, email config & host resources
+              </p>
               <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: 10, padding: '10px 16px', display: 'inline-block' }}>
                 <p style={{ margin: '0 0 2px', fontSize: '0.6875rem', color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>System Uptime</p>
                 <p style={{ margin: 0, fontFamily: 'Consolas, monospace', fontVariantNumeric: 'tabular-nums', fontSize: '1rem', fontWeight: 700, color: '#fff', letterSpacing: '0.03em' }}>
                   {fmtUptime(uptimeSecs)}
                 </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Security Health */}
-          <div className="sa-card" style={{ marginBottom: 20 }}>
-            <div className="sa-card-head">
-              <p className="sa-card-title">
-                <IcShield style={{ display: 'inline', verticalAlign: 'middle', width: 14, height: 14, marginRight: 6 }} />
-                Security Health
-              </p>
-              <span style={{ fontSize: '0.6875rem', color: 'var(--sa-text-2)' }}>Continuous Monitoring</span>
-            </div>
-            <div className="sa-card-body">
-              <div className="sa-two-col-grid">
-                <div style={{ background: 'var(--sa-card-bg2)', borderRadius: 10, padding: '14px 16px', border: '1px solid var(--sa-border)' }}>
-                  <p style={{ margin: '0 0 6px', fontSize: '0.6875rem', color: 'var(--sa-text-2)', textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 700 }}>Data Integrity</p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--sa-green)', fontWeight: 700 }}>
-                    <span style={{ width: 16, height: 16, display: 'flex', flexShrink: 0 }}><IcCheck /></span> Verified
-                  </div>
-                </div>
-                <div style={{ background: 'var(--sa-card-bg2)', borderRadius: 10, padding: '14px 16px', border: '1px solid var(--sa-border)' }}>
-                  <p style={{ margin: '0 0 6px', fontSize: '0.6875rem', color: 'var(--sa-text-2)', textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 700 }}>Last Audit</p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--sa-text)', fontWeight: 700 }}>
-                    <span style={{ width: 16, height: 16, display: 'flex', flexShrink: 0 }}><IcHistory /></span> 4m ago
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -169,43 +128,32 @@ export default function SASystemHealth() {
           {/* Core Services */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <p style={{ margin: 0, fontWeight: 700, fontSize: '1rem', color: 'var(--sa-text)' }}>Core Services</p>
-            <span style={{ fontSize: '0.6875rem', color: 'var(--sa-text-2)', fontWeight: 600 }}>90-Day Uptime</span>
+            <span style={{ fontSize: '0.6875rem', color: 'var(--sa-text-2)', fontWeight: 600 }}>Live status</span>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 28 }}>
             {services.map(svc => {
               const isOp = svc.status === 'Operational';
               const statusCol = isOp ? 'var(--sa-green)' : 'var(--sa-amber)';
-              const uptimePct = (svc.uptime * 100).toFixed(2);
               return (
                 <div key={svc.id} className="sa-card" style={{ borderLeft: `3px solid ${statusCol}` }}>
-                  <div style={{ padding: '14px 16px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <span style={{ width: 18, height: 18, display: 'flex', color: 'var(--sa-text-2)', flexShrink: 0 }}>{svc.icon}</span>
-                        <span style={{ fontWeight: 600, fontSize: '0.9375rem', color: 'var(--sa-text)' }}>{svc.label}</span>
-                      </div>
-                      <span style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 5,
-                        background: isOp ? 'var(--sa-green-dim)' : 'var(--sa-amber-dim)',
-                        color: statusCol, border: `1px solid ${statusCol}33`,
-                        borderRadius: 20, padding: '3px 10px', fontSize: '0.6875rem', fontWeight: 700, flexShrink: 0,
-                      }}>
-                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: statusCol, display: 'inline-block' }} />
-                        {svc.status}
-                      </span>
+                  <div style={{ padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                      <span style={{ width: 18, height: 18, display: 'flex', color: 'var(--sa-text-2)', flexShrink: 0 }}>{svc.icon}</span>
+                      <span style={{ fontWeight: 600, fontSize: '0.9375rem', color: 'var(--sa-text)' }}>{svc.label}</span>
+                      {svc.probed === false && (
+                        <span style={{ fontSize: '0.625rem', color: 'var(--sa-text-3)', border: '1px solid var(--sa-border)', borderRadius: 10, padding: '1px 7px', whiteSpace: 'nowrap' }} title="Reflects configuration presence, not a live end-to-end test.">config check only</span>
+                      )}
                     </div>
-                    {/* Mini uptime bars */}
-                    <div style={{ display: 'flex', gap: 2, height: 18, alignItems: 'flex-end' }}>
-                      {svc.bars.map((b, i) => {
-                        const col = b === 'up' ? 'var(--sa-green)' : b === 'degraded' ? 'var(--sa-amber)' : 'var(--sa-red)';
-                        const h = b === 'up' ? '100%' : b === 'degraded' ? '65%' : '30%';
-                        return <div key={i} style={{ flex: 1, height: h, background: col, borderRadius: 2, opacity: 0.85 }} />;
-                      })}
-                    </div>
-                    <p style={{ margin: '5px 0 0', fontSize: '0.6875rem', color: 'var(--sa-text-2)', textAlign: 'right' }}>
-                      {uptimePct}% uptime
-                    </p>
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 5,
+                      background: isOp ? 'var(--sa-green-dim)' : 'var(--sa-amber-dim)',
+                      color: statusCol, border: `1px solid ${statusCol}33`,
+                      borderRadius: 20, padding: '3px 10px', fontSize: '0.6875rem', fontWeight: 700, flexShrink: 0,
+                    }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: statusCol, display: 'inline-block' }} />
+                      {svc.status}
+                    </span>
                   </div>
                 </div>
               );

@@ -240,17 +240,38 @@ function CreateUserModal({ onClose, onCreated }) {
    ============================================================ */
 function UserProfile({ user, onBack, onNavigate, showToast }) {
   const risk = RISK_CFG[user.riskLevel] || RISK_CFG.low;
-  const [suspended, setSuspended] = useState(user.status === 'suspended');
+  const suspended = user.status === 'suspended';   // reflects backend status (read-only; suspend toggle not implemented yet)
   const [resetSent, setResetSent] = useState(false);
-  const [setupSent, setSetupSent] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [sessions, setSessions] = useState(user.sessions);
-  const [twoFA, setTwoFA] = useState(user.twoFAEnabled);
+  const twoFA = user.twoFAEnabled;                  // backend currently always reports false (2FA enrollment not implemented)
 
   const initials = (user.name || user.username || 'U').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
   const roleColor = ROLE_COLORS[user.role] || '#64748B';
 
   const terminateSession = (id) => setSessions(s => s.filter(sess => sess.id !== id));
   const terminateAll = () => setSessions(s => s.filter(sess => !sess.active));
+
+  /* Real password reset — calls the existing superadmin endpoint, which hashes a
+     one-time password, forces a change on first login, and emails it to the user. */
+  const handleResetPassword = async () => {
+    if (resetSent || resetting) return;
+    setResetting(true);
+    try {
+      const tempPw = `Ek${Math.random().toString(36).slice(2, 9)}!${Math.floor(Math.random() * 90 + 10)}`;
+      const res = await ApiClient.post('/api/reset-user-password/', { user_id: user.id, new_password: tempPw });
+      if (res?.success) {
+        setResetSent(true);
+        showToast && showToast(`Password reset for ${user.name}. A temporary password was emailed; they must change it on first login.`);
+      } else {
+        showToast && showToast(res?.message || 'Password reset failed.', 'error');
+      }
+    } catch {
+      showToast && showToast('Password reset failed. Please try again.', 'error');
+    } finally {
+      setResetting(false);
+    }
+  };
 
   return (
     <div>
@@ -365,29 +386,32 @@ function UserProfile({ user, onBack, onNavigate, showToast }) {
       {/* Action buttons */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 16 }}>
         <button
-          onClick={() => setResetSent(true)}
-          style={{ flex: '1 1 140px', padding: '11px 16px', borderRadius: 10, border: '1px solid var(--sa-border)', cursor: 'pointer', background: 'var(--sa-card-bg2)', color: resetSent ? 'var(--sa-green)' : 'var(--sa-text)', fontWeight: 700, fontSize: '0.875rem', fontFamily: 'var(--sa-font)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+          onClick={handleResetPassword}
+          disabled={resetting || resetSent}
+          style={{ flex: '1 1 140px', padding: '11px 16px', borderRadius: 10, border: '1px solid var(--sa-border)', cursor: (resetting || resetSent) ? 'default' : 'pointer', background: 'var(--sa-card-bg2)', color: resetSent ? 'var(--sa-green)' : 'var(--sa-text)', fontWeight: 700, fontSize: '0.875rem', fontFamily: 'var(--sa-font)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
         >
           <span style={{ width: 16, height: 16 }}><IcLock /></span>
-          {resetSent ? 'Reset Email Sent' : 'Reset Password'}
+          {resetSent ? 'Password Reset ✓' : resetting ? 'Resetting…' : 'Reset Password'}
         </button>
 
         {!twoFA && (
           <button
-            onClick={() => { setSetupSent(true); setTimeout(() => setTwoFA(true), 1500); }}
-            style={{ flex: '1 1 140px', padding: '11px 16px', borderRadius: 10, cursor: 'pointer', background: setupSent ? 'var(--sa-green-dim)' : 'rgba(99,102,241,0.1)', color: setupSent ? 'var(--sa-green)' : 'var(--sa-accent)', fontWeight: 700, fontSize: '0.875rem', fontFamily: 'var(--sa-font)', border: `1px solid ${setupSent ? 'rgba(16,185,129,0.3)' : 'rgba(99,102,241,0.25)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+            onClick={() => showToast && showToast("2FA enrollment isn't available yet.")}
+            title="2FA enrollment is not implemented yet"
+            style={{ flex: '1 1 140px', padding: '11px 16px', borderRadius: 10, cursor: 'pointer', background: 'var(--sa-card-bg2)', color: 'var(--sa-text-3)', fontWeight: 700, fontSize: '0.875rem', fontFamily: 'var(--sa-font)', border: '1px solid var(--sa-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
           >
             <span style={{ width: 16, height: 16 }}><IcKey /></span>
-            {setupSent ? '2FA Setup Sent' : 'Send 2FA Setup'}
+            Enable 2FA (soon)
           </button>
         )}
 
         <button
-          onClick={() => setSuspended(s => !s)}
-          style={{ flex: '1 1 140px', padding: '11px 16px', borderRadius: 10, cursor: 'pointer', background: suspended ? 'var(--sa-green-dim)' : 'var(--sa-red-dim)', color: suspended ? 'var(--sa-green)' : 'var(--sa-red)', fontWeight: 700, fontSize: '0.875rem', fontFamily: 'var(--sa-font)', border: `1px solid ${suspended ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+          onClick={() => showToast && showToast("Account suspend/unsuspend isn't available yet.")}
+          title="Account suspension is not implemented yet"
+          style={{ flex: '1 1 140px', padding: '11px 16px', borderRadius: 10, cursor: 'pointer', background: 'var(--sa-card-bg2)', color: 'var(--sa-text-3)', fontWeight: 700, fontSize: '0.875rem', fontFamily: 'var(--sa-font)', border: '1px solid var(--sa-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
         >
           <span style={{ width: 16, height: 16 }}><IcBlock /></span>
-          {suspended ? 'Unsuspend Account' : 'Suspend Account'}
+          {suspended ? 'Unsuspend (soon)' : 'Suspend (soon)'}
         </button>
 
         <button

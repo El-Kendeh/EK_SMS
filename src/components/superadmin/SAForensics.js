@@ -266,10 +266,25 @@ export default function SAForensics({ initialEvent }) {
 
   useEffect(() => { fetchCases(); }, [fetchCases]);
 
-  const initCase = initialEvent
-    ? (cases.find(c => c.type === initialEvent.type) || cases[0])
-    : null;
-  const [selectedCase, setSelectedCase] = useState(initCase);
+  const [selectedCase, setSelectedCase] = useState(null);
+
+  /* Open the matching forensic case when arriving via a security-log
+     drill-through (initialEvent). The old code computed the match in a
+     useState initializer, which runs only on the FIRST render while `cases`
+     is still [] (the fetch resolves later), so it always evaluated to
+     undefined and the drill-through opened nothing. Resolve it in an effect
+     once cases have loaded. Security-log and forensic events use different
+     `type` vocabularies, so match on the most specific shared signal
+     available (type, then ip, then actor); if nothing matches, stay on the
+     list rather than opening an unrelated case. */
+  useEffect(() => {
+    if (!initialEvent || !cases.length) return;
+    const match =
+      cases.find(c => c.type === initialEvent.type) ||
+      cases.find(c => initialEvent.ip && c.ip === initialEvent.ip) ||
+      cases.find(c => initialEvent.actor && c.actor === initialEvent.actor);
+    if (match) setSelectedCase(match);
+  }, [initialEvent, cases]);
 
   if (selectedCase) {
     return <ForensicDetail caseData={selectedCase} allCases={cases} onBack={() => setSelectedCase(null)} />;

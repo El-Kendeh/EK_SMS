@@ -137,10 +137,15 @@ export const PAGE_PERMISSIONS = {
   'batch-image-data':  [ROLES.SUPERADMIN],
 
   /* ── Virtual Class / Meeting ── */
+  /* Virtual meetings are a tenant-operational feature. SCHOOL_ADMIN reaches them
+     via the school-admin nav (ALL_NAV_ITEMS); a superadmin reaches them via
+     impersonation ("Enter a School"), so the SA's writes are audited rather than
+     going cross-tenant on the bare superadmin token. (Was SUPERADMIN-only, which
+     left these built pages reachable by no role.) */
   'live-class':        [ROLES.TEACHER, ROLES.STUDENT],
-  'vm-parents':        [ROLES.SUPERADMIN],
-  'vm-staffs':         [ROLES.SUPERADMIN],
-  'vm-students':       [ROLES.SUPERADMIN],
+  'vm-parents':        [ROLES.SUPERADMIN, ROLES.SCHOOL_ADMIN],
+  'vm-staffs':         [ROLES.SUPERADMIN, ROLES.SCHOOL_ADMIN],
+  'vm-students':       [ROLES.SUPERADMIN, ROLES.SCHOOL_ADMIN],
 
   /* ── School Admin only pages ── */
   'syllabus-progress':    [ROLES.SCHOOL_ADMIN, ROLES.PRINCIPAL],

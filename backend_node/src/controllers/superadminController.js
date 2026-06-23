@@ -385,11 +385,15 @@ async function getSystemHealth(req, res) {
     dbStatus = 'Major Outage';
   }
 
+  // Honest health: only report what we can actually observe. Dropped the
+  // fabricated per-service 90-day uptime fractions (0.999x) and the always-green
+  // "Identity Provider" service (auth is in-process JWT, not a separately
+  // probeable component). 'api' is Operational by tautology — if this handler
+  // responded, the API is up. db is a real connection probe; mail is a config check.
   const services = [
-    { id: 'api', label: 'Core API Server', status: 'Operational', uptime: 0.9998, icon: '⚡' },
-    { id: 'db', label: 'Primary Database', status: dbStatus, uptime: 0.9995, icon: '🗄️' },
-    { id: 'mail', label: 'Email Gateway (Resend)', status: process.env.RESEND_API_KEY ? 'Operational' : 'Degraded', uptime: 0.998, icon: '📧' },
-    { id: 'auth', label: 'Identity Provider', status: 'Operational', uptime: 0.9999, icon: '🔑' },
+    { id: 'api', label: 'Core API Server', status: 'Operational', probed: true, icon: '⚡' },
+    { id: 'db', label: 'Primary Database', status: dbStatus, probed: true, icon: '🗄️' },
+    { id: 'mail', label: 'Email Gateway (Resend)', status: process.env.RESEND_API_KEY ? 'Operational' : 'Degraded', probed: false, icon: '📧' },
   ];
 
   const mem = process.memoryUsage();
