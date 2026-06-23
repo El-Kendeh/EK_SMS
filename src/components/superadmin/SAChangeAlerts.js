@@ -108,7 +108,10 @@ function ChannelBadge({ active, sentAt, label, icon }) {
 
 /* ── Helpers ─────────────────────────────────────────────── */
 function relativeTime(iso) {
-  const diff = Date.now() - new Date(iso).getTime();
+  if (!iso) return '';
+  const t = new Date(iso).getTime();
+  if (isNaN(t)) return '';
+  const diff = Date.now() - t;
   const m = Math.floor(diff / 60000);
   if (m < 1)  return 'just now';
   if (m < 60) return `${m}m ago`;
@@ -118,6 +121,7 @@ function relativeTime(iso) {
 }
 
 function formatFull(iso) {
+  if (!iso || isNaN(new Date(iso).getTime())) return '';
   return new Date(iso).toLocaleString('en-GB', {
     day: '2-digit', month: 'short', year: 'numeric',
     hour: '2-digit', minute: '2-digit',
@@ -165,6 +169,9 @@ function AlertCard({ alert, onAcknowledge, onResolve }) {
   const status = STATUS_CFG[alert.status]         || STATUS_CFG.new;
   const ch     = alert.channels || {};
   const isNew  = alert.status === 'new';
+  // Backend getSystemAlerts returns created_at / body / notes — map to the card's fields.
+  const ts          = alert.triggered_at || alert.created_at;
+  const description  = alert.description  || alert.body || '';
 
   const handleAction = async (action) => {
     setLoading(true);
@@ -220,15 +227,19 @@ function AlertCard({ alert, onAcknowledge, onResolve }) {
                 {status.label}
               </span>
             </div>
-            <span title={formatFull(alert.triggered_at)} style={{ fontSize: '0.75rem', color: 'var(--sa-text-3)', whiteSpace: 'nowrap', flexShrink: 0 }}>
-              {relativeTime(alert.triggered_at)}
-            </span>
+            {ts && (
+              <span title={formatFull(ts)} style={{ fontSize: '0.75rem', color: 'var(--sa-text-3)', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                {relativeTime(ts)}
+              </span>
+            )}
           </div>
 
           {/* Description */}
-          <p style={{ fontSize: '0.8125rem', color: 'var(--sa-text-2)', margin: '0 0 10px', lineHeight: 1.55 }}>
-            {alert.description}
-          </p>
+          {description && (
+            <p style={{ fontSize: '0.8125rem', color: 'var(--sa-text-2)', margin: '0 0 10px', lineHeight: 1.55 }}>
+              {description}
+            </p>
+          )}
 
           {/* Meta row */}
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 10, fontSize: '0.75rem', color: 'var(--sa-text-3)' }}>
@@ -241,15 +252,20 @@ function AlertCard({ alert, onAcknowledge, onResolve }) {
             {alert.acknowledged_by && alert.status !== 'new' && (
               <span>{alert.status === 'resolved' ? 'Resolved' : 'Ack.'} by: <strong style={{ color: 'var(--sa-text-2)' }}>{alert.acknowledged_by}</strong></span>
             )}
+            {alert.notes && alert.status !== 'new' && (
+              <span>Notes: <strong style={{ color: 'var(--sa-text-2)' }}>{alert.notes}</strong></span>
+            )}
           </div>
 
-          {/* Notification channels */}
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
-            <ChannelBadge active={ch.in_app}  label="In-App" icon={<IcInApp />}  sentAt={null} />
-            <ChannelBadge active={ch.email}   label="Email"  icon={<IcEmail />}  sentAt={ch.email_sent_at} />
-            <ChannelBadge active={ch.sms}     label="SMS"    icon={<IcSms />}    sentAt={ch.sms_sent_at} />
-            <ChannelBadge active={ch.push}    label="Push"   icon={<IcPush />}   sentAt={ch.push_sent_at} />
-          </div>
+          {/* Notification channels — only when the backend actually reports per-channel delivery */}
+          {alert.channels && (
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+              <ChannelBadge active={ch.in_app}  label="In-App" icon={<IcInApp />}  sentAt={null} />
+              <ChannelBadge active={ch.email}   label="Email"  icon={<IcEmail />}  sentAt={ch.email_sent_at} />
+              <ChannelBadge active={ch.sms}     label="SMS"    icon={<IcSms />}    sentAt={ch.sms_sent_at} />
+              <ChannelBadge active={ch.push}    label="Push"   icon={<IcPush />}   sentAt={ch.push_sent_at} />
+            </div>
+          )}
 
           {/* Action row */}
           {isNew && !expanded && (
