@@ -465,14 +465,14 @@ function LockdownActive({ lockdownTime, onDeactivate }) {
         <div className="sa-lockdown-icon"><IcShieldLock /></div>
       </div>
       <div style={{ textAlign: 'center' }}>
-        <h3 style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--sa-text)', marginBottom: 6 }}>Access Restricted</h3>
+        <h3 style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--sa-text)', marginBottom: 6 }}>Lockdown Recorded</h3>
         <p style={{ fontSize: '0.8125rem', color: 'var(--sa-text-2)', lineHeight: 1.5 }}>
-          Emergency Lockdown is active. All non-admin access to EK-SMS has been suspended.
+          An emergency-lockdown state is recorded and logged. Enforcement is not yet implemented — logins, active sessions, and grade records are not actually blocked.
         </p>
       </div>
       <div className="sa-lockdown-pill">
         <div className="sa-lockdown-dot" />
-        System Status: Emergency Lock
+        Status: Recorded (not enforced)
       </div>
       <div className="sa-lockdown-meta">
         <div className="sa-lockdown-meta-item">
@@ -484,16 +484,16 @@ function LockdownActive({ lockdownTime, onDeactivate }) {
           <p className="sa-lockdown-meta-value">{elapsed === 0 ? 'Just now' : `${elapsed}m ago`}</p>
         </div>
         <div className="sa-lockdown-meta-item">
-          <p className="sa-lockdown-meta-label">Affected</p>
-          <p className="sa-lockdown-meta-value">All Non-Admins</p>
+          <p className="sa-lockdown-meta-label">Enforcement</p>
+          <p className="sa-lockdown-meta-value" style={{ color: 'var(--sa-amber)' }}>Not implemented</p>
         </div>
         <div className="sa-lockdown-meta-item">
-          <p className="sa-lockdown-meta-label">Records</p>
-          <p className="sa-lockdown-meta-value" style={{ color: 'var(--sa-green)' }}>Encrypted ✓</p>
+          <p className="sa-lockdown-meta-label">Audit</p>
+          <p className="sa-lockdown-meta-value">Logged ✓</p>
         </div>
       </div>
       <p className="sa-lockdown-info">
-        All grade records remain securely encrypted and protected. Contact your regional Super Admin for coordination.
+        This records the lockdown intent and writes an audit entry only. Real enforcement (login block, session termination, grade locking) is pending.
       </p>
       <button className="sa-deactivate-btn" onClick={onDeactivate}>
         <IcLockOpen /> Deactivate Lockdown
@@ -895,8 +895,8 @@ export default function SASettings() {
                     >
                       <div className="sa-lcc-initiate-inner">
                         <div>
-                          <p className="sa-lcc-initiate-title">Initiate Lockdown</p>
-                          <p className="sa-lcc-initiate-sub">Execute selected protocol immediately</p>
+                          <p className="sa-lcc-initiate-title">Record Lockdown</p>
+                          <p className="sa-lcc-initiate-sub">Records the state &amp; logs it (enforcement pending)</p>
                         </div>
                         <div className="sa-lcc-initiate-icon">
                           <IcShieldLock size={24} />
@@ -1100,7 +1100,7 @@ export default function SASettings() {
                 <div>
                   <p className="sa-backup-card-label">Last Backup</p>
                   <div className="sa-backup-card-status">
-                    {lastBackupAt ? <><IcSuccess /> Successful</> : 'Never'}
+                    {lastBackupAt ? <><IcSuccess /> Recorded</> : 'Never'}
                   </div>
                   <p className="sa-backup-card-time">
                     {lastBackupAt
@@ -1131,7 +1131,7 @@ export default function SASettings() {
                         size_bytes: res.size_bytes,
                         created_at: iso,
                       });
-                      showToast(`Backup created: ${res.filename}`);
+                      showToast(`Backup entry recorded${res.filename ? `: ${res.filename}` : ''} — no database dump is produced yet.`);
                     } else {
                       showToast(res?.message || 'Backup failed', 'error');
                     }
@@ -1142,8 +1142,12 @@ export default function SASettings() {
                   }
                 }}
               >
-                <IcCloud /> {backingUp ? 'Creating backup…' : 'Initiate Manual Backup'}
+                <IcCloud /> {backingUp ? 'Recording…' : 'Record Backup Entry'}
               </button>
+              <p style={{ fontSize: '0.6875rem', color: 'var(--sa-amber)', marginTop: 10, display: 'flex', alignItems: 'flex-start', gap: 6, lineHeight: 1.5 }}>
+                <span style={{ flexShrink: 0 }}>⚠️</span>
+                <span>Not implemented yet — this records a backup entry and timestamp only; it does not produce an actual database dump.</span>
+              </p>
             </div>
           </div>
         )}
@@ -1190,7 +1194,7 @@ export default function SASettings() {
                 </div>
                 <div className="sa-info-callout" style={{ marginBottom: 16 }}>
                   <IcInfo />
-                  <p>Export is logged in the audit trail. Sensitive data is redacted per compliance policy.</p>
+                  <p>Export is logged in the audit trail. Note: only the Schools dataset is exported today, and redaction is not yet applied (data is not filtered for sensitive fields).</p>
                 </div>
                 <div style={{ display: 'flex', gap: 10 }}>
                   <button className="sa-gov-cancel-btn" style={{ flex: 1 }} onClick={() => setShowExportModal(false)} disabled={exporting}>Cancel</button>
@@ -1257,12 +1261,12 @@ export default function SASettings() {
                 <IcAlert />
               </div>
               <div>
-                <p style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--sa-text)' }}>Activate Emergency Lockdown?</p>
-                <p style={{ fontSize: '0.6875rem', color: 'var(--sa-text-2)', marginTop: 2 }}>This will immediately suspend all non-admin access.</p>
+                <p style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--sa-text)' }}>Record Emergency Lockdown?</p>
+                <p style={{ fontSize: '0.6875rem', color: 'var(--sa-text-2)', marginTop: 2 }}>Records the intent and writes an audit entry.</p>
               </div>
             </div>
             <p style={{ fontSize: '0.8125rem', color: 'var(--sa-text-2)', marginBottom: 20, lineHeight: 1.55 }}>
-              All active sessions will be terminated. Students, teachers, and school admins will be locked out until you deactivate. This action will be logged in the audit trail.
+              ⚠️ <strong>Enforcement is not yet implemented.</strong> This records an emergency-lockdown state and logs it to the audit trail, but it does <strong>not</strong> currently block logins, terminate active sessions, or lock grade records.
             </p>
             <div style={{ display: 'flex', gap: 10 }}>
               <button className="sa-gov-cancel-btn" style={{ flex: 1 }} onClick={() => setShowConfirm(false)}>Cancel</button>
@@ -1278,12 +1282,7 @@ export default function SASettings() {
                       setLockdownTime(Date.now());
                       setLockdownState(res.state);
                       setShowConfirm(false);
-                      const aff = res.affected || {};
-                      const detail = [
-                        aff.grades_locked      ? `${aff.grades_locked} grades locked` : null,
-                        aff.sessions_terminated ? `${aff.sessions_terminated} sessions terminated` : null,
-                      ].filter(Boolean).join(' · ');
-                      showToast(`Lockdown active — ${protocol}${detail ? ` (${detail})` : ''}`, 'error');
+                      showToast(`Lockdown recorded — ${protocol} (not enforced yet)`, 'error');
                     } else {
                       showToast(res?.message || 'Failed to activate lockdown', 'error');
                     }
@@ -1292,7 +1291,7 @@ export default function SASettings() {
                   }
                 }}
               >
-                Confirm Lockdown
+                Record Lockdown
               </button>
             </div>
           </div>

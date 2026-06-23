@@ -118,9 +118,9 @@ function buildNotifications(schools, gradeAlerts, securityLogs = [], backup = nu
     const sizeKb = meta.size_bytes ? ` · ${(meta.size_bytes / 1024).toFixed(0)} KB` : '';
     notifs.push({
       id: `sys-backup-${backup.last_backup_at}`,
-      type: 'system', severity: 'success',
-      title: 'System backup completed',
-      body: `Snapshot ${meta.filename ? `"${meta.filename}" ` : ''}created successfully${sizeKb}.`,
+      type: 'system', severity: 'info',
+      title: 'Backup entry recorded',
+      body: `Backup entry ${meta.filename ? `"${meta.filename}" ` : ''}recorded${sizeKb} — no database dump is produced yet.`,
       school: null,
       timestamp: backup.last_backup_at,
       read: true, actionLabel: 'View Backups', actionPage: 'settings',

@@ -202,14 +202,19 @@ export default function SAOverview({ schools, user, onNavigate, onReview }) {
       {/* System status bar */}
       <div className="sa-status-bar">
         <span style={{ fontSize: '0.75rem', color: 'var(--sa-text-2)', marginRight: 4 }}>System:</span>
-        <span className="sa-status-pill sa-status-pill--ok"><span className="sa-status-dot" />API Healthy</span>
-        <span className="sa-status-pill sa-status-pill--ok"><span className="sa-status-dot" />DB Connected</span>
-        <span className="sa-status-pill sa-status-pill--ok"><span className="sa-status-dot" />Security Active</span>
-        {pending.length > 0 && (
+        {pending.length > 0 ? (
           <span className="sa-status-pill sa-status-pill--warn">
-            <span className="sa-status-dot" />{pending.length} Pending
+            <span className="sa-status-dot" />{pending.length} Pending approval
           </span>
+        ) : (
+          <span className="sa-status-pill" style={{ color: 'var(--sa-text-3)' }}>No pending approvals</span>
         )}
+        <button
+          onClick={() => onNavigate('system-health')}
+          style={{ background: 'none', border: 'none', color: 'var(--sa-accent)', cursor: 'pointer', fontSize: '0.72rem', fontWeight: 600, padding: 0, marginLeft: 'auto' }}
+        >
+          View system health →
+        </button>
       </div>
 
       {/* Stats grid */}
@@ -232,29 +237,24 @@ export default function SAOverview({ schools, user, onNavigate, onReview }) {
         <div className="sa-integrity-card">
           <div className="sa-integrity-head">
             <p className="sa-integrity-title">
-              <IcShield style={{ width: 15, height: 15, verticalAlign: 'middle', marginRight: 6, stroke: 'var(--sa-green)', fill: 'none' }} />
-              Grade Integrity Monitor
+              <IcShield style={{ width: 15, height: 15, verticalAlign: 'middle', marginRight: 6, stroke: 'var(--sa-text-2)', fill: 'none' }} />
+              Schools Snapshot
             </p>
-            <span className="sa-badge sa-badge--approved">Active</span>
+            <span className="sa-badge sa-badge--pending">Live</span>
           </div>
           <div className="sa-integrity-stats">
             <div className="sa-integrity-stat">
-              <span className="sa-integrity-num sa-integrity-num--green">100%</span>
-              <span className="sa-integrity-lbl">Hash Verified</span>
-            </div>
-            <div className="sa-integrity-stat">
               <span className="sa-integrity-num sa-integrity-num--amber">{pending.length}</span>
-              <span className="sa-integrity-lbl">Pending Mods</span>
+              <span className="sa-integrity-lbl">Pending Approval</span>
             </div>
             <div className="sa-integrity-stat">
               <span className="sa-integrity-num">{approved.length}</span>
               <span className="sa-integrity-lbl">Active Schools</span>
             </div>
-            <div className="sa-integrity-stat">
-              <span className="sa-integrity-num sa-integrity-num--green">Stable</span>
-              <span className="sa-integrity-lbl">Chain Status</span>
-            </div>
           </div>
+          <p style={{ fontSize: '0.6875rem', color: 'var(--sa-text-3)', margin: '12px 0 0', lineHeight: 1.5 }}>
+            Cryptographic grade-integrity verification (hash/chain) is not yet implemented.
+          </p>
         </div>
 
         {/* Security Alerts */}
