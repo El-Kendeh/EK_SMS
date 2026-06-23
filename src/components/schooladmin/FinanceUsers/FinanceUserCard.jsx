@@ -91,24 +91,28 @@ export default function FinanceUserCard({ u, onView, onEdit, onToggle }) {
         )}
       </div>
 
-      {/* D. Today's Financial Activity (the headline KPI block) */}
-      <div className="fu-card__kpi">
-        <div className="fu-card__kpi-main">
-          <span className="fu-card__kpi-label">Today</span>
-          <strong className="fu-card__kpi-amount">{fmtUsd(u.txAmount)}</strong>
-          <span className="fu-card__kpi-tx">{u.txToday} transaction{u.txToday !== 1 ? 's' : ''}</span>
-        </div>
-        <div className="fu-card__kpi-side">
-          <div>
-            <span>Total handled</span>
-            <strong>{fmtUsdCompact(u.txTotal)}</strong>
+      {/* D. Today's Financial Activity — render only when the backend actually
+          supplies transaction data. Without this guard a user with no tx data
+          showed "$undefined" / "undefined transactions". */}
+      {(u.txAmount != null || u.txToday != null || u.txTotal != null) && (
+        <div className="fu-card__kpi">
+          <div className="fu-card__kpi-main">
+            <span className="fu-card__kpi-label">Today</span>
+            <strong className="fu-card__kpi-amount">{fmtUsd(u.txAmount)}</strong>
+            <span className="fu-card__kpi-tx">{u.txToday ?? 0} transaction{u.txToday !== 1 ? 's' : ''}</span>
           </div>
-          <div>
-            <span>Last active</span>
-            <strong>{fmtMinsCompact(u.lastMins)}</strong>
+          <div className="fu-card__kpi-side">
+            <div>
+              <span>Total handled</span>
+              <strong>{fmtUsdCompact(u.txTotal)}</strong>
+            </div>
+            <div>
+              <span>Last active</span>
+              <strong>{fmtMinsCompact(u.lastMins)}</strong>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Inline alert if flagged */}
       {(u.flagged || u.highVol) && (

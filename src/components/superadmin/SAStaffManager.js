@@ -387,6 +387,7 @@ function StaffForm({ cfg, isSuper, schools, editItem, onSave, onClose }) {
   const [file, setFile]     = useState(null);
   const [tab, setTab]       = useState('account');
   const [err, setErr]       = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (editItem) {
@@ -399,14 +400,17 @@ function StaffForm({ cfg, isSuper, schools, editItem, onSave, onClose }) {
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
     setErr('');
+    if (submitting) return;
     if (!String(form.first_name || '').trim()) { setErr('First name is required.'); setTab('account'); return; }
     if (!String(form.last_name || '').trim())  { setErr('Last name is required.');  setTab('account'); return; }
     if (!String(form.employee_id || '').trim()) { setErr('Employee ID is required.'); setTab('account'); return; }
     if (isSuper && !editItem && !form.school_id) { setErr('Please select a school.'); setTab('account'); return; }
-    onSave(form, file);
+    setSubmitting(true);
+    try { await onSave(form, file); }
+    finally { setSubmitting(false); }
   };
 
   const section = SECTIONS.find(s => s.id === tab) || SECTIONS[0];
@@ -473,7 +477,7 @@ function StaffForm({ cfg, isSuper, schools, editItem, onSave, onClose }) {
 
           <div className="sasm-modal-actions">
             <button type="button" className="sasm-btn sasm-btn--ghost" onClick={onClose}>Cancel</button>
-            <button type="submit" className="sasm-btn sasm-btn--primary">{editItem ? 'Save Changes' : `Create ${cfg.singular}`}</button>
+            <button type="submit" className="sasm-btn sasm-btn--primary" disabled={submitting}>{submitting ? 'Saving…' : (editItem ? 'Save Changes' : `Create ${cfg.singular}`)}</button>
           </div>
         </form>
       </div>

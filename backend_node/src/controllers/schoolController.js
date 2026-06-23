@@ -12,8 +12,10 @@ const Term = require('../models/Term');
 const Grade = require('../models/Grade');
 const Attendance = require('../models/Attendance');
 const GradingScheme = require('../models/GradingScheme');
+const { appendGradeEventSafe } = require('../utils/gradeEvent');
 const Room = require('../models/Room');
 const Exam = require('../models/Exam');
+const ExamResult = require('../models/ExamResult');
 const Notification = require('../models/Notification');
 const User = require('../models/User');
 const Role = require('../models/Role');
@@ -1465,18 +1467,60 @@ async function saveGrades(req, res) {
     const { subject_id, term_id, grades } = req.body;
     if (!Array.isArray(grades)) return res.status(400).json(errorResponse('Invalid grades format'));
 
-    const saved = await Promise.all(grades.map(g =>
-      Grade.upsert({
+    // Clamp each component to a sane numeric range; '' / null / non-numeric → null.
+    const clampScore = (v) => {
+      if (v === undefined || v === null || v === '') return null;
+      const n = Number(v);
+      if (!Number.isFinite(n)) return null;
+      return Math.min(100, Math.max(0, n));
+    };
+
+    let savedCount = 0;
+    let skipped = 0;
+    for (const g of grades) {
+      // Tenant guard: only accept students that belong to THIS school. Stops a forged/
+      // foreign student_id in the body from writing a cross-tenant grade row.
+      const student = await Student.findOne({
+        where: { id: g.student_id, school_id: school.id }, attributes: ['id'],
+      });
+      if (!student) { skipped += 1; continue; }
+
+      const ca = clampScore(g.ca);
+      const midterm = clampScore(g.midterm);
+      const final = clampScore(g.final);
+
+      // Prior values for the audit trail.
+      const prior = await Grade.findOne({
+        where: { school_id: school.id, student_id: g.student_id, subject_id, term_id },
+        attributes: ['ca', 'midterm', 'final'],
+      });
+
+      await Grade.upsert({
         school_id: school.id,
         student_id: g.student_id,
         subject_id, term_id,
-        ca: g.ca, midterm: g.midterm, final: g.final,
+        ca, midterm, final,
       }, {
-        conflictFields: ['school_id', 'student_id', 'subject_id', 'term_id']
-      })
-    ));
+        conflictFields: ['school_id', 'student_id', 'subject_id', 'term_id'],
+      });
+      savedCount += 1;
 
-    return res.json(successResponse({ saved }, 'Grades saved'));
+      // Tamper-evident audit: record every direct grade write in the per-school
+      // SHA-256 chain (best-effort — an audit hiccup must not block the save).
+      await appendGradeEventSafe({
+        school_id: school.id,
+        student_id: g.student_id,
+        subject_id, term_id,
+        actor_user_id: req.user?.id || null,
+        actor_name: req.user?.username || null,
+        event_type: 'admin_grade_save',
+        field: 'ca/midterm/final',
+        old_value: prior ? `${prior.ca}/${prior.midterm}/${prior.final}` : null,
+        new_value: `${ca}/${midterm}/${final}`,
+      });
+    }
+
+    return res.json(successResponse({ saved: savedCount, skipped }, 'Grades saved'));
   } catch (err) {
     console.error(err);
     return res.status(500).json(errorResponse('Failed to save grades'));
@@ -1579,7 +1623,26 @@ async function getExams(req, res) {
     const school = await getSchoolFromUser(req);
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
-    const exams = await Exam.findAll({ where: { school_id: school.id } });
+    const rows = await Exam.findAll({ where: { school_id: school.id }, order: [['id', 'DESC']] });
+    // Resolve subject/classroom names + how many results are entered, so the exam
+    // list can render "{subject}", "{classroom}" and the "X entered" badge.
+    const [subjects, classes] = await Promise.all([
+      Subject.findAll({ where: { school_id: school.id }, attributes: ['id', 'name'] }),
+      Class.findAll({ where: { school_id: school.id }, attributes: ['id', 'name'] }),
+    ]);
+    const subjMap = Object.fromEntries(subjects.map(s => [String(s.id), s.name]));
+    const classMap = Object.fromEntries(classes.map(c => [String(c.id), c.name]));
+    const exams = await Promise.all(rows.map(async (e) => {
+      const result_count = await ExamResult.count({ where: { exam_id: e.id, school_id: school.id } });
+      return {
+        id: e.id, name: e.name, date: e.date, term_id: e.term_id,
+        subject_id: e.subject_id, classroom_id: e.classroom_id,
+        total_marks: e.total_marks, is_active: e.is_active,
+        subject: subjMap[String(e.subject_id)] || '—',
+        classroom: classMap[String(e.classroom_id)] || '—',
+        result_count,
+      };
+    }));
     return res.json(successResponse({ exams }));
   } catch (err) {
     console.error(err);
@@ -1601,6 +1664,162 @@ async function createExam(req, res) {
   } catch (err) {
     console.error(err);
     return res.status(500).json(errorResponse('Failed to create exam'));
+  }
+}
+
+/* ===== Phase 2 additions: previously-missing endpoints the live UI calls.
+   All school-scoped + validated; mutations are role-gated by the school router. ===== */
+
+async function deleteExam(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+    const exam = await Exam.findOne({ where: { id: req.params.id, school_id: school.id } });
+    if (!exam) return res.status(404).json(errorResponse('Exam not found'));
+    await ExamResult.destroy({ where: { exam_id: exam.id, school_id: school.id } });
+    await exam.destroy();
+    return res.json(successResponse({}, 'Exam deleted'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Failed to delete exam'));
+  }
+}
+
+async function getExamResults(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+    const exam = await Exam.findOne({ where: { id: req.params.id, school_id: school.id } });
+    if (!exam) return res.status(404).json(errorResponse('Exam not found'));
+
+    // Roster = students in the exam's class (or all school students if the exam has
+    // no class), merged with any marks already recorded.
+    const studentWhere = { school_id: school.id };
+    if (exam.classroom_id) studentWhere.classroom_id = exam.classroom_id;
+    const students = await Student.findAll({ where: studentWhere, order: [['id', 'ASC']] });
+    const existing = await ExamResult.findAll({ where: { exam_id: exam.id, school_id: school.id } });
+    const markMap = Object.fromEntries(existing.map(r => [String(r.student_id), r]));
+
+    const results = await Promise.all(students.map(async (s) => {
+      let user = null;
+      try { user = await User.findByPk(s.user_id, { attributes: ['first_name', 'last_name'] }); } catch {}
+      const rec = markMap[String(s.id)];
+      const name = user ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : '';
+      return {
+        student_id: s.id,
+        student_name: name || s.admission_number || `Student #${s.id}`,
+        admission_number: s.admission_number || '',
+        marks: rec && rec.marks != null ? rec.marks : null,
+        remarks: rec ? (rec.remarks || '') : '',
+      };
+    }));
+    return res.json(successResponse({ results }));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Failed to fetch exam results'));
+  }
+}
+
+async function saveExamResults(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+    const exam = await Exam.findOne({ where: { id: req.params.id, school_id: school.id } });
+    if (!exam) return res.status(404).json(errorResponse('Exam not found'));
+    const { results } = req.body;
+    if (!Array.isArray(results)) return res.status(400).json(errorResponse('Invalid results format'));
+
+    const max = Number(exam.total_marks) > 0 ? Number(exam.total_marks) : 100;
+    let saved = 0, skipped = 0;
+    for (const r of results) {
+      // Tenant guard: only accept students that belong to THIS school.
+      const student = await Student.findOne({ where: { id: r.student_id, school_id: school.id }, attributes: ['id'] });
+      if (!student) { skipped += 1; continue; }
+      let marks = (r.marks === '' || r.marks == null) ? null : Number(r.marks);
+      if (marks != null && !Number.isFinite(marks)) marks = null;
+      if (marks != null) marks = Math.min(max, Math.max(0, marks));
+      await ExamResult.upsert({
+        school_id: school.id, exam_id: exam.id, student_id: r.student_id,
+        marks, remarks: (r.remarks || '').slice(0, 255),
+      }, { conflictFields: ['exam_id', 'student_id'] });
+      saved += 1;
+    }
+    return res.json(successResponse({ saved, skipped }, `Saved ${saved} result(s).`));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Failed to save exam results'));
+  }
+}
+
+async function updateRoom(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+    const room = await Room.findOne({ where: { id: req.params.id, school_id: school.id } });
+    if (!room) return res.status(404).json(errorResponse('Room not found'));
+    const { name, code, capacity, room_type, is_active } = req.body;
+    const fields = {};
+    if (name !== undefined) fields.name = name;
+    if (code !== undefined) fields.code = code;
+    if (capacity !== undefined) fields.capacity = capacity;
+    if (room_type !== undefined) fields.room_type = room_type;
+    if (is_active !== undefined) fields.is_active = is_active;
+    await room.update(fields);
+    return res.json(successResponse({ room }, 'Room updated'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Failed to update room'));
+  }
+}
+
+async function deleteRoom(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+    const deleted = await Room.destroy({ where: { id: req.params.id, school_id: school.id } });
+    if (!deleted) return res.status(404).json(errorResponse('Room not found'));
+    return res.json(successResponse({}, 'Room deleted'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Failed to delete room'));
+  }
+}
+
+async function deleteTeacherAssignment(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+    // Soft-delete (matches getTeacherAssignments, which lists is_active: true only).
+    const assignment = await Assignment.findOne({ where: { id: req.params.id, school_id: school.id } });
+    if (!assignment) return res.status(404).json(errorResponse('Assignment not found'));
+    await assignment.update({ is_active: false });
+    return res.json(successResponse({}, 'Assignment removed'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Failed to remove assignment'));
+  }
+}
+
+async function promoteStudent(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+    const { classroom_id, academic_year_id } = req.body;
+    if (!classroom_id) return res.status(400).json(errorResponse('classroom_id is required'));
+    const student = await Student.findOne({ where: { id: req.params.id, school_id: school.id } });
+    if (!student) return res.status(404).json(errorResponse('Student not found'));
+    // Validate the target class belongs to this school (no cross-tenant moves).
+    const cls = await Class.findOne({ where: { id: classroom_id, school_id: school.id }, attributes: ['id'] });
+    if (!cls) return res.status(400).json(errorResponse('Invalid target class'));
+    const fields = { classroom_id };
+    if (academic_year_id) fields.academic_year_id = academic_year_id;
+    await student.update(fields);
+    // Grades live in separate rows keyed by student/subject/term, so changing the
+    // student's class preserves their existing grades automatically.
+    return res.json(successResponse({ student: { id: student.id, classroom_id: student.classroom_id } }, 'Student promoted'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Failed to promote student'));
   }
 }
 
@@ -2208,6 +2427,12 @@ async function reviewModificationRequest(req, res) {
     const { request_id, action, comment } = req.body;
     const modRequest = await ModificationRequest.findOne({ where: { id: request_id, school_id: school.id } });
     if (!modRequest) return res.status(404).json(errorResponse('Request not found'));
+    // NOTE (Phase 0): now role-gated (school_admin/superadmin) by the school router's
+    // write guard. This still only flips status — it does NOT yet apply `requested_value`
+    // to the target grade or emit a GradeEvent. The approve→apply step (with
+    // appendGradeEvent) is a Phase 2 correctness fix; see
+    // EK_SMS/schoolAdminUIFix/02-security-and-risks.md (#4). Until then, approving
+    // records the decision only.
     const newStatus = action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : modRequest.status;
     await modRequest.update({ status: newStatus, reviewed_by: req.user.id, reviewed_at: new Date() });
     return res.json(successResponse({ request: { id: modRequest.id, status: modRequest.status } }, `Request ${newStatus}`));
@@ -2419,7 +2644,7 @@ async function getSyllabusStats(req, res) {
 
 module.exports = {
   getSchoolInfo, updateSchoolInfo, checkSchoolName,
-  getStudents, createStudent, updateStudent, getNextAdmissionNumber, getStudentStats,
+  getStudents, createStudent, updateStudent, getNextAdmissionNumber, getStudentStats, promoteStudent,
   getTeachers, createTeacher, updateTeacher, getTeacherStats,
   getClasses, getClassById, createClass, updateClass, deleteClass, bulkCreateClasses,
   assignStudentsToClass, assignSubjectsToClass,
@@ -2429,12 +2654,12 @@ module.exports = {
   getGrades, saveGrades,
   recordAttendance,
   getGradingScheme, setGradingScheme,
-  getRooms, createRoom,
-  getExams, createExam,
+  getRooms, createRoom, updateRoom, deleteRoom,
+  getExams, createExam, deleteExam, getExamResults, saveExamResults,
   getNotifications, createNotification,
   getAnalytics,
   getFinanceStats, getFinanceFees, recordExpense, getExpenses,
-  getTeacherAssignments, createTeacherAssignment,
+  getTeacherAssignments, createTeacherAssignment, deleteTeacherAssignment,
   getExamOfficers, assignExamOfficer,
   getMessages, sendMessage, recordClassAttendance,
   createParent,

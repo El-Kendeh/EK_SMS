@@ -4,8 +4,10 @@ let pdfParse = null;
 const mammoth = require('mammoth');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyAkxhYIreiQ5XQxNHFXMqxtu_p8s3wNvVQ';
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+// Key comes ONLY from the environment. The previous hardcoded fallback key was a
+// committed secret (removed 2026-06-23) — rotate it in the Google console.
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
 
 async function extractText(filePath, mimetype) {
   const buffer = fs.readFileSync(filePath);
@@ -80,6 +82,9 @@ async function generateSyllabusWithGemini(prompt) {
 
 async function generateSyllabusFromDocument(req, res) {
   try {
+    if (!genAI) {
+      return res.status(503).json({ success: false, message: 'AI syllabus generation is not configured (GEMINI_API_KEY is not set).' });
+    }
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'No file uploaded.' });
     }

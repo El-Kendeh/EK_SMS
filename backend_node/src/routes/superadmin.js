@@ -6,6 +6,7 @@ const router = express.Router();
 const authenticateToken = require('../middleware/auth');
 const schoolScope = require('../middleware/schoolScope');
 const requireRole = require('../middleware/requireRole');
+const requireActiveAccount = require('../middleware/requireActiveAccount');
 
 const {
   getAllSchools,
@@ -220,7 +221,10 @@ sa.post('/users/', data.postUsers);
    shared `sla` routes (e.g. creating principals/bursars/students). */
 
 /* ── School-level routes (accessible by superadmin + school_admin) ── */
-const sla = requireRole(['superadmin', 'school_admin']);
+// Phase 1: re-check approval/is_active per request for the shared school routes.
+// Superadmin bypasses requireActiveAccount; a suspended/rejected school_admin is
+// blocked immediately even with a still-valid token.
+const sla = [requireActiveAccount, requireRole(['superadmin', 'school_admin'])];
 
 /* Classes CRUD */
 router.get('/classes/', sla, data.getSuperClasses);

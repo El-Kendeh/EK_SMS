@@ -5,11 +5,13 @@ const multer = require('multer');
 const fs = require('fs');
 const authenticateToken = require('../middleware/auth');
 const schoolScope = require('../middleware/schoolScope');
+const requireRole = require('../middleware/requireRole');
+const requireActiveAccount = require('../middleware/requireActiveAccount');
 const {
   // School info
   getSchoolInfo, updateSchoolInfo, checkSchoolName,
   // Students
-  getStudents, createStudent, updateStudent, getNextAdmissionNumber, getStudentStats,
+  getStudents, createStudent, updateStudent, getNextAdmissionNumber, getStudentStats, promoteStudent,
   // Teachers
   getTeachers, createTeacher, updateTeacher, getTeacherStats,
   // Classes
@@ -29,9 +31,9 @@ const {
   // Grading scheme
   getGradingScheme, setGradingScheme,
   // Rooms
-  getRooms, createRoom,
+  getRooms, createRoom, updateRoom, deleteRoom,
   // Exams
-  getExams, createExam,
+  getExams, createExam, deleteExam, getExamResults, saveExamResults,
   // Notifications
   getNotifications, createNotification,
   // Analytics
@@ -39,7 +41,7 @@ const {
   // Finance
   getFinanceStats, getFinanceFees, recordExpense, getExpenses,
   // Teacher assignments
-  getTeacherAssignments, createTeacherAssignment,
+  getTeacherAssignments, createTeacherAssignment, deleteTeacherAssignment,
   // Exam officers
   getExamOfficers, assignExamOfficer,
   // Messages
@@ -130,8 +132,30 @@ function studentUpload(req, res, next) {
 // Public routes
 router.get('/check-school-name/', checkSchoolName);
 
-// Protected routes - all require authentication + school scope
-const applyAuth = [authenticateToken, schoolScope];
+// Protected routes - all require authentication + school scope.
+//
+// Reads (GET) are allowed for ANY authenticated user scoped to their own school —
+// this is intentional and cross-role: the dashboard theming (`GET /school/info/`)
+// runs for every role, and principal/bursar/teacher/parent dashboards legitimately
+// read terms/classes/students/academic-years here.
+//
+// MUTATIONS (POST/PUT/PATCH/DELETE) are restricted to school_admin + superadmin via
+// `schoolWriteGuard`. This closes the privilege-escalation hole where any authenticated
+// tenant user (student/parent/teacher) could hit admin write handlers (create principal/
+// finance accounts, edit grades, wipe the timetable, etc.) because no role was checked.
+// Superadmin passes the guard, so superadmin tools (e.g. SABatchTransfer batch-grades,
+// impersonation) keep working. See EK_SMS/schoolAdminUIFix/02-security-and-risks.md (#2).
+const MUTATING_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'];
+function schoolWriteGuard(req, res, next) {
+  if (MUTATING_METHODS.includes(req.method)) {
+    return requireRole(['school_admin', 'superadmin'])(req, res, next);
+  }
+  return next();
+}
+// requireActiveAccount re-checks approval/is_active per request (Phase 1) so a token
+// minted while approved stops working once the school is suspended/rejected. Superadmin
+// bypasses it. See EK_SMS/schoolAdminUIFix/02-security-and-risks.md (approval gate).
+const applyAuth = [authenticateToken, requireActiveAccount, schoolScope, schoolWriteGuard];
 
 // ==================== SCHOOL INFO ====================
 router.get('/school/info/', applyAuth, getSchoolInfo);
@@ -143,6 +167,7 @@ router.post('/school/students/', applyAuth, studentUpload, createStudent);
 router.put('/school/students/:id/', applyAuth, studentUpload, updateStudent);
 router.get('/school/students/next-admission-number/', applyAuth, getNextAdmissionNumber);
 router.get('/school/student-stats/', applyAuth, getStudentStats);
+router.post('/school/students/:id/promote/', applyAuth, promoteStudent);
 
 // ==================== TEACHERS ====================
 router.get('/school/teachers/', applyAuth, getTeachers);
@@ -228,10 +253,15 @@ router.post('/school/grading-scheme/', applyAuth, setGradingScheme);
 // ==================== ROOMS ====================
 router.get('/school/rooms/', applyAuth, getRooms);
 router.post('/school/rooms/', applyAuth, createRoom);
+router.put('/school/rooms/:id/', applyAuth, updateRoom);
+router.delete('/school/rooms/:id/', applyAuth, deleteRoom);
 
 // ==================== EXAMS ====================
 router.get('/school/exams/', applyAuth, getExams);
 router.post('/school/exams/', applyAuth, createExam);
+router.delete('/school/exams/:id/', applyAuth, deleteExam);
+router.get('/school/exams/:id/results/', applyAuth, getExamResults);
+router.post('/school/exams/:id/results/', applyAuth, saveExamResults);
 
 // ==================== NOTIFICATIONS ====================
 router.get('/school/notifications/', applyAuth, getNotifications);
@@ -249,6 +279,7 @@ router.get('/school/finance/expenses/', applyAuth, getExpenses);
 // ==================== TEACHER ASSIGNMENTS ====================
 router.get('/school/teacher-assignments/', applyAuth, getTeacherAssignments);
 router.post('/school/teacher-assignments/', applyAuth, createTeacherAssignment);
+router.delete('/school/teacher-assignments/:id/', applyAuth, deleteTeacherAssignment);
 
 // ==================== EXAM OFFICERS ====================
 router.get('/school/exam-officers/', applyAuth, getExamOfficers);

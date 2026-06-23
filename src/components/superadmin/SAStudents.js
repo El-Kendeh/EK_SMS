@@ -190,6 +190,8 @@ export default function SAStudents() {
 
   const [students,    setStudents]    = useState([]);
   const [schools,     setSchools]     = useState([]);
+  const [classes,       setClasses]       = useState([]); // enrolment dropdown options (3.2)
+  const [academicYears, setAcademicYears] = useState([]); // enrolment dropdown options (3.2)
   const [loading,     setLoading]     = useState(true);
   const [loadErr,     setLoadErr]     = useState('');
   const [search,      setSearch]      = useState('');
@@ -233,10 +235,20 @@ export default function SAStudents() {
     } catch { /* silently ignore */ }
   }, [isSchoolAdmin]);
 
+  /* Options for the enrolment dropdowns (3.2). Backend-scoped + best-effort: a
+     school_admin gets their own classes/years (→ dropdowns replace the raw-ID
+     inputs); for a superadmin with no school context these come back empty and the
+     form falls back to manual ID entry — so there is no regression either way. */
+  const loadEnrolmentOptions = useCallback(async () => {
+    try { const d = await apiGet('/api/classes/'); setClasses(d.classes || []); } catch { /* keep text fallback */ }
+    try { const d = await apiGet('/api/school/academic-years/'); setAcademicYears(d.years || []); } catch { /* keep text fallback */ }
+  }, []);
+
   useEffect(() => {
     loadStudents();
     loadSchools();
-  }, [loadStudents, loadSchools]);
+    loadEnrolmentOptions();
+  }, [loadStudents, loadSchools, loadEnrolmentOptions]);
 
   /* ---- Escape key closes drawer ---- */
   useEffect(() => {
@@ -589,8 +601,12 @@ export default function SAStudents() {
                 { value: 'scholarship',label:'Scholarship' },
                 { value: 'staff',     label: 'Staff Dependent' },
               ]} />
-              <Field label="Classroom ID"      name="classroom_id"     placeholder="e.g. 12" />
-              <Field label="Academic Year ID"  name="academic_year_id" placeholder="e.g. 3" />
+              {classes.length > 0
+                ? <SelectField label="Classroom" name="classroom_id" options={classes.map(c => ({ value: String(c.id), label: c.name }))} />
+                : <Field label="Classroom ID" name="classroom_id" placeholder="e.g. 12" />}
+              {academicYears.length > 0
+                ? <SelectField label="Academic Year" name="academic_year_id" options={academicYears.map(y => ({ value: String(y.id), label: y.name }))} />
+                : <Field label="Academic Year ID" name="academic_year_id" placeholder="e.g. 3" />}
             </div>
           </div>
         );
@@ -822,7 +838,7 @@ export default function SAStudents() {
       <div className="sast-head">
         <div>
           <h1 className="sast-title">Students</h1>
-          <p className="sast-sub">Manage all student accounts across schools.</p>
+          <p className="sast-sub">{isSchoolAdmin ? "Manage your school's student accounts." : 'Manage all student accounts across schools.'}</p>
         </div>
         <button className="sard-btn sard-btn--primary" onClick={openCreate}>
           <IcPlus /> Add Student

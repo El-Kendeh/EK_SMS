@@ -56,11 +56,19 @@ class ApiClient {
   isAuthError(response, errorData) {
     if (!response) return false;
     const message = (errorData?.message || response.statusText || '').toString();
+    const code = (errorData?.code || '').toString();
     if (response.status === 401) {
       return /csrf|auth|token|expired|invalid|access denied|no token/i.test(message);
     }
     if (response.status === 403) {
-      return /csrf|auth|token|expired|invalid/i.test(message);
+      // Token/auth problems OR an account that is no longer approved/active (the
+      // Phase 1 per-request approval gate sends code ACCOUNT_INACTIVE). A
+      // deactivated/rejected account must be returned to login, not left with an
+      // opaque error. NOTE: a plain role-permission denial ("Requires one of: ...")
+      // is deliberately NOT treated as an auth error — a validly logged-in user
+      // must not be logged out just for hitting one forbidden route.
+      if (code === 'ACCOUNT_INACTIVE') return true;
+      return /csrf|auth|token|expired|invalid|not active|requires super admin approval|account is pending/i.test(message);
     }
     return false;
   }

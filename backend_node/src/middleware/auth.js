@@ -23,11 +23,6 @@ function authenticateToken(req, res, next) {
 
   const verified = verifyToken(token);
   if (!verified) {
-    // Fallback for development (TODO_JWT_TOKEN)
-    if (token === 'TODO_JWT_TOKEN' || token === 'TODO_REAL_JWT_TOKEN') {
-      req.user = { id: 1, username: 'admin', is_superuser: true };
-      return next();
-    }
     return res.status(401).json({ success: false, message: 'Invalid or expired token.' });
   }
 

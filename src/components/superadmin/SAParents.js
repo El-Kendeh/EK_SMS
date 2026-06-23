@@ -129,7 +129,9 @@ export default function SAParents() {
         setCreds({
           name: `${form.first_name} ${form.last_name}`,
           username: d.username || form.username,
-          password: form.password || DEFAULT_PW,
+          // Prefer the server-generated password so the admin copies the REAL one;
+          // fall back to the typed value / constant only if the API omits it.
+          password: d.password || form.password || DEFAULT_PW,
         });
       }
       setShowModal(false); setEditItem(null); load();
@@ -335,6 +337,7 @@ export default function SAParents() {
 /* ── Sectioned add / edit form ── */
 function ParentForm({ editItem, onSave, onClose }) {
   const [form, setForm] = useState({});
+  const [submitting, setSubmitting] = useState(false);
   const [file, setFile] = useState(null);
   const [tab, setTab]   = useState('account');
   const [err, setErr]   = useState('');
@@ -349,12 +352,15 @@ function ParentForm({ editItem, onSave, onClose }) {
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
     setErr('');
+    if (submitting) return;
     if (!String(form.first_name || '').trim()) { setErr('First name is required.'); setTab('account'); return; }
     if (!String(form.last_name || '').trim())  { setErr('Last name is required.');  setTab('account'); return; }
-    onSave(form, file);
+    setSubmitting(true);
+    try { await onSave(form, file); }
+    finally { setSubmitting(false); }
   };
 
   const section = SECTIONS.find(s => s.id === tab) || SECTIONS[0];
@@ -399,7 +405,7 @@ function ParentForm({ editItem, onSave, onClose }) {
 
           <div className="sasm-modal-actions">
             <button type="button" className="sasm-btn sasm-btn--ghost" onClick={onClose}>Cancel</button>
-            <button type="submit" className="sasm-btn sasm-btn--primary">{editItem ? 'Save Changes' : 'Create Parent'}</button>
+            <button type="submit" className="sasm-btn sasm-btn--primary" disabled={submitting}>{submitting ? 'Saving…' : (editItem ? 'Save Changes' : 'Create Parent')}</button>
           </div>
         </form>
       </div>
@@ -412,6 +418,13 @@ function LinkModal({ parent, onLink, onClose }) {
   const [studentId, setStudentId] = useState('');
   const [relationship, setRelationship] = useState('guardian');
   const [err, setErr] = useState('');
+  const [students, setStudents] = useState([]); // student picker options (3.2)
+
+  useEffect(() => {
+    // School-scoped on the backend → a school_admin gets their students (→ picker);
+    // an unscoped superadmin gets none, so the raw-ID input stays as a fallback.
+    req('GET', '/api/students/').then(d => setStudents(d.students || [])).catch(() => {});
+  }, []);
 
   const submit = (e) => {
     e.preventDefault();
@@ -429,8 +442,19 @@ function LinkModal({ parent, onLink, onClose }) {
         <form onSubmit={submit}>
           <div className="sasm-form-grid" style={{ marginTop: 4 }}>
             <div className="sasm-field">
-              <label>Student ID *</label>
-              <input type="number" value={studentId} onChange={e => setStudentId(e.target.value)} placeholder="e.g. 42" />
+              <label>Student *</label>
+              {students.length > 0 ? (
+                <select value={studentId} onChange={e => setStudentId(e.target.value)}>
+                  <option value="">— select student —</option>
+                  {students.map(s => (
+                    <option key={s.id} value={s.id}>
+                      {`${s.first_name || ''} ${s.last_name || ''}`.trim() || `Student #${s.id}`}{s.admission_number ? ` (${s.admission_number})` : ''}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input type="number" value={studentId} onChange={e => setStudentId(e.target.value)} placeholder="e.g. 42" />
+              )}
             </div>
             <div className="sasm-field">
               <label>Relationship</label>

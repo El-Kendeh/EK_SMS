@@ -38,16 +38,17 @@ export default function SAClasses() {
   const [deleting, setDeleting] = useState(null);
   const [assignType, setAssignType] = useState(null);
   const [assignId, setAssignId] = useState(null);
+  const [loadError, setLoadError] = useState(null);
   const limit = 20;
 
   const showToast = useCallback((msg, type) => { setToast({ msg, type }); setTimeout(() => setToast(null), 3000); }, []);
   const load = useCallback(async () => {
-    setLoading(true);
+    setLoading(true); setLoadError(null);
     try {
       const params = new URLSearchParams({ page, limit });
       const r = await req('GET', `/api/classes/?${params}`);
       setList(r.classes || []); setTotal(r.total || 0);
-    } catch (e) { showToast(e.message, 'error'); }
+    } catch (e) { showToast(e.message, 'error'); setLoadError(e.message || 'Failed to load classes.'); }
     setLoading(false);
   }, [page, showToast]); // eslint-disable-line
   useEffect(() => { load(); }, [load]);
@@ -89,7 +90,7 @@ export default function SAClasses() {
           <input className="sa-search-input" placeholder="Search classes by name, code, form, subtype..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
       </div>
-      {loading ? <div className="sa-loading">Loading...</div> : (
+      {loading ? <div className="sa-loading">Loading...</div> : loadError ? <div className="sa-loading" style={{ color: 'var(--sa-red)' }}>{loadError}</div> : (
         <>
           <div className="sa-table-wrap">
             <table className="sa-table">
@@ -209,11 +210,15 @@ const classFields = [
 function ClassForm({ editItem, isSuper, schools = [], onSave, onClose }) {
   const [form, setForm] = useState({ colour_tag: '#3B82F6' });
   const [subtypes, setSubtypes] = useState([]);
+  const [years, setYears] = useState([]); // academic-year options for the picker (3.2)
   const [selectedSubtype, setSelectedSubtype] = useState('');
   const [schoolId, setSchoolId] = useState('');
   const [err, setErr] = useState('');
   useEffect(() => {
     req('GET', '/api/class-subtypes/').then(r => setSubtypes(r.classsubtypes || r.data?.classsubtypes || [])).catch(() => {});
+    // Academic-year options (school-scoped). School_admin → dropdown; unscoped
+    // superadmin gets none and the raw-ID number input remains as fallback. (3.2)
+    req('GET', '/api/school/academic-years/').then(r => setYears(r.years || [])).catch(() => {});
     if (editItem) {
       const f = { colour_tag: editItem.colour_tag || '#3B82F6' };
       classFields.forEach(({ key }) => { f[key] = editItem[key] !== undefined && editItem[key] !== null ? String(editItem[key]) : ''; });
@@ -271,12 +276,22 @@ function ClassForm({ editItem, isSuper, schools = [], onSave, onClose }) {
                   <input type="text" value={form.colour_tag || ''} onChange={e => set('colour_tag', e.target.value)} placeholder="#3B82F6" style={{ flex: 1 }} />
                 </div>
               </div>
-              {classFields.filter(f => f.key !== 'name').map(f => (
-                <div key={f.key} className="sa-field" style={f.full ? { gridColumn: '1 / -1' } : undefined}>
-                  <label>{f.label}</label>
-                  <input type={f.type === 'number' ? 'number' : f.type === 'time' ? 'time' : 'text'} value={form[f.key] !== undefined ? form[f.key] : ''} onChange={e => set(f.key, e.target.value)} placeholder={f.placeholder || ''} />
-                </div>
-              ))}
+              {classFields.filter(f => f.key !== 'name').map(f => {
+                const useYearPicker = f.key === 'academic_year_id' && years.length > 0;
+                return (
+                  <div key={f.key} className="sa-field" style={f.full ? { gridColumn: '1 / -1' } : undefined}>
+                    <label>{useYearPicker ? 'Academic Year' : f.label}</label>
+                    {useYearPicker ? (
+                      <select value={form[f.key] !== undefined ? form[f.key] : ''} onChange={e => set(f.key, e.target.value)}>
+                        <option value="">— select —</option>
+                        {years.map(y => <option key={y.id} value={y.id}>{y.name}</option>)}
+                      </select>
+                    ) : (
+                      <input type={f.type === 'number' ? 'number' : f.type === 'time' ? 'time' : 'text'} value={form[f.key] !== undefined ? form[f.key] : ''} onChange={e => set(f.key, e.target.value)} placeholder={f.placeholder || ''} />
+                    )}
+                  </div>
+                );
+              })}
             </div>
             {err && <p style={{ color: 'var(--sa-red, #f87171)', fontSize: 13, marginTop: 12 }}>{err}</p>}
           </div>

@@ -37,16 +37,17 @@ export default function SASubjects() {
   const [deleting, setDeleting] = useState(null);
   const [assignType, setAssignType] = useState(null);
   const [assignId, setAssignId] = useState(null);
+  const [loadError, setLoadError] = useState(null);
   const limit = 20;
 
   const showToast = useCallback((msg, type) => { setToast({ msg, type }); setTimeout(() => setToast(null), 3000); }, []);
   const load = useCallback(async () => {
-    setLoading(true);
+    setLoading(true); setLoadError(null);
     try {
       const params = new URLSearchParams({ page, limit });
       const r = await req('GET', `/api/subjects/?${params}`);
       setList(r.subjects || []); setTotal(r.total || 0);
-    } catch (e) { showToast(e.message, 'error'); }
+    } catch (e) { showToast(e.message, 'error'); setLoadError(e.message || 'Failed to load subjects.'); }
     setLoading(false);
   }, [page, showToast]); // eslint-disable-line
   useEffect(() => { load(); }, [load]);
@@ -88,7 +89,7 @@ export default function SASubjects() {
           <input className="sa-search-input" placeholder="Search subjects by name, code, description..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
       </div>
-      {loading ? <div className="sa-loading">Loading...</div> : (
+      {loading ? <div className="sa-loading">Loading...</div> : loadError ? <div className="sa-loading" style={{ color: 'var(--sa-red)' }}>{loadError}</div> : (
         <>
           <div className="sa-table-wrap">
             <table className="sa-table">

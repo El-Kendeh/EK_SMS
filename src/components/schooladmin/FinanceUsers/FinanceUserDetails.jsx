@@ -56,7 +56,9 @@ export default function FinanceUserDetails({ u, onClose, onEdit, onToggle }) {
             </div>
           )}
 
-          {/* Profile */}
+          {/* Profile — only fields the backend actually returns. The optional
+              working-hours / tx-limit rows render only when present (the create
+              form collects them but the backend does not persist them yet). */}
           <h4 className="fu-detail__section-title">Profile</h4>
           <div className="fu-detail__kv">
             <div><span>Email</span><strong>{u.email || '—'}</strong></div>
@@ -67,66 +69,69 @@ export default function FinanceUserDetails({ u, onClose, onEdit, onToggle }) {
                 {u.is_active ? 'Active' : 'Suspended'}
               </strong>
             </div>
-            <div><span>Working Hours</span><strong>{u.hours}</strong></div>
-            <div><span>Tx Limit</span>
-              <strong>{u.limit ? `${fmtUsd(u.limit)} / tx` : '—'}</strong>
-            </div>
+            {u.hours ? (<div><span>Working Hours</span><strong>{u.hours}</strong></div>) : null}
+            {u.limit ? (<div><span>Tx Limit</span><strong>{fmtUsd(u.limit)} / tx</strong></div>) : null}
           </div>
 
-          {/* Permissions */}
-          <h4 className="fu-detail__section-title">Permissions</h4>
-          <div className="fu-detail__perm-grid">
-            {FU_PERMISSIONS.map(p => {
-              const on = u.perms.includes(p.key);
-              return (
-                <div key={p.key} className={`fu-detail__perm-row ${on ? 'is-on' : 'is-off'}`}>
-                  <Ic name={on ? 'check_circle' : 'cancel'} size="sm" />
-                  <span>{p.label}</span>
-                </div>
-              );
-            })}
-          </div>
+          {/* Permissions — render only when the backend supplies a perms array.
+              (Avoids both the crash on undefined and showing a fabricated grid.) */}
+          {Array.isArray(u.perms) && u.perms.length > 0 && (
+            <>
+              <h4 className="fu-detail__section-title">Permissions</h4>
+              <div className="fu-detail__perm-grid">
+                {FU_PERMISSIONS.map(p => {
+                  const on = u.perms.includes(p.key);
+                  return (
+                    <div key={p.key} className={`fu-detail__perm-row ${on ? 'is-on' : 'is-off'}`}>
+                      <Ic name={on ? 'check_circle' : 'cancel'} size="sm" />
+                      <span>{p.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
 
           {/* Scope */}
-          <h4 className="fu-detail__section-title">Assigned Scope</h4>
-          <div className="fu-detail__chips">
-            {u.scope.map(s => <span key={s} className="fu-chip">{s}</span>)}
-          </div>
+          {Array.isArray(u.scope) && u.scope.length > 0 && (
+            <>
+              <h4 className="fu-detail__section-title">Assigned Scope</h4>
+              <div className="fu-detail__chips">
+                {u.scope.map(s => <span key={s} className="fu-chip">{s}</span>)}
+              </div>
+            </>
+          )}
 
-          {/* Transaction summary */}
-          <h4 className="fu-detail__section-title">Transaction Summary</h4>
-          <div className="fu-detail__summary">
-            <div>
-              <span>Today</span>
-              <strong>{u.txToday} tx</strong>
-            </div>
-            <div>
-              <span>Today's Volume</span>
-              <strong>{fmtUsd(u.txAmount)}</strong>
-            </div>
-            <div>
-              <span>Total Handled</span>
-              <strong>{fmtUsdCompact(u.txTotal)}</strong>
-            </div>
-            <div>
-              <span>Last Active</span>
-              <strong>{fmtMins(u.lastMins)}</strong>
-            </div>
-          </div>
+          {/* Transaction summary — only when real transaction data is present. */}
+          {(u.txToday != null || u.txAmount != null || u.txTotal != null) && (
+            <>
+              <h4 className="fu-detail__section-title">Transaction Summary</h4>
+              <div className="fu-detail__summary">
+                <div><span>Today</span><strong>{u.txToday ?? 0} tx</strong></div>
+                <div><span>Today's Volume</span><strong>{fmtUsd(u.txAmount ?? 0)}</strong></div>
+                <div><span>Total Handled</span><strong>{fmtUsdCompact(u.txTotal ?? 0)}</strong></div>
+                <div><span>Last Active</span><strong>{u.lastMins != null ? fmtMins(u.lastMins) : '—'}</strong></div>
+              </div>
+            </>
+          )}
 
           {/* Activity log */}
-          <h4 className="fu-detail__section-title">Recent Activity</h4>
-          <ul className="fu-detail__activity">
-            {u.activity.map((a, i) => (
-              <li key={i}>
-                <span className={`fu-detail__activity-dot fu-detail__activity-dot--${a.kind}`} />
-                <div>
-                  <p>{a.text}</p>
-                  <span>{a.at}</span>
-                </div>
-              </li>
-            ))}
-          </ul>
+          {Array.isArray(u.activity) && u.activity.length > 0 && (
+            <>
+              <h4 className="fu-detail__section-title">Recent Activity</h4>
+              <ul className="fu-detail__activity">
+                {u.activity.map((a, i) => (
+                  <li key={i}>
+                    <span className={`fu-detail__activity-dot fu-detail__activity-dot--${a.kind}`} />
+                    <div>
+                      <p>{a.text}</p>
+                      <span>{a.at}</span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
 
           <div className="ska-modal-actions">
             <button className="ska-btn ska-btn--ghost" onClick={onClose}>Close</button>
