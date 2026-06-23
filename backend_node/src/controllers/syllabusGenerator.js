@@ -126,7 +126,7 @@ async function generateSyllabusFromDocument(req, res) {
     console.error('generateSyllabusFromDocument Error:', err);
     return res.status(500).json({
       success: false,
-      message: `Failed to generate syllabus: ${err.message}`,
+      message: `Failed to generate syllabus`,
     });
   }
 }

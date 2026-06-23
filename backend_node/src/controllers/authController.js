@@ -302,11 +302,11 @@ async function register(req, res) {
     let errorMessage = "Registration failed";
     
     if (err.name === 'SequelizeValidationError' || err.name === 'SequelizeUniqueConstraintError') {
+      // Surface per-field validation messages (user-facing); never leak the raw
+      // exception message for other errors — keep the generic "Registration failed".
       errorMessage = Array.isArray(err.errors) && err.errors.length
         ? err.errors.map((e) => e.message).join(', ')
-        : (err.message || errorMessage);
-    } else if (err.message) {
-      errorMessage = err.message;
+        : errorMessage;
     }
     
     return res.status(400).json(errorResponse(errorMessage));

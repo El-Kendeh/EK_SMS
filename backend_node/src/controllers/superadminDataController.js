@@ -2402,7 +2402,7 @@ async function createSuperClass(req, res) {
       notes: data.notes || null, auto_promotion_target_id: data.auto_promotion_target_id || null,
     });
     return res.json(successResponse({ id: row.id }, 'Class created'));
-  } catch (err) { console.error(err); return res.status(500).json(errorResponse(err.message)); }
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Server error')); }
 }
 async function updateSuperClass(req, res) {
   try {
@@ -2416,7 +2416,7 @@ async function updateSuperClass(req, res) {
     });
     await row.save();
     return res.json(successResponse({}, 'Class updated'));
-  } catch (err) { console.error(err); return res.status(500).json(errorResponse(err.message)); }
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Server error')); }
 }
 async function deleteSuperClass(req, res) {
   try {
@@ -2468,7 +2468,7 @@ async function createSuperSubject(req, res) {
       code: data.code || null, description: data.description || null,
     });
     return res.json(successResponse({ id: row.id }, 'Subject created'));
-  } catch (err) { console.error(err); return res.status(500).json(errorResponse(err.message)); }
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Server error')); }
 }
 async function updateSuperSubject(req, res) {
   try {
@@ -2482,7 +2482,7 @@ async function updateSuperSubject(req, res) {
     // school_id intentionally not updatable -- a subject never changes owning school via an edit.
     await row.save();
     return res.json(successResponse({}, 'Subject updated'));
-  } catch (err) { console.error(err); return res.status(500).json(errorResponse(err.message)); }
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Server error')); }
 }
 async function deleteSuperSubject(req, res) {
   try {
@@ -2643,7 +2643,7 @@ async function assignClassStudents(req, res) {
     await Student.update({ classroom_id: classId }, { where: { id: student_ids, school_id: cls.school_id } });
     await Student.update({ classroom_id: null }, { where: { school_id: cls.school_id, classroom_id: classId, id: { [Op.notIn]: student_ids } } });
     return res.json(successResponse({ assigned_count: student_ids.length }, 'Students assigned'));
-  } catch (err) { console.error(err); return res.status(500).json(errorResponse(err.message)); }
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Server error')); }
 }
 async function getClassAssignedSubjects(req, res) {
   try {
@@ -2687,7 +2687,7 @@ async function assignClassSubjects(req, res) {
       await ClassSubject.bulkCreate(subject_ids.map(sid => ({ class_id: classId, subject_id: sid })), { ignoreDuplicates: true });
     }
     return res.json(successResponse({ subject_count: subject_ids.length }, 'Subjects assigned'));
-  } catch (err) { console.error(err); return res.status(500).json(errorResponse(err.message)); }
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Server error')); }
 }
 async function assignClassTeacher(req, res) {
   try {
@@ -2699,7 +2699,7 @@ async function assignClassTeacher(req, res) {
     cls.class_teacher_id = teacher_id || null;
     await cls.save();
     return res.json(successResponse({ class_teacher_id: cls.class_teacher_id }, 'Class teacher updated'));
-  } catch (err) { console.error(err); return res.status(500).json(errorResponse(err.message)); }
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Server error')); }
 }
 
 async function assignClassMultipleTeachers(req, res) {
@@ -2723,7 +2723,7 @@ async function assignClassMultipleTeachers(req, res) {
       );
     }
     return res.json(successResponse({ teacher_count: teacher_ids.length }, 'Teachers assigned to class'));
-  } catch (err) { console.error(err); return res.status(500).json(errorResponse(err.message)); }
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Server error')); }
 }
 
 async function getClassTeachers(req, res) {
@@ -2757,7 +2757,7 @@ async function assignSubjectClasses(req, res) {
       await ClassSubject.bulkCreate(class_ids.map(cid => ({ class_id: cid, subject_id: subjectId })), { ignoreDuplicates: true });
     }
     return res.json(successResponse({ class_count: class_ids.length }, 'Classes assigned'));
-  } catch (err) { console.error(err); return res.status(500).json(errorResponse(err.message)); }
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Server error')); }
 }
 async function assignSubjectTeacher(req, res) {
   try {
@@ -2772,7 +2772,7 @@ async function assignSubjectTeacher(req, res) {
       await ClassSubject.update({ teacher_id: null }, { where: { subject_id: subjectId } });
     }
     return res.json(successResponse({}, 'Subject teacher updated'));
-  } catch (err) { console.error(err); return res.status(500).json(errorResponse(err.message)); }
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Server error')); }
 }
 async function getSubjectAssignedClasses(req, res) {
   try {
@@ -3096,7 +3096,7 @@ async function createSuperStudent(req, res) {
       id: student.id, user_id: user.id, username, password: studentPw,
       parents: registeredParents,
     }, 'Student and parents registered'));
-  } catch (err) { console.error(err); return res.status(500).json(errorResponse(err.message)); }
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Server error')); }
 }
 
 async function updateSuperStudent(req, res) {
@@ -3131,7 +3131,7 @@ async function updateSuperStudent(req, res) {
     if (req.file) upd.passport_picture = `/uploads/students/${req.file.filename}`;
     await Student.update(upd, { where: { id: student.id } });
     return res.json(successResponse({}, 'Student updated'));
-  } catch (err) { console.error(err); return res.status(500).json(errorResponse(err.message)); }
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Server error')); }
 }
 
 async function deleteSuperStudent(req, res) {
@@ -3144,7 +3144,7 @@ async function deleteSuperStudent(req, res) {
     await User.destroy({ where: { id: student.user_id }, transaction });
     await transaction.commit();
     return res.json(successResponse({}, 'Student deleted'));
-  } catch (err) { await transaction.rollback(); console.error(err); return res.status(500).json(errorResponse(err.message)); }
+  } catch (err) { await transaction.rollback(); console.error(err); return res.status(500).json(errorResponse('Server error')); }
 }
 
 async function toggleSuperStudentStatus(req, res) {
@@ -3264,7 +3264,7 @@ async function createSuperParent(req, res) {
 
     await transaction.commit();
     return res.json(successResponse({ id: parent.id, user_id: user.id, username }, 'Parent created'));
-  } catch (err) { await transaction.rollback(); console.error(err); return res.status(500).json(errorResponse(err.message)); }
+  } catch (err) { await transaction.rollback(); console.error(err); return res.status(500).json(errorResponse('Server error')); }
 }
 
 async function updateSuperParent(req, res) {
@@ -3291,7 +3291,7 @@ async function updateSuperParent(req, res) {
     await Parent.update(upd, { where: { id: parent.id }, transaction });
     await transaction.commit();
     return res.json(successResponse({}, 'Parent updated'));
-  } catch (err) { await transaction.rollback(); console.error(err); return res.status(500).json(errorResponse(err.message)); }
+  } catch (err) { await transaction.rollback(); console.error(err); return res.status(500).json(errorResponse('Server error')); }
 }
 
 async function deleteSuperParent(req, res) {
@@ -3308,7 +3308,7 @@ async function deleteSuperParent(req, res) {
     await User.destroy({ where: { id: parent.user_id }, transaction });
     await transaction.commit();
     return res.json(successResponse({}, 'Parent deleted'));
-  } catch (err) { await transaction.rollback(); console.error(err); return res.status(500).json(errorResponse(err.message)); }
+  } catch (err) { await transaction.rollback(); console.error(err); return res.status(500).json(errorResponse('Server error')); }
 }
 
 async function toggleSuperParentStatus(req, res) {
@@ -3553,7 +3553,7 @@ async function createSuperTeacher(req, res) {
     return res.json(successResponse({
       id: teacher.id, user_id: user.id, username, password: teacherPw,
     }, 'Teacher created'));
-  } catch (err) { console.error(err); return res.status(500).json(errorResponse(err.message)); }
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Server error')); }
 }
 
 async function updateSuperTeacher(req, res) {
@@ -3585,7 +3585,7 @@ async function updateSuperTeacher(req, res) {
     if (req.file) upd.profile_picture = `/uploads/teachers/${req.file.filename}`;
     await Teacher.update(upd, { where: { id: teacher.id } });
     return res.json(successResponse({}, 'Teacher updated'));
-  } catch (err) { console.error(err); return res.status(500).json(errorResponse(err.message)); }
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Server error')); }
 }
 
 async function deleteSuperTeacher(req, res) {
@@ -3710,7 +3710,7 @@ async function createSuperBursar(req, res) {
       status: 'active', is_active: true,
     });
     return res.json(successResponse({ id: bursar.id, user_id: user.id, username, password: pw }, 'Bursar created'));
-  } catch (err) { console.error(err); return res.status(500).json(errorResponse(err.message)); }
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Server error')); }
 }
 
 async function updateSuperBursar(req, res) {
@@ -3739,7 +3739,7 @@ async function updateSuperBursar(req, res) {
     if (req.file) upd.profile_picture = `/uploads/bursars/${req.file.filename}`;
     await CoreBursar.update(upd, { where: { id: bursar.id } });
     return res.json(successResponse({}, 'Bursar updated'));
-  } catch (err) { console.error(err); return res.status(500).json(errorResponse(err.message)); }
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Server error')); }
 }
 
 async function deleteSuperBursar(req, res) {
@@ -3846,7 +3846,7 @@ async function createSuperPrincipal(req, res) {
       status: 'active', is_active: true,
     });
     return res.json(successResponse({ id: principal.id, user_id: user.id, username, password: pw }, 'Principal created'));
-  } catch (err) { console.error(err); return res.status(500).json(errorResponse(err.message)); }
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Server error')); }
 }
 
 async function updateSuperPrincipal(req, res) {
@@ -3874,7 +3874,7 @@ async function updateSuperPrincipal(req, res) {
     if (req.file) upd.profile_picture = `/uploads/principals/${req.file.filename}`;
     await CorePrincipal.update(upd, { where: { id: principal.id } });
     return res.json(successResponse({}, 'Principal updated'));
-  } catch (err) { console.error(err); return res.status(500).json(errorResponse(err.message)); }
+  } catch (err) { console.error(err); return res.status(500).json(errorResponse('Server error')); }
 }
 
 async function deleteSuperPrincipal(req, res) {

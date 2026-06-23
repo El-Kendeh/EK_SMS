@@ -181,7 +181,7 @@ async function registerSchoolAdmin(req, res) {
   } catch (err) {
     await transaction.rollback();
     console.error('Registration error:', err);
-    return res.status(500).json(errorResponse(err.message || 'Registration failed'));
+    return res.status(500).json(errorResponse('Registration failed'));
   }
 }
 

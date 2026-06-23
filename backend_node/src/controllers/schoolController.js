@@ -3,6 +3,9 @@ const SchoolAdmin = require('../models/SchoolAdmin');
 const Student = require('../models/Student');
 const Teacher = require('../models/Teacher');
 const Parent = require('../models/Parent');
+const CorePrincipal = require('../models/CorePrincipal');
+const CoreBursar = require('../models/CoreBursar');
+const StudentParent = require('../models/StudentParent');
 const Class = require('../models/Class');
 const Subject = require('../models/Subject');
 const ClassSubject = require('../models/ClassSubject');
@@ -135,7 +138,7 @@ async function getSchoolInfo(req, res) {
     }));
   } catch (err) {
     console.error(err);
-    return res.status(500).json(errorResponse(`Internal server error: ${err.message}`, 500));
+    return res.status(500).json(errorResponse(`Internal server error`, 500));
   }
 }
 
@@ -188,7 +191,7 @@ async function updateSchoolInfo(req, res) {
     return res.json(successResponse({ school }, 'School information updated'));
   } catch (err) {
     console.error(err);
-    return res.status(500).json(errorResponse(`Failed to update school information: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to update school information`));
   }
 }
 
@@ -237,7 +240,7 @@ async function getStudents(req, res) {
     return res.json(successResponse({ students: formatted }));
   } catch (err) {
     console.error('getStudents Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch students: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch students`));
   }
 }
 
@@ -340,7 +343,7 @@ async function createStudent(req, res) {
   } catch (err) {
     await transaction.rollback();
     console.error('createStudent Error:', err);
-    return res.status(400).json(errorResponse(`Failed to create student: ${err.message}`));
+    return res.status(400).json(errorResponse(`Failed to create student`));
   }
 }
 
@@ -446,7 +449,7 @@ async function updateStudent(req, res) {
     return res.json(successResponse({ student }, 'Student updated successfully'));
   } catch (err) {
     await transaction.rollback();
-    return res.status(400).json(errorResponse(`Failed to update student: ${err.message}`));
+    return res.status(400).json(errorResponse(`Failed to update student`));
   }
 }
 
@@ -500,7 +503,7 @@ async function getTeachers(req, res) {
     return res.json(successResponse({ teachers: formatted }));
   } catch (err) {
     console.error('getTeachers Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch teachers: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch teachers`));
   }
 }
 
@@ -562,7 +565,7 @@ async function createTeacher(req, res) {
   } catch (err) {
     if (transaction) await transaction.rollback();
     console.error('createTeacher Error:', err);
-    return res.status(400).json(errorResponse(`Failed to create teacher: ${err.message}`));
+    return res.status(400).json(errorResponse(`Failed to create teacher`));
   }
 }
 
@@ -666,7 +669,7 @@ async function getClasses(req, res) {
     return res.json(successResponse({ classes: enriched }));
   } catch (err) {
     console.error('getClasses Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch classes: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch classes`));
   }
 }
 
@@ -745,7 +748,7 @@ async function getClassById(req, res) {
     }));
   } catch (err) {
     console.error('getClassById Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch class: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch class`));
   }
 }
 
@@ -805,7 +808,7 @@ async function createClass(req, res) {
     return res.json(successResponse({ class: cls }, 'Class created'));
   } catch (err) {
     console.error('createClass Error:', err);
-    return res.status(500).json(errorResponse(`Failed to create class: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to create class`));
   }
 }
 
@@ -874,7 +877,7 @@ async function updateClass(req, res) {
     return res.json(successResponse({ class: cls }, 'Class updated'));
   } catch (err) {
     console.error('updateClass Error:', err);
-    return res.status(500).json(errorResponse(`Failed to update class: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to update class`));
   }
 }
 
@@ -895,7 +898,7 @@ async function deleteClass(req, res) {
     return res.json(successResponse({}, 'Class deleted'));
   } catch (err) {
     console.error('deleteClass Error:', err);
-    return res.status(500).json(errorResponse(`Failed to delete class: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to delete class`));
   }
 }
 
@@ -929,7 +932,7 @@ async function assignStudentsToClass(req, res) {
     return res.json(successResponse({ assigned_count: student_ids.length }, 'Students assigned to class'));
   } catch (err) {
     console.error('assignStudentsToClass Error:', err);
-    return res.status(500).json(errorResponse(`Failed to assign students: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to assign students`));
   }
 }
 
@@ -961,7 +964,7 @@ async function assignSubjectsToClass(req, res) {
     return res.json(successResponse({ subject_count: subject_ids.length }, 'Subjects assigned to class'));
   } catch (err) {
     console.error('assignSubjectsToClass Error:', err);
-    return res.status(500).json(errorResponse(`Failed to assign subjects: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to assign subjects`));
   }
 }
 
@@ -1007,7 +1010,7 @@ async function bulkCreateClasses(req, res) {
         });
         created.push(cls);
       } catch (err) {
-        skipped.push({ code, reason: err.message });
+        skipped.push({ code, reason: 'Failed to create class' });
       }
     }
 
@@ -1018,7 +1021,7 @@ async function bulkCreateClasses(req, res) {
     }));
   } catch (err) {
     console.error('bulkCreateClasses Error:', err);
-    return res.status(500).json(errorResponse(`Failed to bulk create classes: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to bulk create classes`));
   }
 }
 
@@ -1124,7 +1127,7 @@ async function getSubjects(req, res) {
     return res.json(successResponse({ subjects: enriched }));
   } catch (err) {
     console.error('getSubjects Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch subjects: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch subjects`));
   }
 }
 
@@ -1142,7 +1145,7 @@ async function createSubject(req, res) {
     return res.json(successResponse({ subject }, 'Subject created'));
   } catch (err) {
     console.error('createSubject Error:', err);
-    return res.status(500).json(errorResponse(`Failed to create subject: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to create subject`));
   }
 }
 
@@ -1166,7 +1169,7 @@ async function updateSubject(req, res) {
     return res.json(successResponse({ subject }, 'Subject updated'));
   } catch (err) {
     console.error('updateSubject Error:', err);
-    return res.status(500).json(errorResponse(`Failed to update subject: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to update subject`));
   }
 }
 
@@ -1186,7 +1189,7 @@ async function deleteSubject(req, res) {
     return res.json(successResponse({}, 'Subject deleted'));
   } catch (err) {
     console.error('deleteSubject Error:', err);
-    return res.status(500).json(errorResponse(`Failed to delete subject: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to delete subject`));
   }
 }
 
@@ -1218,7 +1221,7 @@ async function assignClassesToSubject(req, res) {
     return res.json(successResponse({ class_count: class_ids.length }, 'Classes assigned to subject'));
   } catch (err) {
     console.error('assignClassesToSubject Error:', err);
-    return res.status(500).json(errorResponse(`Failed to assign classes: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to assign classes`));
   }
 }
 
@@ -1260,7 +1263,7 @@ async function assignTeachersToSubject(req, res) {
     return res.json(successResponse({ teacher_count: teacher_ids.length }, 'Teachers assigned to subject'));
   } catch (err) {
     console.error('assignTeachersToSubject Error:', err);
-    return res.status(500).json(errorResponse(`Failed to assign teachers: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to assign teachers`));
   }
 }
 
@@ -1371,7 +1374,7 @@ async function getSchoolContext(req, res) {
     }));
   } catch (err) {
     console.error('getSchoolContext Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch school context: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch school context`));
   }
 }
 
@@ -2143,7 +2146,7 @@ async function createParent(req, res) {
   } catch (err) {
     await transaction.rollback();
     console.error('createParent Error:', err);
-    return res.status(400).json(errorResponse(`Failed to create parent: ${err.message}`));
+    return res.status(400).json(errorResponse(`Failed to create parent`));
   }
 }
 
@@ -2214,13 +2217,36 @@ async function sendMessage(req, res) {
       });
       count = 1;
     } else if (role) {
-      const roleUsers = await User.findAll({
-        include: [{ model: Role, as: 'role', where: { code: role }, attributes: [] }],
-      });
-      for (const u of roleUsers) {
+      // The User table has no school_id — resolve recipients WITHIN this school via
+      // the role-specific tables (parents link via the school's students). This
+      // replaces an unscoped `User.findAll` by role that would have notified users
+      // across ALL schools (cross-tenant leak).
+      let recipientUserIds = [];
+      if (role === 'teacher') {
+        recipientUserIds = (await Teacher.findAll({ where: { school_id: school.id }, attributes: ['user_id'] })).map(r => r.user_id);
+      } else if (role === 'student') {
+        recipientUserIds = (await Student.findAll({ where: { school_id: school.id }, attributes: ['user_id'] })).map(r => r.user_id);
+      } else if (role === 'principal') {
+        recipientUserIds = (await CorePrincipal.findAll({ where: { school_id: school.id }, attributes: ['user_id'] })).map(r => r.user_id);
+      } else if (role === 'bursar') {
+        recipientUserIds = (await CoreBursar.findAll({ where: { school_id: school.id }, attributes: ['user_id'] })).map(r => r.user_id);
+      } else if (role === 'school_admin' || role === 'schooladmin') {
+        recipientUserIds = (await SchoolAdmin.findAll({ where: { school_id: school.id }, attributes: ['user_id'] })).map(r => r.user_id);
+      } else if (role === 'parent') {
+        const studs = await Student.findAll({ where: { school_id: school.id }, attributes: ['id'] });
+        if (studs.length) {
+          const links = await StudentParent.findAll({ where: { student_id: studs.map(s => s.id) }, attributes: ['parent_id'] });
+          const parentIds = [...new Set(links.map(l => l.parent_id))];
+          if (parentIds.length) {
+            recipientUserIds = (await Parent.findAll({ where: { id: parentIds }, attributes: ['user_id'] })).map(r => r.user_id);
+          }
+        }
+      }
+      recipientUserIds = [...new Set(recipientUserIds.filter(Boolean))];
+      for (const uid of recipientUserIds) {
         await Notification.create({
           school_id: school.id,
-          user_id: u.id,
+          user_id: uid,
           title,
           message,
           type: type || 'info',
@@ -2245,7 +2271,7 @@ async function sendMessage(req, res) {
     return res.json(successResponse({ count }, `Notification sent to ${count} recipient(s)`));
   } catch (err) {
     console.error('sendMessage Error:', err);
-    return res.status(500).json(errorResponse(`Failed to send message: ${err.message}`));
+    return res.status(500).json(errorResponse('Failed to send message'));
   }
 }
 
@@ -2281,7 +2307,7 @@ async function recordClassAttendance(req, res) {
   } catch (err) {
     await transaction.rollback();
     console.error('recordClassAttendance Error:', err);
-    return res.status(500).json(errorResponse(`Failed to record attendance: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to record attendance`));
   }
 }
 
@@ -2483,7 +2509,7 @@ async function updateTeacher(req, res) {
   } catch (err) {
     await transaction.rollback();
     console.error('updateTeacher Error:', err);
-    return res.status(400).json(errorResponse(`Failed to update teacher: ${err.message}`));
+    return res.status(400).json(errorResponse(`Failed to update teacher`));
   }
 }
 
@@ -2533,7 +2559,7 @@ async function getSyllabusTopics(req, res) {
     return res.json(successResponse({ topics: enriched }));
   } catch (err) {
     console.error('getSyllabusTopics Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch syllabus topics: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch syllabus topics`));
   }
 }
 
@@ -2569,7 +2595,7 @@ async function createSyllabusTopic(req, res) {
     return res.json(successResponse({ topic }, 'Topic created'));
   } catch (err) {
     console.error('createSyllabusTopic Error:', err);
-    return res.status(500).json(errorResponse(`Failed to create topic: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to create topic`));
   }
 }
 
@@ -2603,7 +2629,7 @@ async function updateSyllabusTopic(req, res) {
     return res.json(successResponse({ topic }, 'Topic updated'));
   } catch (err) {
     console.error('updateSyllabusTopic Error:', err);
-    return res.status(500).json(errorResponse(`Failed to update topic: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to update topic`));
   }
 }
 
@@ -2620,7 +2646,7 @@ async function deleteSyllabusTopic(req, res) {
     return res.json(successResponse({}, 'Topic deleted'));
   } catch (err) {
     console.error('deleteSyllabusTopic Error:', err);
-    return res.status(500).json(errorResponse(`Failed to delete topic: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to delete topic`));
   }
 }
 
@@ -2645,7 +2671,7 @@ async function getSyllabusStats(req, res) {
     }));
   } catch (err) {
     console.error('getSyllabusStats Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch stats: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch stats`));
   }
 }
 

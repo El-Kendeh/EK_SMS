@@ -390,7 +390,7 @@ async function submitGradesForLocking(req, res) {
   } catch (err) {
     await transaction.rollback();
     console.error('submitGradesForLocking Error:', err);
-    return res.status(500).json(errorResponse(`Failed to submit grades: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to submit grades`));
   }
 }
 

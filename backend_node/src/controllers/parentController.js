@@ -94,7 +94,7 @@ async function getChildren(req, res) {
     return res.json(successResponse({ children, parent }));
   } catch (err) {
     console.error('getChildren Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch children: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch children`));
   }
 }
 
@@ -133,7 +133,7 @@ async function getChildGrades(req, res) {
     return res.json(successResponse({ grades: formatted }));
   } catch (err) {
     console.error('getChildGrades Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch grades: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch grades`));
   }
 }
 
@@ -149,7 +149,7 @@ async function getChildGradeHistory(req, res) {
     return res.json(successResponse({ history: events }));
   } catch (err) {
     console.error('getChildGradeHistory Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch history: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch history`));
   }
 }
 
@@ -211,7 +211,7 @@ async function getChildReportCards(req, res) {
     return res.json(successResponse({ reportCards, attendance_rate: attendanceRate }));
   } catch (err) {
     console.error('getChildReportCards Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch report cards: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch report cards`));
   }
 }
 
@@ -269,7 +269,7 @@ async function downloadChildReportCard(req, res) {
     return res.json(successResponse({ report: reportData }));
   } catch (err) {
     console.error('downloadChildReportCard Error:', err);
-    return res.status(500).json(errorResponse(`Failed to download: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to download`));
   }
 }
 
@@ -302,7 +302,7 @@ async function getParentNotifications(req, res) {
     return res.json(successResponse({ notifications: formatted, unread }));
   } catch (err) {
     console.error('getParentNotifications Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch notifications: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch notifications`));
   }
 }
 
@@ -317,7 +317,7 @@ async function markParentNotificationRead(req, res) {
     return res.json(successResponse({}, 'Notification marked as read'));
   } catch (err) {
     console.error('markParentNotificationRead Error:', err);
-    return res.status(500).json(errorResponse(`Failed to mark notification: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to mark notification`));
   }
 }
 
@@ -337,7 +337,7 @@ async function getParentProfile(req, res) {
     }));
   } catch (err) {
     console.error('getParentProfile Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch profile: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch profile`));
   }
 }
 
@@ -358,7 +358,7 @@ async function updateParentProfile(req, res) {
     }, 'Profile updated'));
   } catch (err) {
     console.error('updateParentProfile Error:', err);
-    return res.status(500).json(errorResponse(`Failed to update profile: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to update profile`));
   }
 }
 
@@ -372,7 +372,7 @@ async function get2FASetup(req, res) {
     }));
   } catch (err) {
     console.error('get2FASetup Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch 2FA setup: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch 2FA setup`));
   }
 }
 
@@ -382,7 +382,7 @@ async function enable2FA(req, res) {
     return res.json(successResponse({}, '2FA enabled'));
   } catch (err) {
     console.error('enable2FA Error:', err);
-    return res.status(500).json(errorResponse(`Failed to enable 2FA: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to enable 2FA`));
   }
 }
 
@@ -392,7 +392,7 @@ async function disable2FA(req, res) {
     return res.json(successResponse({}, '2FA disabled'));
   } catch (err) {
     console.error('disable2FA Error:', err);
-    return res.status(500).json(errorResponse(`Failed to disable 2FA: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to disable 2FA`));
   }
 }
 
@@ -434,7 +434,7 @@ async function getChildAttendance(req, res) {
     }));
   } catch (err) {
     console.error('getChildAttendance Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch attendance: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch attendance`));
   }
 }
 
@@ -476,7 +476,7 @@ async function getChildBehavior(req, res) {
     return res.json(successResponse({ entries }));
   } catch (err) {
     console.error('getChildBehavior Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch behavior: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch behavior`));
   }
 }
 
@@ -527,7 +527,7 @@ async function getChildFees(req, res) {
     }));
   } catch (err) {
     console.error('getChildFees Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch fees: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch fees`));
   }
 }
 
@@ -543,7 +543,7 @@ async function getPaymentChannels(req, res) {
     }));
   } catch (err) {
     console.error('getPaymentChannels Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch payment channels: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch payment channels`));
   }
 }
 
@@ -591,7 +591,7 @@ async function startPayment(req, res) {
     }, 'Payment recorded'));
   } catch (err) {
     console.error('startPayment Error:', err);
-    return res.status(500).json(errorResponse(`Failed to start payment: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to start payment`));
   }
 }
 
@@ -635,7 +635,7 @@ async function getReceipts(req, res) {
     return res.json(successResponse({ receipts: formatted }));
   } catch (err) {
     console.error('getReceipts Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch receipts: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch receipts`));
   }
 }
 
@@ -673,7 +673,7 @@ async function downloadReceipt(req, res) {
     return res.json(successResponse({ receipt }));
   } catch (err) {
     console.error('downloadReceipt Error:', err);
-    return res.status(500).json(errorResponse(`Failed to download: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to download`));
   }
 }
 
@@ -723,7 +723,7 @@ async function verifyHash(req, res) {
     return res.json(successResponse({ valid: false, reason: 'Hash not found' }));
   } catch (err) {
     console.error('verifyHash Error:', err);
-    return res.status(500).json(errorResponse(`Failed to verify: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to verify`));
   }
 }
 
@@ -736,7 +736,7 @@ async function getTamperCount(req, res) {
     return res.json(successResponse({ total, blocked, successful }));
   } catch (err) {
     console.error('getTamperCount Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch tamper count: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch tamper count`));
   }
 }
 
@@ -764,7 +764,7 @@ async function getAccessLog(req, res) {
     return res.json(successResponse({ entries: formatted }));
   } catch (err) {
     console.error('getAccessLog Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch access log: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch access log`));
   }
 }
 
@@ -790,7 +790,7 @@ async function submitModificationObjection(req, res) {
     return res.json(successResponse({ ticketId: `OBJ-${objection.id}` }, 'Objection submitted'));
   } catch (err) {
     console.error('submitModificationObjection Error:', err);
-    return res.status(500).json(errorResponse(`Failed to submit objection: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to submit objection`));
   }
 }
 
@@ -823,7 +823,7 @@ async function getChannelPreferences(req, res) {
     return res.json(successResponse({ preferences: result }));
   } catch (err) {
     console.error('getChannelPreferences Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch preferences: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch preferences`));
   }
 }
 
@@ -843,7 +843,7 @@ async function updateChannelPreferences(req, res) {
     return res.json(successResponse({}, 'Preferences updated'));
   } catch (err) {
     console.error('updateChannelPreferences Error:', err);
-    return res.status(500).json(errorResponse(`Failed to update preferences: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to update preferences`));
   }
 }
 
@@ -863,7 +863,7 @@ async function getWhistleblowerCategories(req, res) {
     return res.json(successResponse({ categories: formatted }));
   } catch (err) {
     console.error('getWhistleblowerCategories Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch categories: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch categories`));
   }
 }
 
@@ -891,7 +891,7 @@ async function submitWhistleblowerReport(req, res) {
     return res.json(successResponse({ ticketId: followUpKey, followUpKey }, 'Report submitted'));
   } catch (err) {
     console.error('submitWhistleblowerReport Error:', err);
-    return res.status(500).json(errorResponse(`Failed to submit report: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to submit report`));
   }
 }
 
@@ -917,7 +917,7 @@ async function checkWhistleblowerStatus(req, res) {
     }));
   } catch (err) {
     console.error('checkWhistleblowerStatus Error:', err);
-    return res.status(500).json(errorResponse(`Failed to check status: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to check status`));
   }
 }
 
@@ -944,7 +944,7 @@ async function getConferenceSlots(req, res) {
     return res.json(successResponse({ slots: formatted }));
   } catch (err) {
     console.error('getConferenceSlots Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch conference slots: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch conference slots`));
   }
 }
 
@@ -973,7 +973,7 @@ async function claimConferenceSlot(req, res) {
     }, 'Slot claimed'));
   } catch (err) {
     console.error('claimConferenceSlot Error:', err);
-    return res.status(500).json(errorResponse(`Failed to claim slot: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to claim slot`));
   }
 }
 
@@ -997,7 +997,7 @@ async function cancelConferenceSlot(req, res) {
     return res.json(successResponse({}, 'Slot cancelled'));
   } catch (err) {
     console.error('cancelConferenceSlot Error:', err);
-    return res.status(500).json(errorResponse(`Failed to cancel slot: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to cancel slot`));
   }
 }
 
@@ -1027,7 +1027,7 @@ async function getCounsellor(req, res) {
     return res.json(successResponse({ thread: { messages: formatted } }));
   } catch (err) {
     console.error('getCounsellor Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch counsellor: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch counsellor`));
   }
 }
 
@@ -1054,7 +1054,7 @@ async function sendCounsellorMessage(req, res) {
     }, 'Message sent'));
   } catch (err) {
     console.error('sendCounsellorMessage Error:', err);
-    return res.status(500).json(errorResponse(`Failed to send message: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to send message`));
   }
 }
 
@@ -1101,7 +1101,7 @@ async function getTeacherThreads(req, res) {
     return res.json(successResponse({ threads: Object.values(threads) }));
   } catch (err) {
     console.error('getTeacherThreads Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch threads: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch threads`));
   }
 }
 
@@ -1132,7 +1132,7 @@ async function sendTeacherMessage(req, res) {
     }, 'Message sent'));
   } catch (err) {
     console.error('sendTeacherMessage Error:', err);
-    return res.status(500).json(errorResponse(`Failed to send message: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to send message`));
   }
 }
 
@@ -1166,7 +1166,7 @@ async function getCoGuardians(req, res) {
     return res.json(successResponse({ guardians: formatted }));
   } catch (err) {
     console.error('getCoGuardians Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch guardians: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch guardians`));
   }
 }
 
@@ -1208,7 +1208,7 @@ async function inviteCoGuardian(req, res) {
     }, 'Invitation sent'));
   } catch (err) {
     console.error('inviteCoGuardian Error:', err);
-    return res.status(500).json(errorResponse(`Failed to invite guardian: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to invite guardian`));
   }
 }
 
@@ -1231,7 +1231,7 @@ async function removeCoGuardian(req, res) {
     return res.json(successResponse({}, 'Guardian removed'));
   } catch (err) {
     console.error('removeCoGuardian Error:', err);
-    return res.status(500).json(errorResponse(`Failed to remove guardian: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to remove guardian`));
   }
 }
 
@@ -1259,7 +1259,7 @@ async function getPickupAllowList(req, res) {
     return res.json(successResponse({ pickups: formatted }));
   } catch (err) {
     console.error('getPickupAllowList Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch pickups: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch pickups`));
   }
 }
 
@@ -1292,7 +1292,7 @@ async function addPickup(req, res) {
     }, 'Pickup person added'));
   } catch (err) {
     console.error('addPickup Error:', err);
-    return res.status(500).json(errorResponse(`Failed to add pickup: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to add pickup`));
   }
 }
 
@@ -1315,7 +1315,7 @@ async function removePickup(req, res) {
     return res.json(successResponse({}, 'Pickup person removed'));
   } catch (err) {
     console.error('removePickup Error:', err);
-    return res.status(500).json(errorResponse(`Failed to remove pickup: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to remove pickup`));
   }
 }
 
@@ -1354,7 +1354,7 @@ async function getPermissionSlips(req, res) {
     return res.json(successResponse({ slips: formatted }));
   } catch (err) {
     console.error('getPermissionSlips Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch slips: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch slips`));
   }
 }
 
@@ -1399,7 +1399,7 @@ async function signPermissionSlip(req, res) {
     return res.json(successResponse({}, 'Slip signed'));
   } catch (err) {
     console.error('signPermissionSlip Error:', err);
-    return res.status(500).json(errorResponse(`Failed to sign slip: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to sign slip`));
   }
 }
 
@@ -1433,7 +1433,7 @@ async function acknowledgeRecord(req, res) {
     return res.json(successResponse({}, 'Acknowledged'));
   } catch (err) {
     console.error('acknowledgeRecord Error:', err);
-    return res.status(500).json(errorResponse(`Failed to acknowledge: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to acknowledge`));
   }
 }
 
@@ -1455,7 +1455,7 @@ async function getAcknowledgments(req, res) {
     return res.json(successResponse({ acknowledgments: formatted }));
   } catch (err) {
     console.error('getAcknowledgments Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch acknowledgments: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch acknowledgments`));
   }
 }
 
@@ -1486,7 +1486,7 @@ async function getParentEvents(req, res) {
     return res.json(successResponse({ events: formatted }));
   } catch (err) {
     console.error('getParentEvents Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch events: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch events`));
   }
 }
 
@@ -1521,7 +1521,7 @@ async function getDonations(req, res) {
     return res.json(successResponse({ campaigns: formatted, total_sponsored: totalSponsored }));
   } catch (err) {
     console.error('getDonations Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch donations: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch donations`));
   }
 }
 
@@ -1561,7 +1561,7 @@ async function donateToCampaign(req, res) {
     }, 'Donation received'));
   } catch (err) {
     console.error('donateToCampaign Error:', err);
-    return res.status(500).json(errorResponse(`Failed to donate: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to donate`));
   }
 }
 
@@ -1636,7 +1636,7 @@ async function getEndOfTermPack(req, res) {
     }));
   } catch (err) {
     console.error('getEndOfTermPack Error:', err);
-    return res.status(500).json(errorResponse(`Failed to generate pack: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to generate pack`));
   }
 }
 
@@ -1702,7 +1702,7 @@ async function getWeeklyDigest(req, res) {
     return res.json(successResponse({ digest, period: { from: weekAgo, to: new Date() } }));
   } catch (err) {
     console.error('getWeeklyDigest Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch digest: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch digest`));
   }
 }
 
@@ -1754,7 +1754,7 @@ async function getVoiceDigest(req, res) {
     return res.json(successResponse({ text }));
   } catch (err) {
     console.error('getVoiceDigest Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch voice digest: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch voice digest`));
   }
 }
 
@@ -1802,7 +1802,7 @@ async function getFamilyActivity(req, res) {
     return res.json(successResponse({ activity }));
   } catch (err) {
     console.error('getFamilyActivity Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch activity: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch activity`));
   }
 }
 

@@ -199,7 +199,7 @@ async function approveSchool(req, res) {
   } catch (err) {
     await transaction.rollback();
     console.error('Approve school error:', err);
-    return res.status(500).json(errorResponse(err.message || 'Internal server error', 500));
+    return res.status(500).json(errorResponse('Internal server error', 500));
   }
 }
 
@@ -282,7 +282,7 @@ async function rejectSchool(req, res) {
   } catch (err) {
     await transaction.rollback();
     console.error('Reject school error:', err);
-    return res.status(500).json(errorResponse(err.message || 'Internal server error', 500));
+    return res.status(500).json(errorResponse('Internal server error', 500));
   }
 }
 

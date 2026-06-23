@@ -59,7 +59,7 @@ async function getOverview(req, res) {
     }));
   } catch (err) {
     console.error('getOverview Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch overview: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch overview`));
   }
 }
 
@@ -121,7 +121,7 @@ async function listGradeApprovals(req, res) {
     }));
   } catch (err) {
     console.error('listGradeApprovals Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch approvals: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch approvals`));
   }
 }
 
@@ -177,7 +177,7 @@ async function reviewGradeChange(req, res) {
     return res.json(successResponse({ count }, `${count} grade(s) ${action}d`));
   } catch (err) {
     console.error('reviewGradeChange Error:', err);
-    return res.status(500).json(errorResponse(`Failed to review: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to review`));
   }
 }
 
@@ -249,7 +249,7 @@ async function listReportCards(req, res) {
     }));
   } catch (err) {
     console.error('listReportCards Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch report cards: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch report cards`));
   }
 }
 
@@ -297,7 +297,7 @@ async function publishReportCard(req, res) {
     return res.json(successResponse({ published_count: publishedStudents.size }, 'Report cards published'));
   } catch (err) {
     console.error('publishReportCard Error:', err);
-    return res.status(500).json(errorResponse(`Failed to publish: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to publish`));
   }
 }
 
@@ -322,7 +322,7 @@ async function commentReportCard(req, res) {
     return res.json(successResponse({ grade_id: grade.id }, 'Comment saved'));
   } catch (err) {
     console.error('commentReportCard Error:', err);
-    return res.status(500).json(errorResponse(`Failed to save comment: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to save comment`));
   }
 }
 
@@ -352,7 +352,7 @@ async function getPrincipalUsers(req, res) {
     return res.json(successResponse({ principal_users: users }));
   } catch (err) {
     console.error('getPrincipalUsers Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch principals: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch principals`));
   }
 }
 
@@ -389,7 +389,7 @@ async function createPrincipalUser(req, res) {
     return res.json(successResponse({ id: admin.id }, 'Principal created'));
   } catch (err) {
     console.error('createPrincipalUser Error:', err);
-    return res.status(500).json(errorResponse(`Failed to create principal: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to create principal`));
   }
 }
 
@@ -435,7 +435,7 @@ async function updatePrincipalUser(req, res) {
     return res.json(successResponse({}, 'Member updated'));
   } catch (err) {
     console.error('updatePrincipalUser Error:', err);
-    return res.status(500).json(errorResponse(`Failed to update: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to update`));
   }
 }
 
@@ -490,7 +490,7 @@ async function getAttendanceReport(req, res) {
     }));
   } catch (err) {
     console.error('getAttendanceReport Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch attendance report: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch attendance report`));
   }
 }
 
@@ -552,7 +552,7 @@ async function getSchoolCommandDashboard(req, res) {
     }));
   } catch (err) {
     console.error('getSchoolCommandDashboard Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch dashboard: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch dashboard`));
   }
 }
 
@@ -587,7 +587,7 @@ async function getClassPerformance(req, res) {
     }));
   } catch (err) {
     console.error('getClassPerformance Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch class performance: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch class performance`));
   }
 }
 
@@ -609,7 +609,7 @@ async function getTeacherInsights(req, res) {
     }));
   } catch (err) {
     console.error('getTeacherInsights Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch teacher insights: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch teacher insights`));
   }
 }
 
@@ -626,7 +626,7 @@ async function getFinanceSnapshot(req, res) {
     }));
   } catch (err) {
     console.error('getFinanceSnapshot Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch finance: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch finance`));
   }
 }
 
@@ -664,7 +664,7 @@ async function getActivityFeed(req, res) {
     }));
   } catch (err) {
     console.error('getActivityFeed Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch activity: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch activity`));
   }
 }
 
@@ -697,7 +697,7 @@ async function getSyllabusProgress(req, res) {
     return res.json(successResponse({ subjects: progress }));
   } catch (err) {
     console.error('getSyllabusProgress Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch syllabus: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch syllabus`));
   }
 }
 

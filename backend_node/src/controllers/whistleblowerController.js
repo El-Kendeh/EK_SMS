@@ -23,7 +23,7 @@ async function getCategories(req, res) {
     return res.json(successResponse({ categories }));
   } catch (err) {
     console.error('getCategories Error:', err);
-    return res.status(500).json(errorResponse(`Failed to fetch categories: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to fetch categories`));
   }
 }
 
@@ -54,7 +54,7 @@ async function submitReport(req, res) {
     }, 'Report submitted. Save your follow-up key to check status.'));
   } catch (err) {
     console.error('submitReport Error:', err);
-    return res.status(500).json(errorResponse(`Failed to submit report: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to submit report`));
   }
 }
 
@@ -75,7 +75,7 @@ async function checkStatus(req, res) {
     }));
   } catch (err) {
     console.error('checkStatus Error:', err);
-    return res.status(500).json(errorResponse(`Failed to check status: ${err.message}`));
+    return res.status(500).json(errorResponse(`Failed to check status`));
   }
 }
 
