@@ -3588,6 +3588,12 @@ async function getSuperBursars(req, res) {
   try {
     const { school_id, status, page = 1, limit = 100 } = req.query;
     const forcedSchool = scopedSchoolId(req);
+    // Cross-tenant lockdown: a superadmin must scope to a single school via
+    // ?school_id=; the bare route never bulk-returns every tenant's bursar PII
+    // (national ID/bank/salary). View per-school only.
+    if (forcedSchool === null && !school_id) {
+      return res.json(successResponse({ bursars: [], total: 0, page: parseInt(page), limit: parseInt(limit) }, 'Select a school to view its bursars.'));
+    }
     const where = {};
     if (forcedSchool !== null) where.school_id = forcedSchool;
     else if (school_id) where.school_id = school_id;
@@ -3734,6 +3740,12 @@ async function getSuperPrincipals(req, res) {
   try {
     const { school_id, status, page = 1, limit = 100 } = req.query;
     const forcedSchool = scopedSchoolId(req);
+    // Cross-tenant lockdown: a superadmin must scope to a single school via
+    // ?school_id=; the bare route never bulk-returns every tenant's principal PII
+    // (national ID/bank/salary). View per-school only.
+    if (forcedSchool === null && !school_id) {
+      return res.json(successResponse({ principals: [], total: 0, page: parseInt(page), limit: parseInt(limit) }, 'Select a school to view its principals.'));
+    }
     const where = {};
     if (forcedSchool !== null) where.school_id = forcedSchool;
     else if (school_id) where.school_id = school_id;
