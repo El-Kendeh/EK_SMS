@@ -69,6 +69,9 @@ eksms/staticfiles/
 
 # User-uploaded media (personal data — never commit)
 eksms/media/
+# Node runtime-uploaded media at the repo ROOT (stray output — the backend writes
+# to backend_node/uploads/; this /uploads/ is not source). Never commit.
+/uploads/
 
 # ── Debug & utility scripts (local dev only) ──────────────────────
 eksms/check_*.py
