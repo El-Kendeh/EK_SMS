@@ -1534,6 +1534,9 @@ async function recordAttendance(req, res) {
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
     const { student_id, classroom_id, date, status, remarks } = req.body;
+    // Tenant guard: the student must belong to this school (no cross-tenant attendance rows).
+    const student = await Student.findOne({ where: { id: student_id, school_id: school.id }, attributes: ['id'] });
+    if (!student) return res.status(400).json(errorResponse('Invalid student for this school'));
     const attendance = await Attendance.create({
       school_id: school.id, student_id, classroom_id, date, status, remarks,
     });
@@ -1995,6 +1998,10 @@ async function createTeacherAssignment(req, res) {
     const school = await getSchoolFromUser(req);
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
     const { title, description, class_id, subject_id, teacher_id, due_date, max_score } = req.body;
+    // Tenant guards: any referenced class/subject/teacher must belong to THIS school.
+    if (class_id) { const c = await Class.findOne({ where: { id: class_id, school_id: school.id }, attributes: ['id'] }); if (!c) return res.status(400).json(errorResponse('Invalid class for this school')); }
+    if (subject_id) { const s = await Subject.findOne({ where: { id: subject_id, school_id: school.id }, attributes: ['id'] }); if (!s) return res.status(400).json(errorResponse('Invalid subject for this school')); }
+    if (teacher_id) { const t = await Teacher.findOne({ where: { id: teacher_id, school_id: school.id }, attributes: ['id'] }); if (!t) return res.status(400).json(errorResponse('Invalid teacher for this school')); }
     const assignment = await Assignment.create({
       school_id: school.id, title, description, class_id, subject_id, teacher_id, due_date, max_score, is_active: true,
     });

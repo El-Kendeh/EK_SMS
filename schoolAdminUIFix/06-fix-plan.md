@@ -5,8 +5,9 @@
 > - Phase 2 details: [CHANGELOG-PHASE-2.md](CHANGELOG-PHASE-2.md) (2.9 was a false positive — no change; 2.3 AI-capture deferred; 2.8 done as a safe subset)
 > - Phase 3 details: [CHANGELOG-PHASE-3.md](CHANGELOG-PHASE-3.md) (3.1/3.2/3.4/3.6 done; 3.3/3.5/3.7/3.8 deferred with reasons)
 > - Phase 4 details: [CHANGELOG-PHASE-4.md](CHANGELOG-PHASE-4.md) (~9.3k lines of orphaned UI quarantined to `_deprecated/`, build-verified; Parents/Principal + backend orphan routes held for a focused pass) — **backend restarted; `pruh_core_exam_result` created in dev**
-> - **Manual still needed:** rotate Gemini key · create `pruh_core_exam_result` in **prod** · (optional) hide `ai-capture` in permissions.js · delete `_deprecated/` after a release cycle.
-> Remaining: deferred Phase 3 items + Phase 4 follow-ups + Phase 5 below.
+> - Phase 5 details: [CHANGELOG-PHASE-5.md](CHANGELOG-PHASE-5.md) (FK tenant-guards on attendance + teacher-assignment done; sendMessage/err.message/admission#/expense-approval/dedupe deferred with reasons)
+> - **Manual still needed:** rotate Gemini key · create `pruh_core_exam_result` in **prod** · restart backend for the Phase-5 guards · (optional) hide `ai-capture` in permissions.js · delete `_deprecated/` after a release cycle.
+> Remaining: deferred Phase 3 + Phase 4 follow-ups + deferred Phase 5 items below.
 
 Sequenced so the highest-risk, lowest-effort items come first. Effort = rough dev time. Each item has an acceptance check.
 

@@ -822,6 +822,55 @@ export default function Dashboard({ onNavigate }) {
     { key: 'notifications',  label: 'Notifications',  icon: <IcBell />, badge: 0, section: null },
   ];
 
+  /* School Admin gets a curated sidebar — the SAME categories + collapsible
+     grouping it already had (rendered from the `section` field), just without the
+     "under development" stub keys (examination, fees-structure, school-financial-report,
+     report-card-generator) and the 404 ai-capture page. Keys must stay permitted in
+     permissions.js; the canAccess filter below still applies as defence-in-depth. */
+  const SCHOOL_ADMIN_NAV_ITEMS = [
+    { key: 'overview',            label: 'Dashboard',           icon: <IcHome />, badge: 0, section: null },
+
+    /* Academics (people + structure — unchanged grouping) */
+    { key: 'classes',             label: 'Classes',             icon: <IcGen />, badge: 0, section: 'Academics' },
+    { key: 'subjects',            label: 'Subjects',            icon: <IcGen />, badge: 0, section: 'Academics' },
+    { key: 'principal',           label: 'Principal',           icon: <IcGen />, badge: 0, section: 'Academics' },
+    { key: 'bursar',              label: 'Bursar',              icon: <IcGen />, badge: 0, section: 'Academics' },
+    { key: 'account-teachers',    label: 'Teachers',            icon: <IcGen />, badge: 0, section: 'Academics' },
+    { key: 'account-students',    label: 'Students',            icon: <IcGen />, badge: 0, section: 'Academics' },
+    { key: 'account-parents',     label: 'Parent',              icon: <IcGen />, badge: 0, section: 'Academics' },
+
+    /* Attendance */
+    { key: 'attendance-report',   label: 'Report',              icon: <IcGen />, badge: 0, section: 'Attendance' },
+
+    /* Lessons */
+    { key: 'timetable-mgr',       label: 'Timetable Manager',   icon: <IcGen />, badge: 0, section: 'Lessons' },
+
+    /* Fees */
+    { key: 'fee-dashboard',       label: 'Fee Dashboard',       icon: <IcGen />, badge: 0, section: 'Fees' },
+    { key: 'fee-categories',      label: 'Fee Categories',      icon: <IcGen />, badge: 0, section: 'Fees' },
+
+    /* Report Cards */
+    { key: 'report-cards-published', label: 'Published Report Cards', icon: <IcGen />, badge: 0, section: 'Report Cards' },
+
+    /* School Admin */
+    { key: 'syllabus-progress',   label: 'Syllabus Progress',   icon: <IcGen />, badge: 0, section: 'School Admin' },
+    { key: 'exam-schedule',       label: 'Examination',         icon: <IcGen />, badge: 0, section: 'School Admin' },
+    { key: 'rooms',               label: 'Rooms',               icon: <IcGen />, badge: 0, section: 'School Admin' },
+    { key: 'grading-scheme',      label: 'Grading Scheme',      icon: <IcGen />, badge: 0, section: 'School Admin' },
+    { key: 'academic-calendar',   label: 'Academic Calendar',   icon: <IcGen />, badge: 0, section: 'School Admin' },
+    { key: 'promotions',          label: 'Promotions',          icon: <IcGen />, badge: 0, section: 'School Admin' },
+    { key: 'teacher-assignments', label: 'Teacher Assignments', icon: <IcGen />, badge: 0, section: 'School Admin' },
+    { key: 'exam-officers',       label: 'Exam Officers',       icon: <IcGen />, badge: 0, section: 'School Admin' },
+    { key: 'finance-users',       label: 'Finance Users',       icon: <IcGen />, badge: 0, section: 'School Admin' },
+
+    /* Virtual Meeting (enabled for school admins in permissions.js) */
+    { key: 'vm-parents',  label: 'Parents',  icon: <IcGen />, badge: 0, section: 'Virtual Meeting' },
+    { key: 'vm-staffs',   label: 'Staffs',   icon: <IcGen />, badge: 0, section: 'Virtual Meeting' },
+    { key: 'vm-students', label: 'Students', icon: <IcGen />, badge: 0, section: 'Virtual Meeting' },
+
+    { key: 'notifications', label: 'Notifications', icon: <IcBell />, badge: 0, section: null },
+  ];
+
   /* Impersonate ("enter") a school: save the operator session so it can be
      restored on exit, swap to the school's token, and re-render as that
      school's console. Shared by the sidebar launcher + Analytics "Login as". */
@@ -912,6 +961,7 @@ export default function Dashboard({ onNavigate }) {
   const navItems = (user?.role === 'principal' ? PRINCIPAL_NAV_ITEMS
     : user?.role === 'bursar' ? BURSAR_NAV_ITEMS
     : user?.role === 'superadmin' ? SUPERADMIN_NAV_ITEMS
+    : user?.role === 'school_admin' ? SCHOOL_ADMIN_NAV_ITEMS
     : ALL_NAV_ITEMS)
     .filter(item => item.action || canAccess(item.key, user?.role));
 

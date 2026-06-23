@@ -14,6 +14,7 @@
 | 3.4 | **List error states** | `SAClasses` + `SASubjects`: a failed list load now shows a persistent error message instead of looking like "no data" (previously only a 3-second toast). Added a `loadError` state + render branch; the toast still fires too. |
 | 3.6 | **Role-aware copy** | `SAStudents` subtitle now reads "Manage your school's student accounts." for a school admin (was always "…across schools."). (SAClasses/SASubjects/SAParents subtitles were already role-aware.) |
 | 3.2 | **ID inputs → pickers** | Raw numeric-ID fields replaced with dropdowns sourced from scoped data: `SAStudents` Classroom + Academic Year, `SAClasses` Academic Year, `SAParents` link-to-student. **Each degrades gracefully** — if the option list can't load (e.g. a superadmin with no school context), the original text/number input remains, so nothing breaks and the submitted value is still the same ID. |
+| 3.8 | **Dedicated `SCHOOL_ADMIN_NAV_ITEMS`** | Added a curated school-admin sidebar array + one selector line in `SuperadminDashboard.js`. The render loop (section grouping + collapsible dropdowns) is **untouched** — same categories, order, and collapse behavior — it just drops the dead stub/404 entries (the never-built `examination` stub, Fees Structure, School Financial Report, Report Card Generator, AI Capture) and insulates the school-admin menu from future `ALL_NAV_ITEMS` changes. **Note:** the real exams page (`exam-schedule` → `ExamsPage`) is kept and **labelled "Examination"** per the owner's preference — so the menu shows a working "Examination" item, not the dead stub. `canAccess` filter still applies. Build clean. |
 
 ### Files changed (all frontend)
 - [SAStudents.js](../src/components/superadmin/SAStudents.js) — subtitle
@@ -31,7 +32,6 @@
 | 3.3 | Real document upload on student create | Significant: changes the create flow **and** the `/api/students/` backend to accept files. Higher risk; schedule on its own. |
 | 3.5 | Server-side / full-dataset search | Current search works (page-local). Converting it risks breaking a working feature for marginal gain; needs backend query support. |
 | 3.7 | Build/remove stub nav items (Examination, Report-Card-Generator, Fees-Structure, School-Financial-Report) | Touches `permissions.js`, which was **being edited concurrently** — I won't risk a conflict. One-liners you can drop in when free. |
-| 3.8 | Dedicated `SCHOOL_ADMIN_NAV_ITEMS` | Structural change to the shared 1.6k-line shell nav; affects all roles if wrong. Better as its own reviewed change. |
 
 ---
 
