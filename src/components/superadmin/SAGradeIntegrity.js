@@ -64,11 +64,9 @@ function RequestCard({ req, onClick }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <span style={{ fontFamily: 'Consolas, monospace', fontSize: '0.6875rem', color: 'var(--sa-text-3)', letterSpacing: '0.02em' }}>#{req.id}</span>
-          {/* Hash badge */}
-          <span className={`sa-gi-hash-badge ${req.hashMatch ? 'sa-gi-hash-badge--ok' : 'sa-gi-hash-badge--bad'}`}>
-            <span style={{ width: 10, height: 10, display: 'flex' }}>{req.hashMatch ? <IcShield /> : <IcWarn />}</span>
-            {req.hashMatch ? (req.verified ? 'Blockchain Verified' : 'Hash Match') : 'Hash Mismatch'}
-          </span>
+          {/* Hash/blockchain verification badge removed: grade hashing is not
+              implemented, so req.hashMatch is never emitted and the badge showed a
+              phantom "Hash Mismatch" on every card. */}
         </div>
         {/* Status badge */}
         <span style={{

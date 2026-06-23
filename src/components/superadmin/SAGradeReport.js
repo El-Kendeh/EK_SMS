@@ -246,13 +246,10 @@ export default function SAGradeReport({ onViewRequests, onViewDetail }) {
   const totalAlerts   = alerts.length;
   const pendingCount  = alerts.filter(a => a.status === 'Pending').length;
   const flaggedCount  = alerts.filter(a => a.urgency === 'critical' || a.status === 'Flagged').length;
-  const hashVerPct    = totalAlerts > 0
-    ? Math.round(alerts.filter(a => a.hashMatch !== false).length / totalAlerts * 100)
-    : 100;
-
+  /* Hash-Verified stat removed: grade hashing is not implemented, so hashMatch is
+     never emitted and the metric always showed a fabricated 100%. */
   const stats = [
     { label: 'Manual Modifications', value: totalAlerts > 0 ? String(totalAlerts) : '—', icon: <IcEdit />,   iconCls: 'sa-stat-icon--amber', trend: { dir: 'up',   label: totalAlerts > 0 ? `${totalAlerts} total` : 'Loading…' } },
-    { label: 'Hash-Verified',         value: `${hashVerPct}%`,  icon: <IcShield />, iconCls: 'sa-stat-icon--green', trend: { dir: 'flat', label: 'All records checked' } },
     { label: 'Pending Requests',      value: totalAlerts > 0 ? String(pendingCount) : '—', icon: <IcClock />,  iconCls: 'sa-stat-icon--blue',  trend: { dir: pendingCount > 0 ? 'up' : 'flat', label: `${pendingCount} queued` } },
     { label: 'Anomalous Alerts',      value: totalAlerts > 0 ? String(flaggedCount) : '—', icon: <IcAlert />,  iconCls: 'sa-stat-icon--red',   trend: { dir: flaggedCount > 0 ? 'up' : 'flat', label: flaggedCount > 0 ? `${flaggedCount} need review` : 'None flagged', isAlert: flaggedCount > 0 } },
   ];

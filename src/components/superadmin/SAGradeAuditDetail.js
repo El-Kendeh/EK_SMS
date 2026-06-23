@@ -125,6 +125,14 @@ export default function SAGradeAuditDetail({ request, onBack }) {
         </div>
       </div>
 
+      {/* Honesty banner — this detail view is illustrative; the integrity model is not implemented. */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 14px', borderRadius: 10, marginBottom: 16, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)' }}>
+        <span style={{ flexShrink: 0, color: 'var(--sa-amber)' }}>⚠️</span>
+        <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--sa-text-2)', lineHeight: 1.5 }}>
+          <strong>Illustrative preview.</strong> Cryptographic grade integrity (hashing, blockchain ledger, chain-of-custody) is not implemented, so the hash / anomaly / ledger indicators below are not backed by real data, and the Validate and Flag actions do not persist.
+        </p>
+      </div>
+
       {/* ── Anomaly / Clean Banner ── */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, marginBottom: 20,
