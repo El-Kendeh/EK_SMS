@@ -433,6 +433,14 @@ export default function SAGovernance() {
         </button>
       </div>
 
+      {/* Honesty banner — the permission matrix is not yet wired into authorization. */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 14px', borderRadius: 10, marginBottom: 16, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)' }}>
+        <span style={{ flexShrink: 0, color: 'var(--sa-amber)' }}>⚠️</span>
+        <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--sa-text-2)', lineHeight: 1.5 }}>
+          <strong>Preview — not enforced.</strong> This permission matrix is saved as configuration but is not yet wired into authorization, so changing a role's permissions here does <strong>not</strong> currently affect what users can access.
+        </p>
+      </div>
+
       {/* Stats */}
       <div className="sa-gov-stats">
         <div className="sa-gov-stat">

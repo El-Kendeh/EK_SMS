@@ -182,7 +182,10 @@ function ForensicDetail({ caseData, allCases, onBack }) {
 
       {/* Chain of Custody */}
       <div className="sa-card" style={{ marginBottom: 16 }}>
-        <div className="sa-card-head"><p className="sa-card-title">Chain of Custody</p></div>
+        <div className="sa-card-head">
+          <p className="sa-card-title">Chain of Custody</p>
+          <span style={{ fontSize: '0.6875rem', color: 'var(--sa-amber)' }}>Illustrative — not a cryptographic chain</span>
+        </div>
         <div className="sa-card-body" style={{ paddingBottom: 8 }}>
           <div className="sa-tl">
             {CHAIN_STEPS.map((step, i) => (
@@ -210,10 +213,9 @@ function ForensicDetail({ caseData, allCases, onBack }) {
             <IcShield />
           </div>
           <div>
-            <p style={{ margin: '0 0 2px', fontWeight: 700, fontSize: '0.9375rem', color: 'var(--sa-text)' }}>Digitally Signed Report</p>
+            <p style={{ margin: '0 0 2px', fontWeight: 700, fontSize: '0.9375rem', color: 'var(--sa-text)' }}>Forensic Report</p>
             <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--sa-text-2)' }}>
-              Verified by SecurLog™ Integrity Protocol · Sig:{' '}
-              <span style={{ fontFamily: 'Consolas, monospace', fontSize: '0.6875rem' }}>0x492...1F</span>
+              Built from the recorded forensic event. Cryptographic signing of reports is not yet implemented.
             </p>
           </div>
         </div>

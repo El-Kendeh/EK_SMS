@@ -225,14 +225,16 @@ export default function SABenchmarks() {
   const realTopSchools = schoolStats.slice(0, 5).map((s, i) => ({
     rank: i + 1,
     name: s.school_name,
-    integrity: 100,          // no per-school integrity API — show 100% as verified
+    // integrity / attendance / type have no real per-school source — null so the
+    // UI shows nothing instead of fabricated always-green values (was 100/90/'Public').
+    integrity: null,
     perf: parseFloat((s.student_count / Math.max(1, schoolStats[0]?.student_count || 1) * 10).toFixed(1)),
     trend: 'up',
-    passRate: passRatePct ? parseFloat(passRatePct) : 80,
-    attendance: 90,
-    gpa: avgScore ? parseFloat((avgScore / 100 * 4).toFixed(1)) : 3.0,
+    passRate: passRatePct ? parseFloat(passRatePct) : null,
+    attendance: null,
+    gpa: avgScore ? parseFloat((avgScore / 100 * 4).toFixed(1)) : null,
     students: s.student_count,
-    type: 'Public',
+    type: null,
   }));
   const topSchools = realTopSchools;
 
@@ -316,14 +318,14 @@ export default function SABenchmarks() {
           ) : <>
           <div className="san-bench-head">
             <span>School Name</span>
-            <span>Integrity</span>
+            <span>Students</span>
             <span>Perf. Index</span>
           </div>
           {topSchools.map(s => (
             <div key={s.rank} className="san-bench-row">
               <span className="san-bench-rank">{s.rank}</span>
               <span className="san-bench-sname">{s.name}</span>
-              <span className="san-bench-int" style={{ color: s.integrity >= 95 ? 'var(--sa-green)' : 'var(--sa-amber)' }}>{s.integrity}</span>
+              <span className="san-bench-int">{(s.students ?? 0).toLocaleString()}</span>
               <span className="san-bench-perf">
                 {s.trend === 'up'     && <IcTrend />}
                 {s.trend === 'down'   && <IcTrendDn />}

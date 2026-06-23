@@ -357,6 +357,14 @@ function TwoFAView({ onBack, onComplete, totpKey = DEFAULT_TOTP_KEY, recoveryCod
           <p style={{ fontSize: '0.8125rem', color: 'var(--sa-text-2)', lineHeight: 1.5 }}>Scan the QR code with your authenticator app (Google Authenticator, Authy, etc.)</p>
         </div>
 
+        {/* Honesty banner — 2FA enrollment is a non-functional preview. */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 12px', borderRadius: 10, marginBottom: 20, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)' }}>
+          <span style={{ flexShrink: 0, color: 'var(--sa-amber)' }}>⚠️</span>
+          <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--sa-text-2)', lineHeight: 1.5, textAlign: 'left' }}>
+            <strong>Preview — not functional.</strong> The QR code is illustrative (not a real provisioning key) and the code you enter is not verified. Completing this does not actually enable 2FA.
+          </p>
+        </div>
+
         {/* QR box */}
         <div className="sa-qr-box">
           <div className="sa-qr-placeholder">
@@ -681,7 +689,7 @@ export default function SASettings() {
     return <PasswordView onBack={() => setSecView('main')} onSubmit={changePassword} />;
   }
   if (secView === '2fa') {
-    return <TwoFAView onBack={() => setSecView('main')} onComplete={() => { setSecView('main'); showToast('2FA setup complete'); }} totpKey={totpKey} recoveryCodes={recoveryCodes} />;
+    return <TwoFAView onBack={() => setSecView('main')} onComplete={() => { setSecView('main'); showToast('2FA enrollment is a preview — nothing was changed.'); }} totpKey={totpKey} recoveryCodes={recoveryCodes} />;
   }
 
   /* ---- Main view ---- */
