@@ -30,53 +30,9 @@ const RISK_CFG = {
   high: { color: 'var(--sa-red)', bg: 'var(--sa-red-dim)', label: 'High' },
 };
 
-/* ---- Deterministic 30-day risk sparkline ---- */
-function genSparkData(userId, riskScore, failedAttempts) {
-  const pts = [];
-  let val = Math.max(5, riskScore - 15);
-  for (let i = 0; i < 30; i++) {
-    // pseudo-random walk seeded from userId + day index
-    const seed = (userId * 31 + i * 17 + failedAttempts * 7) % 97;
-    const delta = ((seed % 11) - 5) * 1.5;
-    val = Math.min(100, Math.max(0, val + delta));
-    pts.push(Math.round(val));
-  }
-  // ensure last point matches current riskScore
-  pts[29] = riskScore;
-  return pts;
-}
-
-function RiskSparkline({ userId, riskScore, failedAttempts, color }) {
-  const data = genSparkData(userId, riskScore, failedAttempts);
-  const W = 200, H = 40, PAD = 2;
-  const min = Math.min(...data);
-  const max = Math.max(...data) || 1;
-  const scaleY = v => PAD + (H - PAD * 2) * (1 - (v - min) / (max - min || 1));
-  const scaleX = i => (i / (data.length - 1)) * W;
-  const points = data.map((v, i) => `${scaleX(i)},${scaleY(v)}`).join(' ');
-  const areaPoints = `0,${H} ${points} ${W},${H}`;
-
-  return (
-    <div style={{ marginTop: 16 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-        <span style={{ fontSize: '0.72rem', fontWeight: 500, color: 'var(--sa-text-2)' }}>Risk Trend — Last 30 Days</span>
-        <span style={{ fontSize: '0.72rem', color, fontWeight: 700 }}>{data[0]} → {riskScore}</span>
-      </div>
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} preserveAspectRatio="none" style={{ display: 'block', overflow: 'visible' }}>
-        <defs>
-          <linearGradient id={`spk-${userId}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={color} stopOpacity="0.25" />
-            <stop offset="100%" stopColor={color} stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        <polygon points={areaPoints} fill={`url(#spk-${userId})`} />
-        <polyline points={points} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
-        {/* last point dot */}
-        <circle cx={scaleX(29)} cy={scaleY(riskScore)} r="3" fill={color} />
-      </svg>
-    </div>
-  );
-}
+/* The fabricated 30-day "Risk Trend" sparkline (a pseudo-random walk seeded from
+   the user id, ending at the backend-hardcoded riskScore of 0) and its
+   RiskSparkline component were removed — per-user risk scoring is not implemented. */
 
 const ROLE_COLORS = {
   'Super Admin':    '#1B3FAF',
@@ -367,19 +323,18 @@ function UserProfile({ user, onBack, onNavigate, showToast }) {
               </div>
             ))}
           </div>
-          {/* Risk score bar */}
+          {/* Risk score bar. Risk scoring is not implemented (the backend returns 0
+              for every user), so it's labelled "not yet tracked"; the fabricated
+              pseudo-random 30-day "Risk Trend" sparkline was removed. */}
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 500, marginBottom: 6 }}>
-              <span>Risk Assessment Score</span>
+              <span>Risk Assessment Score <span style={{ color: 'var(--sa-text-3)', fontWeight: 400 }}>· not yet tracked</span></span>
               <span style={{ color: risk.color }}>{user.riskScore}/100</span>
             </div>
             <div style={{ height: 6, width: '100%', background: 'var(--sa-border)', borderRadius: 999, overflow: 'hidden' }}>
               <div style={{ height: '100%', width: `${user.riskScore}%`, background: risk.color, borderRadius: 999, transition: 'width 0.5s ease' }} />
             </div>
           </div>
-
-          {/* 30-day sparkline */}
-          <RiskSparkline userId={user.id} riskScore={user.riskScore} failedAttempts={user.failedAttempts} color={risk.color} />
         </div>
       </div>
 
@@ -584,7 +539,6 @@ export default function SAUsers({ onNavigate }) {
   }, [users, search, roleFilter]);
 
   const roles = useMemo(() => ['all', ...Array.from(new Set(users.map(u => u.role)))], [users]);
-  const no2FACount = users.filter(u => !u.twoFAEnabled).length;
 
   if (selected) return <UserProfile user={selected} onBack={() => setSelected(null)} onNavigate={onNavigate} showToast={showToast} />;
 
@@ -613,18 +567,17 @@ export default function SAUsers({ onNavigate }) {
         </button>
       </div>
 
-      {/* 2FA compliance banner */}
-      {no2FACount > 0 && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 10, marginBottom: 16,
-          background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)',
-        }}>
-          <span style={{ color: 'var(--sa-red)', flexShrink: 0 }}><IcKey /></span>
-          <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--sa-text-2)', flex: 1 }}>
-            <strong style={{ color: 'var(--sa-red)' }}>{no2FACount} {no2FACount === 1 ? 'user' : 'users'}</strong> have not enrolled in 2FA. Platform security policy requires 2FA for all admin and teacher accounts.
-          </p>
-        </div>
-      )}
+      {/* 2FA status banner — enrollment isn't implemented yet, so no account is
+          enrolled; a neutral notice, not a red "all users failed compliance" alarm. */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 10, marginBottom: 16,
+        background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)',
+      }}>
+        <span style={{ color: 'var(--sa-amber)', flexShrink: 0 }}><IcKey /></span>
+        <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--sa-text-2)', flex: 1 }}>
+          Two-factor authentication is <strong>not yet available</strong> — no accounts are enrolled. 2FA enrollment is planned.
+        </p>
+      </div>
 
       {/* Toolbar */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
