@@ -269,7 +269,7 @@ export default function SABenchmarks() {
 
       {/* 2×2 KPI Grid */}
       <div className="san-kpi-2x2">
-        <KpiCard label="Pass Rate"   value={passRatePct != null ? `${passRatePct}%` : '—'} delta={passRatePct != null ? `${passRatePct}% pass` : 'No data'} deltaDir={passRatePct >= 80 ? 'up' : 'down'} />
+        <KpiCard label="Pass Rate"   value={passRatePct != null ? `${passRatePct}%` : '—'} delta={passRatePct != null ? `${passRatePct}% pass` : 'No data'} deltaDir={passRatePct == null ? 'neutral' : (passRatePct >= 80 ? 'up' : 'down')} />
         <KpiCard label="Avg Score"   value={avgScore != null ? `${avgScore}%` : '—'} delta="System-wide" deltaDir="neutral" />
         <KpiCard label="Total Grades" value={totalGrades > 0 ? totalGrades.toLocaleString() : '—'} delta={gradeStats ? `${gradeStats.locked_grades} locked` : 'No data'} deltaDir="up" />
         <KpiCard label="Schools Live" value={totalSchools > 0 ? totalSchools : '—'} delta={totalStudents > 0 ? `${fmtCount(totalStudents)} students` : 'No data'} deltaDir="up" />
