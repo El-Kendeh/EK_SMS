@@ -63,6 +63,18 @@ function outsideScope(forcedSchool, rowSchoolId) {
   return forcedSchool !== null && Number(rowSchoolId) !== forcedSchool;
 }
 
+/* Block a school-scoped caller (e.g. school_admin) from acting on another
+   school's row by id; a superadmin (forcedSchool=null) passes through. Sends a
+   403 and returns true when denied, so handlers do:
+     if (denyCrossTenant(req, res, row.school_id, 'classes')) return; */
+function denyCrossTenant(req, res, rowSchoolId, noun) {
+  if (outsideScope(scopedSchoolId(req), rowSchoolId)) {
+    res.status(403).json(errorResponse(`You can only manage your own school's ${noun || 'records'}.`, 403));
+    return true;
+  }
+  return false;
+}
+
 /* Parents have no school_id column — they belong to a school through the
    students they are linked to. */
 async function parentInSchool(parentId, schoolId) {
@@ -2396,8 +2408,10 @@ async function updateSuperClass(req, res) {
   try {
     const row = await ClassModel.findByPk(req.params.id);
     if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    if (denyCrossTenant(req, res, row.school_id, 'classes')) return;
     const data = req.body;
-    ['name','code','form','form_number','category','stream','class_teacher_id','class_subtype_id','capacity','max_teachers','academic_year_id','room','start_time','end_time','colour_tag','education_level','track','notes','auto_promotion_target_id','school_id'].forEach(k => {
+    // school_id intentionally excluded -- a class never changes owning school via an edit.
+    ['name','code','form','form_number','category','stream','class_teacher_id','class_subtype_id','capacity','max_teachers','academic_year_id','room','start_time','end_time','colour_tag','education_level','track','notes','auto_promotion_target_id'].forEach(k => {
       if (data[k] !== undefined) row[k] = data[k];
     });
     await row.save();
@@ -2408,6 +2422,7 @@ async function deleteSuperClass(req, res) {
   try {
     const row = await ClassModel.findByPk(req.params.id);
     if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    if (denyCrossTenant(req, res, row.school_id, 'classes')) return;
     await row.destroy();
     return res.json(successResponse({}, 'Class deleted'));
   } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
@@ -2416,6 +2431,7 @@ async function toggleSuperClassStatus(req, res) {
   try {
     const row = await ClassModel.findByPk(req.params.id);
     if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    if (denyCrossTenant(req, res, row.school_id, 'classes')) return;
     row.is_active = !row.is_active; await row.save();
     return res.json(successResponse({ is_active: row.is_active }, `Status changed to ${row.is_active ? 'active' : 'inactive'}`));
   } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
@@ -2458,11 +2474,12 @@ async function updateSuperSubject(req, res) {
   try {
     const row = await Subject.findByPk(req.params.id);
     if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    if (denyCrossTenant(req, res, row.school_id, 'subjects')) return;
     const data = req.body;
     if (data.name !== undefined) row.name = data.name;
     if (data.code !== undefined) row.code = data.code;
     if (data.description !== undefined) row.description = data.description;
-    if (data.school_id !== undefined) row.school_id = data.school_id;
+    // school_id intentionally not updatable -- a subject never changes owning school via an edit.
     await row.save();
     return res.json(successResponse({}, 'Subject updated'));
   } catch (err) { console.error(err); return res.status(500).json(errorResponse(err.message)); }
@@ -2471,6 +2488,7 @@ async function deleteSuperSubject(req, res) {
   try {
     const row = await Subject.findByPk(req.params.id);
     if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    if (denyCrossTenant(req, res, row.school_id, 'subjects')) return;
     await row.destroy();
     return res.json(successResponse({}, 'Subject deleted'));
   } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
@@ -2479,6 +2497,7 @@ async function toggleSuperSubjectStatus(req, res) {
   try {
     const row = await Subject.findByPk(req.params.id);
     if (!row) return res.status(404).json(errorResponse('Not found', 404));
+    if (denyCrossTenant(req, res, row.school_id, 'subjects')) return;
     row.is_active = !row.is_active; await row.save();
     return res.json(successResponse({ is_active: row.is_active }, `Status changed to ${row.is_active ? 'active' : 'inactive'}`));
   } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
@@ -2580,6 +2599,7 @@ async function getClassStudents(req, res) {
     const classId = req.params.id;
     const cls = await ClassModel.findByPk(classId);
     if (!cls) return res.status(404).json(errorResponse('Class not found', 404));
+    if (denyCrossTenant(req, res, cls.school_id, 'classes')) return;
     const students = await Student.findAll({ where: { classroom_id: classId }, order: [['id', 'DESC']] });
     const enriched = await Promise.all(students.map(async s => {
       let u = null; try { u = await User.findByPk(s.user_id); } catch {}
@@ -2593,6 +2613,7 @@ async function getAvailableStudents(req, res) {
     const classId = req.params.id;
     const cls = await ClassModel.findByPk(classId);
     if (!cls) return res.status(404).json(errorResponse('Class not found', 404));
+    if (denyCrossTenant(req, res, cls.school_id, 'classes')) return;
     const schoolId = cls.school_id;
     const where = { school_id: schoolId };
     where.classroom_id = { [Op.or]: [null, { [Op.ne]: Number(classId) }] };
@@ -2609,6 +2630,7 @@ async function assignClassStudents(req, res) {
     const classId = req.params.id;
     const cls = await ClassModel.findByPk(classId);
     if (!cls) return res.status(404).json(errorResponse('Class not found', 404));
+    if (denyCrossTenant(req, res, cls.school_id, 'classes')) return;
     const { student_ids } = req.body;
     if (!Array.isArray(student_ids)) return res.status(400).json(errorResponse('student_ids must be an array'));
     const currentCount = await Student.count({ where: { classroom_id: classId } });
@@ -2626,6 +2648,9 @@ async function assignClassStudents(req, res) {
 async function getClassAssignedSubjects(req, res) {
   try {
     const classId = req.params.id;
+    const cls = await ClassModel.findByPk(classId);
+    if (!cls) return res.status(404).json(errorResponse('Class not found', 404));
+    if (denyCrossTenant(req, res, cls.school_id, 'classes')) return;
     const rows = await ClassSubject.findAll({ where: { class_id: classId } });
     const enriched = await Promise.all(rows.map(async r => {
       let sub = null; try { sub = await Subject.findByPk(r.subject_id); } catch {}
@@ -2640,6 +2665,7 @@ async function getAvailableSubjectsForClass(req, res) {
     const classId = req.params.id;
     const cls = await ClassModel.findByPk(classId);
     if (!cls) return res.status(404).json(errorResponse('Class not found', 404));
+    if (denyCrossTenant(req, res, cls.school_id, 'classes')) return;
     const assigned = await ClassSubject.findAll({ where: { class_id: classId }, attributes: ['subject_id'] });
     const assignedIds = assigned.map(a => a.subject_id);
     const where = { school_id: cls.school_id };
@@ -2653,6 +2679,7 @@ async function assignClassSubjects(req, res) {
     const classId = req.params.id;
     const cls = await ClassModel.findByPk(classId);
     if (!cls) return res.status(404).json(errorResponse('Class not found', 404));
+    if (denyCrossTenant(req, res, cls.school_id, 'classes')) return;
     const { subject_ids } = req.body;
     if (!Array.isArray(subject_ids)) return res.status(400).json(errorResponse('subject_ids must be an array'));
     await ClassSubject.destroy({ where: { class_id: classId } });
@@ -2667,6 +2694,7 @@ async function assignClassTeacher(req, res) {
     const classId = req.params.id;
     const cls = await ClassModel.findByPk(classId);
     if (!cls) return res.status(404).json(errorResponse('Class not found', 404));
+    if (denyCrossTenant(req, res, cls.school_id, 'classes')) return;
     const { teacher_id } = req.body;
     cls.class_teacher_id = teacher_id || null;
     await cls.save();
@@ -2679,6 +2707,7 @@ async function assignClassMultipleTeachers(req, res) {
     const classId = req.params.id;
     const cls = await ClassModel.findByPk(classId);
     if (!cls) return res.status(404).json(errorResponse('Class not found', 404));
+    if (denyCrossTenant(req, res, cls.school_id, 'classes')) return;
     const { teacher_ids } = req.body;
     if (!Array.isArray(teacher_ids)) return res.status(400).json(errorResponse('teacher_ids must be an array'));
     const currentCount = await ClassAssistantTeacher.count({ where: { class_id: classId } });
@@ -2702,6 +2731,7 @@ async function getClassTeachers(req, res) {
     const classId = req.params.id;
     const cls = await ClassModel.findByPk(classId);
     if (!cls) return res.status(404).json(errorResponse('Class not found', 404));
+    if (denyCrossTenant(req, res, cls.school_id, 'classes')) return;
     const links = await ClassAssistantTeacher.findAll({ where: { class_id: classId } });
     const teachers = await Promise.all(links.map(async l => {
       const t = await Teacher.findByPk(l.teacher_id);
@@ -2719,6 +2749,7 @@ async function assignSubjectClasses(req, res) {
     const subjectId = req.params.id;
     const sub = await Subject.findByPk(subjectId);
     if (!sub) return res.status(404).json(errorResponse('Subject not found', 404));
+    if (denyCrossTenant(req, res, sub.school_id, 'subjects')) return;
     const { class_ids } = req.body;
     if (!Array.isArray(class_ids)) return res.status(400).json(errorResponse('class_ids must be an array'));
     await ClassSubject.destroy({ where: { subject_id: subjectId } });
@@ -2733,6 +2764,7 @@ async function assignSubjectTeacher(req, res) {
     const subjectId = req.params.id;
     const sub = await Subject.findByPk(subjectId);
     if (!sub) return res.status(404).json(errorResponse('Subject not found', 404));
+    if (denyCrossTenant(req, res, sub.school_id, 'subjects')) return;
     const { teacher_id } = req.body;
     if (teacher_id) {
       await ClassSubject.update({ teacher_id }, { where: { subject_id: subjectId } });
@@ -2745,6 +2777,9 @@ async function assignSubjectTeacher(req, res) {
 async function getSubjectAssignedClasses(req, res) {
   try {
     const subjectId = req.params.id;
+    const sub = await Subject.findByPk(subjectId);
+    if (!sub) return res.status(404).json(errorResponse('Subject not found', 404));
+    if (denyCrossTenant(req, res, sub.school_id, 'subjects')) return;
     const rows = await ClassSubject.findAll({ where: { subject_id: subjectId } });
     const enriched = await Promise.all(rows.map(async r => {
       const c = await ClassModel.findByPk(r.class_id);
@@ -2758,6 +2793,7 @@ async function getAvailableClassesForSubject(req, res) {
     const subjectId = req.params.id;
     const sub = await Subject.findByPk(subjectId);
     if (!sub) return res.status(404).json(errorResponse('Subject not found', 404));
+    if (denyCrossTenant(req, res, sub.school_id, 'subjects')) return;
     const assigned = await ClassSubject.findAll({ where: { subject_id: subjectId }, attributes: ['class_id'] });
     const assignedIds = assigned.map(a => a.class_id);
     const where = { school_id: sub.school_id };
@@ -2771,6 +2807,7 @@ async function getTeachersForSubject(req, res) {
     const { id } = req.params;
     const sub = await Subject.findByPk(id);
     if (!sub) return res.status(404).json(errorResponse('Subject not found', 404));
+    if (denyCrossTenant(req, res, sub.school_id, 'subjects')) return;
     const teachers = await Teacher.findAll({ where: { school_id: sub.school_id, is_active: true }, order: [['id', 'DESC']], limit: 500 });
     const enriched = await Promise.all(teachers.map(async t => {
       let u = null; try { u = await User.findByPk(t.user_id); } catch {}
@@ -2784,6 +2821,7 @@ async function getAvailableTeachersForClass(req, res) {
     const classId = req.params.id;
     const cls = await ClassModel.findByPk(classId);
     if (!cls) return res.status(404).json(errorResponse('Class not found', 404));
+    if (denyCrossTenant(req, res, cls.school_id, 'classes')) return;
     const teachers = await Teacher.findAll({ where: { school_id: cls.school_id, is_active: true }, order: [['id', 'DESC']], limit: 500 });
     const enriched = await Promise.all(teachers.map(async t => {
       let u = null; try { u = await User.findByPk(t.user_id); } catch {}
