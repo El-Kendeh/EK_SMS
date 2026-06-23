@@ -206,7 +206,9 @@ export default function SABenchmarks() {
   const totalGrades  = gradeStats?.total_grades   || 0;
   const passedGrades = gradeStats?.passed          || 0;
   const avgScore     = gradeStats?.average_score   != null ? gradeStats.average_score : null;
-  const passRatePct  = totalGrades > 0 ? ((passedGrades / totalGrades) * 100).toFixed(1) : null;
+  // Only compute a pass rate if the backend actually returns `passed`; today it
+  // does not, so this stays null and the KPI shows "—" instead of a false "0.0%".
+  const passRatePct  = (totalGrades > 0 && gradeStats?.passed != null) ? ((passedGrades / totalGrades) * 100).toFixed(1) : null;
 
   /* Real grade distribution */
   const GRADE_COLORS_MAP = { A: '#10B981', B: '#0EA5E9', C: '#F59E0B', D: '#8B5CF6', E: '#EF4444', I: '#6366F1' };

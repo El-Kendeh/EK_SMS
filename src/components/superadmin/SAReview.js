@@ -54,7 +54,7 @@ function getRisk(school) {
   const hasContact = !!(school.phone && school.email);
   const hasAdmin   = !!(school.principal_name);
   const score      = [hasCity, hasContact, hasAdmin].filter(Boolean).length;
-  if (score === 3) return { level: 'low',    trust: 94, desc: 'Domain and IP checks passed. All fields present.' };
+  if (score === 3) return { level: 'low',    trust: 94, desc: 'All required fields are present.' };
   if (score === 2) return { level: 'medium', trust: 62, desc: 'Some information is incomplete. Review carefully.' };
   return               { level: 'high',   trust: 28, desc: 'Multiple required fields are missing.' };
 }
@@ -258,7 +258,7 @@ export default function SAReview({ school, onBack, onApprove, onReject, onReques
 
           {/* Risk gauge — desktop only, shown inline */}
           <div className="sa-review-id-risk">
-            <p style={{ margin: '0 0 4px', fontSize: '0.6875rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--sa-text-2)' }}>Trust Score</p>
+            <p style={{ margin: '0 0 4px', fontSize: '0.6875rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--sa-text-2)' }}>Profile Completeness</p>
             <p style={{ margin: '0 0 8px', fontSize: '1.5rem', fontWeight: 800, color: riskColor }}>{risk.trust}<span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--sa-text-2)', marginLeft: 2 }}>/100</span></p>
             <div style={{ height: 5, background: 'var(--sa-border)', borderRadius: 999, overflow: 'hidden', width: 120 }}>
               <div style={{ height: '100%', width: `${risk.trust}%`, background: riskColor, borderRadius: 999, transition: 'width 0.6s ease' }} />
@@ -359,8 +359,8 @@ export default function SAReview({ school, onBack, onApprove, onReject, onReques
               <Field label="Username" value={school.admin_username || school.admin_email?.split('@')[0]} />
               <Field label="Phone"    value={school.admin_phone} />
               <Field
-                label="Email Status"
-                value={adminEmail && adminEmail !== '—' ? 'Verified ✓' : 'Not provided'}
+                label="Email"
+                value={adminEmail && adminEmail !== '—' ? 'Provided' : 'Not provided'}
                 chip={adminEmail && adminEmail !== '—' ? 'approved' : 'pending'}
               />
             </Section>

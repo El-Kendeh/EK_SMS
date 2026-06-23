@@ -31,7 +31,7 @@ const IcSearch  = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColo
 const IcSchool  = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18M5 21V10.6M19 21V10.6M12 3L2 8h20L12 3z"/><rect x="9" y="13" width="6" height="8" rx="1"/></svg>;
 const IcCheck   = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>;
 const IcClock   = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>;
-const IcHealth  = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>;
+// IcHealth removed (only used by the deleted hardcoded "System Health 98%" card).
 const IcDots    = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="5" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="12" cy="19" r="1" fill="currentColor"/></svg>;
 const IcEye     = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>;
 
@@ -79,7 +79,7 @@ export default function SASchools({ schools, onReview }) {
     { label: 'Total Schools', value: schools.length,  icon: <IcSchool />,  cls: 'sa-stat-icon--blue'  },
     { label: 'Active',        value: approved,         icon: <IcCheck />,   cls: 'sa-stat-icon--green' },
     { label: 'Pending',       value: pending,          icon: <IcClock />,   cls: 'sa-stat-icon--amber' },
-    { label: 'System Health', value: '98%',            icon: <IcHealth />,  cls: 'sa-stat-icon--purple'},
+    // 'System Health: 98%' card removed — it was a hardcoded fabricated metric (no probe).
   ];
 
   return (

@@ -304,10 +304,12 @@ function UserProfile({ user, onBack, onNavigate, showToast }) {
             </span>
           </div>
           <div className="sa-user-stat-grid">
+            {/* Trend chips removed — the +5%/-10%/0% deltas were hardcoded and the
+                underlying counts are backend-zero (no real time-series). */}
             {[
-              { label: 'Successful Logins', value: user.successLogins, trend: '+5%', trendUp: true },
-              { label: 'Failed Attempts', value: user.failedAttempts, trend: '-10%', trendUp: false },
-              { label: 'Alerts Triggered', value: user.alertsTriggered, trend: '0%', trendUp: null },
+              { label: 'Successful Logins', value: user.successLogins, trendUp: null },
+              { label: 'Failed Attempts', value: user.failedAttempts, trendUp: null },
+              { label: 'Alerts Triggered', value: user.alertsTriggered, trendUp: null },
             ].map((stat, i) => (
               <div key={i} style={{ background: 'var(--sa-card-bg2)', borderRadius: 10, padding: '14px 16px', border: '1px solid var(--sa-border)' }}>
                 <p style={{ margin: '0 0 8px', fontSize: '0.72rem', color: 'var(--sa-text-2)', fontWeight: 500 }}>{stat.label}</p>

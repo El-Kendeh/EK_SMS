@@ -213,9 +213,7 @@ function OversightView({ school, onBack, onLoginAs }) {
             ))}
           </div>
           <div className="san-section-hdr" style={{ marginTop: 20 }}><span>Grade Distribution</span></div>
-          {[['A+', 28, 'var(--sa-green)'], ['A', 32, 'var(--sa-green)'], ['B', 22, 'var(--sa-accent)'], ['C', 12, 'var(--sa-amber)'], ['D', 4, 'var(--sa-red)'], ['F', 2, 'var(--sa-red)']].map(([g, v, c]) => (
-            <ProgressBar key={g} label={g} sublabel={`${v}%`} value={v} max={35} color={c} />
-          ))}
+          <p style={{ fontSize: '0.8125rem', color: 'var(--sa-text-3)', padding: '8px 0' }}>Grade distribution is not yet tracked.</p>
         </div>
       )}
 
@@ -223,6 +221,7 @@ function OversightView({ school, onBack, onLoginAs }) {
       {tab === 'compliance' && (
         <div className="san-tab-body">
           <div className="san-section-hdr"><span>Compliance Status</span></div>
+          <p style={{ fontSize: '0.75rem', color: 'var(--sa-amber)', padding: '4px 0 8px', lineHeight: 1.5 }}>⚠️ Placeholder — these flags and the coverage bars below are derived from account status, not real 2FA / backup / policy data.</p>
           <div className="san-comply-list">
             {COMPLIANCE.map(c => {
               const ok = compliance[c.id];
@@ -241,7 +240,7 @@ function OversightView({ school, onBack, onLoginAs }) {
           <ProgressBar label="Policy Adherence" value={78}  color="var(--sa-amber)"  sublabel="78%" />
           <div className="san-comply-meta">
             <div className="san-comply-meta-item"><p className="san-comply-meta-lbl">Last Audit</p><p className="san-comply-meta-val">{ov.lastAudit || '—'}</p></div>
-            <div className="san-comply-meta-item"><p className="san-comply-meta-lbl">Next Review</p><p className="san-comply-meta-val">Apr 2025</p></div>
+            <div className="san-comply-meta-item"><p className="san-comply-meta-lbl">Next Review</p><p className="san-comply-meta-val">—</p></div>
           </div>
         </div>
       )}
@@ -653,8 +652,8 @@ export default function SAAnalytics({ schools = [], onLoginAs }) {
       {/* KPI Strip */}
       <div className="san-kpi-row">
         {[
-          { label: 'Active Schools', value: approved, delta: '+5% MoM', col: 'var(--sa-accent)',  colD: 'up',   icon: <IcSchool />, cls: 'san-kpi-ico--blue',  spark: [8,10,9,12,11,14,approved || 15] },
-          { label: 'Total Students', value: totalStu > 1000 ? `${(totalStu/1000).toFixed(1)}k` : totalStu || '0', delta: '+12% YTD', col: 'var(--sa-green)', colD: 'up', icon: <IcUsers />, cls: 'san-kpi-ico--green', spark: [40,52,60,72,80,90,95] },
+          { label: 'Active Schools', value: approved, delta: 'approved', col: 'var(--sa-accent)',  colD: 'neutral', icon: <IcSchool />, cls: 'san-kpi-ico--blue',  spark: [8,10,9,12,11,14,approved || 15] },
+          { label: 'Total Students', value: totalStu > 1000 ? `${(totalStu/1000).toFixed(1)}k` : totalStu || '0', delta: 'enrolled', col: 'var(--sa-green)', colD: 'neutral', icon: <IcUsers />, cls: 'san-kpi-ico--green', spark: [40,52,60,72,80,90,95] },
           { label: 'Pending Review', value: pending,  delta: `${pending} queued`, col: 'var(--sa-amber)', colD: 'neutral', icon: <IcSchool />, cls: 'san-kpi-ico--amber', spark: [2,5,3,7,4,6,pending || 4] },
         ].map(k => (
           <div key={k.label} className="san-kpi-card">

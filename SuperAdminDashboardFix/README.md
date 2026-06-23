@@ -9,6 +9,11 @@ This folder documents the full audit of the EK-SMS **Super Admin** console (UI +
 
 **Audited:** 2026-06-23 · **Method:** two adversarially-verified multi-agent workflows (43 + 42 agents); every high/medium finding re-checked against source before inclusion.
 
+> ## ⚠️ Independent verification (2026-06-23, post-fix)
+> A third workflow re-checked **all 84 findings against the deployed code**: **25 fixed · 15 partial · 43 open** (1 moot).
+> The **security-critical work IS done** (staff/student PII routes, class/subject IDOR, audited impersonation). **But the "trust-signal honesty pass" was NOT comprehensive** — it covered the components I happened to edit, and **missed several fabricated-signal components that still mislead in production**: **SAReview** (fake "Trust Score"/"Email Verified" on the approval screen — HIGH), **SABenchmarks Pass Rate** (false "0.0%" — HIGH), **SAChangeAlerts** (blank/"Invalid Date" cards — HIGH), **SAAnalytics** (compliance/coverage/KPI/grade-distribution), **SASchools** ("98%" health), **SASecurityLogs** ("Flagged IPs"), **SAAlertBroadcast** ("System: Optimal"), and the **SAUsers** per-card trend chips. Plus deferred design/feature items (A8 person pages, real enforcement, etc.) and 22 low cosmetic items.
+> A **follow-up sweep is closing the missed fabricated-signal components** (see commits below).
+
 ---
 
 ## Verdict

@@ -350,13 +350,7 @@ export default function SAAlertBroadcast() {
           <p className="sa-page-sub">Send and manage system-wide security alerts to school administrators.</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            background: 'var(--sa-green-dim)', color: 'var(--sa-green)',
-            border: '1px solid rgba(16,185,129,0.25)', borderRadius: 20, padding: '5px 12px', fontSize: '0.75rem', fontWeight: 700,
-          }}>
-            <span className="sa-live-dot" /> System: Optimal
-          </span>
+          {/* Removed hardcoded "System: Optimal" health pill — no real health signal here. */}
           <button className="sa-btn sa-btn--primary sa-btn--sm" onClick={() => setComposing(true)}>
             <IcCampaign /> New Alert
           </button>
