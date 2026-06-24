@@ -825,8 +825,9 @@ export default function Dashboard({ onNavigate }) {
   /* School Admin gets a curated sidebar — the SAME categories + collapsible
      grouping it already had (rendered from the `section` field), just without the
      "under development" stub keys (examination, fees-structure, school-financial-report,
-     report-card-generator) and the 404 ai-capture page. Keys must stay permitted in
-     permissions.js; the canAccess filter below still applies as defence-in-depth. */
+     report-card-generator). AI Capture (ai-capture) is now exposed — its Gemini backend
+     is live (POST/GET /api/school/ai-capture/). Keys must stay permitted in permissions.js;
+     the canAccess filter below still applies as defence-in-depth. */
   const SCHOOL_ADMIN_NAV_ITEMS = [
     { key: 'overview',            label: 'Dashboard',           icon: <IcHome />, badge: 0, section: null },
 
@@ -862,6 +863,7 @@ export default function Dashboard({ onNavigate }) {
     { key: 'teacher-assignments', label: 'Teacher Assignments', icon: <IcGen />, badge: 0, section: 'School Admin' },
     { key: 'exam-officers',       label: 'Exam Officers',       icon: <IcGen />, badge: 0, section: 'School Admin' },
     { key: 'finance-users',       label: 'Finance Users',       icon: <IcGen />, badge: 0, section: 'School Admin' },
+    { key: 'ai-capture',          label: 'AI Capture',          icon: <IcGen />, badge: 0, section: 'School Admin' },
 
     /* Virtual Meeting (enabled for school admins in permissions.js) */
     { key: 'vm-parents',  label: 'Parents',  icon: <IcGen />, badge: 0, section: 'Virtual Meeting' },

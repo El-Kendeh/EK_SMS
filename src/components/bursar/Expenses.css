@@ -3,6 +3,51 @@
    Shared rules live in Bursar.css; only page tweaks here.
    ============================================================ */
 
+/* Neutral info banner (Bursar.css ships --success / --error only). */
+.bur-banner--info {
+  background: var(--ska-surface-high);
+  color: var(--ska-text-2);
+  border: 1px solid var(--ska-border);
+}
+
+.bur-muted { color: var(--ska-text-3); font-size: 0.85rem; }
+
+/* Clickable "N awaiting approval" call-to-action (amber, full width). */
+.exp-pending-cta {
+  width: 100%;
+  cursor: pointer;
+  text-align: left;
+  background: var(--ska-tertiary-dim);
+  color: var(--ska-tertiary);
+  border: 1px solid var(--ska-tertiary);
+  font: inherit;
+  font-weight: 600;
+}
+.exp-pending-cta:hover { filter: brightness(0.97); }
+
+/* Approve / Reject controls in the ledger's action column. */
+.exp-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.exp-reject-btn { color: var(--ska-error); }
+
+/* Rejection reason shown under a Rejected badge. */
+.exp-reason {
+  margin-top: 4px;
+  max-width: 220px;
+  font-size: 0.72rem;
+  line-height: 1.3;
+  color: var(--ska-error);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.exp-reviewed-at { color: var(--ska-text-3); font-size: 0.75rem; }
+
+/* The ledger gained Recorded By / Status / Action columns — keep it scrollable. */
 @media (max-width: 600px) {
-  .pu-page .bur-table-wrap .ska-table { min-width: 640px; }
+  .pu-page .bur-table-wrap .ska-table { min-width: 760px; }
+  .exp-actions { flex-wrap: nowrap; }
+  .exp-reason { max-width: 160px; }
 }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import financeApi from '../../api/financeApi';
-import { fmtMoney, fmtDate, EXPENSE_CATEGORIES, catLabel } from './bursar.utils';
+import { fmtMoney, fmtDate, fmtDateTime, EXPENSE_CATEGORIES, catLabel } from './bursar.utils';
 
 import '../schooladmin/SchoolAdmin.css';
 import '../schooladmin/Principal/Principal.css';
@@ -12,6 +12,20 @@ const Ic = ({ name, size, style }) => (
 );
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
+
+/** Current user (role drives whether approve/reject controls are shown). */
+const currentUser = () => {
+  try { return JSON.parse(localStorage.getItem('user') || 'null'); } catch { return null; }
+};
+
+const APPROVER_ROLES = ['principal', 'school_admin', 'superadmin'];
+
+const STATUS_META = {
+  pending:  { label: 'Pending',  badge: 'pending' },
+  approved: { label: 'Approved', badge: 'green' },
+  rejected: { label: 'Rejected', badge: 'red' },
+};
+const statusMeta = (s) => STATUS_META[s] || STATUS_META.pending;
 
 /* ── Record expense modal ─────────────────────────────────── */
 function RecordExpenseModal({ onClose, onSuccess }) {
@@ -61,6 +75,11 @@ function RecordExpenseModal({ onClose, onSuccess }) {
           <form className="bur-modal-form" onSubmit={handleSubmit}>
             {error && <div className="bur-banner bur-banner--error"><Ic name="error" size="sm" />{error}</div>}
 
+            <div className="bur-banner bur-banner--info">
+              <Ic name="info" size="sm" />
+              Recorded expenses are submitted for approval — a principal or school admin must approve them before they count against the books.
+            </div>
+
             <label className="bur-field">
               <span>Description *</span>
               <input className="bur-input" type="text" required autoFocus
@@ -92,7 +111,62 @@ function RecordExpenseModal({ onClose, onSuccess }) {
             <div className="bur-modal__actions">
               <button type="button" className="ska-btn ska-btn--ghost" onClick={onClose}>Cancel</button>
               <button type="submit" className="ska-btn ska-btn--primary" disabled={!canSubmit}>
-                {submitting ? 'Saving…' : 'Save Expense'}
+                {submitting ? 'Saving…' : 'Submit for Approval'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Reject expense modal (reason required) ───────────────── */
+function RejectExpenseModal({ expense, onClose, onSubmit }) {
+  const [reason, setReason] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
+  const canSubmit = reason.trim() && !submitting;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!canSubmit) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      await onSubmit(reason.trim());
+    } catch (err) {
+      setError(err.message || 'Failed to reject expense');
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="ska-modal-overlay" onClick={onClose}>
+      <div className="ska-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="ska-modal-head">
+          <h3 className="ska-modal-title">Reject Expense</h3>
+          <button className="ska-modal-close" onClick={onClose} aria-label="Close">
+            <Ic name="close" size="sm" />
+          </button>
+        </div>
+        <div className="ska-modal-body">
+          <form className="bur-modal-form" onSubmit={handleSubmit}>
+            {error && <div className="bur-banner bur-banner--error"><Ic name="error" size="sm" />{error}</div>}
+            <p className="bur-muted" style={{ margin: 0 }}>
+              Rejecting <strong>{catLabel(expense.category)}</strong> · {fmtMoney(expense.amount)}
+              {expense.description ? ` — ${expense.description}` : ''}
+            </p>
+            <label className="bur-field">
+              <span>Reason for rejection *</span>
+              <textarea className="bur-input" rows={3} required autoFocus
+                placeholder="e.g. Missing receipt, duplicate entry, over budget…"
+                value={reason} onChange={(e) => setReason(e.target.value)} />
+            </label>
+            <div className="bur-modal__actions">
+              <button type="button" className="ska-btn ska-btn--ghost" onClick={onClose}>Cancel</button>
+              <button type="submit" className="ska-btn ska-btn--danger" disabled={!canSubmit}>
+                {submitting ? 'Rejecting…' : 'Reject Expense'}
               </button>
             </div>
           </form>
@@ -106,31 +180,42 @@ function RecordExpenseModal({ onClose, onSuccess }) {
 export default function Expenses() {
   const [expenses, setExpenses] = useState([]);
   const [allTimeTotal, setAllTimeTotal] = useState(0);
+  const [pendingTotal, setPendingTotal] = useState(0);
+  const [counts, setCounts] = useState({ pending: 0, approved: 0, rejected: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [banner, setBanner] = useState(null);
 
   const [category, setCategory] = useState('');
+  const [status, setStatus] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
 
   const [recordOpen, setRecordOpen] = useState(false);
+  const [rejectTarget, setRejectTarget] = useState(null);
+  const [actingId, setActingId] = useState(null);
+
+  const canApprove = useMemo(() => APPROVER_ROLES.includes(currentUser()?.role), []);
+  const myId = useMemo(() => currentUser()?.id, []);
 
   const load = useCallback(() => {
     setLoading(true);
     setError(null);
     financeApi.getExpenses({
       category: category || undefined,
+      status: status || undefined,
       date_from: dateFrom || undefined,
       date_to: dateTo || undefined,
     })
       .then((res) => {
         setExpenses(res.expenses || []);
         setAllTimeTotal(Number(res.total || 0));
+        setPendingTotal(Number(res.pending_total || 0));
+        setCounts(res.counts || { pending: 0, approved: 0, rejected: 0 });
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [category, dateFrom, dateTo]);
+  }, [category, status, dateFrom, dateTo]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -140,39 +225,45 @@ export default function Expenses() {
     return () => clearTimeout(t);
   }, [banner]);
 
-  const filteredTotal = useMemo(
+  const shownTotal = useMemo(
     () => expenses.reduce((sum, x) => sum + Number(x.amount || 0), 0),
     [expenses]
   );
 
-  const monthTotal = useMemo(() => {
-    const now = new Date();
-    return expenses.reduce((sum, x) => {
-      const d = new Date(x.date);
-      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
-        ? sum + Number(x.amount || 0)
-        : sum;
-    }, 0);
-  }, [expenses]);
+  const resetFilters = () => { setCategory(''); setStatus(''); setDateFrom(''); setDateTo(''); };
 
-  const topCategory = useMemo(() => {
-    const byCat = {};
-    expenses.forEach((x) => {
-      const c = x.category || 'general';
-      byCat[c] = (byCat[c] || 0) + Number(x.amount || 0);
-    });
-    const entries = Object.entries(byCat).sort((a, b) => b[1] - a[1]);
-    return entries.length ? { name: catLabel(entries[0][0]), amount: entries[0][1] } : null;
-  }, [expenses]);
+  const handleApprove = async (exp) => {
+    setActingId(exp.id);
+    setError(null);
+    try {
+      const res = await financeApi.reviewExpense({ id: exp.id, action: 'approve' });
+      if (res?.success === false) throw new Error(res.message || 'Failed to approve');
+      setBanner(`Expense approved · ${fmtMoney(exp.amount)}`);
+      load();
+    } catch (err) {
+      setError(err.message || 'Failed to approve expense');
+    } finally {
+      setActingId(null);
+    }
+  };
 
-  const resetFilters = () => { setCategory(''); setDateFrom(''); setDateTo(''); };
+  const submitReject = async (reason) => {
+    const exp = rejectTarget;
+    const res = await financeApi.reviewExpense({ id: exp.id, action: 'reject', reason });
+    if (res?.success === false) throw new Error(res.message || 'Failed to reject');
+    setRejectTarget(null);
+    setBanner(`Expense rejected · ${fmtMoney(exp.amount)}`);
+    load();
+  };
+
+  const colCount = canApprove ? 7 : 6;
 
   return (
     <div className="pu-page">
       <div className="pu-page__head">
         <div>
           <h1 className="ska-page-title">Expenses</h1>
-          <p className="ska-page-sub">School spending ledger by category and date</p>
+          <p className="ska-page-sub">School spending ledger — recorded, approved, and rejected</p>
         </div>
         <div className="bur-head-actions">
           <button className="ska-btn ska-btn--primary" onClick={() => setRecordOpen(true)}>
@@ -187,22 +278,42 @@ export default function Expenses() {
       {/* Summary */}
       <div className="bur-summary">
         <div className="bur-summary__chip bur-summary__chip--red">
-          <span>All-time Spending</span><strong>{loading ? '…' : fmtMoney(allTimeTotal)}</strong>
+          <span>Approved Spending</span><strong>{loading ? '…' : fmtMoney(allTimeTotal)}</strong>
         </div>
         <div className="bur-summary__chip bur-summary__chip--amber">
-          <span>Shown ({loading ? '…' : expenses.length})</span><strong>{loading ? '…' : fmtMoney(filteredTotal)}</strong>
+          <span>Pending Approval ({loading ? '…' : counts.pending})</span>
+          <strong>{loading ? '…' : fmtMoney(pendingTotal)}</strong>
         </div>
         <div className="bur-summary__chip bur-summary__chip--primary">
-          <span>This Month</span><strong>{loading ? '…' : fmtMoney(monthTotal)}</strong>
+          <span>Shown ({loading ? '…' : expenses.length})</span><strong>{loading ? '…' : fmtMoney(shownTotal)}</strong>
         </div>
         <div className="bur-summary__chip">
-          <span>Top Category</span>
-          <strong>{loading ? '…' : topCategory ? topCategory.name : '—'}</strong>
+          <span>Rejected</span><strong>{loading ? '…' : counts.rejected}</strong>
         </div>
       </div>
 
+      {canApprove && counts.pending > 0 && status !== 'pending' && (
+        <button
+          type="button"
+          className="bur-banner bur-banner--info exp-pending-cta"
+          onClick={() => setStatus('pending')}
+        >
+          <Ic name="pending_actions" size="sm" />
+          {counts.pending} expense{counts.pending === 1 ? '' : 's'} awaiting your approval — review now
+        </button>
+      )}
+
       {/* Filters */}
       <div className="bur-filters">
+        <label className="bur-field">
+          <span>Status</span>
+          <select className="bur-input" value={status} onChange={(e) => setStatus(e.target.value)}>
+            <option value="">All statuses</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+          </select>
+        </label>
         <label className="bur-field">
           <span>Category</span>
           <select className="bur-input" value={category} onChange={(e) => setCategory(e.target.value)}>
@@ -218,7 +329,7 @@ export default function Expenses() {
           <span>To</span>
           <input className="bur-input" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
         </label>
-        {(category || dateFrom || dateTo) && (
+        {(category || status || dateFrom || dateTo) && (
           <button className="ska-btn ska-btn--ghost bur-filters__reset" onClick={resetFilters}>
             <Ic name="filter_alt_off" size="sm" /> Reset
           </button>
@@ -231,11 +342,11 @@ export default function Expenses() {
           <Ic name="receipt_long" size="xl" style={{ color: 'var(--ska-text-3)' }} />
           <p className="pu-empty__title">No expenses found</p>
           <p className="pu-empty__desc">
-            {category || dateFrom || dateTo
+            {category || status || dateFrom || dateTo
               ? 'No expenses match the current filters.'
               : 'Record the school’s first expense to start tracking spending.'}
           </p>
-          {!(category || dateFrom || dateTo) && (
+          {!(category || status || dateFrom || dateTo) && (
             <button className="ska-btn ska-btn--primary" onClick={() => setRecordOpen(true)}>
               <Ic name="add_card" size="sm" /> Record Expense
             </button>
@@ -243,38 +354,80 @@ export default function Expenses() {
         </div>
       ) : (
         <div className="bur-table-wrap">
-          <table className="ska-table">
+          <table className="ska-table exp-table">
             <thead>
               <tr>
                 <th>Date</th>
                 <th>Category</th>
                 <th>Description</th>
                 <th style={{ textAlign: 'right' }}>Amount</th>
+                <th>Recorded By</th>
                 <th>Status</th>
+                {canApprove && <th>Action / Reviewer</th>}
               </tr>
             </thead>
             <tbody>
               {loading
                 ? Array.from({ length: 6 }).map((_, i) => (
-                    <tr key={i}>{Array.from({ length: 5 }).map((__, j) => (
+                    <tr key={i}>{Array.from({ length: colCount }).map((__, j) => (
                       <td key={j}><div className="bur-skel" /></td>
                     ))}</tr>
                   ))
-                : expenses.map((x) => (
-                    <tr key={x.id}>
-                      <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(x.date)}</td>
-                      <td><span className="ska-badge ska-badge--primary">{catLabel(x.category)}</span></td>
-                      <td>{x.description || '—'}</td>
-                      <td className="bur-cell-money bur-cell-money--red" style={{ textAlign: 'right' }}>
-                        −{fmtMoney(x.amount)}
-                      </td>
-                      <td>
-                        <span className={`ska-badge ska-badge--${x.status === 'approved' ? 'green' : 'pending'}`}>
-                          {(x.status || 'approved').replace(/\b\w/g, (c) => c.toUpperCase())}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                : expenses.map((x) => {
+                    const meta = statusMeta(x.status);
+                    const isActing = actingId === x.id;
+                    // Separation of duties: you can't approve an expense you recorded
+                    // (backend enforces this with a 403 — hide the buttons to match).
+                    const isOwn = myId != null && String(x.created_by) === String(myId);
+                    return (
+                      <tr key={x.id}>
+                        <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(x.date)}</td>
+                        <td><span className="ska-badge ska-badge--primary">{catLabel(x.category)}</span></td>
+                        <td>{x.description || '—'}</td>
+                        <td className="bur-cell-money bur-cell-money--red" style={{ textAlign: 'right' }}>
+                          −{fmtMoney(x.amount)}
+                        </td>
+                        <td>{x.created_by_name || '—'}</td>
+                        <td>
+                          <span className={`ska-badge ska-badge--${meta.badge}`}>{meta.label}</span>
+                          {x.status === 'rejected' && x.rejection_reason && (
+                            <div className="exp-reason" title={x.rejection_reason}>{x.rejection_reason}</div>
+                          )}
+                        </td>
+                        {canApprove && (
+                          <td>
+                            {x.status === 'pending' && isOwn ? (
+                              <span className="bur-muted">Your entry — awaiting another approver</span>
+                            ) : x.status === 'pending' ? (
+                              <div className="exp-actions">
+                                <button
+                                  className="ska-btn ska-btn--sm ska-btn--primary"
+                                  disabled={isActing}
+                                  onClick={() => handleApprove(x)}
+                                >
+                                  {isActing ? '…' : 'Approve'}
+                                </button>
+                                <button
+                                  className="ska-btn ska-btn--sm ska-btn--ghost exp-reject-btn"
+                                  disabled={isActing}
+                                  onClick={() => setRejectTarget(x)}
+                                >
+                                  Reject
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="bur-muted">
+                                {x.approved_by_name ? `${x.approved_by_name}` : '—'}
+                                {x.approved_at && (
+                                  <span className="exp-reviewed-at"> · {fmtDateTime(x.approved_at)}</span>
+                                )}
+                              </span>
+                            )}
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
             </tbody>
           </table>
         </div>
@@ -283,7 +436,15 @@ export default function Expenses() {
       {recordOpen && (
         <RecordExpenseModal
           onClose={() => setRecordOpen(false)}
-          onSuccess={() => { setBanner('Expense recorded'); load(); }}
+          onSuccess={() => { setBanner('Expense submitted for approval'); load(); }}
+        />
+      )}
+
+      {rejectTarget && (
+        <RejectExpenseModal
+          expense={rejectTarget}
+          onClose={() => setRejectTarget(null)}
+          onSubmit={submitReject}
         />
       )}
     </div>

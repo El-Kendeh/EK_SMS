@@ -92,15 +92,24 @@ export const financeApi = {
 
   /* ── Expenses ─────────────────────────────────────────────── */
   async getExpenses(params = {}) {
-    // params: category, date_from, date_to → { expenses[], total } (total = all-time)
+    // params: category, date_from, date_to, status (pending|approved|rejected)
+    // → { expenses[], total (approved all-time), pending_total, counts:{pending,approved,rejected} }
     return apiClient.get(`/api/finance/expenses/${qs(params)}`);
   },
   async recordExpense({ description, amount, category, date }) {
+    // Recorded as PENDING — a principal/school_admin must approve before it hits the books.
     return apiClient.post('/api/finance/expenses/', {
       description,
       amount: Number(amount),
       category: category || 'general',
       date: date || null,
+    });
+  },
+  async reviewExpense({ id, action, reason }) {
+    // action: 'approve' | 'reject'. reason required when rejecting.
+    return apiClient.post(`/api/finance/expenses/${id}/review/`, {
+      action,
+      reason: reason || null,
     });
   },
 

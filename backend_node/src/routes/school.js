@@ -60,6 +60,7 @@ const {
   getFinanceUsers, createFinanceUser, updateFinanceUser,
 } = require('../controllers/financeController');
 const { generateSyllabusFromDocument } = require('../controllers/syllabusGenerator');
+const { aiCaptureUpload, aiCaptureList } = require('../controllers/aiCaptureController');
 
 // Multer config for badge/file uploads
 const storage = multer.diskStorage({
@@ -238,6 +239,41 @@ const syllabusUpload = multer({
   limits: { fileSize: 20 * 1024 * 1024 }, // 20MB
 });
 router.post('/school/syllabus/generate/', applyAuth, syllabusUpload.single('document'), generateSyllabusFromDocument);
+
+// ==================== AI DOCUMENT CAPTURE ====================
+// Gemini-backed extraction of rosters/grade/attendance documents into structured rows.
+const aiCaptureStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = path.join(__dirname, '../../../uploads/ai-capture/');
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `capture-${Date.now()}${ext}`);
+  },
+});
+const aiCaptureMulter = multer({
+  storage: aiCaptureStorage,
+  fileFilter: (req, file, cb) => {
+    const allowed = [
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain', 'text/csv', 'application/vnd.ms-excel', 'application/csv',
+      'image/png', 'image/jpeg', 'image/webp',
+    ];
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    const okExt = ['.pdf', '.docx', '.txt', '.csv', '.png', '.jpg', '.jpeg', '.webp'].includes(ext);
+    if (allowed.includes(file.mimetype) || okExt) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF, DOCX, TXT, CSV, PNG, JPG, or WEBP files are allowed.'), false);
+    }
+  },
+  limits: { fileSize: 25 * 1024 * 1024 }, // 25MB
+});
+router.post('/school/ai-capture/', applyAuth, aiCaptureMulter.single('file'), aiCaptureUpload);
+router.get('/school/ai-capture/list/', applyAuth, aiCaptureList);
 
 // ==================== GRADES ====================
 router.get('/school/grades/', applyAuth, getGrades);

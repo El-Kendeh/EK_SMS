@@ -16,6 +16,7 @@ const Grade = require('../models/Grade');
 const Attendance = require('../models/Attendance');
 const GradingScheme = require('../models/GradingScheme');
 const { appendGradeEventSafe } = require('../utils/gradeEvent');
+const { appendSecurityAuditLog } = require('../utils/auditLog');
 const Room = require('../models/Room');
 const Exam = require('../models/Exam');
 const ExamResult = require('../models/ExamResult');
@@ -1942,18 +1943,28 @@ async function recordExpense(req, res) {
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
     const { description, amount, category, date } = req.body;
+    // Recorded expenses start PENDING and require approval (principal/school_admin) —
+    // no self-approval. See financeController.reviewExpense for the approval endpoint.
     const expense = await Expense.create({
       school_id: school.id,
       description,
       amount,
       category,
       date: date || new Date(),
-      approved_by: req.user.id,
-      status: 'approved',
+      created_by: req.user.id,
+      status: 'pending',
+    });
+    await appendSecurityAuditLog({
+      type: 'expense_recorded',
+      severity: 'info',
+      actor: req.user?.username || String(req.user?.id || 'unknown'),
+      ip: req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || '—',
+      action: `Expense #${expense.id} recorded (amount ${expense.amount}, school ${school.id}) by ${req.user?.role || 'unknown'}`,
+      metadata: { expense_id: expense.id, school_id: school.id, amount: expense.amount, category: expense.category },
     });
     return res.json(successResponse({
-      expense: { id: expense.id, description: expense.description, amount: expense.amount, category: expense.category, date: expense.date }
-    }, 'Expense recorded'));
+      expense: { id: expense.id, description: expense.description, amount: expense.amount, category: expense.category, date: expense.date, status: expense.status }
+    }, 'Expense recorded — pending approval'));
   } catch (err) {
     return res.status(500).json(errorResponse('Failed to record expense'));
   }

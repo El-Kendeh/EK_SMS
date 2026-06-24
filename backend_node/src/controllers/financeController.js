@@ -16,6 +16,7 @@ const Fee = require('../models/Fee');
 const Payment = require('../models/Payment');
 const Expense = require('../models/Expense');
 const Subject = require('../models/Subject');
+const { appendSecurityAuditLog } = require('../utils/auditLog');
 
 const successResponse = (data = {}, message = 'Success') => ({ success: true, message, ...data });
 const errorResponse = (message) => ({ success: false, message });
@@ -502,6 +503,8 @@ async function recordExpense(req, res) {
     const { description, amount, category, date, receipt_path } = req.body;
     if (!description || !amount) return res.status(400).json(errorResponse('Description and amount are required'));
 
+    // Bursar/admin records the expense → it starts PENDING and must be approved by a
+    // principal/school_admin/superadmin before it counts against the books. No self-approval.
     const expense = await Expense.create({
       school_id: school.id,
       category: category || 'general',
@@ -509,9 +512,20 @@ async function recordExpense(req, res) {
       amount,
       date: date || new Date(),
       receipt_path: receipt_path || null,
+      created_by: req.user?.id || null,
+      status: 'pending',
     });
 
-    return res.json(successResponse({ expense }, 'Expense recorded'));
+    await appendSecurityAuditLog({
+      type: 'expense_recorded',
+      severity: 'info',
+      actor: req.user?.username || String(req.user?.id || 'unknown'),
+      ip: req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || '—',
+      action: `Expense #${expense.id} recorded (amount ${expense.amount}, school ${school.id}) by ${req.user?.role || 'unknown'}`,
+      metadata: { expense_id: expense.id, school_id: school.id, amount: expense.amount, category: expense.category },
+    });
+
+    return res.json(successResponse({ expense }, 'Expense recorded — pending approval'));
   } catch (err) {
     console.error('recordExpense Error:', err);
     return res.status(500).json(errorResponse(`Failed to record expense`));
@@ -523,9 +537,10 @@ async function getExpenses(req, res) {
     const school = await getSchoolFromUser(req);
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
-    const { category, date_from, date_to } = req.query;
+    const { category, date_from, date_to, status } = req.query;
     const where = { school_id: school.id };
     if (category) where.category = category;
+    if (status && ['pending', 'approved', 'rejected'].includes(status)) where.status = status;
     if (date_from || date_to) {
       where.date = {};
       if (date_from) where.date[Op.gte] = date_from;
@@ -538,12 +553,113 @@ async function getExpenses(req, res) {
       limit: 200,
     });
 
-    const total = await Expense.sum('amount', { where: { school_id: school.id } }) || 0;
+    // Resolve creator/approver names in one query (no model associations on Expense).
+    const userIds = [...new Set(
+      expenses.flatMap((e) => [e.created_by, e.approved_by]).filter(Boolean),
+    )];
+    const nameById = {};
+    if (userIds.length) {
+      const users = await User.findAll({ where: { id: userIds }, attributes: ['id', 'first_name', 'last_name', 'username'] });
+      users.forEach((u) => {
+        nameById[u.id] = `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.username || `User #${u.id}`;
+      });
+    }
 
-    return res.json(successResponse({ expenses, total }));
+    const formatted = expenses.map((e) => ({
+      id: e.id,
+      school_id: e.school_id,
+      category: e.category,
+      description: e.description,
+      amount: e.amount,
+      date: e.date,
+      receipt_path: e.receipt_path,
+      status: e.status || 'pending',
+      created_by: e.created_by,
+      created_by_name: e.created_by ? (nameById[e.created_by] || null) : null,
+      approved_by: e.approved_by,
+      approved_by_name: e.approved_by ? (nameById[e.approved_by] || null) : null,
+      approved_at: e.approved_at,
+      rejection_reason: e.rejection_reason,
+    }));
+
+    // `total` (all-time spend) counts APPROVED expenses only — pending/rejected never
+    // hit the books, matching getFinanceStats/getFinanceAnalytics which filter status='approved'.
+    const total = await Expense.sum('amount', { where: { school_id: school.id, status: 'approved' } }) || 0;
+    const [pending, approved, rejected] = await Promise.all([
+      Expense.count({ where: { school_id: school.id, status: 'pending' } }),
+      Expense.count({ where: { school_id: school.id, status: 'approved' } }),
+      Expense.count({ where: { school_id: school.id, status: 'rejected' } }),
+    ]);
+    const pending_total = await Expense.sum('amount', { where: { school_id: school.id, status: 'pending' } }) || 0;
+
+    return res.json(successResponse({
+      expenses: formatted,
+      total,
+      pending_total,
+      counts: { pending, approved, rejected },
+    }));
   } catch (err) {
     console.error('getExpenses Error:', err);
     return res.status(500).json(errorResponse(`Failed to fetch expenses`));
+  }
+}
+
+// POST /api/finance/expenses/:id/review/  { action: 'approve'|'reject', reason? }
+// Gated at the route to principal/school_admin/superadmin. The bursar who recorded an
+// expense can NOT approve it — separation of duties.
+async function reviewExpense(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+
+    const { id } = req.params;
+    const { action, reason } = req.body;
+    if (!['approve', 'reject'].includes(action)) {
+      return res.status(400).json(errorResponse('Action must be approve or reject'));
+    }
+    if (action === 'reject' && !(reason && String(reason).trim())) {
+      return res.status(400).json(errorResponse('A reason is required to reject an expense'));
+    }
+
+    const expense = await Expense.findOne({ where: { id, school_id: school.id } });
+    if (!expense) return res.status(404).json(errorResponse('Expense not found'));
+    // Separation of duties enforced at the INDIVIDUAL level (not just role): whoever
+    // recorded the expense can never approve/reject it — even a principal/school_admin.
+    if (expense.created_by && req.user?.id && String(expense.created_by) === String(req.user.id)) {
+      return res.status(403).json(errorResponse('You cannot review an expense you recorded — it must be approved by someone else.'));
+    }
+    if (expense.status !== 'pending') {
+      // 409 Conflict: the resource is in a state that forbids the action (already reviewed),
+      // not a malformed request. Guards against double-review races / client retries.
+      return res.status(409).json(errorResponse(`Expense is already ${expense.status} and cannot be reviewed again`));
+    }
+
+    await expense.update({
+      status: action === 'approve' ? 'approved' : 'rejected',
+      approved_by: req.user?.id || null,
+      approved_at: new Date(),
+      rejection_reason: action === 'reject' ? String(reason).trim() : null,
+    });
+
+    await appendSecurityAuditLog({
+      type: 'expense_review',
+      severity: 'info',
+      actor: req.user?.username || String(req.user?.id || 'unknown'),
+      ip: req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || '—',
+      action: `Expense #${expense.id} ${action}d (amount ${expense.amount}, school ${school.id}) by ${req.user?.role || 'unknown'}`,
+      metadata: {
+        expense_id: expense.id,
+        action,
+        school_id: school.id,
+        amount: expense.amount,
+        reason: action === 'reject' ? String(reason).trim() : null,
+      },
+    });
+
+    return res.json(successResponse({ id: expense.id, status: expense.status }, `Expense ${action}d`));
+  } catch (err) {
+    console.error('reviewExpense Error:', err);
+    return res.status(500).json(errorResponse(`Failed to review expense`));
   }
 }
 
@@ -1063,7 +1179,7 @@ async function getSyllabusProgress(req, res) {
 }
 
 module.exports = {
-  getFinanceStats, getFinanceAnalytics, getFinanceFees, recordExpense, getExpenses,
+  getFinanceStats, getFinanceAnalytics, getFinanceFees, recordExpense, getExpenses, reviewExpense,
   getFeeCategories, createFeeCategory, assignFees,
   recordPayment, getPayments, getStudentFees,
   getFinanceUsers, createFinanceUser, updateFinanceUser,
