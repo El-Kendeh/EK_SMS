@@ -2336,11 +2336,15 @@ async function toggleClassSubtypeStatus(req, res) {
 /* ---------- Classes CRUD (superadmin) ---------- */
 async function getSuperClasses(req, res) {
   try {
-    const { school_id, page = 1, limit = 100 } = req.query;
+    const { school_id, page = 1, limit = 100, q } = req.query;
     const forcedSchool = scopedSchoolId(req);
     const where = {};
     if (forcedSchool !== null) where.school_id = forcedSchool;
     else if (school_id) where.school_id = school_id;
+    if (q && String(q).trim()) {
+      const like = { [Op.like]: `%${String(q).trim()}%` };
+      where[Op.or] = [{ name: like }, { code: like }, { form: like }, { category: like }];
+    }
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const { rows, count } = await ClassModel.findAndCountAll({ where, order: [['created_at', 'DESC']], offset, limit: parseInt(limit) });
     const classes = await Promise.all(rows.map(async r => {
@@ -2440,11 +2444,15 @@ async function toggleSuperClassStatus(req, res) {
 /* ---------- Subjects CRUD (superadmin) ---------- */
 async function getSuperSubjects(req, res) {
   try {
-    const { school_id, page = 1, limit = 100 } = req.query;
+    const { school_id, page = 1, limit = 100, q } = req.query;
     const forcedSchool = scopedSchoolId(req);
     const where = {};
     if (forcedSchool !== null) where.school_id = forcedSchool;
     else if (school_id) where.school_id = school_id;
+    if (q && String(q).trim()) {
+      const like = { [Op.like]: `%${String(q).trim()}%` };
+      where[Op.or] = [{ name: like }, { code: like }, { description: like }];
+    }
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const { rows, count } = await Subject.findAndCountAll({ where, order: [['created_at', 'DESC']], offset, limit: parseInt(limit) });
     const subjects = await Promise.all(rows.map(async r => {
@@ -2924,6 +2932,13 @@ async function getSuperStudents(req, res) {
     if (forcedSchool !== null) where.school_id = forcedSchool;
     else if (school_id) where.school_id = school_id;
     if (status) where.status = status;
+    const qStr = (req.query.q || '').toString().trim();
+    if (qStr) {
+      const like = { [Op.like]: `%${qStr}%` };
+      const matchUsers = await User.findAll({ where: { [Op.or]: [{ first_name: like }, { last_name: like }, { email: like }, { username: like }] }, attributes: ['id'] });
+      const uids = matchUsers.map((u) => u.id);
+      where[Op.or] = [{ user_id: { [Op.in]: uids.length ? uids : [0] } }, { admission_number: like }];
+    }
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const { rows, count } = await Student.findAndCountAll({
       where, order: [['id', 'DESC']], offset, limit: parseInt(limit),
@@ -3191,6 +3206,11 @@ async function getSuperParents(req, res) {
       });
       where.id = [...new Set(links.map((l) => l.parent_id))];
     }
+    const qStr = (req.query.q || '').toString().trim();
+    if (qStr) {
+      const like = { [Op.like]: `%${qStr}%` };
+      where[Op.or] = [{ first_name: like }, { last_name: like }, { email: like }, { phone: like }];
+    }
     const rows = await Parent.findAll({ where, order: [['id', 'DESC']], limit: 500 });
     const parents = await Promise.all(rows.map(async p => {
       let user = null, linkedStudents = [];
@@ -3451,6 +3471,13 @@ async function getSuperTeachers(req, res) {
     if (forcedSchool !== null) where.school_id = forcedSchool;
     else if (school_id) where.school_id = school_id;
     if (status) where.status = status;
+    const qStr = (req.query.q || '').toString().trim();
+    if (qStr) {
+      const like = { [Op.like]: `%${qStr}%` };
+      const matchUsers = await User.findAll({ where: { [Op.or]: [{ first_name: like }, { last_name: like }, { email: like }, { username: like }] }, attributes: ['id'] });
+      const uids = matchUsers.map((u) => u.id);
+      where[Op.or] = [{ user_id: { [Op.in]: uids.length ? uids : [0] } }, { employee_id: like }];
+    }
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const { rows, count } = await Teacher.findAndCountAll({
       where, order: [['id', 'DESC']], offset, limit: parseInt(limit),
@@ -3636,6 +3663,13 @@ async function getSuperBursars(req, res) {
     if (forcedSchool !== null) where.school_id = forcedSchool;
     else if (school_id) where.school_id = school_id;
     if (status) where.status = status;
+    const qStr = (req.query.q || '').toString().trim();
+    if (qStr) {
+      const like = { [Op.like]: `%${qStr}%` };
+      const matchUsers = await User.findAll({ where: { [Op.or]: [{ first_name: like }, { last_name: like }, { email: like }, { username: like }] }, attributes: ['id'] });
+      const uids = matchUsers.map((u) => u.id);
+      where[Op.or] = [{ user_id: { [Op.in]: uids.length ? uids : [0] } }, { employee_id: like }];
+    }
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const { rows, count } = await CoreBursar.findAndCountAll({ where, order: [['id', 'DESC']], offset, limit: parseInt(limit) });
     const bursars = await Promise.all(rows.map(async b => {
@@ -3788,6 +3822,13 @@ async function getSuperPrincipals(req, res) {
     if (forcedSchool !== null) where.school_id = forcedSchool;
     else if (school_id) where.school_id = school_id;
     if (status) where.status = status;
+    const qStr = (req.query.q || '').toString().trim();
+    if (qStr) {
+      const like = { [Op.like]: `%${qStr}%` };
+      const matchUsers = await User.findAll({ where: { [Op.or]: [{ first_name: like }, { last_name: like }, { email: like }, { username: like }] }, attributes: ['id'] });
+      const uids = matchUsers.map((u) => u.id);
+      where[Op.or] = [{ user_id: { [Op.in]: uids.length ? uids : [0] } }, { employee_id: like }];
+    }
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const { rows, count } = await CorePrincipal.findAndCountAll({ where, order: [['id', 'DESC']], offset, limit: parseInt(limit) });
     const principals = await Promise.all(rows.map(async p => {

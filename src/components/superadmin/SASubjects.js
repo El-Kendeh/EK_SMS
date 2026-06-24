@@ -45,12 +45,14 @@ export default function SASubjects() {
     setLoading(true); setLoadError(null);
     try {
       const params = new URLSearchParams({ page, limit });
+      if (search.trim()) params.set('q', search.trim());   // server-side search across the full dataset
       const r = await req('GET', `/api/subjects/?${params}`);
       setList(r.subjects || []); setTotal(r.total || 0);
     } catch (e) { showToast(e.message, 'error'); setLoadError(e.message || 'Failed to load subjects.'); }
     setLoading(false);
-  }, [page, showToast]); // eslint-disable-line
-  useEffect(() => { load(); }, [load]);
+  }, [page, search, showToast]); // eslint-disable-line
+  // Debounced: refetch on page/search change (search is sent to the server).
+  useEffect(() => { const t = setTimeout(load, 250); return () => clearTimeout(t); }, [load]);
 
   useEffect(() => {
     if (!isSuper) return;
@@ -86,7 +88,7 @@ export default function SASubjects() {
       </div>
       <div className="sa-toolbar">
         <div className="sa-search-bar">
-          <input className="sa-search-input" placeholder="Search subjects by name, code, description..." value={search} onChange={e => setSearch(e.target.value)} />
+          <input className="sa-search-input" placeholder="Search subjects by name, code, description..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
         </div>
       </div>
       {loading ? <div className="sa-loading">Loading...</div> : loadError ? <div className="sa-loading" style={{ color: 'var(--sa-red)' }}>{loadError}</div> : (

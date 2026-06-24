@@ -30,7 +30,7 @@
 | # | Item | Why deferred |
 |---|------|--------------|
 | 3.3 | Real document upload on student create | Significant: changes the create flow **and** the `/api/students/` backend to accept files. Higher risk; schedule on its own. |
-| 3.5 | Server-side / full-dataset search | Current search works (page-local). Converting it risks breaking a working feature for marginal gain; needs backend query support. |
+| 3.5 | Server-side search | **DONE for classes/subjects.** Added optional tenant-scoped `?q` to all 7 list endpoints; wired SAClasses/SASubjects (debounced, resets to page 1, client filter kept as fallback). People PAGES kept on their rich client-side search to avoid regressing multi-field coverage (linked-student names, occupation, subjects); their backend `?q` is implemented + ready for a future deliberate wire-up. |
 | 3.7 | Build/remove stub nav items (Examination, Report-Card-Generator, Fees-Structure, School-Financial-Report) | Touches `permissions.js`, which was **being edited concurrently** — I won't risk a conflict. One-liners you can drop in when free. |
 
 ---
