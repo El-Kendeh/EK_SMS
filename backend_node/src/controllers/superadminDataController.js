@@ -63,6 +63,28 @@ function outsideScope(forcedSchool, rowSchoolId) {
   return forcedSchool !== null && Number(rowSchoolId) !== forcedSchool;
 }
 
+/* Bound + shape a client-supplied vaccinations object before it is stored in the JSON
+   column: accept only a plain object of scalar key/values (drop nested objects/arrays),
+   cap key count + string lengths. Prevents storing arbitrary, unbounded, or deeply
+   nested client JSON. Returns null for anything that isn't a plain object. */
+function sanitizeVaccinations(v) {
+  if (v == null) return null;
+  let obj = v;
+  if (typeof v === 'string') { try { obj = JSON.parse(v); } catch { return null; } }
+  if (typeof obj !== 'object' || Array.isArray(obj)) return null;
+  const clean = {};
+  let n = 0;
+  for (const [k, val] of Object.entries(obj)) {
+    if (n >= 50) break;
+    const key = String(k).slice(0, 64);
+    if (val === null || typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') {
+      clean[key] = typeof val === 'string' ? val.slice(0, 200) : val;
+      n += 1;
+    }
+  }
+  return clean;
+}
+
 /* Block a school-scoped caller (e.g. school_admin) from acting on another
    school's row by id; a superadmin (forcedSchool=null) passes through. Sends a
    403 and returns true when denied, so handlers do:
@@ -3056,7 +3078,7 @@ async function createSuperStudent(req, res) {
       documents_transfer_letter: data.documents_transfer_letter,
       documents_medical_report: data.documents_medical_report,
       documents_other: data.documents_other,
-      vaccinations: data.vaccinations || null,
+      vaccinations: sanitizeVaccinations(data.vaccinations),
       passport_picture: passportPath,
     });
 
@@ -3143,6 +3165,7 @@ async function updateSuperStudent(req, res) {
     ];
     const upd = {};
     fields.forEach(k => { if (data[k] !== undefined) upd[k] = data[k]; });
+    if (upd.vaccinations !== undefined) upd.vaccinations = sanitizeVaccinations(upd.vaccinations);
     if (req.file) upd.passport_picture = `/uploads/students/${req.file.filename}`;
     await Student.update(upd, { where: { id: student.id } });
     return res.json(successResponse({}, 'Student updated'));
