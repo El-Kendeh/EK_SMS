@@ -738,6 +738,13 @@ export default function SASettings() {
             <div className="sa-settings-section">
               <h2 className="sa-settings-section-title">Security Configuration</h2>
 
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 14px', borderRadius: 10, marginBottom: 14, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)' }}>
+                <span style={{ flexShrink: 0, color: 'var(--sa-amber)', marginTop: 1, fontWeight: 800 }}>!</span>
+                <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--sa-text-2)', lineHeight: 1.5 }}>
+                  Recorded — enforcement pending. These preferences are saved, but global 2FA, auto grade-locking and the session timeout are not yet wired into login, grade and session handling, so they don't change behaviour yet.
+                </p>
+              </div>
+
               <div className="sa-toggle-item">
                 <div className="sa-toggle-item-left">
                   <div className="sa-toggle-item-icon"><IcShield /></div>

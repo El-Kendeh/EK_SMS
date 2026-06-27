@@ -137,6 +137,7 @@ export default function SAStaffManager({ kind = 'principal' }) {
   const [toast, setToast]       = useState(null);
   const [deleting, setDeleting] = useState(null);
   const [creds, setCreds]       = useState(null); // { name, username, password }
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const limit = 20;
 
   const showToast = useCallback((msg, type) => {
@@ -148,14 +149,25 @@ export default function SAStaffManager({ kind = 'principal' }) {
     setLoading(true);
     try {
       const params = new URLSearchParams({ page, limit });
+      const q = debouncedSearch.trim();
+      if (q) params.set('q', q);           // server-side search across ALL pages
       const r = await req('GET', `${cfg.endpoint}?${params}`);
       setList(r[cfg.listKey] || []);
       setTotal(r.total || 0);
     } catch (e) { showToast(e.message, 'error'); }
     setLoading(false);
-  }, [page, cfg.endpoint, cfg.listKey, showToast]);
+  }, [page, debouncedSearch, cfg.endpoint, cfg.listKey, showToast]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Debounce the search box and push it to the server (resetting to page 1) so a
+  // record on a later page is found instead of a false "No results". The client
+  // filter below still refines the current page (and covers any endpoint that
+  // ignores q), so this is a strict improvement with no regression.
+  useEffect(() => {
+    const t = setTimeout(() => { setDebouncedSearch(search); setPage(1); }, 250);
+    return () => clearTimeout(t);
+  }, [search]);
 
   useEffect(() => {
     if (!isSuper) return;

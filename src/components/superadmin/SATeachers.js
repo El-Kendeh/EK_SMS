@@ -128,6 +128,7 @@ export default function SATeachers() {
   const [toast, setToast]       = useState(null);
   const [deleting, setDeleting] = useState(null);
   const [creds, setCreds]       = useState(null);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
   const showToast = useCallback((msg, type) => {
     setToast({ msg, type });
@@ -138,14 +139,23 @@ export default function SATeachers() {
     setLoading(true);
     try {
       const params = new URLSearchParams({ page, limit: LIMIT });
+      const q = debouncedSearch.trim();
+      if (q) params.set('q', q);           // server-side search across ALL pages
       const r = await req('GET', `${ENDPOINT}?${params}`);
       setList(r.teachers || []);
       setTotal(r.total || 0);
     } catch (e) { showToast(e.message, 'error'); }
     setLoading(false);
-  }, [page, showToast]);
+  }, [page, debouncedSearch, showToast]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Debounce the search box and push it to the server (resetting to page 1) so a
+  // teacher on a later page is found instead of a false "No results".
+  useEffect(() => {
+    const t = setTimeout(() => { setDebouncedSearch(search); setPage(1); }, 250);
+    return () => clearTimeout(t);
+  }, [search]);
 
   useEffect(() => {
     if (!isSuper) return;
@@ -160,17 +170,16 @@ export default function SATeachers() {
     return s ? s.name : `#${id}`;
   }, [schools]);
 
+  // Server now handles search (q) across all pages; this only applies the
+  // status chip to the current page of results.
   const visible = useMemo(() => {
-    const q = search.trim().toLowerCase();
     return list.filter(p => {
       if (statusF === 'active' && (!p.is_active || p.status === 'blocked')) return false;
       if (statusF === 'inactive' && p.is_active) return false;
       if (statusF === 'blocked' && p.status !== 'blocked') return false;
-      if (!q) return true;
-      return [p.first_name, p.last_name, `${p.first_name} ${p.last_name}`, p.email, p.username, p.employee_id, p.phone_number, p.subjects_specialization]
-        .some(v => String(v || '').toLowerCase().includes(q));
+      return true;
     });
-  }, [list, search, statusF]);
+  }, [list, statusF]);
 
   async function handleSave(form, file) {
     try {

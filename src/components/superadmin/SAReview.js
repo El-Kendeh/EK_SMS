@@ -359,7 +359,7 @@ export default function SAReview({ school, onBack, onApprove, onReject, onReques
               <Field label="Username" value={school.admin_username || school.admin_email?.split('@')[0]} />
               <Field label="Phone"    value={school.admin_phone} />
               <Field
-                label="Email"
+                label="Email status"
                 value={adminEmail && adminEmail !== '—' ? 'Provided' : 'Not provided'}
                 chip={adminEmail && adminEmail !== '—' ? 'approved' : 'pending'}
               />

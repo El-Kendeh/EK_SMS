@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import ApiClient from '../../api/client';
 
 /* ── Icons ──────────────────────────────────────────────────── */
-const IcChevDown = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>;
 const IcTrend    = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>;
 const IcTrendDn  = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>;
 const IcMinus    = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>;
@@ -70,7 +69,7 @@ function CompareView({ onBack, schools = [] }) {
      hardcoded 100/90). The remaining metrics derive from real counts/scores;
      null is formatted as "—" so nothing renders as the literal "null%". */
   const metrics = [
-    { key: 'perf',     label: 'Perf. Index', fmt: v => (v == null ? '—' : v)                    },
+    { key: 'perf',     label: 'Relative Size', fmt: v => (v == null ? '—' : v)                    },
     { key: 'passRate', label: 'Pass Rate',   fmt: v => (v == null ? '—' : v + '%')              },
     { key: 'gpa',      label: 'Avg GPA',     fmt: v => (v == null ? '—' : v)                    },
     { key: 'students', label: 'Students',    fmt: v => (v == null ? '—' : v.toLocaleString())   },
@@ -178,10 +177,7 @@ function CompareView({ onBack, schools = [] }) {
 }
 
 /* ── Main: SABenchmarks ─────────────────────────────────────── */
-export default function SABenchmarks() {
-  const [year,      setYear]      = useState('2024-25');
-  const [term,      setTerm]      = useState('All Terms');
-  const [grade,     setGrade]     = useState('K-12');
+export default function SABenchmarks({ onNavigate }) {
   const [comparing, setComparing] = useState(false);
 
   /* Real data from API */
@@ -252,21 +248,6 @@ export default function SABenchmarks() {
 
   return (
     <div className="san-benchmarks">
-      {/* Filters */}
-      <div className="san-filter-bar">
-        {[
-          [year,  setYear,  ['2023-24','2024-25','2022-23']],
-          [term,  setTerm,  ['All Terms','Spring','Fall','Summer']],
-          [grade, setGrade, ['K-12','Primary','Secondary','Tertiary']],
-        ].map(([val, setter, opts], idx) => (
-          <div key={idx} className="san-sel-wrap">
-            <select className="san-sel" value={val} onChange={e => setter(e.target.value)}>
-              {opts.map(o => <option key={o}>{o}</option>)}
-            </select><IcChevDown />
-          </div>
-        ))}
-      </div>
-
       {/* 2×2 KPI Grid */}
       <div className="san-kpi-2x2">
         <KpiCard label="Pass Rate"   value={passRatePct != null ? `${passRatePct}%` : '—'} delta={passRatePct != null ? `${passRatePct}% pass` : 'No data'} deltaDir={passRatePct == null ? 'neutral' : (passRatePct >= 80 ? 'up' : 'down')} />
@@ -322,7 +303,7 @@ export default function SABenchmarks() {
           <div className="san-bench-head">
             <span>School Name</span>
             <span>Students</span>
-            <span>Perf. Index</span>
+            <span>Relative Size</span>
           </div>
           {topSchools.map(s => (
             <div key={s.rank} className="san-bench-row">
@@ -340,7 +321,7 @@ export default function SABenchmarks() {
           </>}
         </div>
         <div className="san-card-foot">
-          <button className="san-view-all-btn">View All Schools</button>
+          <button className="san-view-all-btn" onClick={() => onNavigate && onNavigate('analytics')}>View All Schools</button>
         </div>
       </div>
 
@@ -348,7 +329,6 @@ export default function SABenchmarks() {
       <div className="san-card">
         <div className="san-card-hdr">
           <h3 className="san-card-title">Platform Summary</h3>
-          <span className="san-card-meta">{year}</span>
         </div>
         <div className="san-card-body">
           <div className="san-summary-grid">

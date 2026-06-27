@@ -68,10 +68,10 @@ export default function FinanceUserCard({ u, onView, onEdit, onToggle }) {
           title={status} />
       </div>
 
-      {/* B. Role + Risk */}
+      {/* B. Role — risk pill removed: the backend supplies no per-user risk score,
+          so it always rendered a fabricated "Low Risk". */}
       <div className="fu-card__rolebar">
         <FuRoleBadge role={u.role} />
-        <FuRiskPill risk={u.risk} />
       </div>
 
       {/* C. Permission summary — tick / cross */}

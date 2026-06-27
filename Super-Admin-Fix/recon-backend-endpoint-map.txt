@@ -1,0 +1,206 @@
+I've now read both controllers in full and the route file. I have everything needed to produce the endpoint map. Let me verify a couple of scoping details before finalizing: the `getUsersShort`/`getUsers` (no school filter, but they're SA-only platform-user directory — that's correct), and `getSecurityCounters` which uses `active_sessions: activeUsers` (counts active users, not real sessions — a mild stub-ish label but it queries real data).
+
+Two flags worth confirming: `assignClassStudents` updates students with `school_id: cls.school_id` (scoped, good). And `assignSubjectClasses`/`assignClassSubjects` bulk-create ClassSubject without verifying the supplied `class_ids`/`subject_ids` belong to the same school — a potential cross-tenant linking gap for a school_admin. Let me note those. I have enough to produce the JSON.
+
+Returning the full map now.
+
+```json
+{
+  "summary": {
+    "controllers_read": [
+      "EK_SMS/backend_node/src/routes/superadmin.js",
+      "EK_SMS/backend_node/src/controllers/superadminController.js (526 lines, fully read)",
+      "EK_SMS/backend_node/src/controllers/superadminDataController.js (4107 lines, fully read)"
+    ],
+    "overall": "Almost every superadmin route is backed by a REAL implementation (live Sequelize queries against pruh_* models). The only non-real handlers are a small cluster of settings-JSON-backed 'SA ops' endpoints (lockdown, manual backup, custom roles) that persist a flag but do not perform the real-world action, plus getSchoolStats which returns all-zero metrics, and getSystemHealth/getSecurityCounters which mix real probes with placeholder values.",
+    "missing_controller_fns": "NONE. Every data.* / controller fn referenced by a route exists and is exported (verified against both module.exports blocks). Note: getPrincipals/createPrincipal/... and getBursars/createBursar/... are exported but are NOT wired to any route (the live principal/bursar routes use the getSuperPrincipals/getSuperBursars CoreModel handlers instead). These are dead exports, not missing fns.",
+    "tenant_scoping_note": "The shared sla routes (superadmin + school_admin) are consistently scoped via scopedSchoolId(req)/denyCrossTenant/outsideScope, and the bulk PII GETs (students/teachers/bursars/principals/parents) correctly refuse to dump cross-tenant PII for a superadmin unless ?school_id= is supplied. See 'scoping_findings' for the residual gaps."
+  },
+  "superadmin_only_routes": [
+    { "method": "GET",    "path": "/api/schools/",                 "controllerFn": "getAllSchools",        "implStatus": "real" },
+    { "method": "POST",   "path": "/api/schools/approve/",         "controllerFn": "handleSchoolAction",   "implStatus": "real" },
+    { "method": "POST",   "path": "/api/impersonate/",             "controllerFn": "impersonate",          "implStatus": "real" },
+    { "method": "GET",    "path": "/api/system-health/",           "controllerFn": "getSystemHealth",      "implStatus": "partial", "evidence": "superadminController.js:393-397 services are real (db probe + mail config check) but the resource metrics are host-process metrics, and the os.networkInterfaces() 'Network Ingress' at :414-423 reads details.bytesReceived which does not exist on Node's networkInterfaces() output (always 0). Honest-by-design, but partially placeholder." },
+    { "method": "POST",   "path": "/api/reset-user-password/",     "controllerFn": "resetUserPassword",    "implStatus": "real" },
+    { "method": "GET",    "path": "/api/security-logs/",           "controllerFn": "getSecurityLogs",      "implStatus": "real" },
+    { "method": "GET",    "path": "/api/security-counters/",       "controllerFn": "getSecurityCounters",  "implStatus": "partial", "evidence": "superadminDataController.js:178-183 threats/failed_logins are real COUNT queries, but active_sessions is just User.count({is_active:true}) (active-user count mislabeled as live sessions); no session store exists." },
+    { "method": "GET",    "path": "/api/forensic-events/",         "controllerFn": "getForensicEvents",    "implStatus": "real" },
+    { "method": "GET",    "path": "/api/broadcast-alerts/",        "controllerFn": "getBroadcastAlerts",   "implStatus": "real" },
+    { "method": "POST",   "path": "/api/broadcast-alerts/",        "controllerFn": "postBroadcastAlerts",  "implStatus": "partial", "evidence": "superadminDataController.js:543-551 persists the broadcast row with status:'sent' but performs NO actual delivery (no email/push/notification fan-out). It is a recorded-only broadcast." },
+    { "method": "GET",    "path": "/api/system-alerts/",           "controllerFn": "getSystemAlerts",      "implStatus": "real" },
+    { "method": "POST",   "path": "/api/system-alerts/",           "controllerFn": "postSystemAlerts",     "implStatus": "real" },
+    { "method": "POST",   "path": "/api/sa/branding/",             "controllerFn": "postSaBranding",       "implStatus": "real", "note": "multer single('file'); persists upload path into SuperadminSettings JSON." },
+    { "method": "GET",    "path": "/api/sa/lockdown/",             "controllerFn": "getSaLockdown",        "implStatus": "real" },
+    { "method": "POST",   "path": "/api/sa/lockdown/",             "controllerFn": "postSaLockdown",       "implStatus": "stub-or-mock", "evidence": "superadminDataController.js:641-666 only flips a lockdown_state flag in settings JSON and returns hardcoded affected:{ sessions_terminated: 0, grades_locked: 0 }. No sessions are actually terminated and no grades are locked — nothing enforces the lockdown." },
+    { "method": "POST",   "path": "/api/sa/backup/manual/",        "controllerFn": "postSaBackupManual",   "implStatus": "stub-or-mock", "evidence": "superadminDataController.js:673-700 generates a fake filename and a hardcoded estimatedSizeBytes = 2048000 (// ~2MB estimated). No DB dump is produced; it only records last_backup_meta in settings." },
+    { "method": "GET",    "path": "/api/sa/custom-roles/",         "controllerFn": "getSaCustomRoles",     "implStatus": "real", "note": "real read of settings JSON, but these custom roles are cosmetic — they are not bound to any RBAC enforcement." },
+    { "method": "POST",   "path": "/api/sa/custom-roles/",         "controllerFn": "postSaCustomRoles",    "implStatus": "stub-or-mock", "evidence": "superadminDataController.js:718-731 pushes a { id, name, description } object into settings.custom_roles. No Role row is created, no permissions, no enforcement — a label store only." },
+    { "method": "GET",    "path": "/api/sa/export/",               "controllerFn": "getSaExport",          "implStatus": "partial", "evidence": "superadminDataController.js:738-771 exports ONLY the schools table (csv/json) regardless of the ?datasets= param, which is logged but ignored. Real query, but does not honor requested datasets." },
+
+    { "method": "GET",    "path": "/api/academic-years/",                    "controllerFn": "getAcademicYears",         "implStatus": "real" },
+    { "method": "POST",   "path": "/api/academic-years/",                    "controllerFn": "createAcademicYear",       "implStatus": "real" },
+    { "method": "PUT",    "path": "/api/academic-years/:id/",                "controllerFn": "updateAcademicYear",       "implStatus": "real" },
+    { "method": "DELETE", "path": "/api/academic-years/:id/",                "controllerFn": "deleteAcademicYear",       "implStatus": "real" },
+    { "method": "PATCH",  "path": "/api/academic-years/:id/toggle/",         "controllerFn": "toggleAcademicYearStatus", "implStatus": "real" },
+    { "method": "POST",   "path": "/api/academic-years/:id/rollout/",        "controllerFn": "rolloutAcademicYear",      "implStatus": "real", "note": "real cascade into per-school AcademicYear/Term via findOrCreate." },
+    { "method": "GET",    "path": "/api/academic-years/:id/rollout-preview/","controllerFn": "getRolloutPreview",        "implStatus": "real" },
+    { "method": "POST",   "path": "/api/academic-years/:id/restore/",        "controllerFn": "restoreAcademicYear",      "implStatus": "real" },
+    { "method": "POST",   "path": "/api/academic-years/:id/clone/",          "controllerFn": "cloneAcademicYear",        "implStatus": "real" },
+    { "method": "POST",   "path": "/api/academic-years/:id/close/",          "controllerFn": "closeAcademicYear",        "implStatus": "real" },
+    { "method": "GET",    "path": "/api/academic-years/:id/adoption/",       "controllerFn": "getAcademicYearAdoption",  "implStatus": "real" },
+    { "method": "GET",    "path": "/api/academic-years/:id/history/",        "controllerFn": "getAcademicYearHistory",   "implStatus": "real", "note": "derives history by scanning SecurityAuditLog config_change rows; functional but limited to last 500 audit rows." },
+
+    { "method": "GET",    "path": "/api/system-terms/",            "controllerFn": "getSystemTerms",        "implStatus": "real" },
+    { "method": "POST",   "path": "/api/system-terms/",            "controllerFn": "createSystemTerm",      "implStatus": "real" },
+    { "method": "PUT",    "path": "/api/system-terms/:id/",        "controllerFn": "updateSystemTerm",      "implStatus": "real" },
+    { "method": "DELETE", "path": "/api/system-terms/:id/",        "controllerFn": "deleteSystemTerm",      "implStatus": "real" },
+    { "method": "PATCH",  "path": "/api/system-terms/:id/toggle/", "controllerFn": "toggleSystemTermStatus","implStatus": "real" },
+    { "method": "POST",   "path": "/api/system-terms/:id/rollout/","controllerFn": "rolloutTerm",           "implStatus": "real" },
+
+    { "method": "GET",    "path": "/api/institution-types/ (sa)",          "controllerFn": "getInstitutionTypes",        "implStatus": "real" },
+    { "method": "POST",   "path": "/api/institution-types/",               "controllerFn": "createInstitutionType",      "implStatus": "real" },
+    { "method": "PUT",    "path": "/api/institution-types/:id/",           "controllerFn": "updateInstitutionType",      "implStatus": "real" },
+    { "method": "DELETE", "path": "/api/institution-types/:id/",           "controllerFn": "deleteInstitutionType",      "implStatus": "real" },
+    { "method": "PATCH",  "path": "/api/institution-types/:id/toggle/",    "controllerFn": "toggleInstitutionTypeStatus","implStatus": "real" },
+
+    { "method": "GET",    "path": "/api/lesson-plan-types/",               "controllerFn": "getLessonPlanTypes",        "implStatus": "real" },
+    { "method": "POST",   "path": "/api/lesson-plan-types/",               "controllerFn": "createLessonPlanType",      "implStatus": "real" },
+    { "method": "PUT",    "path": "/api/lesson-plan-types/:id/",           "controllerFn": "updateLessonPlanType",      "implStatus": "real" },
+    { "method": "DELETE", "path": "/api/lesson-plan-types/:id/",           "controllerFn": "deleteLessonPlanType",      "implStatus": "real" },
+    { "method": "PATCH",  "path": "/api/lesson-plan-types/:id/toggle/",    "controllerFn": "toggleLessonPlanTypeStatus","implStatus": "real" },
+
+    { "method": "GET",    "path": "/api/capacity-categories/",             "controllerFn": "getCapacityCategories",         "implStatus": "real" },
+    { "method": "POST",   "path": "/api/capacity-categories/",             "controllerFn": "createCapacityCategory",        "implStatus": "real" },
+    { "method": "PUT",    "path": "/api/capacity-categories/:id/",         "controllerFn": "updateCapacityCategory",        "implStatus": "real" },
+    { "method": "DELETE", "path": "/api/capacity-categories/:id/",         "controllerFn": "deleteCapacityCategory",        "implStatus": "real" },
+    { "method": "PATCH",  "path": "/api/capacity-categories/:id/toggle/",  "controllerFn": "toggleCapacityCategoryStatus",  "implStatus": "real" },
+
+    { "method": "GET",    "path": "/api/school-capacities/",               "controllerFn": "getSchoolCapacities",         "implStatus": "real" },
+    { "method": "POST",   "path": "/api/school-capacities/",               "controllerFn": "createSchoolCapacity",        "implStatus": "real" },
+    { "method": "PUT",    "path": "/api/school-capacities/:id/",           "controllerFn": "updateSchoolCapacity",        "implStatus": "real" },
+    { "method": "DELETE", "path": "/api/school-capacities/:id/",           "controllerFn": "deleteSchoolCapacity",        "implStatus": "real" },
+    { "method": "PATCH",  "path": "/api/school-capacities/:id/toggle/",    "controllerFn": "toggleSchoolCapacityStatus",  "implStatus": "real" },
+
+    { "method": "GET",    "path": "/api/countries/ (sa)",   "controllerFn": "getCountries",       "implStatus": "real" },
+    { "method": "POST",   "path": "/api/countries/",        "controllerFn": "createCountry",      "implStatus": "real" },
+    { "method": "PUT",    "path": "/api/countries/:id/",    "controllerFn": "updateCountry",      "implStatus": "real" },
+    { "method": "DELETE", "path": "/api/countries/:id/",    "controllerFn": "deleteCountry",      "implStatus": "real" },
+    { "method": "PATCH",  "path": "/api/countries/:id/toggle/","controllerFn": "toggleCountryStatus","implStatus": "real" },
+
+    { "method": "GET",    "path": "/api/regions/ (sa)",     "controllerFn": "getRegions",         "implStatus": "real" },
+    { "method": "POST",   "path": "/api/regions/",          "controllerFn": "createRegion",       "implStatus": "real" },
+    { "method": "PUT",    "path": "/api/regions/:id/",      "controllerFn": "updateRegion",       "implStatus": "real" },
+    { "method": "DELETE", "path": "/api/regions/:id/",      "controllerFn": "deleteRegion",       "implStatus": "real" },
+    { "method": "PATCH",  "path": "/api/regions/:id/toggle/","controllerFn": "toggleRegionStatus","implStatus": "real" },
+
+    { "method": "GET",    "path": "/api/cities/ (sa)",      "controllerFn": "getCities",          "implStatus": "real" },
+    { "method": "POST",   "path": "/api/cities/",           "controllerFn": "createCity",         "implStatus": "real" },
+    { "method": "PUT",    "path": "/api/cities/:id/",       "controllerFn": "updateCity",         "implStatus": "real" },
+    { "method": "DELETE", "path": "/api/cities/:id/",       "controllerFn": "deleteCity",         "implStatus": "real" },
+    { "method": "PATCH",  "path": "/api/cities/:id/toggle/","controllerFn": "toggleCityStatus",   "implStatus": "real" },
+
+    { "method": "GET",    "path": "/api/school-types/",     "controllerFn": "getSchoolTypes",     "implStatus": "real" },
+    { "method": "POST",   "path": "/api/school-types/",     "controllerFn": "createSchoolType",   "implStatus": "real" },
+    { "method": "PUT",    "path": "/api/school-types/:id/", "controllerFn": "updateSchoolType",   "implStatus": "real" },
+    { "method": "DELETE", "path": "/api/school-types/:id/", "controllerFn": "deleteSchoolType",   "implStatus": "real" },
+    { "method": "PATCH",  "path": "/api/school-types/:id/toggle/","controllerFn": "toggleSchoolTypeStatus","implStatus": "real" },
+
+    { "method": "GET",    "path": "/api/syllabus-types/",   "controllerFn": "getSyllabusTypes",   "implStatus": "real" },
+    { "method": "POST",   "path": "/api/syllabus-types/",   "controllerFn": "createSyllabusType", "implStatus": "real" },
+    { "method": "PUT",    "path": "/api/syllabus-types/:id/","controllerFn": "updateSyllabusType","implStatus": "real" },
+    { "method": "DELETE", "path": "/api/syllabus-types/:id/","controllerFn": "deleteSyllabusType","implStatus": "real" },
+    { "method": "PATCH",  "path": "/api/syllabus-types/:id/toggle/","controllerFn": "toggleSyllabusTypeStatus","implStatus": "real" },
+
+    { "method": "GET",    "path": "/api/class-subtypes/",   "controllerFn": "getClassSubtypes",   "implStatus": "real" },
+    { "method": "POST",   "path": "/api/class-subtypes/",   "controllerFn": "createClassSubtype", "implStatus": "real" },
+    { "method": "PUT",    "path": "/api/class-subtypes/:id/","controllerFn": "updateClassSubtype","implStatus": "real" },
+    { "method": "DELETE", "path": "/api/class-subtypes/:id/","controllerFn": "deleteClassSubtype","implStatus": "real" },
+    { "method": "PATCH",  "path": "/api/class-subtypes/:id/toggle/","controllerFn": "toggleClassSubtypeStatus","implStatus": "real" },
+
+    { "method": "GET",    "path": "/api/academic-systems/", "controllerFn": "getAcademicSystems", "implStatus": "real" },
+    { "method": "POST",   "path": "/api/academic-systems/", "controllerFn": "createAcademicSystem","implStatus": "real" },
+    { "method": "PUT",    "path": "/api/academic-systems/:id/","controllerFn": "updateAcademicSystem","implStatus": "real" },
+    { "method": "DELETE", "path": "/api/academic-systems/:id/","controllerFn": "deleteAcademicSystem","implStatus": "real" },
+    { "method": "PATCH",  "path": "/api/academic-systems/:id/toggle/","controllerFn": "toggleAcademicSystemStatus","implStatus": "real" },
+
+    { "method": "GET",    "path": "/api/grading-systems/",  "controllerFn": "getGradingSystems",  "implStatus": "real" },
+    { "method": "POST",   "path": "/api/grading-systems/",  "controllerFn": "createGradingSystem","implStatus": "real" },
+    { "method": "PUT",    "path": "/api/grading-systems/:id/","controllerFn": "updateGradingSystem","implStatus": "real" },
+    { "method": "DELETE", "path": "/api/grading-systems/:id/","controllerFn": "deleteGradingSystem","implStatus": "real" },
+    { "method": "PATCH",  "path": "/api/grading-systems/:id/toggle/","controllerFn": "toggleGradingSystemStatus","implStatus": "real" },
+
+    { "method": "GET",    "path": "/api/grade-stats/",      "controllerFn": "getGradeStats",      "implStatus": "real", "note": "real aggregate queries over the Grade model (per-school breakdown + integrity score)." },
+    { "method": "GET",    "path": "/api/school-stats/",     "controllerFn": "getSchoolStats",     "implStatus": "stub-or-mock", "evidence": "superadminDataController.js:408-424 returns one row per school with student_count/teacher_count/active_classes/attendance_rate/avg_performance ALL hardcoded to 0. Pure placeholder." },
+    { "method": "GET",    "path": "/api/users/",            "controllerFn": "getUsers",           "implStatus": "partial", "evidence": "superadminDataController.js:288-311 mapUserToSaRow real names/email/status, but riskLevel:'low', riskScore:0, failedAttempts:0, successLogins:0, twoFAEnabled:false, alertsTriggered:0, recentActivity:[], sessions:[] are all hardcoded placeholders." },
+    { "method": "GET",    "path": "/api/get-users/",        "controllerFn": "getUsersShort",      "implStatus": "real" },
+    { "method": "POST",   "path": "/api/users/",            "controllerFn": "postUsers",          "implStatus": "real", "note": "creates an inactive User + optional SchoolAdmin link; no invite email is actually sent (a temp password is generated but never emailed)." }
+  ],
+  "shared_routes_not_sa_gated": [
+    { "method": "GET",   "path": "/api/dashboard/",        "controllerFn": "getDashboard",        "implStatus": "real", "scoping": "NOT role-gated and NOT tenant-scoped — returns GLOBAL counts (School.count, User.count, pending/approved). Mounted on the shared router after authenticateToken only; any authenticated role (incl. school_admin) gets platform-wide totals. See scoping_findings #1." },
+    { "method": "GET",   "path": "/api/grade-alerts/",     "controllerFn": "getGradeAlerts",      "implStatus": "real", "scoping": "NOT tenant-scoped — returns all SystemOpsAlert rows with trigger_type LIKE 'grade%' to any authenticated caller. See scoping_findings #2." },
+    { "method": "POST",  "path": "/api/impersonate/end/",  "controllerFn": "endImpersonation",    "implStatus": "real", "note": "intentionally shared (caller holds a school_admin impersonation token); validates req.user.imp claim." },
+    { "method": "GET",   "path": "/api/profile/",          "controllerFn": "getProfile",          "implStatus": "real", "scoping": "self-scoped via req.user.id (OK for any role)." },
+    { "method": "PATCH", "path": "/api/profile/",          "controllerFn": "patchProfile",        "implStatus": "real", "scoping": "self-scoped via req.user.id (OK)." },
+    { "method": "POST",  "path": "/api/change-password/",  "controllerFn": "postChangePassword",  "implStatus": "real", "scoping": "self-scoped (OK)." },
+    { "method": "GET",   "path": "/api/admin-settings/",   "controllerFn": "getAdminSettings",    "implStatus": "real", "scoping": "NOT role-gated — reads the single global SuperadminSettings row (id:1). A school_admin can read superadmin/global settings JSON. See scoping_findings #3." },
+    { "method": "PATCH", "path": "/api/admin-settings/",   "controllerFn": "patchAdminSettings",  "implStatus": "real", "scoping": "NOT role-gated — writes the single global SuperadminSettings row. A school_admin can WRITE global superadmin settings. See scoping_findings #3 (higher severity)." }
+  ],
+  "shared_school_level_routes_sla_gated": {
+    "gate": "sla = [requireActiveAccount, requireRole(['superadmin','school_admin'])]; tenant scope enforced inside handlers via scopedSchoolId(req)/denyCrossTenant/outsideScope. All listed below are implStatus 'real' unless noted.",
+    "routes": [
+      { "method": "GET/POST/PUT/DELETE/PATCH", "path": "/api/classes/ (+ /:id, /:id/toggle)", "controllerFns": ["getSuperClasses","createSuperClass","updateSuperClass","deleteSuperClass","toggleSuperClassStatus"], "implStatus": "real", "scoping": "scoped + denyCrossTenant on mutations (good)." },
+      { "method": "GET/POST/PUT/DELETE/PATCH", "path": "/api/subjects/ (+ /:id, /:id/toggle)", "controllerFns": ["getSuperSubjects","createSuperSubject","updateSuperSubject","deleteSuperSubject","toggleSuperSubjectStatus"], "implStatus": "real", "scoping": "scoped + denyCrossTenant (good)." },
+      { "method": "GET", "path": "/api/classes/:id/students/", "controllerFn": "getClassStudents", "implStatus": "real" },
+      { "method": "GET", "path": "/api/classes/:id/available-students/", "controllerFn": "getAvailableStudents", "implStatus": "real" },
+      { "method": "POST", "path": "/api/classes/:id/assign-students/", "controllerFn": "assignClassStudents", "implStatus": "real", "scoping": "scoped: Student.update constrained to {school_id: cls.school_id} (good)." },
+      { "method": "GET", "path": "/api/classes/:id/subjects/", "controllerFn": "getClassAssignedSubjects", "implStatus": "real" },
+      { "method": "GET", "path": "/api/classes/:id/available-subjects/", "controllerFn": "getAvailableSubjectsForClass", "implStatus": "real" },
+      { "method": "POST", "path": "/api/classes/:id/assign-subjects/", "controllerFn": "assignClassSubjects", "implStatus": "real", "scoping": "WEAK: bulkCreate ClassSubject from raw subject_ids without verifying each subject belongs to cls.school_id. See scoping_findings #4." },
+      { "method": "POST", "path": "/api/classes/:id/assign-teacher/", "controllerFn": "assignClassTeacher", "implStatus": "real", "scoping": "WEAK: sets cls.class_teacher_id = teacher_id without verifying the teacher belongs to the class's school. See scoping_findings #4." },
+      { "method": "GET", "path": "/api/classes/:id/teachers/", "controllerFn": "getClassTeachers", "implStatus": "real" },
+      { "method": "POST", "path": "/api/classes/:id/assign-multiple-teachers/", "controllerFn": "assignClassMultipleTeachers", "implStatus": "real", "scoping": "WEAK: bulkCreate ClassAssistantTeacher from raw teacher_ids without same-school verification. See scoping_findings #4." },
+      { "method": "GET", "path": "/api/classes/:id/available-teachers/", "controllerFn": "getAvailableTeachersForClass", "implStatus": "real" },
+      { "method": "GET", "path": "/api/subjects/:id/classes/", "controllerFn": "getSubjectAssignedClasses", "implStatus": "real" },
+      { "method": "GET", "path": "/api/subjects/:id/available-classes/", "controllerFn": "getAvailableClassesForSubject", "implStatus": "real" },
+      { "method": "POST", "path": "/api/subjects/:id/assign-classes/", "controllerFn": "assignSubjectClasses", "implStatus": "real", "scoping": "WEAK: bulkCreate ClassSubject from raw class_ids without verifying each class belongs to sub.school_id. See scoping_findings #4." },
+      { "method": "GET", "path": "/api/subjects/:id/teachers/", "controllerFn": "getTeachersForSubject", "implStatus": "real" },
+      { "method": "POST", "path": "/api/subjects/:id/assign-teacher/", "controllerFn": "assignSubjectTeacher", "implStatus": "real", "scoping": "WEAK: ClassSubject.update sets teacher_id without verifying teacher's school. See scoping_findings #4." },
+      { "method": "GET/POST/PUT/DELETE/PATCH/PATCH", "path": "/api/students/ (+ /:id, /:id/toggle, /:id/block)", "controllerFns": ["getSuperStudents","createSuperStudent","updateSuperStudent","deleteSuperStudent","toggleSuperStudentStatus","blockSuperStudent"], "implStatus": "real", "scoping": "STRONG: getSuperStudents refuses to bulk-dump cross-tenant PII for superadmin without ?school_id= (:2950); mutations use outsideScope guard (good)." },
+      { "method": "GET", "path": "/api/students/:id/parents/", "controllerFn": "getStudentParents", "implStatus": "real" },
+      { "method": "GET/POST/DELETE", "path": "/api/students/:id/documents/ (+ /:docId)", "controllerFns": ["getStudentDocuments","uploadStudentDocument","deleteStudentDocument"], "implStatus": "real", "scoping": "scoped via student.school_id outsideScope (good)." },
+      { "method": "GET/POST/PUT/DELETE/PATCH/PATCH", "path": "/api/parents/ (+ /:id, /:id/toggle, /:id/block)", "controllerFns": ["getSuperParents","createSuperParent","updateSuperParent","deleteSuperParent","toggleSuperParentStatus","blockSuperParent"], "implStatus": "real", "scoping": "STRONG: parents scoped through linked students (parentInSchool / targetSchool); superadmin must pass ?school_id= (:3219) (good)." },
+      { "method": "POST", "path": "/api/link-parent/", "controllerFn": "linkParentToStudent", "implStatus": "real", "scoping": "student scoped via outsideScope; parent not school-checked but parents are cross-linkable by design." },
+      { "method": "POST", "path": "/api/unlink-parent/", "controllerFn": "unlinkParentFromStudent", "implStatus": "real", "scoping": "student scoped (good)." },
+      { "method": "GET/POST/PUT/DELETE/PATCH/PATCH", "path": "/api/teachers/ (+ /:id, /:id/toggle, /:id/block)", "controllerFns": ["getSuperTeachers","createSuperTeacher","updateSuperTeacher","deleteSuperTeacher","toggleSuperTeacherStatus","blockSuperTeacher"], "implStatus": "real", "scoping": "STRONG: getSuperTeachers requires ?school_id= for superadmin (:3490); mutations outsideScope-guarded (good)." },
+      { "method": "GET/POST/PUT/DELETE", "path": "/api/virtual-meetings/ (+ /:id)", "controllerFns": ["getVirtualMeetings","createVirtualMeeting","updateVirtualMeeting","deleteVirtualMeeting"], "implStatus": "real", "scoping": "scoped via forcedSchool/outsideScope (good)." },
+      { "method": "GET/POST/PUT/DELETE/PATCH/PATCH", "path": "/api/bursars/ (+ /:id, /:id/toggle, /:id/block)", "controllerFns": ["getSuperBursars","createSuperBursar","updateSuperBursar","deleteSuperBursar","toggleSuperBursarStatus","blockSuperBursar"], "implStatus": "real", "scoping": "STRONG: getSuperBursars requires ?school_id= for superadmin (:3682); mutations outsideScope-guarded (good). Uses CoreBursar model." },
+      { "method": "GET/POST/PUT/DELETE/PATCH/PATCH", "path": "/api/principals/ (+ /:id, /:id/toggle, /:id/block)", "controllerFns": ["getSuperPrincipals","createSuperPrincipal","updateSuperPrincipal","deleteSuperPrincipal","toggleSuperPrincipalStatus","blockSuperPrincipal"], "implStatus": "real", "scoping": "STRONG: getSuperPrincipals requires ?school_id= for superadmin (:3841); mutations outsideScope-guarded (good). Uses CorePrincipal model." }
+    ]
+  },
+  "scoping_findings": [
+    { "id": 1, "severity": "low-medium", "endpoint": "GET /api/dashboard/", "issue": "Mounted on the shared router (authenticateToken + schoolScope only, NO requireRole). getDashboard returns platform-wide School/User/pending/approved counts to ANY authenticated user, including school_admin/teacher/parent. A tenant user can read global platform metrics.", "evidence": "routes/superadmin.js:99 router.get('/dashboard/', getDashboard); superadminController.js:498-514 uses School.count()/User.count() with no school filter." },
+    { "id": 2, "severity": "low-medium", "endpoint": "GET /api/grade-alerts/", "issue": "Shared route, not tenant-scoped: returns up to 200 SystemOpsAlert rows (all schools) to any authenticated caller. The grade-integrity feed is the SA USP and leaks cross-school alert text to tenants.", "evidence": "routes/superadmin.js:100; superadminController.js:343-372 — no school_id filter on the query." },
+    { "id": 3, "severity": "MEDIUM-HIGH", "endpoint": "GET+PATCH /api/admin-settings/", "issue": "Shared (not requireRole) but reads/writes the SINGLE global SuperadminSettings row (id:1). A school_admin can GET and PATCH superadmin/global settings (branding, lockdown_state, custom_roles, last_backup_meta all live in this same blob). This is a privilege-boundary break: tenant role mutating operator-global config.", "evidence": "routes/superadmin.js:107-108 mounted on shared router; superadminDataController.js:260-285 loadSettings()/saveSettings() operate on {id:1} with no role or tenant check." },
+    { "id": 4, "severity": "medium", "endpoint": "assign-subjects / assign-teacher / assign-multiple-teachers / assign-classes / assign-subject-teacher", "issue": "The owning class/subject is correctly denyCrossTenant-checked, but the SUPPLIED ids in the body (subject_ids, teacher_ids, class_ids, teacher_id) are bulk-linked/assigned WITHOUT verifying those referenced rows belong to the same school. A school_admin (or SA acting in-scope) could link another school's subject/teacher/class into their own class by guessing ids.", "evidence": "assignClassSubjects (:2707-2721) bulkCreate from subject_ids with no school check; assignClassMultipleTeachers (:2735-2757) same for teacher_ids; assignSubjectClasses (:2777-2791) same for class_ids; assignClassTeacher (:2722-2733) & assignSubjectTeacher (:2792-2806) set teacher_id with no school check." }
+  ],
+  "stub_or_mock_endpoints_quicklist": [
+    "POST /api/sa/lockdown/ — flag-only, hardcoded affected:{sessions_terminated:0, grades_locked:0} (superadminDataController.js:665)",
+    "POST /api/sa/backup/manual/ — fake filename + hardcoded estimatedSizeBytes=2048000, no real dump (superadminDataController.js:678)",
+    "POST /api/sa/custom-roles/ — pushes label into settings JSON, no Role/permissions/enforcement (superadminDataController.js:718-731)",
+    "GET /api/school-stats/ — all per-school metrics hardcoded to 0 (superadminDataController.js:413-420)"
+  ],
+  "partial_endpoints_quicklist": [
+    "GET /api/system-health/ — db probe real; network ingress reads nonexistent bytesReceived (always 0) (superadminController.js:414-423)",
+    "GET /api/security-counters/ — active_sessions is just active-user count, not real sessions (superadminDataController.js:178)",
+    "GET /api/users/ — risk/2FA/sessions/activity fields hardcoded (superadminDataController.js:300-311)",
+    "POST /api/broadcast-alerts/ — records row, no actual delivery (superadminDataController.js:543-560)",
+    "GET /api/sa/export/ — exports schools table only, ignores ?datasets= (superadminDataController.js:738-771)",
+    "POST /api/users/ — creates user + generates temp password but never emails an invite (superadminDataController.js:354-405)"
+  ],
+  "missing_or_dead": {
+    "missing_controller_fns_referenced_by_routes": "NONE — every data.*/controller fn referenced in superadmin.js exists and is exported.",
+    "dead_exports_not_wired": ["getPrincipals","createPrincipal","updatePrincipal","deletePrincipal","togglePrincipalStatus","getBursars","createBursar","updateBursar","deleteBursar","toggleBursarStatus"],
+    "dead_export_note": "These simple name-only Principal/Bursar handlers (superadminDataController.js:2865-2940) are exported but NOT routed; the live principal/bursar routes use the richer getSuperPrincipals/getSuperBursars (CorePrincipal/CoreBursar) handlers instead."
+  }
+}
+```

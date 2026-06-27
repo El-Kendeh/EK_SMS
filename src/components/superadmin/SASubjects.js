@@ -291,8 +291,12 @@ function AssignSubjectTeacherModal({ subjectId, onClose, showToast }) {
   }, [subjectId, showToast]);
   async function handleAssign() {
     try {
-      await req('POST', `/api/subjects/${subjectId}/assign-teacher/`, { teacher_id: selectedTeacher ? Number(selectedTeacher) : null });
-      showToast('Teacher assigned to subject', 'success');
+      const r = await req('POST', `/api/subjects/${subjectId}/assign-teacher/`, { teacher_id: selectedTeacher ? Number(selectedTeacher) : null });
+      if (selectedTeacher && (r?.affected ?? 0) === 0) {
+        showToast('No classes are linked to this subject yet — assign classes to it first.', 'error');
+        return;
+      }
+      showToast(selectedTeacher ? `Teacher assigned to ${r.affected} class${r.affected === 1 ? '' : 'es'}` : 'Teacher unassigned', 'success');
       onClose();
     } catch (e) { showToast(e.message, 'error'); }
   }

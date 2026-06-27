@@ -91,7 +91,7 @@ export default function SAApplications({ schools, onReview }) {
     { label: 'Pending',    value: pending.length,  icon: <IcClock />,    cls: 'sa-stat-icon--amber',  trend: { dir: pending.length > 0 ? 'up' : 'flat',    label: pending.length > 0 ? `${pending.length} awaiting` : 'All caught up' } },
     { label: 'Approved',   value: approved.length, icon: <IcCheck />,    cls: 'sa-stat-icon--green',  trend: { dir: approved.length > 0 ? 'up' : 'flat',   label: approved.length > 0 ? `+${approved.length} total` : 'None yet' } },
     { label: 'Rejected',   value: rejected.length,  icon: <IcX />,        cls: 'sa-stat-icon--red',    trend: { dir: rejected.length > 0 ? 'up' : 'flat', label: rejected.length > 0 ? `${rejected.length} rejected` : 'None rejected' } },
-    { label: 'Avg Review', value: avgReview,        icon: <IcCalendar />, cls: 'sa-stat-icon--blue',   trend: { dir: 'down', label: '−10m faster' } },
+    { label: 'Avg Review', value: avgReview,        icon: <IcCalendar />, cls: 'sa-stat-icon--blue',   trend: { dir: 'flat', label: 'avg time to decide' } },
   ];
 
   const filtered = useMemo(() => {

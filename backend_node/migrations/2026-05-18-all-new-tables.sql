@@ -482,6 +482,8 @@ CREATE TABLE IF NOT EXISTS `pruh_system_academicyear` (
     `start_date` DATE,
     `end_date` DATE,
     `is_active` TINYINT(1) DEFAULT 0,
+    `status` ENUM('draft','active','closed','archived') NOT NULL DEFAULT 'draft',
+    `deleted_at` DATETIME NULL,
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
     `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

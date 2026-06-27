@@ -133,6 +133,13 @@ export default function SAParents() {
           // fall back to the typed value / constant only if the API omits it.
           password: d.password || form.password || DEFAULT_PW,
         });
+        // A brand-new parent has no student links yet, and the list only returns
+        // parents linked to this school's students — so it would otherwise vanish
+        // and be unmanageable. Queue the link step; it opens once the credentials
+        // modal is dismissed, so the admin can link the new parent right away.
+        if (d.id) {
+          setLinkParent({ id: d.id, first_name: form.first_name, last_name: form.last_name, students: [], _justCreated: true });
+        }
       }
       setShowModal(false); setEditItem(null); load();
     } catch (e) { showToast(e.message, 'error'); }
@@ -290,7 +297,7 @@ export default function SAParents() {
         />
       )}
 
-      {linkParent && (
+      {linkParent && !creds && (
         <LinkModal
           parent={linkParent}
           onLink={handleLink}

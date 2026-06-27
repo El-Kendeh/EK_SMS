@@ -1,3 +1,4 @@
+import UpcomingMeetings from '../shared/UpcomingMeetings';
 import { motion } from 'framer-motion';
 import { useParentChildren } from '../../hooks/useParentChildren';
 import { getChildColors } from '../../utils/parentUtils';
@@ -21,6 +22,7 @@ export default function ParentHome({ navigateTo, parent }) {
 
   return (
     <div className="par-home">
+      <UpcomingMeetings endpoint="/api/parent/virtual-meetings/" />
       {/* Identity banner */}
       <motion.div
         className="par-home__banner"

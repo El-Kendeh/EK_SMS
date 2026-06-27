@@ -50,22 +50,35 @@ const ACTIVITY_ICONS = { grade: <IcGrade />, login: <IcLogin />, admin: <IcAdmin
 /* ============================================================
    Create User Modal
    ============================================================ */
-const ROLES_LIST = ['Super Admin', 'School Admin', 'Teacher', 'Exam Officer', 'Finance Officer'];
+/* Only roles the backend can actually create (mapInviteLabelToCode + seedRoles).
+   "Exam Officer"/"Finance Officer" were removed — they had no backend role and
+   were silently created as School Admins. */
+const ROLES_LIST = ['Super Admin', 'School Admin', 'Teacher'];
 
 function CreateUserModal({ onClose, onCreated }) {
-  const [form, setForm] = useState({ name: '', email: '', role: 'Teacher', school: '' });
+  const [form, setForm] = useState({ name: '', email: '', role: 'Teacher', school_id: '' });
   const [submitted, setSubmitted] = useState(false);
+  const [result,    setResult]    = useState(null);
+  const [schools,   setSchools]   = useState([]);
   const [sending,   setSending]   = useState(false);
   const [errors, setErrors] = useState({});
 
-  const needsSchool = form.role !== 'Super Admin';
+  // Only School Admin actually gets a school link in the backend, so only it
+  // needs (and requires) a school — picked from a real list, sent as school_id.
+  const needsSchool = form.role === 'School Admin';
+
+  useEffect(() => {
+    ApiClient.get('/api/schools/')
+      .then(d => { if (d?.success && Array.isArray(d.schools)) setSchools(d.schools); })
+      .catch(() => {});
+  }, []);
 
   const validate = () => {
     const e = {};
     if (!form.name.trim()) e.name = 'Full name is required';
     if (!form.email.trim()) e.email = 'Email is required';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = 'Enter a valid email';
-    if (needsSchool && !form.school.trim()) e.school = 'School is required for this role';
+    if (needsSchool && !form.school_id) e.school_id = 'Select a school for this role';
     return e;
   };
 
@@ -77,20 +90,21 @@ function CreateUserModal({ onClose, onCreated }) {
     setErrors({});
     try {
       const res = await ApiClient.post('/api/users/', {
-        name:   form.name,
-        email:  form.email,
-        role:   form.role,
-        school: form.school,
+        name:      form.name,
+        email:     form.email,
+        role:      form.role,
+        school_id: form.school_id || undefined,
       });
       if (!res?.success) {
         setErrors({ email: res?.message || 'Failed to create user' });
         return;
       }
+      setResult(res);
       setSubmitted(true);
       // Refresh parent list so newly-created user appears immediately. The
       // testing-team report flagged "duplicate email on retry" — that happened
       // because the modal didn't surface success state on first attempt.
-      if (onCreated) onCreated(res.user);
+      if (onCreated) onCreated(res);
     } catch (err) {
       // ApiError already carries .data with the parsed body; surface server's
       // message verbatim instead of the generic "Connection error" the
@@ -145,10 +159,24 @@ function CreateUserModal({ onClose, onCreated }) {
             <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--sa-green-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', color: 'var(--sa-green)' }}>
               <IcCheck />
             </div>
-            <p style={{ margin: '0 0 6px', fontWeight: 700, fontSize: '1rem' }}>Invitation Sent</p>
-            <p style={{ margin: '0 0 20px', fontSize: '0.8125rem', color: 'var(--sa-text-2)' }}>
-              Credentials have been dispatched to <strong>{form.email}</strong>. The user must complete 2FA setup on first login.
+            <p style={{ margin: '0 0 6px', fontWeight: 700, fontSize: '1rem' }}>
+              {result?.emailed ? 'Invitation Sent' : 'Account Created'}
             </p>
+            {result?.emailed ? (
+              <p style={{ margin: '0 0 20px', fontSize: '0.8125rem', color: 'var(--sa-text-2)' }}>
+                Login credentials were emailed to <strong>{form.email}</strong>.
+              </p>
+            ) : (
+              <div style={{ margin: '0 0 20px', fontSize: '0.8125rem', color: 'var(--sa-text-2)' }}>
+                <p style={{ margin: '0 0 8px' }}>
+                  Email isn't configured here, so nothing was sent. Share this temporary
+                  password with <strong>{form.email}</strong> — it won't be shown again:
+                </p>
+                <code style={{ display: 'inline-block', padding: '6px 10px', borderRadius: 6, background: 'var(--sa-card-bg2)', border: '1px solid var(--sa-border)', fontFamily: 'monospace', fontSize: '0.875rem', userSelect: 'all' }}>
+                  {result?.tempPassword || '—'}
+                </code>
+              </div>
+            )}
             <button className="sa-btn sa-btn--primary" onClick={onClose} style={{ width: '100%' }}>Done</button>
           </div>
         ) : (
@@ -169,8 +197,23 @@ function CreateUserModal({ onClose, onCreated }) {
               </select>
             </div>
 
-            {/* School — only for non-SA roles */}
-            {needsSchool && field('school', 'School', 'text', 'e.g. MAB Secondary School')}
+            {/* School — only School Admin gets a real school link in the backend.
+                A real dropdown (sends school_id) so the link can never be silently
+                dropped on a typo. */}
+            {needsSchool && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label style={{ fontSize: '0.78125rem', fontWeight: 600, color: 'var(--sa-text-2)' }}>School</label>
+                <select
+                  value={form.school_id}
+                  onChange={e => { setForm(f => ({ ...f, school_id: e.target.value })); setErrors(er => ({ ...er, school_id: undefined })); }}
+                  style={{ padding: '9px 12px', borderRadius: 8, fontSize: '0.875rem', background: 'var(--sa-card-bg2)', border: `1px solid ${errors.school_id ? 'var(--sa-red)' : 'var(--sa-border)'}`, color: 'var(--sa-text)', cursor: 'pointer', fontFamily: 'var(--sa-font)' }}
+                >
+                  <option value="">Select a school…</option>
+                  {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+                {errors.school_id && <span style={{ fontSize: '0.71875rem', color: 'var(--sa-red)' }}>{errors.school_id}</span>}
+              </div>
+            )}
 
             {/* 2FA enforcement notice */}
             <div style={{ display: 'flex', gap: 10, padding: '10px 12px', borderRadius: 8, background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)' }}>
@@ -422,7 +465,7 @@ function UserProfile({ user, onBack, onNavigate, showToast }) {
             )}
           </div>
           {sessions.length === 0 ? (
-            <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--sa-text-3)', textAlign: 'center', padding: '12px 0' }}>No sessions found</p>
+            <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--sa-text-3)', textAlign: 'center', padding: '12px 0' }}>Session tracking isn't available yet.</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {sessions.map(sess => (
@@ -550,7 +593,7 @@ export default function SAUsers({ onNavigate }) {
       {showCreate && (
         <CreateUserModal
           onClose={() => setShowCreate(false)}
-          onCreated={() => { fetchUsers(); showToast('Invitation sent — user will receive credentials by email.'); }}
+          onCreated={(res) => { fetchUsers(); showToast(res?.emailed ? 'Invitation sent — credentials emailed.' : 'Account created — email not configured; copy the temp password shown.'); }}
         />
       )}
 

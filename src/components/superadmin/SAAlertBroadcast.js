@@ -84,9 +84,9 @@ function AlertDetail({ alert, onBack }) {
             <IcCheck />
           </div>
           <div>
-            <p style={{ margin: '0 0 4px', fontWeight: 700, fontSize: '0.9375rem', color: 'var(--sa-text)' }}>Acknowledgment Required</p>
+            <p style={{ margin: '0 0 4px', fontWeight: 700, fontSize: '0.9375rem', color: 'var(--sa-text)' }}>Acknowledgment</p>
             <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--sa-text-2)', lineHeight: 1.55 }}>
-              This is a critical security update. Your acknowledgment is logged for system audit and compliance tracking.
+              Acknowledging dismisses this announcement for you on this device. It is not yet recorded server-side for audit or compliance.
             </p>
           </div>
         </div>
@@ -167,8 +167,8 @@ function ComposeAlert({ onBack, onSent }) {
   if (sent) return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 280, gap: 16, textAlign: 'center' }}>
       <div className="sa-stat-icon sa-stat-icon--green" style={{ width: 56, height: 56 }}><IcCheck /></div>
-      <p style={{ fontWeight: 700, fontSize: '1.125rem', color: 'var(--sa-text)', margin: 0 }}>Alert Sent!</p>
-      <p style={{ fontSize: '0.8125rem', color: 'var(--sa-text-2)', margin: 0 }}>Returning to Broadcast Center…</p>
+      <p style={{ fontWeight: 700, fontSize: '1.125rem', color: 'var(--sa-text)', margin: 0 }}>Announcement Recorded</p>
+      <p style={{ fontSize: '0.8125rem', color: 'var(--sa-text-2)', margin: 0 }}>Saved to the broadcast log. Returning to Broadcast Center…</p>
     </div>
   );
 

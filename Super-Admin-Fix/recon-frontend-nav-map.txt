@@ -1,0 +1,62 @@
+Confirmed: `grade-report` has no getTitle entry (line 947 is the nav; getTitle map has no `'grade-report'` key, only `reports: 'Reports'` at line 356), so it falls through to the default formatter → "Grade Report". And `academic-year` → getTitle returns "Year" (line 279) while the SA nav label is "Academic Years". My analysis holds.
+
+Here is the precise map and findings as JSON.
+
+```json
+{
+  "navMap": [
+    { "key": "overview", "label": "Dashboard", "section": null, "rendersComponent": "SAOverview", "inHandledPages": true, "inPermissionsForSuperadmin": true },
+    { "key": "schools", "label": "All Schools", "section": "Schools", "rendersComponent": "SASchools", "inHandledPages": true, "inPermissionsForSuperadmin": true },
+    { "key": "applications", "label": "Onboarding", "section": "Schools", "rendersComponent": "SAApplications", "inHandledPages": true, "inPermissionsForSuperadmin": true },
+    { "key": "rejected", "label": "Rejected", "section": "Schools", "rendersComponent": "SARejected", "inHandledPages": true, "inPermissionsForSuperadmin": true },
+    { "key": "__enter_school", "label": "Enter a School", "section": "Schools", "rendersComponent": "N/A — action item (action:'enter-school' opens the impersonation modal via setEnterSchoolOpen(true); no page render block)", "inHandledPages": false, "inPermissionsForSuperadmin": false },
+    { "key": "countries", "label": "Countries", "section": "Geography", "rendersComponent": "SARefDataManager", "inHandledPages": true, "inPermissionsForSuperadmin": true },
+    { "key": "regions", "label": "Regions", "section": "Geography", "rendersComponent": "SARefDataManager", "inHandledPages": true, "inPermissionsForSuperadmin": true },
+    { "key": "cities", "label": "Cities", "section": "Geography", "rendersComponent": "SARefDataManager", "inHandledPages": true, "inPermissionsForSuperadmin": true },
+    { "key": "institution-type", "label": "Institution Types", "section": "Master Data", "rendersComponent": "SARefDataManager", "inHandledPages": true, "inPermissionsForSuperadmin": true },
+    { "key": "school-type", "label": "School Types", "section": "Master Data", "rendersComponent": "SARefDataManager", "inHandledPages": true, "inPermissionsForSuperadmin": true },
+    { "key": "school-capacity", "label": "Capacity Tiers", "section": "Master Data", "rendersComponent": "SASchoolCapacity", "inHandledPages": true, "inPermissionsForSuperadmin": true },
+    { "key": "syllabus-type", "label": "Syllabus Types", "section": "Master Data", "rendersComponent": "SARefDataManager", "inHandledPages": true, "inPermissionsForSuperadmin": true },
+    { "key": "academic-system", "label": "Academic Systems", "section": "Master Data", "rendersComponent": "SAAcademicSystem", "inHandledPages": true, "inPermissionsForSuperadmin": true },
+    { "key": "grading-system", "label": "Grading Templates", "section": "Master Data", "rendersComponent": "SAGradingSystem", "inHandledPages": true, "inPermissionsForSuperadmin": true },
+    { "key": "class-subtype", "label": "Class Subtypes", "section": "Master Data", "rendersComponent": "SARefDataManager", "inHandledPages": true, "inPermissionsForSuperadmin": true },
+    { "key": "lesson-plan-type", "label": "Lesson Plan Types", "section": "Master Data", "rendersComponent": "SARefDataManager", "inHandledPages": true, "inPermissionsForSuperadmin": true },
+    { "key": "academic-year", "label": "Academic Years", "section": "Master Data", "rendersComponent": "SARefDataManager", "inHandledPages": true, "inPermissionsForSuperadmin": true },
+    { "key": "users", "label": "Platform Users", "section": "People & Access", "rendersComponent": "SAUsers", "inHandledPages": true, "inPermissionsForSuperadmin": true },
+    { "key": "governance", "label": "Governance", "section": "People & Access", "rendersComponent": "SAGovernance", "inHandledPages": true, "inPermissionsForSuperadmin": true },
+    { "key": "reports", "label": "Reports", "section": "Reports & Analytics", "rendersComponent": "SAReportsHub", "inHandledPages": true, "inPermissionsForSuperadmin": true },
+    { "key": "analytics", "label": "Analytics", "section": "Reports & Analytics", "rendersComponent": "SAAnalytics", "inHandledPages": true, "inPermissionsForSuperadmin": true },
+    { "key": "benchmarks", "label": "Benchmarks", "section": "Reports & Analytics", "rendersComponent": "SABenchmarks", "inHandledPages": true, "inPermissionsForSuperadmin": true },
+    { "key": "grade-integrity", "label": "Integrity Dashboard", "section": "Reports & Analytics", "rendersComponent": "SAGradeIntegrity", "inHandledPages": true, "inPermissionsForSuperadmin": true },
+    { "key": "grades-accumulation", "label": "Grade Accumulation", "section": "Reports & Analytics", "rendersComponent": "SAGradesAccumulation", "inHandledPages": true, "inPermissionsForSuperadmin": true },
+    { "key": "grade-report", "label": "Grade Reports", "section": "Reports & Analytics", "rendersComponent": "SAGradeReport", "inHandledPages": true, "inPermissionsForSuperadmin": true },
+    { "key": "system-health", "label": "Platform Health", "section": "System", "rendersComponent": "SASystemHealth", "inHandledPages": true, "inPermissionsForSuperadmin": true },
+    { "key": "system-audits", "label": "Audit Log", "section": "System", "rendersComponent": "SASecurityLogs", "inHandledPages": true, "inPermissionsForSuperadmin": true },
+    { "key": "forensics", "label": "Forensics", "section": "System", "rendersComponent": "SAForensics", "inHandledPages": true, "inPermissionsForSuperadmin": true },
+    { "key": "change-alerts", "label": "Change Alerts", "section": "System", "rendersComponent": "SAChangeAlerts", "inHandledPages": true, "inPermissionsForSuperadmin": true },
+    { "key": "alert-broadcast", "label": "Announcements", "section": "System", "rendersComponent": "SAAlertBroadcast", "inHandledPages": true, "inPermissionsForSuperadmin": true },
+    { "key": "notifications", "label": "Notifications", "section": "System", "rendersComponent": "SANotifications", "inHandledPages": true, "inPermissionsForSuperadmin": true },
+    { "key": "settings", "label": "System Settings", "section": "System", "rendersComponent": "SASettings", "inHandledPages": true, "inPermissionsForSuperadmin": true }
+  ],
+  "findings": {
+    "1_stubOrDeadPages": "NONE. All 31 page-bearing SA nav keys are in HANDLED_PAGES and each has a real render block in <main> mounting a real component. No SA nav key resolves to StubPage or is MISSING. The only non-page entry is '__enter_school', which is an action item (no render block by design). The lean SA operator menu is fully wired.",
+    "2_missingFromPermissions": "Only '__enter_school' is absent from PAGE_PERMISSIONS, and that is BY DESIGN, not a defect. It carries { action: 'enter-school' }; the nav filter at line 968 is `.filter(item => item.action || canAccess(item.key, role))`, so action items bypass canAccess, and its onClick calls setEnterSchoolOpen(true) (NOT goTo), so it never hits a permission gate. All 31 real page keys ARE permitted for superadmin in permissions.js. No SA nav click is silently blocked or does nothing.",
+    "3_getTitleKeyMismatches": [
+      "applications: sidebar label 'Onboarding' vs getTitle 'Applications' (breadcrumb diverges).",
+      "schools: label 'All Schools' vs getTitle 'Schools'.",
+      "academic-year: label 'Academic Years' vs getTitle 'Year' (line 279).",
+      "institution-type: label 'Institution Types' (plural) vs getTitle 'Institution Type' (singular).",
+      "school-type/syllabus-type/class-subtype/academic-system/grading-system: labels pluralized/renamed ('School Types','Syllabus Types','Class Subtypes','Academic Systems','Grading Templates') vs getTitle older forms ('School Type','Syllabus Type','Class Subtype','Academic System','Grading System').",
+      "school-capacity: label 'Capacity Tiers' vs getTitle 'School Capacity'.",
+      "grade-integrity: label 'Integrity Dashboard' vs getTitle 'Grade Integrity'.",
+      "grades-accumulation: label 'Grade Accumulation' vs getTitle 'Grades Accumulation'.",
+      "Keys with NO getTitle entry that fall through to the default formatter (key.replace('-',' ') + title-case): grade-report→'Grade Report' (sidebar 'Grade Reports'), alert-broadcast→'Alert Broadcast' (sidebar 'Announcements'), users→'Users' (sidebar 'Platform Users'), system-health→'System Health' (sidebar 'Platform Health'), forensics→'Forensics', change-alerts→'Change Alerts', analytics→'Analytics', benchmarks→'Benchmarks', governance→'Governance'. All cosmetic — the breadcrumb text just doesn't match the renamed lean-menu labels; nothing breaks."
+    ],
+    "4_duplicateComponentRows": [
+      "Among the VISIBLE SUPERADMIN_NAV_ITEMS rows there are NO two rows mounting the same component.",
+      "Cross-key (visible row + hidden drill-down) duplications, by design: (a) grade-integrity ('Integrity Dashboard') and the non-sidebar drill-down key grade-requests both render <SAGradeIntegrity>; (b) system-audits ('Audit Log') and the non-sidebar key security-logs both render <SASecurityLogs> with identical props. Comments at lines 948-955 document these folds — the duplicate page was removed from the sidebar but kept as a routable drill-down target."
+    ],
+    "5_undefinedPageOrStateHandlers": "NONE for the SA surface. The '__enter_school' action resolves to setEnterSchoolOpen(true) (defined state). Every goTo target reachable from an SA row resolves to a real activePage render block. getTitle reads school.name for review/app-history/version-compare/rejection-audit, but those render blocks are guarded by `&& selectedSchool` and getTitle by `&& school`, so a null selectedSchool cannot crash. The superadmin mobile bottom-nav branch references overview/applications/analytics/grade-report/system-health — all valid keys with render blocks."
+  }
+}
+```

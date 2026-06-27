@@ -16,10 +16,13 @@ export const adminApi = {
     const fd = new FormData();
     fd.append('file', file);
     fd.append('document_type', documentType || 'other');
-    return apiClient.request('/api/school/ai-capture/', {
+    // request() resolves to the raw fetch Response; parse the JSON body so callers
+    // get { success, capture_id, structured } instead of a Response object.
+    const res = await apiClient.request('/api/school/ai-capture/', {
       method: 'POST',
       body: fd,
     });
+    return res.json();
   },
   async aiCaptureList() {
     return apiClient.get('/api/school/ai-capture/list/');
@@ -31,10 +34,11 @@ export const adminApi = {
     fd.append('kind', kind);          // 'students' | 'teachers' | 'parents'
     fd.append('file', file);
     if (classroom_id) fd.append('classroom_id', classroom_id);
-    return apiClient.request('/api/school/bulk-import/', {
+    const res = await apiClient.request('/api/school/bulk-import/', {
       method: 'POST',
       body: fd,
     });
+    return res.json();
   },
 
   // ── Live classes (school admin scope) ──

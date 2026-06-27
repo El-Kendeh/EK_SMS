@@ -26,6 +26,10 @@ const School = sequelize.define('School', {
   is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
   rejection_reason: { type: DataTypes.TEXT, allowNull: true },
   changes_requested: { type: DataTypes.BOOLEAN, defaultValue: false },
+  // Real first-approval timestamp (set by handleSchoolAction's approve branch).
+  // Distinct from created_at so "Avg Review" / the Approved date are real, not
+  // the registration date. NULL for never-approved or legacy (pre-column) rows.
+  approved_at: { type: DataTypes.DATE, allowNull: true },
   created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
 }, {
   tableName: 'pruh_core_school',

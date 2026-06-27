@@ -1,0 +1,831 @@
+[
+ {
+  "agentId": "af741bfdae7e08e3f",
+  "unit": "students slice (page keys: students, account-students)",
+  "summary": "The LIVE student-management page for school_admin is account-students -> SAStudents.js (a self-contained drawer-based CRUD UI). It is wired end-to-end and mostly solid: every button (Add, Edit, Toggle active, Block/Unblock, Delete-with-confirm, Search, 7 drawer tabs, photo upload, Copy credentials) maps to a real handler and a real backend endpoint under the bare /api/students/* routes (mounted via routes/superadmin.js lines 263-274). Those routes ARE role-gated (sla = [requireActiveAccount, requireRole(['superadmin','school_admin'])]) and the controller (superadminDataController.js) tenant-scopes every operation via scopedSchoolId(req): a school_admin is pinned to their own school on list/create and gets a 404 on cross-tenant id access (update/delete/toggle/block). The bare-list superadmin PII leak that memory flagged is closed (getSuperStudents returns empty unless ?school_id is supplied). Client-supplied school_id is ignored for school_admin (forced to token school_id), and vaccinations JSON is sanitized. So the core flow is functional and tenant-isolated. The real issues are: (1) the plain 'students' permission key is an orphan that renders the generic 'under development' StubPage; (2) ALL student create/update/delete actions write NO audit log despite the system having appendSecurityAuditLog wired everywhere else (account + password resets happen untracked); (3) every parent account created alongside a student is given the predictable default password 'Parent@123' (the form has no parent-password field) and that default is then displayed in the 'Save Credentials' panel as if it were a real generated secret; (4) the fetch helpers throw bare 'HTTP 4xx/5xx' and never read the backend's error message, so meaningful server validation/permission messages ('No school is linked to your account', 'School not found') are replaced with codes; (5) the mobile (<=600px) card-layout CSS relies on data-label attributes the table rows never set, so on phones the table cells render right-aligned with no column labels.",
+  "workingWell": [
+   "account-students -> SAStudents.js is fully wired end-to-end: openCreate/openEdit/handleSubmit/handleToggle/handleBlock/handleDelete all hit live endpoints that exist and execute (superadminDataController.js getSuperStudents/createSuperStudent/updateSuperStudent/deleteSuperStudent/toggleSuperStudentStatus/blockSuperStudent).",
+   "Tenant isolation is correctly enforced server-side: scopedSchoolId(req) (controller lines 55-60) forces a school_admin to their own school_id, ignores any client-sent school_id on create (line 3025), and outsideScope() returns 404 on cross-tenant id access for update/delete/toggle/block (lines 3143/3180/3192/3203). The memory-noted bare-list PII leak is closed: getSuperStudents returns an empty list for a superadmin unless ?school_id is provided (lines 2950-2952).",
+   "Routes are role-gated: the bare /api/students/* CRUD is behind sla = [requireActiveAccount, requireRole(['superadmin','school_admin'])] (superadmin.js line 227), and a suspended/rejected school_admin is blocked per-request even with a valid token.",
+   "Input hardening present: vaccinations JSON is bounded/sanitized via sanitizeVaccinations (controller lines 70-86); delete runs in a DB transaction removing both Student and the linked User (lines 3175-3186).",
+   "Frontend has proper loading, error-banner, and empty states (lines 873-888), Escape-to-close on the drawer, required-field validation before submit, and a delete confirmation inline step. Response shape matches: successResponse spreads keys to top level so d.students/d.username/d.password/d.parents resolve correctly.",
+   "Mobile rules exist for the form: SAStudents.css collapses grids to one column and full-width drawer at <=600px, and icon buttons are 44px touch targets at <=600px (SARefDataManager.css line 1801)."
+  ],
+  "findings": [
+   {
+    "id": "students-key-orphan-stub",
+    "title": "Plain 'students' permission key renders the generic 'under development' stub",
+    "category": "stub",
+    "severity": "low",
+    "page": "students",
+    "component": "src/components/superadmin/SuperadminDashboard.js",
+    "evidence": "permissions.js grants school_admin the 'students' key, but SuperadminDashboard.js HANDLED_PAGES (lines 366-389) does NOT contain 'students' and there is no `activePage === 'students'` render block; it falls through to <StubPage title=... \"This section is under development.\"/> (~line 1508). The real page is 'account-students' -> SAStudents. 'students' has no nav row in SCHOOL_ADMIN_NAV_ITEMS, so it is only reachable by manually setting activePage / global search.",
+    "userImpact": "If a school admin reaches the 'students' key (e.g. via global search or a stale deep link), they see a meaningless 'under development' placeholder even though full student management exists under account-students.",
+    "suggestedFix": "Either redirect/alias the 'students' key to render SAStudents (same as account-students), or remove 'students' from school_admin permissions so it can never resolve to a dead stub.",
+    "backendTrace": "No backend involved; purely a frontend routing/permissions orphan."
+   },
+   {
+    "id": "student-crud-no-audit-log",
+    "title": "Student create/update/delete and password resets write no audit log",
+    "category": "data-integrity",
+    "severity": "high",
+    "page": "account-students",
+    "component": "backend_node/src/controllers/superadminDataController.js",
+    "evidence": "appendSecurityAuditLog is imported (line 39) and used in ~18 other handlers (settings/security/governance, e.g. lines 219,387,552,907...), but createSuperStudent (3019-3137), updateSuperStudent (3139-3173, which resets the student's password via bcrypt at line 3150), deleteSuperStudent (3175-3186, which destroys the Student AND the User), toggleSuperStudentStatus, and blockSuperStudent write NO audit entry.",
+    "userImpact": "Creating a student+parent accounts, resetting a student's login password, blocking, or permanently deleting a student and their user record leaves no trace. There is no way to see who deleted a student or reset credentials — a real concern for a multi-tenant system holding minors' medical/SEN/disciplinary PII.",
+    "suggestedFix": "Call appendSecurityAuditLog in createSuperStudent/updateSuperStudent/deleteSuperStudent/toggle/block with actor (req.user), action, student id, and school_id, mirroring the existing audited handlers.",
+    "backendTrace": "Endpoints exist and execute correctly; they simply omit the audit-write step that the rest of the controller performs."
+   },
+   {
+    "id": "parent-default-password-shown-as-secret",
+    "title": "Auto-created parent accounts get predictable 'Parent@123' and it is displayed as a real credential",
+    "category": "security",
+    "severity": "high",
+    "page": "account-students",
+    "component": "src/components/superadmin/SAStudents.js + backend_node/src/controllers/superadminDataController.js",
+    "evidence": "The Add-Student form (parents tab, SAStudents.js lines 645-701) collects father/mother name/phone/email but has NO parent password field, and handleSubmit never sends father_password/mother_password. createSuperStudent registerParent() defaults `const pw = p.password || 'Parent@123'` (line 3091) and returns that pw as the parent credential. The success panel then renders it verbatim as 'Password' for each parent (SAStudents.js lines 1010-1013). The student account has the same issue: studentPw defaults to 'Student@123' (line 3032) when the admin leaves the password blank.",
+    "userImpact": "Every parent (and every blank-password student) is provisioned with the same publicly-guessable password across the whole platform. The UI presents it in the 'Save Credentials' box as if it were a unique generated secret, so admins distribute a known-default password believing it is safe. An attacker who knows the username pattern can log into parent accounts.",
+    "suggestedFix": "Generate a random strong password server-side when none is supplied (for both student and parents) instead of a hardcoded constant, and/or force a password change on first parent/student login. Optionally expose a parent-password field in the form.",
+    "backendTrace": "POST /api/students/ -> createSuperStudent: hardcoded defaults at lines 3032 (student) and 3091 (parents)."
+   },
+   {
+    "id": "api-helpers-swallow-backend-error-messages",
+    "title": "Fetch helpers throw bare 'HTTP 4xx/5xx' and discard the server's error message",
+    "category": "poor-ux",
+    "severity": "medium",
+    "page": "account-students",
+    "component": "src/components/superadmin/SAStudents.js",
+    "evidence": "apiGet/apiPatch/apiDelete/apiMultipart all do `if (!res.ok) throw new Error('HTTP ' + res.status)` (lines 24,35,44,54) without reading the JSON body. The backend returns useful messages on 4xx — e.g. createSuperStudent 'No school is linked to your account' (403, line 3024), 'School not found' (400, line 3028), and cross-tenant denials. On any non-2xx these surface to the user as 'HTTP 400' / 'HTTP 403' / 'HTTP 500' in saveErr/actionErr instead of the real reason.",
+    "userImpact": "When a save, delete, toggle, or block fails for a real reason, the school admin sees an opaque 'HTTP 403' / 'HTTP 500' with no actionable explanation. Only the success-but-failed (200 with success:false) path shows a real message; genuine HTTP error statuses do not.",
+    "suggestedFix": "In each helper, on !res.ok try `const body = await res.json(); throw new Error(body.message || ('HTTP ' + res.status))` so backend messages reach the banners.",
+    "backendTrace": "Backend correctly returns status + message; the frontend helper drops the body."
+   },
+   {
+    "id": "students-table-mobile-missing-data-labels",
+    "title": "Mobile card layout shows no column labels because rows lack data-label attributes",
+    "category": "responsiveness",
+    "severity": "medium",
+    "page": "account-students",
+    "component": "src/components/superadmin/SAStudents.js (uses SARefDataManager.css .sard-* table)",
+    "evidence": "At <=600px the shared table CSS hides the header and switches each row to a stacked card where each cell prints its label via `content: attr(data-label)` (SARefDataManager.css lines 1763-1789). But SAStudents.js renders the cells as plain `<span className=\"sard-td\">` with NO data-label attribute (NAME/ADMISSION NO/STATUS/SCHOOL/ADDED, lines 901-918). There are also two competing @media(max-width:600px) .sard-tr blocks (line 1038 keeps a grid; line 1766 forces block layout) in the same stylesheet.",
+    "userImpact": "On a phone the student list becomes a stack of right-aligned values (name, admission number, status, date) with blank/empty label chips, so it is unclear which value is which. The project mandates mobile responsiveness on every component; this row is effectively unlabeled on small screens.",
+    "suggestedFix": "Add data-label=\"Name\"/\"Admission No\"/\"Status\"/\"School\"/\"Added\" to the corresponding .sard-td spans in SAStudents.js (matching how SARefDataManager rows are built), and reconcile the duplicate <=600px .sard-tr rules so only the card layout applies.",
+    "backendTrace": "No backend involvement."
+   },
+   {
+    "id": "account-students-no-resend-credentials",
+    "title": "Live student page has no Resend Credentials action (button + endpoint exist elsewhere but unused here)",
+    "category": "missing-ui",
+    "severity": "low",
+    "page": "account-students",
+    "component": "src/components/superadmin/SAStudents.js",
+    "evidence": "ResendCredentialsButton (src/components/schooladmin/ResendCredentialsButton.js) and adminApi.resendCredentials exist, but SAStudents.js never imports them — the only row actions are Edit/Toggle/Block/Delete (lines 934-960). A school admin cannot re-issue a student's or parent's login from the student page; the only way to change a password is the Edit drawer (and even then the new password is not shown).",
+    "userImpact": "If a parent or student loses their (default 'Parent@123'/'Student@123') password, the admin has no in-page way to regenerate and re-send it from account-students; they must edit the record and manually re-distribute.",
+    "suggestedFix": "Add ResendCredentialsButton (or an equivalent reset action) to each student row using s.user_id, once a working resend endpoint exists.",
+    "backendTrace": "Note: ResendCredentialsButton -> adminApi.resendCredentials POSTs to /api/school/users/resend-credentials/, which does NOT exist in routes/school.js (grep for 'resend' in routes/ returns only auth resend-otp). That missing endpoint primarily affects the teachers/finance-users forms that DO render the button; on account-students the feature is simply absent."
+   },
+   {
+    "id": "admission-number-no-autofill-dup-risk",
+    "title": "Admission number is free-text with no auto-suggest despite a backend next-admission-number endpoint",
+    "category": "poor-ux",
+    "severity": "low",
+    "page": "account-students",
+    "component": "src/components/superadmin/SAStudents.js",
+    "evidence": "The Academic tab renders Admission Number as a plain text input (line 591) and createSuperStudent stores it as-is with no uniqueness check (controller line 3045). The backend exposes GET /api/school/students/next-admission-number/ (routes/school.js line 169) which SAStudents never calls.",
+    "userImpact": "Admins type admission numbers by hand with no suggestion and no duplicate guard, so two students can be given the same (or inconsistently formatted) admission number within a school.",
+    "suggestedFix": "On openCreate, call the existing next-admission-number endpoint to prefill the field, and/or add a server-side uniqueness check per school on create.",
+    "backendTrace": "GET /api/school/students/next-admission-number/ exists (school.js line 169) but is unused by this UI; create path performs no uniqueness validation."
+   }
+  ]
+ },
+ {
+  "agentId": "ac443b7a5a0447434",
+  "unit": "test",
+  "summary": "test",
+  "workingWell": [],
+  "findings": [
+   {
+    "id": "x",
+    "title": "t",
+    "category": "bug",
+    "severity": "low",
+    "page": "overview",
+    "component": "c",
+    "evidence": "e",
+    "userImpact": "u",
+    "suggestedFix": "f"
+   }
+  ]
+ },
+ {
+  "agentId": "a31e3efce15c89e26",
+  "unit": "teachers (pages: account-teachers [live] + teachers [stub]); component src/components/superadmin/SATeachers.js, dead module src/components/schooladmin/Teachers/** + NewPages.TeachersPage",
+  "summary": "The LIVE school_admin teacher experience is SATeachers.js (nav key account-teachers, SuperadminDashboard line 1489), backed by the bare /api/teachers/ endpoints on the superadmin router. End-to-end CRUD (create/edit/toggle/block/delete) is fully functional and the backend is properly tenant-isolated: router.use(authenticateToken)+schoolScope (superadmin.js:95-96), sla=[requireActiveAccount, requireRole(['superadmin','school_admin'])] on every /teachers/ route (superadmin.js:289-294), and controllers pin school_id from JWT via scopedSchoolId() on create and reject cross-tenant rows with outsideScope()->404 on update/delete/toggle/block. No IDOR, no client-trusted school_id. Responsiveness is handled (SAStaffManager.css has @media max-width:600px and an overflow-x:auto table wrap with min-width:720px). The real problems are: (1) an entire polished teacher module — schooladmin/Teachers/** wizard (AddTeacherWizard, BulkImportModal, PreviewPanel, WelcomeLetter, SendCredentials, ClassAssignmentEditor, AvailabilityGrid, ComplianceStep) plus NewPages.TeachersPage with server-side search, teacher-stats cards, overload filter and profile panels backed by /api/school/teachers/ — is built and imported but NEVER rendered for any role (dead code); school_admin instead gets the simpler SATeachers; (2) SATeachers search/status filtering is client-side over only the current 20-row page even though the backend getSuperTeachers supports q= and status= params, so searching for a teacher who is on a later page returns a false 'No results'; (3) every teacher is created with the shared default password Teacher@123 and must_change_password stays false (never sent), so there is no forced first-login rotation; (4) the plain 'teachers' permission key renders the generic 'under development' StubPage.",
+  "workingWell": [
+   "Tenant isolation on the live path is correct: every /api/teachers/ route carries authenticateToken + schoolScope (superadmin.js:95-96) and sla=[requireActiveAccount, requireRole(['superadmin','school_admin'])] (superadmin.js:227,289-294); a school_admin's school_id is pinned from JWT via scopedSchoolId() and cannot be overridden by the client.",
+   "Writes are tenant-pinned: createSuperTeacher forces data.school_id = forcedSchool (superadminDataController.js:3557); update/delete/toggle/block all call outsideScope(scopedSchoolId(req), teacher.school_id) and return 404 for cross-tenant rows (3613, 3645, 3656, 3667) — no IDOR.",
+   "All five table actions are wired end-to-end to existing, implemented endpoints: Add/Edit -> POST/PUT /api/teachers/, Activate/Deactivate -> PATCH /toggle/, Block/Unblock -> PATCH /block/, Delete -> DELETE (with a confirm modal). Delete also removes the linked User (superadminDataController.js:3646-3647), so login access is revoked.",
+   "Create returns the real generated username and password and surfaces them in a one-time copy-to-clipboard credentials modal (SATeachers.js:189-194, 345-361); edit correctly omits the password (form useEffect skips it, line 391) and only changes it if a new one is typed (controller 3620).",
+   "Loading, empty, and error states are all present: spinner while loading (line 251), distinct empty messages for no-teachers vs no-search-results (254-258), and toast on API error (144). Pagination uses the server total (218, 322-330).",
+   "Responsiveness is handled: SAStaffManager.css has @media(max-width:600px) (lines 344-355) stacking head/search/filters/form/modal and giving 42-46px touch targets, plus a .sasm-table-wrap overflow-x:auto with .sasm-table min-width:720px (110-116) so the wide table scrolls on mobile rather than overflowing."
+  ],
+  "findings": [
+   {
+    "id": "teachers-rich-module-dead-code",
+    "title": "Entire polished teacher-management module (Teachers/ wizard + NewPages.TeachersPage) is built, imported, but never rendered for school_admin",
+    "category": "dead-ui",
+    "severity": "high",
+    "page": "account-teachers",
+    "component": "src/components/schooladmin/NewPages.js (TeachersPage) + src/components/schooladmin/Teachers/**",
+    "evidence": "NewPages.js:4342 `export function TeachersPage({ school })` is a full card-grid teacher UI: server-side debounced search via /api/school/teachers/?q= (line 4356-4368), stats cards via /api/school/teacher-stats/ (4370-4373), overloaded filter, TeacherProfilePanel (4526), AddTeacherWizard (4536, imported NewPages.js:7), BulkImportModal (4545, imported line 8), EditTeacherModal (4554). The Teachers/ dir holds AddTeacherWizard.jsx, BulkImportModal.jsx, PreviewPanel.jsx, WelcomeLetter.jsx, SendCredentials.jsx, ClassAssignmentEditor.jsx, AvailabilityGrid.jsx, ComplianceStep.jsx, etc. But `grep -rn TeachersPage src` returns ONLY its own definition — it is exported and never imported. SuperadminDashboard.js:1489 renders `<SATeachers />` for account-teachers, not NewPages.TeachersPage. _deprecated/README.md:35 even claims Teachers/ is 'imported by the live NewPages.js; keep' — true that NewPages imports it, but NewPages.TeachersPage itself is dead.",
+    "userImpact": "A school admin never sees the richer teacher workflow (server-side search across all pages, teacher stats, class-load/overload view, profile panels, bulk CSV import, welcome-letter + send-credentials onboarding). They get the simpler SATeachers table instead. Significant built functionality is invisible to users and the corresponding backend (/api/school/teachers/, /api/school/teacher-stats/, bulk import) is reachable but UI-orphaned.",
+    "suggestedFix": "Decide on ONE teacher page. Either (a) route account-teachers to NewPages.TeachersPage (verify /api/school/teachers/ tenant-gating first — it uses school.js applyAuth, separate from the well-scoped /api/teachers/ path) and retire SATeachers, or (b) delete schooladmin/Teachers/**, NewPages.TeachersPage, and the related imports as confirmed dead code to stop shipping ~20 unused .jsx files in the bundle.",
+    "backendTrace": "Dead UI would call /api/school/teachers/ (GET/POST/PUT exist: school.js:174-176) and /api/school/teacher-stats/ (school.js:177). These endpoints exist but are only reachable from this orphaned component."
+   },
+   {
+    "id": "teachers-search-filter-client-side-only",
+    "title": "Teacher search and status filter only match the current 20-row page; teachers on other pages show false 'No results'",
+    "category": "bug",
+    "severity": "high",
+    "page": "account-teachers",
+    "component": "src/components/superadmin/SATeachers.js",
+    "evidence": "load() builds params with only page & limit: `new URLSearchParams({ page, limit: LIMIT })` and never appends q or status (SATeachers.js:140-141, LIMIT=20 line 18). The `visible` useMemo (163-173) filters `list` (the current page's 20 rows) client-side by search text and statusF. So when total>20, typing a name that lives on page 2+ yields the empty state 'No results for the current search / filter.' (line 257) even though the teacher exists. The backend getSuperTeachers explicitly supports server-side q (superadminDataController.js:3497-3503) and status (3496) — the frontend just doesn't use them.",
+    "userImpact": "A school admin with more than 20 teachers searches for a colleague, gets 'No results', and reasonably concludes the teacher isn't registered — leading to duplicate registrations or wasted time. The Active/Inactive/Blocked filter is similarly limited to the visible page.",
+    "suggestedFix": "Send search and status to the server: include `q` (debounced) and `status` in load()'s URLSearchParams and let the backend filter+paginate; reset page to 1 on query/filter change. Keep the client-side `visible` filter only as a cosmetic layer over server-filtered results, or remove it.",
+    "backendTrace": "/api/teachers/ GET -> getSuperTeachers (superadminDataController.js:3483) already accepts q and status and paginates with findAndCountAll; no backend change needed."
+   },
+   {
+    "id": "teachers-shared-default-password-no-forced-rotation",
+    "title": "Teachers created with shared default password Teacher@123 and are never forced to change it",
+    "category": "security",
+    "severity": "medium",
+    "page": "account-teachers",
+    "component": "src/components/superadmin/SATeachers.js",
+    "evidence": "DEFAULT_PW='Teacher@123' (SATeachers.js:17). If the admin leaves Password blank, createSuperTeacher uses `data.password || 'Teacher@123'` (superadminDataController.js:3560). The form's SECTIONS has no must_change_password field, so it is never sent; backend sets `must_change_password: data.must_change_password` (3599) = undefined, falling to the Teacher model default `false` (src/models/Teacher.js:51). The creds modal tells the admin to 'share them securely' (SATeachers.js:350) but nothing forces the teacher to rotate the shared password on first login.",
+    "userImpact": "Many teachers across the tenant share the identical, well-known password Teacher@123 and are never prompted to change it. Anyone who knows the convention can guess credentials; a teacher who never changes it leaves an account permanently on the default password.",
+    "suggestedFix": "Set must_change_password=true by default when a teacher is created without an explicit password (in createSuperTeacher, or force it from the frontend), and enforce a change-password gate on first teacher login. Consider generating a random temp password instead of a fixed constant.",
+    "backendTrace": "/api/teachers/ POST -> createSuperTeacher (superadminDataController.js:3550-3606); model default must_change_password=false (Teacher.js:51). No first-login rotation gate observed for this flow."
+   },
+   {
+    "id": "teachers-plain-key-stub",
+    "title": "Permission key 'teachers' renders the generic 'under development' stub (orphan permission)",
+    "category": "stub",
+    "severity": "low",
+    "page": "teachers",
+    "component": "src/components/superadmin/SuperadminDashboard.js",
+    "evidence": "school_admin is granted the 'teachers' key in permissions.js (per shared inventory line 57) but there is no `activePage === 'teachers'` render block, it is not in HANDLED_PAGES, and it is not in SCHOOL_ADMIN_NAV_ITEMS — so it falls through to <StubPage title='Teachers' 'This section is under development.'> (SuperadminDashboard.js StubPage fallback ~1508). The functional page lives under the separate key account-teachers (line 1489 -> SATeachers).",
+    "userImpact": "Not reachable from the sidebar, so most admins never hit it; but any deep link / global-search hit on the 'teachers' key shows a misleading 'under development' page for a feature that is actually fully built under account-teachers.",
+    "suggestedFix": "Either remove the orphan 'teachers' permission for school_admin, or alias activePage 'teachers' to render SATeachers so a direct hit doesn't show a false stub.",
+    "backendTrace": "N/A — pure frontend routing; no endpoint involved."
+   },
+   {
+    "id": "teachers-no-duplicate-employee-id-guard",
+    "title": "createSuperTeacher does not validate employee_id (or username) uniqueness within a school",
+    "category": "data-integrity",
+    "severity": "low",
+    "page": "account-teachers",
+    "component": "backend_node/src/controllers/superadminDataController.js",
+    "evidence": "createSuperTeacher (superadminDataController.js:3550-3606) requires first_name/last_name/employee_id (3553-3554) but performs no existence check before Teacher.create; two teachers in the same school can be created with the same employee_id. Username collisions are sidestepped by appending `_${Date.now()}` (3559) but employee_id is stored verbatim (3573).",
+    "userImpact": "A school admin can accidentally register the same employee_id twice (e.g. re-submitting after the search bug above hides an existing teacher), producing duplicate teacher records that later collide in payroll/exam-officer/assignment views.",
+    "suggestedFix": "Before create, check for an existing Teacher with the same employee_id under the scoped school_id and return a 409 with a clear message; ideally add a composite unique index (school_id, employee_id) at the DB level.",
+    "backendTrace": "/api/teachers/ POST -> createSuperTeacher; no pre-insert uniqueness query observed."
+   }
+  ]
+ },
+ {
+  "agentId": "a8eb5e52018974342",
+  "unit": "parents (account-parents → SAParents.js; plain \"parents\" key → StubPage)",
+  "summary": "The live School-Admin \"parents\" experience is a single component, src/components/superadmin/SAParents.js, mounted at activePage 'account-parents'. The schooladmin/Parents/** directory referenced in the brief DOES NOT EXIST (no dead component to compare). The slice is largely solid end-to-end: every button (Add, Edit, Toggle, Block, Delete, Link, search, status filters, pagination, copy-credentials) is wired to a real handler hitting an endpoint that exists, is role-gated (requireRole(['superadmin','school_admin']) via the `sla` chain), tenant-scoped (parentInSchool/scopedSchoolId), and active-account-gated (requireActiveAccount). The prior audit's \"wrong password shown\" claim is FIXED — verified: the creds modal shows form.password or the DEFAULT_PW 'Parent@123' which matches the backend default exactly, so the displayed password is always the real one. Responsiveness is good (table-wrap overflow-x scroll, min-width fallback, full @media(max-width:600px) block, 42-46px touch targets). The one real functional defect: the create-parent form has NO student-linking field and never sends student_ids, but getSuperParents for a school_admin only returns parents linked to that school's students — so a freshly created (unlinked) parent immediately disappears from the list, and because the \"Link to student\" action is a per-row button, the admin can never reach it. That is a genuine dead-end. Secondary: the Link modal's student picker loads only the first 100 students with no pagination/search and no truncation indicator.",
+  "workingWell": [
+   "Add/Edit/Toggle/Block/Delete/Link parent flows all hit existing endpoints: GET/POST/PUT/DELETE /api/parents/, PATCH /api/parents/:id/toggle/ and /block/, POST /api/link-parent/ — every route exists in backend_node/src/routes/superadmin.js (lines 277-286) and maps to implemented controllers in superadminDataController.js (3211-3400), none are stubs/no-ops.",
+   "Tenant isolation is enforced server-side: getSuperParents (3211) derives the school from scopedSchoolId(req) and filters parents to those linked to the caller's own students; update/delete/toggle/block all call parentInSchool(parent.id, forcedSchool) before mutating (3320/3347/3363/3377); link-parent re-checks the student's school via outsideScope (3392). Client-supplied IDs are never trusted blindly.",
+   "Auth/role gating: the parent routes sit behind authenticateToken + schoolScope + requireActiveAccount + requireRole(['superadmin','school_admin']); no TODO_JWT_TOKEN backdoor on this router (that issue was on /api/school/*, not these /api/parents/ routes).",
+   "Credentials modal password is correct (prior 'wrong password' bug is resolved): SAParents.js:134 password = d.password || form.password || DEFAULT_PW, DEFAULT_PW='Parent@123' equals backend default at superadminDataController.js:3282, so the shown password always matches what was stored.",
+   "Responsiveness compliant: SAStaffManager.css table-wrap uses overflow-x:auto with min-width:720px (lines 110-116), and a full @media(max-width:600px) block (344-355) stacks the header/filters/form/modal and sets 42-46px touch targets.",
+   "Good UX states: loading spinner, distinct empty states for no-parents vs no-search-results (SAParents.js:201-206), error toasts on every catch, one-time copyable credentials modal, delete confirm modal with consequences spelled out."
+  ],
+  "findings": [
+   {
+    "id": "parents-create-unlinked-vanishes",
+    "title": "Newly created parent disappears from the School-Admin list because create has no student-link and the list only shows parents linked to the school's students",
+    "category": "bug",
+    "severity": "high",
+    "page": "account-parents",
+    "component": "src/components/superadmin/SAParents.js",
+    "evidence": "The create form SECTIONS (SAParents.js:46-66) only contains Account + Profile fields — there is NO student-link field — and handleSave (117-139) builds a FormData of just those fields plus passport_photo; it never sends student_ids. Backend getSuperParents (superadminDataController.js:3224-3231) builds where.id from StudentParent links to the caller's own students only: it queries the school's students, then `where.id = [...new Set(links.map(l => l.parent_id))]`. A parent with zero links yields an empty IN (...) set and is excluded. So after the success/credentials modal, load() refetches and the new parent is NOT in the returned list. The only way to link is the per-row IcLink button (SAParents.js:257) which requires the parent to already be visible in the table.",
+    "userImpact": "A school admin clicks Add Parent, fills the form, sees the 'Parent account created' credentials modal, then the parent is nowhere in the list. They cannot click Link-to-student (no row exists), cannot edit, cannot delete it — the account is orphaned and invisible. Re-adding creates duplicate User/Parent rows. It looks like creation silently failed.",
+    "suggestedFix": "Add a student multi-select (reusing the same GET /api/students/ picker already in LinkModal) to the create form and pass student_ids to POST /api/parents/ — the backend createSuperParent already accepts and validates data.student_ids (superadminDataController.js:3275-3306). Alternatively, after a successful create, immediately open the Link modal for the new parent, or relax getSuperParents to also include parents created by/visible to the school until linked. The student-link path on create is the cleanest since the controller already supports it.",
+    "backendTrace": "POST /api/parents/ → superadmin.js:278 → createSuperParent (superadminDataController.js:3268) EXISTS, role+tenant gated, supports student_ids but UI never sends them. GET /api/parents/ → superadmin.js:277 → getSuperParents (3211) filters strictly by StudentParent links (3224-3231), excluding unlinked parents."
+   },
+   {
+    "id": "parents-link-picker-100-cap",
+    "title": "Link-to-student picker loads only the first 100 students with no pagination, search, or truncation notice",
+    "category": "poor-ux",
+    "severity": "medium",
+    "page": "account-parents",
+    "component": "src/components/superadmin/SAParents.js",
+    "evidence": "LinkModal fetches GET /api/students/ with no query params (SAParents.js:426) and renders every returned student as a <select> option (446-454). Backend getSuperStudents (superadminDataController.js:2945) defaults limit=100 and paginates via findAndCountAll (2964-2967). The frontend only falls back to a raw numeric ID input when students.length === 0 (455-457) — never when the list is merely truncated.",
+    "userImpact": "In a school with more than 100 students, parents can only be linked to students who happen to be in the first 100 (ordered by id DESC, i.e. newest). Older students are silently unselectable and there is no search box or 'showing 100 of N' hint, so the admin assumes the student doesn't exist.",
+    "suggestedFix": "Make the LinkModal picker searchable/server-filtered: pass ?q= to /api/students/ as the admin types (getSuperStudents already supports a `q` filter, superadminDataController.js:2957-2963) and/or request a higher limit, and always keep the raw-ID input available as a fallback rather than only when the list is empty."
+   },
+   {
+    "id": "parents-creds-default-pw-coupling",
+    "title": "Credentials modal default password is hardcoded and silently coupled to the backend default",
+    "category": "poor-ux",
+    "severity": "low",
+    "page": "account-parents",
+    "component": "src/components/superadmin/SAParents.js",
+    "evidence": "SAParents.js:17 DEFAULT_PW = 'Parent@123' and line 134 falls back to it when the admin leaves the password blank and the API omits the password. The backend independently hardcodes the same value in createSuperParent (superadminDataController.js:3282 `data.password || 'Parent@123'`). The two constants must stay byte-identical or the modal would display a password that does not match the stored hash.",
+    "userImpact": "Correct today (both equal 'Parent@123'), so the admin sees the real password. But it is a latent footgun: if a backend dev changes the default password policy without updating the frontend constant, the modal would show a wrong password and parents would be locked out, with no error surfaced. The create endpoint should return the generated password instead of relying on a duplicated literal.",
+    "suggestedFix": "Have createSuperParent return the actually-applied password (or a clear 'password set by admin' flag) in its success payload so the frontend can display d.password authoritatively, and drop the duplicated DEFAULT_PW literal. This mirrors how username is already returned and consumed (d.username)."
+   }
+  ]
+ },
+ {
+  "agentId": "a4134506daac57f0b",
+  "unit": "principal (School-Admin slice)",
+  "summary": "The live School-Admin \"principal\" page renders SAPrincipal -> SAStaffManager (kind=\"principal\"), a shared staff-management component. It is functional end-to-end: list, create (with one-time credentials modal), edit, activate/deactivate, block/unblock, and delete all call real backend endpoints under /api/principals/* that EXIST, are role-gated (requireActiveAccount + requireRole(['superadmin','school_admin'])), and are correctly tenant-scoped. Tenant isolation is solid: scopedSchoolId() pins school_id from the JWT for school_admin, create overwrites any client-supplied school_id with the forced value, and edit/delete/toggle/block all 404 on cross-tenant rows via outsideScope(). The component is responsive (600px media query, horizontally scrollable table, 42-46px touch targets). The whole schooladmin/Principal/** directory (PrincipalPage.jsx and its child panels) is DEAD CODE for this page key - exported as NewPages.PrincipalUsersPage but never rendered in SuperadminDashboard.js, and already flagged for removal in _deprecated/README.md. Real issues found are minor: client-side-only search/filter that misses records on other pagination pages (backend supports a q param the UI never sends), and an orphan must_change_password update field with no corresponding form input.",
+  "workingWell": [
+   "End-to-end CRUD verified: SAStaffManager Add/Edit/Toggle/Block/Delete (SAStaffManager.js lines 186-219) all map to existing routes /api/principals/* (superadmin.js lines 335-340) backed by real controller methods getSuperPrincipals/createSuperPrincipal/updateSuperPrincipal/deleteSuperPrincipal/toggleSuperPrincipalStatus/blockSuperPrincipal (superadminDataController.js 3834-3973).",
+   "Auth + role gating: the whole superadmin router applies authenticateToken + schoolScope globally (superadmin.js 95-96), and the principals routes carry the sla chain = [requireActiveAccount, requireRole(['superadmin','school_admin'])] (superadmin.js 227, 335-340). A school_admin reaches them; other roles get 403/401.",
+   "Tenant isolation is correct: scopedSchoolId(req) pins school_id from req.schoolId/JWT for non-superadmin (superadminDataController.js 55-60); createSuperPrincipal overwrites client school_id with the forced value (line 3889); updateSuperPrincipal/delete/toggle/block all call outsideScope() and return 404 for cross-tenant rows (lines 3920, 3948, 3959, 3969). A school_admin cannot read or mutate another school's principals.",
+   "Credentials UX works: createSuperPrincipal returns {username, password} (line 3912); the frontend shows them once in a copyable modal (SAStaffManager.js 196-203, 349-365) with a clear 'shown only once' warning and a clipboard copy handler (221-225).",
+   "Responsive: SAStaffManager.css has a @media(max-width:600px) block (344-355) stacking the header/toolbar/modal, the table is wrapped with overflow-x:auto + min-width:720px (110-116) so it scrolls on mobile, and primary/filter/modal buttons get min-height 42-46px touch targets.",
+   "Empty, loading, and error states all present: spinner while loading (260), distinct 'no records yet' vs 'no results for filter' empty messages (262-267), and a toast for every API error (154, 205, 210, 214, 218)."
+  ],
+  "findings": [
+   {
+    "id": "principal-tree-dead-code",
+    "title": "Entire schooladmin/Principal/** component tree is dead code for the principal page",
+    "category": "dead-ui",
+    "severity": "low",
+    "page": "principal",
+    "component": "src/components/schooladmin/Principal/PrincipalPage.jsx (+ AddPrincipalForm, PrincipalCard, StatsCards, HealthScoreCard, etc.)",
+    "evidence": "The live 'principal' key renders SAPrincipal -> SAStaffManager (SuperadminDashboard render switch, confirmed: PrincipalPage/PrincipalUsersPage is NOT referenced anywhere in SuperadminDashboard.js). PrincipalPage is only re-exported as NewPages.PrincipalUsersPage (NewPages.js line 956) and is never mounted. schooladmin/_deprecated/README.md line 33 explicitly says to remove the PrincipalUsersPage re-export. The folder also still wires to the historically-404ing /api/principal/dashboard/ paths described in public/memory/06-KNOWN-ISSUES.md.",
+    "userImpact": "No user-facing impact (the code never runs), but it is confusing for maintainers and risks being revived: it duplicates principal management with a different, partly-broken implementation. The Principal.css from this dead folder is still imported by many live files for shared .pu-* styles, so the CSS must stay even though the JSX is dead.",
+    "suggestedFix": "Remove the export of PrincipalUsersPage from NewPages.js (line 956) and move the JSX components in schooladmin/Principal/ into _deprecated, but KEEP Principal.css (it is the shared style base imported by bursar/* and principal/* live pages). Document that SAStaffManager is the single source of truth for principal management.",
+    "backendTrace": "N/A - dead frontend code. Its intended endpoints (/api/principal/dashboard/, getSchoolCommandDashboard etc.) are the ones noted as missing/404 in public/memory/06-KNOWN-ISSUES.md, which is one more reason not to revive this tree."
+   },
+   {
+    "id": "principal-search-current-page-only",
+    "title": "Search and status filter only cover the current pagination page; backend q-search is unused",
+    "category": "bug",
+    "severity": "medium",
+    "page": "principal",
+    "component": "src/components/superadmin/SAStaffManager.js",
+    "evidence": "load() fetches one server page with limit=20 and only ?page/limit params (SAStaffManager.js 150-152) - it never sends a search/q param. The `visible` memo filters `list` (the 20 loaded rows) client-side for both search text and status (lines 174-184). The backend getSuperPrincipals fully supports a `q` param (superadminDataController.js 3848-3854, matches first/last name, email, username, employee_id) and a `status` param (3847), neither of which the UI uses.",
+    "userImpact": "A school admin with more than 20 principals (rare but possible for large institutions, and the same SAStaffManager powers the bursar page where it is more likely) who searches for a person on page 2+ gets 'No results for the current search / filter' even though the record exists. The status filter chips (Active/Inactive/Blocked) likewise only reflect the current page, so counts/filtering are misleading once paginated.",
+    "suggestedFix": "Send search and status to the server: pass the debounced search term as ?q= and the active status chip as ?status= into load()'s URLSearchParams, and reset to page 1 on filter change. Then the existing client-side `visible` filter becomes a thin no-op or can be removed. This makes search authoritative across all pages with no backend change needed.",
+    "backendTrace": "Backend already supports it: /api/principals/ GET -> getSuperPrincipals reads req.query.q (3848) and req.query.status (3847) and applies them to the WHERE before pagination. The fix is frontend-only."
+   },
+   {
+    "id": "principal-must-change-password-orphan",
+    "title": "must_change_password is updatable in the API but has no form field; new principals are not forced to rotate the shared default",
+    "category": "poor-ux",
+    "severity": "low",
+    "page": "principal",
+    "component": "src/components/superadmin/SAStaffManager.js",
+    "evidence": "The SECTIONS form definition (SAStaffManager.js 64-119) has no must_change_password field, and ALL_FIELD_KEYS (line 121) therefore omits it, so the StaffForm never sends it. Yet the backend update whitelist includes 'must_change_password' (superadminDataController.js 3934) and create stores data.must_change_password (3909) - both always undefined from this UI. New principals are created with the well-known default password 'Principal@123' (3891) and there is no force-rotate flag set, so the flag stays whatever the DB default is.",
+    "userImpact": "Every principal created via this page who is given the auto default 'Principal@123' (when the admin leaves the password blank) keeps a guessable, shared default until they voluntarily change it, with no first-login rotation prompt enforced from this flow. Admins also cannot toggle the must_change_password requirement from the UI even though the field exists server-side.",
+    "suggestedFix": "Either set must_change_password: true automatically in createSuperPrincipal when the password falls back to the default, or add a checkbox to the Account section of StaffForm. Pair with a first-login password-change gate for the principal role so the shared default cannot persist.",
+    "backendTrace": "/api/principals/ POST -> createSuperPrincipal (3882) accepts must_change_password but the UI never sends it; the field plumbing exists, only the UI control and the auto-force-on-default are missing."
+   }
+  ]
+ },
+ {
+  "agentId": "aac1fc7295e026688",
+  "unit": "bursar-finance-users (pages: bursar, finance-users)",
+  "summary": "The slice has TWO separate finance-staff managers, both reachable from the school-admin sidebar and backed by different tables. (1) The \"bursar\" page (SABursar -> SAStaffManager kind=\"bursar\") is solid end-to-end: real CRUD against /api/bursars/ (CoreBursar table), tenant-scoped via scopedSchoolId/outsideScope, write-gated to school_admin+superadmin, one-time credentials modal works, responsive. (2) The \"finance-users\" page (FinanceUsersPage + FinanceUsers/* components) is a banking-grade-looking UI sitting on a thin backend that stores only role/access_level against the SchoolAdmin table. The page renders many real-looking analytics (transactions today, volume, risk levels, transaction heat, alerts, integrity hashing) that the backend never supplies, so they are permanently zero/fabricated. The Add form collects permissions, scope, transaction limit and working hours that createFinanceUser silently discards. \"Edit Role\" is a coming-soon banner with no implementation. The GET list endpoint is not role-gated, exposing finance-staff PII (emails/phones) to any authenticated tenant user. The two managers do not share data, which is confusing for an admin. The prior audit's \"View crashes / panels fabricated\" claim is partially fixed: the View modal now guards undefined fields (no crash), but the dashboards above the list are still fabricated/empty and the IntegrityPanel still makes hardcoded SHA-256/audit-trail claims. There are also two genuine frontend wiring bugs: TransactionHeat reads fields heatSummary never produces (blank icons/sub, undefined React keys), and FiltersBar's Activity and Risk filter groups are rendered-but-never-wired (page never passes those props, so they do nothing).",
+  "workingWell": [
+   "SABursar (bursar nav page) is fully functional end-to-end: SAStaffManager issues real CRUD to /api/bursars/ (GET/POST/PUT/DELETE + PATCH toggle/block), all routes exist in superadmin.js (lines 309-314) and the controllers (createSuperBursar/updateSuperBursar/getSuperBursars in superadminDataController.js) perform real DB writes against CoreBursar + User.",
+   "Bursar tenant isolation is correct: getSuperBursars uses scopedSchoolId(req) and returns an empty list for an unscoped superadmin; createSuperBursar pins school_id from scope; updateSuperBursar rejects out-of-scope ids via outsideScope() -> 404. A school_admin only ever sees their own school's bursars (school_id from JWT).",
+   "The one-time credentials modal in SAStaffManager works: createSuperBursar returns {username, password} and handleSave surfaces them in a copyable modal (SAStaffManager.js lines 197-203, 349-365).",
+   "Both pages are mobile-responsive: FinanceUsers.css and SAStaffManager.css carry @media(max-width:600px) rules; the SAStaffManager table is wrapped in a scrollable .sasm-table-wrap.",
+   "FinanceUserDetails (the 'View' modal) no longer crashes on users lacking tx/perms/scope data — every optional section is guarded (Array.isArray / != null checks at lines 78, 96, 106, 119), fixing the prior audit's crash claim.",
+   "Finance-user write endpoints are role-gated: /api/school/finance-users/ POST and PUT pass through schoolWriteGuard (school.js lines 150-155) which enforces requireRole(['school_admin','superadmin']) on mutating methods, and createFinanceUser/updateFinanceUser pin school_id from getSchoolFromUser(req)."
+  ],
+  "findings": [
+   {
+    "id": "fu-fabricated-finance-dashboards",
+    "title": "Finance Users page shows fabricated/permanently-zero analytics the backend never supplies",
+    "category": "poor-ux",
+    "severity": "high",
+    "page": "finance-users",
+    "component": "src/components/schooladmin/FinanceUsers/FinanceUsersPage.jsx + StatsCards.jsx + ActivityPanel.jsx + TransactionHeat.jsx + AlertsPanel.jsx",
+    "evidence": "financeController.js getFinanceUsers (lines 677-687) returns ONLY {id, full_name, email, phone, username, is_active, role, access_level, created_at}. finance.utils.js summariseUsers (lines 24-41) derives txToday/volToday/volTotal/receipts/refunds/flagged/highVol/riskLevels from fields (u.tx_today, u.tx_amount, u.receipts_today, u.flagged, u.risk...) that are NEVER present in the response, so every aggregate is 0/empty. StatsCards.jsx renders 'Transactions Today' (value summary.txToday => 0) and 'Total Volume Today' (=> $0) as if real; ActivityPanel always shows Payments/Receipts/Refunds = 0; TransactionHeat always shows 0 tx; FuRiskPill falls back to FU_RISK.low so every user is labeled 'Low Risk' (FinanceUserCard.jsx line 74 via finance.utils).",
+    "userImpact": "A school admin sees an authoritative-looking finance operations dashboard (transactions today, volume, risk levels, transaction heat by time of day) that is permanently empty or a fixed fabrication. They may believe no money moved today, or trust a 'Low Risk' label that is just a default. This is misleading for a financial control surface.",
+    "suggestedFix": "Either remove the StatsCards tx/volume cards, ActivityPanel, TransactionHeat and risk pills until the backend computes them from real Payment/Receipt rows, or extend getFinanceUsers to join the finance tables and return per-user tx_today/tx_amount/tx_total/receipts_today/refunds_today/risk so the panels reflect reality. Do not present derived-from-nothing metrics as live data.",
+    "backendTrace": "GET /api/school/finance-users/ -> school.js:338 (applyAuth) -> financeController.getFinanceUsers (lines 666-694): selects SchoolAdmin rows for school.id and maps a minimal user shape; no transaction/risk data is queried or returned."
+   },
+   {
+    "id": "fu-list-not-role-gated-pii",
+    "title": "Finance-users list endpoint is not role-gated — any authenticated tenant user can read finance staff PII",
+    "category": "security",
+    "severity": "high",
+    "page": "finance-users",
+    "component": "backend_node/src/routes/school.js (applyAuth), financeController.getFinanceUsers",
+    "evidence": "applyAuth = [authenticateToken, requireActiveAccount, schoolScope, schoolWriteGuard] (school.js:159). schoolWriteGuard only enforces a role on MUTATING_METHODS (POST/PUT/PATCH/DELETE) (school.js:149-155); GET requests fall straight through with no requireRole. GET /api/school/finance-users/ (school.js:338) therefore runs for ANY authenticated active user in the tenant. getFinanceUsers returns email + phone + username for each finance/bursar account (financeController.js:677-687).",
+    "userImpact": "A logged-in teacher, parent, or student in the same school can call GET /api/school/finance-users/ and retrieve the finance team's names, emails and phone numbers. It is scoped to their own school (no cross-tenant leak) but still over-discloses staff contact PII to non-admin roles.",
+    "suggestedFix": "Add a read role gate for sensitive admin listings, e.g. wrap finance-users GET with requireRole(['school_admin','superadmin']) (and similarly principal-users), rather than relying solely on schoolWriteGuard which ignores GET.",
+    "backendTrace": "GET /api/school/finance-users/ -> school.js:338 applyAuth -> schoolScope pins req.schoolId from JWT (correct, no cross-tenant) but no role check on GET -> getFinanceUsers returns staff PII."
+   },
+   {
+    "id": "fu-create-discards-permissions-scope-limit",
+    "title": "Add Finance User form collects permissions/scope/limit/working-hours that the backend silently discards",
+    "category": "non-functional",
+    "severity": "high",
+    "page": "finance-users",
+    "component": "src/components/schooladmin/FinanceUsers/AddFinanceUserForm.jsx + financeController.createFinanceUser",
+    "evidence": "AddFinanceUserForm.submit (lines 51-62) POSTs {permissions, scope, transaction_limit, working_hours, role, ...}. createFinanceUser (financeController.js:701) destructures only {full_name, email, phone, username, password, role, access_level} and creates SchoolAdmin with just {role, access_level, is_active} (lines 717-723). permissions, scope, transaction_limit, working_hours are never read or persisted. Also note the form sends first_name/last_name + email but createFinanceUser expects full_name (it splits full_name into first/last at lines 712-713) — the form never sends full_name, so first_name/last_name end up empty.",
+    "userImpact": "An admin carefully configures a Cashier's permissions, the classes they can collect from, a per-transaction limit and working hours, sees 'Finance user created successfully', but none of that is saved. Worse, because the form sends first_name/last_name (not full_name), the created user's name is blank in the DB and the list later shows the username only. The granular access control the UI advertises does nothing.",
+    "suggestedFix": "Align the contract: either persist permissions/scope/transaction_limit/working_hours on a finance-user model (new columns or a related table) and have createFinanceUser store them, or strip those fields from the form until supported. Fix the name mismatch — accept first_name/last_name in createFinanceUser (or have the form send full_name).",
+    "backendTrace": "POST /api/school/finance-users/ -> school.js:339 (applyAuth, write-gated) -> createFinanceUser (financeController.js:696-730): creates User + SchoolAdmin with role/access_level only; ignores permissions/scope/transaction_limit/working_hours; relies on full_name which the form does not send."
+   },
+   {
+    "id": "fu-edit-role-coming-soon",
+    "title": "'Edit Role' action on every finance user is a dead 'coming soon' banner",
+    "category": "dead-ui",
+    "severity": "medium",
+    "page": "finance-users",
+    "component": "src/components/schooladmin/FinanceUsers/FinanceUsersPage.jsx, FinanceUserCard.jsx, FinanceUserDetails.jsx",
+    "evidence": "FinanceUsersPage.handleEdit (lines 77-78) only does setBanner({type:'ok', text: `Edit Role: open ...'s role editor (coming soon).`}). It is wired to the 'Edit Role' button on every card (FinanceUserCard.jsx lines 130-132) and in the details modal (FinanceUserDetails.jsx lines 139-141). No editor opens, no API is called.",
+    "userImpact": "Clicking 'Edit Role' on any finance user just flashes a green 'coming soon' banner. There is no way to change a finance user's role, permissions or scope after creation — the only post-creation action that works is suspend/activate.",
+    "suggestedFix": "Implement a role/permission edit modal that PUTs to /api/school/finance-users/:id/ (extend the controller to accept role/permission changes), or remove the Edit Role buttons until the editor exists so the UI doesn't advertise a non-feature.",
+    "backendTrace": "No endpoint is called. updateFinanceUser (financeController.js:732-747) ignores req.body entirely and only flips is_active, so even if Edit Role POSTed role changes the backend would not apply them."
+   },
+   {
+    "id": "fu-transactionheat-field-mismatch",
+    "title": "TransactionHeat renders blank icons/sublabels and uses undefined React keys (field-shape mismatch)",
+    "category": "bug",
+    "severity": "medium",
+    "page": "finance-users",
+    "component": "src/components/schooladmin/FinanceUsers/TransactionHeat.jsx + finance.utils.heatSummary",
+    "evidence": "heatSummary (finance.utils.js:45-57) returns objects shaped {label, count, pct, level} only. TransactionHeat.jsx maps them expecting h.key (line 25 key={h.key}), h.icon (line 28 <Ic name={h.icon}>) and h.sub (line 30 <span>{h.sub}</span>) — none of which exist. The matching FU_HEAT_BUCKETS constant (finance.constants.js:49-53) that DOES carry key/sub/icon is never used.",
+    "userImpact": "The Transaction Heat panel shows three columns with no time-of-day icon and no '8 AM – 12 PM' style subtitle, and React logs a 'each child should have a unique key' warning because key is undefined. It looks half-rendered. (It is also always all-zero because the underlying tx data is never supplied — see fu-fabricated-finance-dashboards.)",
+    "suggestedFix": "Merge FU_HEAT_BUCKETS into the heatSummary output (map by index to attach key/label/sub/icon) so TransactionHeat receives the fields it reads, and use h.key (or the bucket key) as the React key.",
+    "backendTrace": "N/A — pure frontend data-shape bug; no backend involved."
+   },
+   {
+    "id": "fu-dead-activity-risk-filters",
+    "title": "Activity and Risk filter groups are rendered but never wired (no-op chips)",
+    "category": "dead-ui",
+    "severity": "medium",
+    "page": "finance-users",
+    "component": "src/components/schooladmin/FinanceUsers/FiltersBar.jsx + FinanceUsersPage.jsx",
+    "evidence": "FiltersBar renders four filter groups including 'Activity' (FU_ACTIVITY_OPTIONS) and 'Risk' (FU_RISK_OPTIONS) bound to props activityFilter/onActivity and riskFilter/onRisk (FiltersBar.jsx lines 56-57). FinanceUsersPage renders <FiltersBar> passing ONLY search/role/status props (FinanceUsersPage.jsx lines 134-138) — activityFilter, onActivity, riskFilter, onRisk are undefined. The page's visibleUsers filter (lines 80-90) only filters by role/status/search; activity and risk are never applied.",
+    "userImpact": "The admin sees Activity (All/High/Low/Idle) and Risk (All/Low/Medium/High) filter chips, but clicking them does nothing — value never changes, list never filters. Two of the four advertised filter dimensions are dead.",
+    "suggestedFix": "Either wire activity/risk filter state into FinanceUsersPage and apply it in visibleUsers, or remove the Activity and Risk groups from FiltersBar until the backend returns activity/risk fields to filter on.",
+    "backendTrace": "N/A — frontend wiring gap; the backend does not return risk/activity data to filter on anyway."
+   },
+   {
+    "id": "fu-two-disjoint-bursar-managers",
+    "title": "Two separate, non-shared finance-user managers ('bursar' and 'finance-users') in the same sidebar",
+    "category": "data-integrity",
+    "severity": "medium",
+    "page": "finance-users",
+    "component": "SABursar.js / SAStaffManager.js (CoreBursar) vs FinanceUsersPage.jsx (SchoolAdmin)",
+    "evidence": "The 'bursar' nav page (SABursar -> SAStaffManager kind='bursar') reads/writes /api/bursars/ backed by the CoreBursar table (superadminDataController.getSuperBursars line 3697 CoreBursar.findAndCountAll; createSuperBursar line 3748 CoreBursar.create). The 'finance-users' nav page reads/writes /api/school/finance-users/ backed by the SchoolAdmin table (financeController.getFinanceUsers line 671 SchoolAdmin.findAll; createFinanceUser line 717 SchoolAdmin.create). Both create a User with role_id=bursar. The two lists never reflect each other.",
+    "userImpact": "A bursar created under 'Finance Users' does not appear under 'Bursars' and vice versa, even though both pages claim to manage bursars/finance staff and both can log a person in. An admin can create the same person twice, or block them in one screen while they stay active in the other, with no indication the two screens are different systems.",
+    "suggestedFix": "Consolidate to a single source of truth for finance staff (pick CoreBursar or SchoolAdmin), and back both nav pages with it, or clearly differentiate their purpose (e.g. 'Bursar HR record' vs 'finance login/access') and link them. At minimum, surface a warning when a person exists in the other store.",
+    "backendTrace": "/api/bursars/* (superadmin.js:309-314) -> CoreBursar; /api/school/finance-users/* (school.js:338-340) -> SchoolAdmin. Distinct tables, both gated to school_admin+superadmin, both tenant-scoped, but no cross-reference."
+   },
+   {
+    "id": "fu-integrity-panel-hardcoded-claims",
+    "title": "System Integrity panel hardcodes SHA-256 / audit-trail / immutable-records trust claims",
+    "category": "vague-feature",
+    "severity": "low",
+    "page": "finance-users",
+    "component": "src/components/schooladmin/FinanceUsers/IntegrityPanel.jsx + finance.constants.FU_INTEGRITY_BADGES",
+    "evidence": "IntegrityPanel renders a fixed 'System Integrity ACTIVE' shield with copy 'All transactions are securely logged and audited' and badges 'SHA-256 Hashed', 'Audit Trail Enabled', 'Immutable Records' (IntegrityPanel.jsx:23-37, FU_INTEGRITY_BADGES in finance.constants.js:83-87). None of these are driven by any backend signal; the only dynamic text is `${summary.txToday} transactions hashed today` which is always 0 (see fu-fabricated-finance-dashboards).",
+    "userImpact": "The admin is shown a security-assurance panel asserting transactions are SHA-256 hashed and tamper-evident with an immutable audit trail. There is no evidence in the codebase that finance transactions are hashed or stored immutably, so this is an unverifiable trust claim presented as fact.",
+    "suggestedFix": "Remove the panel or replace the hardcoded badges with claims you can actually back (e.g. real audit-log row counts), and drop the always-zero 'transactions hashed today' line.",
+    "backendTrace": "N/A — static frontend content; no backend basis for the hashing/immutability claims."
+   }
+  ]
+ },
+ {
+  "agentId": "ae2a93ee46bbc39bd",
+  "unit": "classes-subjects",
+  "summary": "The classes-subjects slice (SAClasses.js, SASubjects.js, rendered for activePage 'classes'->SAClasses and 'subjects'->SASubjects) is largely solid and functional end-to-end for school_admin. All list/CRUD/toggle/delete operations and every assignment modal (students, subjects, teachers to classes; classes and teacher to subjects) call real backend endpoints under the superadmin router mounted at /api. Those routes use the shared gate sla = [requireActiveAccount, requireRole(['superadmin','school_admin'])] (routes/superadmin.js:227-260), and every handler in superadminDataController.js enforces tenant isolation via scopedSchoolId(req) on create/list and denyCrossTenant(req,res,row.school_id,...) on every id-addressed read/update/delete/assign (verified lines 2359-2862). A school_admin cannot reach another school's class/subject by id (403), and create is force-pinned to the JWT school_id, ignoring any client school_id. Tenant isolation for this slice is correct. The one real defect: ClassForm fetches GET /api/class-subtypes/ (SAClasses.js:220) but that route is registered ONLY on the superadmin-gated sa sub-router (superadmin.js:196), so a school_admin gets 403, the .catch(()=>{}) swallows it, and the Class Subtype dropdown is permanently empty for school admins. Secondary UX issues: AssignSubjectTeacherModal always shows a success toast even when the subject has no class links (the update is a silent no-op), and the Class form exposes raw developer-ish numeric fields (Form Number, Academic Year ID) and many unlabeled-purpose fields.",
+  "workingWell": [
+   "Classes list + Subjects list load real, tenant-scoped data: GET /api/classes/ and /api/subjects/ -> getSuperClasses/getSuperSubjects force where.school_id = scopedSchoolId(req) for non-superadmin (superadminDataController.js:2362-2364, 2470-2472), so a school_admin only ever sees its own rows.",
+   "Create/Update/Delete/Toggle for both classes and subjects are real and tenant-guarded: create pins school_id from token (createSuperClass:2413-2416, createSuperSubject:2492-2495) and ignores client-supplied school_id on edit; update/delete/toggle all call denyCrossTenant against the row's school_id before mutating (2437/2451/2460 and 2507/2521/2530).",
+   "All three class assignment modals are wired end-to-end and tenant-safe: assign-students (capacity-checked, scoped to cls.school_id at 2666-2674), assign-subjects (2707-2719), assign-multiple-teachers (max_teachers checked, 2735-2756); each loads current+available lists from real endpoints that filter members by the class's own school_id.",
+   "Both subject assignment modals work end-to-end: assign-classes (assignSubjectClasses:2777-2790) and assign-teacher (assignSubjectTeacher:2792-2805), with available-classes/teachers scoped to sub.school_id (2829, 2841).",
+   "Search is genuinely server-side (q param -> Op.like across name/code/form/category for classes, name/code/description for subjects, 2366-2369 / 2474-2477) with debounce (250ms) and pagination wired to the returned total; empty, loading, and error states all render (loadError branch and the 'No ... yet' / 'No ... match your search' empty rows).",
+   "Academic Year dropdown in ClassForm resolves correctly for school_admin: GET /api/school/academic-years/ exists on the school router (routes/school.js:199) and the form upgrades the raw academic_year_id number input to a real <select> when years load (SAClasses.js:282-290).",
+   "Response shape matches: successResponse spreads payload at top level (superadminDataController.js:42), so the frontend's r.classes / r.subjects / r.total reads are correct.",
+   "Tables are wrapped in .sa-table-wrap with overflow-x:auto (SA.css:929-934) and the shell ships @media(max-width:600px) blocks, so the grid scrolls rather than overflowing on mobile."
+  ],
+  "findings": [
+   {
+    "id": "class-subtype-dropdown-403-empty",
+    "title": "Class Subtype dropdown is permanently empty for school_admin (endpoint is superadmin-only, 403 silently swallowed)",
+    "category": "bug",
+    "severity": "medium",
+    "page": "classes",
+    "component": "src/components/superadmin/SAClasses.js (ClassForm)",
+    "evidence": "SAClasses.js:220 ClassForm fetches req('GET','/api/class-subtypes/').then(...).catch(()=>{}). That route is registered ONLY on the superadmin-gated sub-router: routes/superadmin.js:196 `sa.get('/class-subtypes/', data.getClassSubtypes)` where sa.use(requireRole(['superadmin'])) (superadmin.js:112). Grep confirms no school-level class-subtypes route exists anywhere. For a school_admin the GET returns 403, the .catch swallows it, subtypes stays [], and the dropdown (SAClasses.js:269-272) shows only '— None —'.",
+    "userImpact": "A school admin opening Add/Edit Class can never pick a Class Subtype — the dropdown is always empty even when subtypes exist in the system. The field silently does nothing, with no error shown. The Subtype column in the table will therefore always read '—' for classes they create.",
+    "suggestedFix": "Expose a read-only class-subtypes list to school_admin: add `router.get('/class-subtypes/', sla, data.getClassSubtypes)` on the shared (sla) router in superadmin.js alongside the other school-level reads, OR point the ClassForm at an existing school-scoped reference endpoint. At minimum, surface the failure instead of swallowing it so the gap is visible.",
+    "backendTrace": "GET /api/class-subtypes/ -> routes/superadmin.js:196 (sa router, requireRole(['superadmin']) at line 112) -> getClassSubtypes (superadminDataController.js:~2319). Endpoint EXISTS but is role-gated to superadmin only; school_admin -> 403."
+   },
+   {
+    "id": "assign-subject-teacher-noop-false-success",
+    "title": "Assigning a teacher to a subject with no class links is a silent no-op but reports success",
+    "category": "poor-ux",
+    "severity": "low",
+    "page": "subjects",
+    "component": "src/components/superadmin/SASubjects.js (AssignSubjectTeacherModal)",
+    "evidence": "SASubjects.js:292-297 handleAssign POSTs /api/subjects/{id}/assign-teacher/ then unconditionally shows 'Teacher assigned to subject' on any 2xx. Backend assignSubjectTeacher (superadminDataController.js:2792-2805) does ClassSubject.update({teacher_id},{where:{subject_id}}) — it only touches existing class-subject links. If the subject is not yet assigned to any class, zero rows update and it returns success({}, 'Subject teacher updated').",
+    "userImpact": "A school admin picks a teacher for a subject that hasn't been attached to any class, sees a green success toast, but nothing was actually assigned. Reopening shows no teacher recorded. The modal label ('assigns to all classes linked to this subject') hints at this but the success message contradicts it, causing confusion.",
+    "suggestedFix": "Have the backend return the affected-row count and the frontend show 'No classes are linked to this subject yet — assign classes first' when zero rows were updated; or block/disable the Assign action until at least one class is linked.",
+    "backendTrace": "POST /api/subjects/:id/assign-teacher/ -> routes/superadmin.js:260 (sla gate) -> assignSubjectTeacher (superadminDataController.js:2792). Exists, tenant-guarded via denyCrossTenant(2797); behaves as a no-op when the subject has no ClassSubject rows."
+   },
+   {
+    "id": "class-form-raw-developer-fields",
+    "title": "Class form exposes raw 'Academic Year ID' / 'Form Number' inputs and many ambiguous fields with no guidance",
+    "category": "poor-ux",
+    "severity": "low",
+    "page": "classes",
+    "component": "src/components/superadmin/SAClasses.js (ClassForm)",
+    "evidence": "classFields (SAClasses.js:194-210) renders ~15 inputs in one modal including 'Form Number' (number), 'Academic Year ID' (number) and 'Track'/'Education Level'/'Category'/'Stream' as free text. The Academic Year field only upgrades to a friendly <select> if /api/school/academic-years/ returns rows (line 282); otherwise the user is asked to type a raw numeric foreign-key ID (line 203, 292).",
+    "userImpact": "A non-technical school admin sees a long, dense form with an 'Academic Year ID' number box (a DB foreign key) when no academic years are configured, plus several unlabeled-purpose free-text fields. Easy to fill wrong or leave blank; no inline help, grouping, or validation beyond 'name required'.",
+    "suggestedFix": "Group the form into sections (Identity / Capacity / Schedule), hide or relabel the raw academic_year_id input (never ask for a bare ID — require the dropdown or omit), and add short helper text for Form Number, Track, and Education Level.",
+    "backendTrace": "Cosmetic/UX only — POST/PUT /api/classes/ (createSuperClass:2409, updateSuperClass:2433) accept all these fields and persist them correctly; no backend defect."
+   }
+  ]
+ },
+ {
+  "agentId": "a51e9f3e20e8ccc9e",
+  "unit": "timetable-exams-rooms",
+  "summary": "Audited the four school_admin pages in this slice end-to-end (frontend handlers -> ApiClient -> route -> controller -> model). Timetable and Rooms are functional end-to-end (CRUD persists, tenant-scoped). Exams works for creating/listing/deleting exams and entering/saving marks, but the exam \"Type\" dropdown is a dead control (no DB column, never persisted, list badge renders blank). The single most serious finding is Exam Officers: the page is completely non-functional because the backend returns the wrong response key AND filters out non-officers AND omits the User join the UI needs (name/email), so the list is always empty and no teacher can ever be assigned the Examination Officer role. Security/tenant isolation across the slice is solid: every /api/school/* handler resolves the tenant from the SchoolAdmin link or JWT (getSchoolFromUser/schoolScope) and never trusts a client school_id; mutations are role-gated to school_admin/superadmin via schoolWriteGuard. Note a code-hygiene risk: getExamOfficers/assignExamOfficer are defined twice in schoolController.js (the later duplicate wins).",
+  "workingWell": [
+   "Timetable (timetable-mgr) is functional end-to-end: GET /api/school/timetable/?class_id= reads persisted TimetableSlot rows, POST /generate/ runs a constraint-aware solver in a transaction and bulkCreates slots (no double-booking, max-teacher/day cap, break rows persisted), DELETE clears per-class or whole-school. Response field names line up with the frontend (total_slots->placed, periods_per_day, break_periods).",
+   "Rooms (rooms) CRUD is functional and tenant-scoped: getRooms/createRoom/updateRoom/deleteRoom all filter by school.id; toggle reuses updateRoom with is_active; delete uses window.confirm; response key {rooms} matches the UI.",
+   "Exams (exam-schedule) core flow works: create/list/delete exams and load/save results all persist and are school-scoped. saveExamResults has a real tenant guard (skips student_ids not in this school) and clamps marks to [0,total_marks].",
+   "Tenant isolation is correct across the whole slice: getSchoolFromUser resolves the school from the SchoolAdmin link (or JWT school_id fallback) and never from a client-supplied body/query field; schoolScope only honours ?school_id for superadmin.",
+   "Mutations on /api/school/* are role-gated: schoolWriteGuard applies requireRole(['school_admin','superadmin']) to every POST/PUT/PATCH/DELETE, closing the privilege-escalation hole for student/parent/teacher tokens.",
+   "Pages use the shared ska- class system whose CSS (SchoolAdmin.css) has @media(max-width:600px/480px/400px/360px) rules collapsing ska-form-grid and ska-stat-grid-4; data tables are wrapped in overflowX:auto so they scroll on mobile."
+  ],
+  "findings": [
+   {
+    "id": "exam-officers-response-key-mismatch",
+    "title": "Exam Officers page is permanently empty — backend returns {exam_officers} but UI reads d.teachers",
+    "category": "bug",
+    "severity": "critical",
+    "page": "exam-officers",
+    "component": "src/components/schooladmin/SAExtraPages.js (ExamOfficersPage) + backend_node/src/controllers/schoolController.js (getExamOfficers)",
+    "evidence": "Frontend SAExtraPages.js:1115-1116 sets state from `d.teachers`: ApiClient.get('/api/school/exam-officers/').then(d => setTeachers(d.teachers || [])). Backend getExamOfficers (schoolController.js:2165-2177, the duplicate that wins) returns successResponse({ exam_officers: officers }) — key is `exam_officers`, never `teachers`. So setTeachers always receives [].",
+    "userImpact": "A school admin opening Examination Officers sees 'No teachers found' forever. Both the 'Current Examination Officers' section and the 'All Teachers' assignment list are always empty, so they can never assign or remove the Examination Officer role — which the page sub-header says is required to allow report-card generation.",
+    "suggestedFix": "Return the key the UI expects (rename `exam_officers` -> `teachers`), and have getExamOfficers return ALL teachers (not just officers) with their name/email — see exam-officers-only-returns-officers and exam-officers-missing-user-join. Also delete the duplicate definition.",
+    "backendTrace": "Route school.js:321 GET /school/exam-officers/ -> getExamOfficers. Two identical definitions exist (schoolController.js:2028 and 2165); JS hoisting/redeclaration means the later one (2165) is the live handler. Both return { exam_officers }."
+   },
+   {
+    "id": "exam-officers-only-returns-officers",
+    "title": "getExamOfficers returns only existing officers, so no NEW officer can ever be assigned",
+    "category": "non-functional",
+    "severity": "high",
+    "page": "exam-officers",
+    "component": "backend_node/src/controllers/schoolController.js (getExamOfficers)",
+    "evidence": "schoolController.js:2170-2172 (and dup 2033-2035): Teacher.findAll({ where: { school_id: school.id, is_examination_officer: true } }). The query is filtered to officers only. The UI (SAExtraPages.js:1134-1135) splits the returned list into officers = is_examination_officer true and others = false, and renders the 'Assign Role' buttons from `others`. With only officers ever returned, `others` is always empty.",
+    "userImpact": "Even after fixing the response-key bug, the 'All Teachers' section that lets an admin grant the Examination Officer role would still be empty — there is no path to assign the role to a teacher who does not already have it. The feature is a dead end.",
+    "suggestedFix": "Drop the is_examination_officer filter and return all teachers for the school (the UI does its own officer/non-officer split). Keep the per-school scope.",
+    "backendTrace": "GET /school/exam-officers/ -> getExamOfficers. assignExamOfficer (schoolController.js:2179) itself works (Teacher.update is_examination_officer scoped by school), but the list it depends on never surfaces non-officers."
+   },
+   {
+    "id": "exam-officers-missing-user-join",
+    "title": "Exam Officers returns Teacher rows with no name/email (no User join) — UI would crash on t.name.charAt(0)",
+    "category": "bug",
+    "severity": "high",
+    "page": "exam-officers",
+    "component": "backend_node/src/controllers/schoolController.js (getExamOfficers) + models/Teacher.js",
+    "evidence": "Teacher.js has no name/email/first_name columns (grep shows only user_id, employee_id, is_examination_officer, bank_*, emergency_contact_name, next_of_kin_name). getExamOfficers does Teacher.findAll(...) with NO include of User. The UI renders t.name.charAt(0) (SAExtraPages.js:1175,1199), t.name, t.email, t.employee_id (1178-1179,1202-1203). If the list were ever populated, t.name would be undefined and t.name.charAt(0) throws a TypeError, white-screening the page.",
+    "userImpact": "Compounds the empty-list bug: the only reason the page does not currently crash is that the list is always empty. Fixing the key/filter without also joining User and projecting a `name`/`email` would replace 'empty page' with 'crashed page'.",
+    "suggestedFix": "In getExamOfficers, include the User association (as 'user') and project name = `${user.first_name} ${user.last_name}`.trim(), email = user.email, employee_id, is_examination_officer, id — mirroring how getSchoolTimetable resolves teacher names (schoolController.js:2346-2347).",
+    "backendTrace": "GET /school/exam-officers/ -> getExamOfficers (schoolController.js:2165). No include[User]; Teacher model carries no display name."
+   },
+   {
+    "id": "exam-type-dropdown-not-persisted",
+    "title": "Exam 'Type' dropdown is a dead control — no DB column, never saved, list badge renders blank",
+    "category": "dead-ui",
+    "severity": "medium",
+    "page": "exam-schedule",
+    "component": "src/components/schooladmin/NewPages.js (ExamsPage) + backend_node/src/controllers/schoolController.js (createExam) + models/Exam.js",
+    "evidence": "Create form sends exam_type (NewPages.js:280 form default 'final', dropdown 376-379). createExam (schoolController.js:1665) destructures only { term_id, name, date, subject_id, classroom_id, total_marks } and Exam.create omits exam_type. Exam.js has NO exam_type column. getExams (1644-1652) returns no exam_type. The list badge does TYPE_LABEL[e.exam_type] || e.exam_type (NewPages.js:428), which resolves to undefined and renders an empty cyan badge.",
+    "userImpact": "A school admin carefully picks an exam type (C.A./Mid-Term/Final/Mock/Quiz) when creating an exam, but the choice is silently discarded. Every exam in the list shows a blank Type badge, so the column is useless and the selection is misleading.",
+    "suggestedFix": "Add an exam_type column to the Exam model + a prod migration, destructure and persist exam_type in createExam, and return it from getExams. If type tracking is not wanted, remove the Type dropdown and the list column to avoid implying data is stored.",
+    "backendTrace": "POST /school/exams/ -> createExam (schoolController.js:1660) drops exam_type. GET /school/exams/ -> getExams (1628) never selects/returns it. Model pruh_core_exam has no such column."
+   },
+   {
+    "id": "rooms-notes-not-persisted",
+    "title": "Room 'Notes' field is dropped on create/update — no DB column, yet the table tries to display it",
+    "category": "dead-ui",
+    "severity": "low",
+    "page": "rooms",
+    "component": "src/components/schooladmin/SAExtraPages.js (RoomsPage) + backend_node/src/controllers/schoolController.js (createRoom/updateRoom) + models/Room.js",
+    "evidence": "Room form collects notes (SAExtraPages.js:951,1090-1092) and the table renders {r.notes} under the room name (1040). createRoom (schoolController.js:1615) destructures only { name, code, capacity, room_type } — notes is ignored; updateRoom (1767-1773) builds fields from name/code/capacity/room_type/is_active only. Room.js has no notes column.",
+    "userImpact": "An admin can type room notes (e.g. 'projector, 2nd floor') and the form accepts them, but they are never saved and never appear in the list. Low impact (cosmetic field) but it is a silent data-loss control.",
+    "suggestedFix": "Add a notes column to the Room model + migration and persist it in createRoom/updateRoom, or remove the Notes textarea and the table's {r.notes} render so users are not led to enter data that is discarded.",
+    "backendTrace": "POST/PUT /school/rooms/ -> createRoom (1610) / updateRoom (1761). Neither reads req.body.notes; pruh_core_room has no notes column."
+   },
+   {
+    "id": "timetable-clear-all-no-confirm",
+    "title": "Timetable 'Clear' wipes the entire school's timetable with no confirmation when viewing 'All Classes'",
+    "category": "poor-ux",
+    "severity": "medium",
+    "page": "timetable-mgr",
+    "component": "src/components/schooladmin/NewPages.js (TimetablePage handleClear)",
+    "evidence": "NewPages.js:736-742 handleClear calls ApiClient.delete(`/api/school/timetable/${selClass ? `?class_id=${selClass}` : ''}`) with NO window.confirm. When the View Class selector is set to '— All Classes —' (selClass === '', the default before a class is auto-selected, and an explicit option at 806), the request omits class_id and the backend deleteTimetable (schoolController.js:2452-2459) destroys every TimetableSlot for the school. By contrast Rooms delete, term delete, and assignment delete all use window.confirm.",
+    "userImpact": "One stray click on 'Clear' while 'All Classes' is selected irreversibly deletes the generated timetable for every class in the school with no warning and no undo. The success banner even reads 'All timetables cleared.' after the fact.",
+    "suggestedFix": "Add a window.confirm gate to handleClear, with copy that distinguishes single-class vs whole-school clears (e.g. 'Clear the timetable for ALL classes? This cannot be undone.').",
+    "backendTrace": "DELETE /school/timetable/ -> deleteTimetable (schoolController.js:2452); with no class_id it destroys all slots for school.id. Endpoint works as designed; the gap is the missing client-side confirmation."
+   },
+   {
+    "id": "timetable-generate-ignores-selected-class",
+    "title": "'Generate Timetable' always rebuilds ALL classes regardless of the selected View Class",
+    "category": "poor-ux",
+    "severity": "low",
+    "page": "timetable-mgr",
+    "component": "src/components/schooladmin/NewPages.js (TimetablePage handleGenerate) + backend_node/src/controllers/schoolController.js (generateTimetable)",
+    "evidence": "handleGenerate (NewPages.js:714-734) posts only { periods_per_day, max_teacher_per_day, break_periods } — selClass is never sent. generateTimetable (schoolController.js:2381,2436) loads all active classes for the school, destroys their slots and regenerates them all. The page header/controls are framed around a single 'View Class', so the global scope of Generate is not obvious.",
+    "userImpact": "An admin who selected one class and tweaks the periods/breaks to regenerate just that class actually wipes and regenerates every class's timetable in the school. Existing manually-acceptable schedules for other classes are silently replaced.",
+    "suggestedFix": "Either (a) make the UI explicit that Generate rebuilds the whole school (label it 'Generate All Classes' and warn), or (b) accept an optional class_id in generateTimetable and scope the regenerate to the selected class when one is chosen.",
+    "backendTrace": "POST /school/timetable/generate/ -> generateTimetable (schoolController.js:2367) operates on all active classes; no class scoping parameter is read."
+   },
+   {
+    "id": "exam-results-grade-letters-hardcoded",
+    "title": "Exam results entry shows hardcoded letter grades, ignoring the school's configured grading scheme",
+    "category": "poor-ux",
+    "severity": "low",
+    "page": "exam-schedule",
+    "component": "src/components/schooladmin/NewPages.js (ExamsPage results tab)",
+    "evidence": "NewPages.js:480 computes the displayed letter from fixed cutoffs: pct >= 80 'A' : >= 65 'B' : >= 50 'C' : >= 40 'D' : 'F'. These thresholds are hardcoded and do not read the school's Grading Scheme (pass_mark/boundaries) configured at /api/school/grading-scheme/ (GradingSchemePage).",
+    "userImpact": "While entering marks, the live grade letter an admin sees may not match the school's own grade boundaries (e.g. a school with pass_mark 50 and custom bands). The stored marks are correct, but the on-screen grade preview can mislead. Cosmetic only — letters are not persisted here.",
+    "suggestedFix": "Fetch the school grading scheme and derive the preview letter from its boundaries, or drop the letter column in the entry view to avoid implying an authoritative grade.",
+    "backendTrace": "No backend involvement — saveExamResults stores numeric marks only; the letter is a client-side display. Grading scheme available at GET /school/grading-scheme/ but not consumed here."
+   }
+  ]
+ },
+ {
+  "agentId": "a4517d4f682a716e9",
+  "unit": "attendance (page key: attendance-report)",
+  "summary": "The attendance slice (single page `attendance-report` → src/components/principal/AttendanceReport.js) is functional end-to-end and well-built. The one interactive control (the date-range `<select>`: 7/30/90/180 days) is correctly wired: it drives `principalApi.getAttendanceReport(days)` → GET /api/principal/attendance-report/?days=N → controller `getAttendanceReport` in principalController.js (line 442), which aggregates real rows from the `pruh_core_attendance` table (Attendance model), grouped per class with present/absent/late/excused counts and an attendance rate. The data source is real: teachers write attendance via teacherController (`Attendance.upsert`, line 577). Tenant scoping is correct — the controller resolves school via `getSchoolFromUser(req)` which uses `req.schoolId || req.user.school_id` (pinned from JWT for non-superadmin; superadmin may pass ?school_id), so there is NO client-trusted school_id and no cross-tenant leak. The component has proper loading, error, and empty states, sorts low-attendance classes first with a warning banner, and the CSS (AttendanceReport.css) includes the mandated @media(max-width:600px) and (max-width:360px) responsive rules with full-width controls. The ONLY real issue found is a missing role gate on the whole /api/principal/* router: it applies only `authenticateToken` + `schoolScope` and no `requireRole`, so any authenticated user in the school (student, parent, teacher, bursar) can call the attendance-report endpoint and read school-wide attendance analytics meant for principals/school-admins. This is a same-tenant horizontal authorization gap, not a cross-tenant breach.</parameter>\n<parameter name=\"pagesAudited\">[\"attendance-report\"]",
+  "workingWell": [
+   "Date-range select (7/30/90/180 days) is fully wired: onChange sets `days`, which re-triggers the memoized `load()` via useEffect, refetching GET /api/principal/attendance-report/?days=N (AttendanceReport.js:54-56, 31-45).",
+   "Backend endpoint exists and is real: principal.js:33 routes to getAttendanceReport (principalController.js:442-495), which performs genuine aggregation over the Attendance table — not a stub or mock.",
+   "Real data source confirmed: attendance rows are written by teachers via teacherController.js `Attendance.upsert` (line 577), so the report is not perpetually empty by design.",
+   "Tenant isolation is correct: getSchoolFromUser uses req.schoolId||req.user.school_id pinned from JWT (principalController.js:19-28; schoolScope.js only honors ?school_id for superadmin), so no cross-tenant exposure and no client-trusted school id.",
+   "Complete UX states: distinct error block (AttendanceReport.js:59-65), loading block (67-72), empty block with helpful copy (74-80), plus low-attendance warning banner (107-112) and low classes sorted first (controller sort at line 479).",
+   "Responsive: AttendanceReport.css has @media(max-width:600px) stacking the header and making the select full-width (97-116) and @media(max-width:360px) (118-120), meeting the project mobile mandate.",
+   "Defensive client parsing: handles res.success===false, null overall, and overall.total===0 without crashing (AttendanceReport.js:36-39, 74, 82)."
+  ],
+  "findings": [
+   {
+    "id": "principal-router-no-role-gate",
+    "title": "Attendance report endpoint (and all /api/principal/*) lacks a requireRole gate — any authenticated user can read school-wide attendance",
+    "category": "security",
+    "severity": "medium",
+    "page": "attendance-report",
+    "component": "src/components/principal/AttendanceReport.js (backend: backend_node/src/routes/principal.js)",
+    "evidence": "principal.js:15-18 applies only `router.use(authenticateToken)` and `router.use(schoolScope)` — there is NO `requireRole(...)`. auth.js:6-46 only validates the JWT and sets req.user; it does not restrict role. schoolScope.js:1-11 only pins school_id, no role check. The route principal.js:33 `router.get('/attendance-report/', getAttendanceReport)` therefore accepts any valid token. By contrast requireRole IS used on sibling routers: finance.js:55/57, school.js:152, superadmin.js:112/227. getAttendanceReport (principalController.js:442) resolves the school from the caller's own JWT and returns full school-wide present/absent/late/excused counts per class.",
+    "userImpact": "A logged-in student, parent, teacher, or bursar in the same school can call GET /api/principal/attendance-report/ directly (e.g. via devtools/curl with their own token) and retrieve principal-level, school-wide attendance analytics for every class — data the UI never exposes to them and that is intended for principals/school admins. No cross-tenant leak (school is pinned to the caller's own school), but it is a cross-role information disclosure within the tenant.",
+    "suggestedFix": "Add a role gate on the principal router, e.g. `router.use(requireRole(['principal','school_admin','superadmin']))` after schoolScope in principal.js (mirroring finance.js/school.js). If specific principal endpoints must stay broader, gate per-route instead. Re-verify that legitimate school_admin/principal tokens still pass (they carry role 'school_admin'/'principal').",
+    "backendTrace": "GET /api/principal/attendance-report/?days=N → mounted at index.js:142 (app.use('/api/principal', principalRouter)) → principal.js:15-18 (authenticateToken + schoolScope only, no requireRole) → principal.js:33 getAttendanceReport → principalController.js:442-495 (real aggregation over Attendance where school_id = caller's school). Endpoint EXISTS and WORKS; the gap is authorization, not functionality."
+   }
+  ]
+ },
+ {
+  "agentId": "a0cad2e07014801fd",
+  "unit": "virtual-meetings (vm-parents, vm-staffs, vm-students)",
+  "summary": "The virtual-meetings slice is a single component (SAVirtualMeeting.js) reused for three audiences (parents/staffs/students). The admin-side CRUD is genuinely functional end-to-end and well-secured: all four routes (GET/POST/PUT/DELETE /api/virtual-meetings/) are gated by [requireActiveAccount, requireRole(['superadmin','school_admin'])], the controller pins school_admin to their own school via scopedSchoolId() (-1 sentinel prevents cross-tenant leakage when no school_id) and guards update/delete with outsideScope() to prevent IDOR, and every UI control (Schedule, Edit, Delete with confirm modal, Complete, Cancel, Join link, plus the superadmin school filter) maps to a real handler that persists to pruh_core_virtual_meeting. Empty/loading/error/toast states are all present and the CSS is fully responsive (42px+ touch targets, @media max-width:600px). The real problems are at the product level, not the plumbing: (1) the feature is admin-create-only — NO parent, staff, or student portal anywhere consumes VirtualMeeting, so the audience never sees the meeting or its join link; (2) the page subtitle promises 'reminders' but no notification/email is ever generated; (3) the model relies on db.sync alter which is OFF in production, and no .sql migration exists, so the prod table must be created by hand or every call 500s.",
+  "workingWell": [
+   "Role gating is correct: all four /api/virtual-meetings/ routes carry sla = [requireActiveAccount, requireRole(['superadmin','school_admin'])] (superadmin.js:227, 329-332). A teacher/parent/student token is rejected with 403.",
+   "Tenant isolation is solid: scopedSchoolId() pins a school_admin to their own school and returns -1 (matches nothing) when the token has no school_id (superadminDataController.js:55-60); getVirtualMeetings filters where.school_id accordingly (1688); update/delete additionally call outsideScope() so a school_admin cannot edit/delete another school's meeting even by guessing an id — returns 404 (1735, 1756). No IDOR.",
+   "createVirtualMeeting ignores client-supplied school_id for non-superadmin (forcedSchool wins; data.school_id only used when forcedSchool is null i.e. superadmin), so a school_admin cannot plant a meeting in another tenant (1709-1711).",
+   "Full CRUD is real and persists: create/list/update/delete all hit the DB; status transitions (scheduled/completed/cancelled) are whitelisted server-side (1742). The Complete/Cancel buttons and the Edit-form status dropdown all work end-to-end.",
+   "Every interactive control is wired: Schedule Meeting (line 158), Edit/Delete icon buttons (123-124), Delete confirm modal (207-218), Complete/Cancel (140-141), Join link (135-136, opens meeting_url in new tab with rel=noopener), and the superadmin-only school <select> filter (280-288). No dead buttons.",
+   "Good UX states: loading spinner (163), error banner (164), empty state (168-173), per-section empty text (179), and a toast system (151, 63) for success/error feedback. Upcoming vs Past split is computed sensibly (86-96).",
+   "Fully responsive per project mandate: SAVirtualMeeting.css:191-199 has @media (max-width:600px) collapsing the grid and form to one column, full-width buttons, and column-reversed modal actions; touch targets are >=42px (.savm-btn min-height 42px, inputs min-height 42px, mobile buttons 46px).",
+   "MeetingForm is conditionally mounted, so opening 'Schedule' after an 'Edit' starts from a clean useState({duration_minutes:60}) — no stale-form bug between create and edit."
+  ],
+  "findings": [
+   {
+    "id": "vm-no-audience-delivery",
+    "title": "Scheduled meetings are never delivered to parents/staff/students — admin-only data island",
+    "category": "non-functional",
+    "severity": "high",
+    "page": "vm-parents, vm-staffs, vm-students",
+    "component": "src/components/superadmin/SAVirtualMeeting.js",
+    "evidence": "Grep for VirtualMeeting/virtual-meetings across the whole frontend returns ONLY SuperadminDashboard.js, SAVirtualMeeting.js and SAVirtualMeeting.css. Across the whole backend it returns ONLY superadminDataController.js, models/VirtualMeeting.js and routes/superadmin.js. parentController.js has zero references. There is no parent/teacher/student endpoint or portal view that lists VirtualMeeting rows. The component header comment (lines 4-9) and subtitle 'Schedule and manage video meetings for X. Shareable join links, reminders and status tracking.' (line 156) imply the audience receives the meeting, but nothing on the parent/staff/student side ever reads these rows.",
+    "userImpact": "A school admin fills in a Parent-Teacher Meeting with a Google Meet/Zoom link and a time, sees 'Meeting scheduled', and reasonably believes parents will get the invite/link. In reality the meeting lives only in the admin's own dashboard. No parent, staff member, or student is ever shown the meeting or the join link, so the core purpose of the feature (getting an audience into a video call) does not happen. The admin must copy the link out-of-band, defeating the tool.",
+    "suggestedFix": "Add a read endpoint and UI on the consumer side: parent portal lists VirtualMeeting where audience='parents' AND school_id=their school (status='scheduled'); teacher/staff portal for audience='staffs'; student portal for audience='students'. Surface upcoming meetings with the Join link on each role's overview/notifications page so the audience can actually attend.",
+    "backendTrace": "VirtualMeeting model (models/VirtualMeeting.js) + CRUD in superadminDataController.js getVirtualMeetings/createVirtualMeeting (lines 1683-1729). No GET handler in parentController.js / teacher / student controllers reads VirtualMeeting. Backend grep confirms only 3 files reference it, all admin-side."
+   },
+   {
+    "id": "vm-reminders-not-implemented",
+    "title": "UI advertises 'reminders' but no reminder/notification is ever created",
+    "category": "vague-feature",
+    "severity": "medium",
+    "page": "vm-parents, vm-staffs, vm-students",
+    "component": "src/components/superadmin/SAVirtualMeeting.js",
+    "evidence": "Subtitle at SAVirtualMeeting.js:156 reads '...Shareable join links, reminders and status tracking.' But createVirtualMeeting (superadminDataController.js:1704-1729) only does VirtualMeeting.create({...}) and returns — no Notification row, no email, no SMS, no scheduled job. updateVirtualMeeting (1731-1750) likewise only mutates the row. There is no reminder mechanism anywhere in the slice.",
+    "userImpact": "The admin trusts the product's own copy that attendees will be reminded. No reminder is ever sent (and per the previous finding, attendees can't even see the meeting). The promised behaviour silently does not exist, so admins may skip manually notifying people and attendance suffers.",
+    "suggestedFix": "Either implement reminders (create Notification rows / queue email on create and N minutes before scheduled_at), or remove the word 'reminders' from line 156 until it is real. Do not advertise capabilities the code does not have.",
+    "backendTrace": "createVirtualMeeting / updateVirtualMeeting in superadminDataController.js — no notification/email side effects present."
+   },
+   {
+    "id": "vm-prod-table-missing-migration",
+    "title": "pruh_core_virtual_meeting has no production migration; depends on dev-only db.sync(alter)",
+    "category": "non-functional",
+    "severity": "high",
+    "page": "vm-parents, vm-staffs, vm-students",
+    "component": "backend_node/src/models/VirtualMeeting.js",
+    "evidence": "VirtualMeeting.js:22 tableName 'pruh_core_virtual_meeting'. index.js:154 runs db.sync({ alter: process.env.NODE_ENV !== 'production' }) — alter is DISABLED in production. A repo grep for *.sql referencing virtual_meeting returns nothing, so there is no manual migration shipped for this table (consistent with the project's documented 'pending prod migrations' pattern for TimetableSlot etc.). Locally the table auto-creates; in prod it will not exist unless created by hand.",
+    "userImpact": "On production, the first time a school admin opens any vm-* page or clicks Schedule, the query against a non-existent table throws and the handler returns 500 'Internal server error' (caught at lines 1698-1701 / 1725-1728). The admin sees 'HTTP 500' in the error/toast and the entire feature is dead until ops runs a CREATE TABLE by hand.",
+    "suggestedFix": "Add a committed SQL migration that creates pruh_core_virtual_meeting (mirroring the model columns) and run it on prod, the same way TimetableSlot and academic-year ALTERs are handled. Document it in the pending-prod-migrations list.",
+    "backendTrace": "Model maps to pruh_core_virtual_meeting; index.js:154 sync alter off in prod; no .sql file creates the table; controller wraps errors as 500."
+   },
+   {
+    "id": "vm-no-url-time-validation",
+    "title": "Meeting can be saved with no link and no date; client-only validation accepts empty join URL and past times",
+    "category": "poor-ux",
+    "severity": "low",
+    "page": "vm-parents, vm-staffs, vm-students",
+    "component": "src/components/superadmin/SAVirtualMeeting.js",
+    "evidence": "MeetingForm.submit (SAVirtualMeeting.js:253-268) only enforces title ('Title is required.', line 256). meeting_url and scheduled_at are optional; payload sends them as '' / null. Backend createVirtualMeeting (superadminDataController.js:1704-1724) validates only data.title; it never validates meeting_url is a URL or scheduled_at is present/future. The card then renders no Join button when meeting_url is empty (line 135) and 'Not scheduled' when scheduled_at is null (fmtWhen, line 44).",
+    "userImpact": "An admin can create a 'meeting' with no link and no time and it is accepted as scheduled. The resulting card has nothing to join and shows 'Not scheduled', which is a dead card. Past-dated meetings silently drop into the 'Past & Closed' bucket (upcoming/past split, lines 86-96) even though just created, which looks like a bug to the admin.",
+    "suggestedFix": "Require scheduled_at and a valid http(s) meeting_url in the form before enabling Schedule (and mirror the check server-side in createVirtualMeeting). Warn when the chosen time is in the past.",
+    "backendTrace": "createVirtualMeeting validates only title (line 1707); accepts null scheduled_at and empty meeting_url."
+   }
+  ]
+ },
+ {
+  "agentId": "aa445b8abc2606165",
+  "unit": "ai-capture (School Admin → AI Document Capture)",
+  "summary": "The ai-capture slice is one page: schooladmin/AIDocumentCapture.js (nav key 'ai-capture', rendered at SuperadminDashboard.js:1505) backed by POST /api/school/ai-capture/ and GET /api/school/ai-capture/list/. The BACKEND is solid and end-to-end correct: both routes use applyAuth (authenticateToken + requireActiveAccount + schoolScope + schoolWriteGuard); the POST is a mutating method so schoolWriteGuard enforces requireRole(['school_admin','superadmin']); schoolScope pins req.schoolId from the JWT (never trusted from client) and the controller writes/reads AIDocumentCapture WHERE school_id = that value, so tenant isolation holds. The prior audit's 'committed Gemini key' concern is RESOLVED — aiCaptureController.js and syllabusGenerator.js both read GEMINI_API_KEY from process.env only, with a clean 503 when unset; no key is committed. The model auto-creates in dev (controller require registers it before db.sync) and the documented production migration covers prod. HOWEVER there is a CRITICAL client-integration bug: adminApi.aiCaptureUpload() returns apiClient.request(...) which resolves to the RAW fetch Response object (not parsed JSON), yet the component reads r.success / r.structured / r.capture_id — all undefined on a Response. Result: even a fully successful 200 extraction takes the else branch and shows 'AI extraction failed.', and the extracted-rows preview table NEVER renders. The feature is effectively non-functional from the user's seat despite a working backend. Secondary issues: multer rejects (oversized/bad-type) on this route bubble to Express's default handler as non-JSON (no error middleware exists), and there is no frontend file-size guard against the 25MB cap; minor responsiveness gap (the .aidc wrapper has no CSS, leans entirely on shared ska-* classes + overflowX scroll, which is acceptable but untcustomized).",
+  "workingWell": [
+   "Backend route POST /api/school/ai-capture/ is fully gated: applyAuth (school.js:159,275) runs authenticateToken + requireActiveAccount + schoolScope + schoolWriteGuard, and because POST is a mutating method schoolWriteGuard (school.js:150-155) calls requireRole(['school_admin','superadmin']). No TODO_JWT backdoor on this route.",
+   "Tenant isolation is correct: schoolScope (schoolScope.js:3-4) sets req.schoolId = req.user.school_id from the JWT for non-superadmin; aiCaptureUpload (aiCaptureController.js:131) and aiCaptureList (aiCaptureController.js:178,182) use that server-derived schoolId for both the INSERT and the list WHERE clause, so a school admin can never read or write another tenant's captures.",
+   "No committed AI key (prior-audit concern resolved): aiCaptureController.js:7-8 and syllabusGenerator.js:9-10 both read GEMINI_API_KEY from process.env only and return a clean 503 'not configured' when unset (aiCaptureController.js:124-126). grep for an AIza* literal across the repo and .env files found nothing.",
+   "Controller does real work and is robust: extracts text from PDF/DOCX/TXT/CSV or sends images to Gemini multimodal (aiCaptureController.js:90-114), persists a processing→done/failed audit row with rows_count and error (aiCaptureController.js:139-156,168-170), and always unlinks the temp upload via cleanup() on every path (aiCaptureController.js:119-120,157,166).",
+   "Schema lifecycle is covered: AIDocumentCapture model auto-creates in dev because requiring schoolRouter (index.js:14) transitively requires the controller and model before db.sync({alter}) runs (index.js:154); production is covered by the documented migration 2026-06-23-ai-capture-and-expense-approval.sql (CREATE TABLE pruh_school_ai_document_capture).",
+   "The capture-history table (GET .../list/) is wired correctly end-to-end: aiCaptureList uses apiClient.get (returns parsed JSON), the component reads d.success/d.captures, and renders status pills + rows + error notes (AIDocumentCapture.js:24-26,168-208)."
+  ],
+  "findings": [
+   {
+    "id": "ai-capture-upload-response-not-parsed",
+    "title": "Upload result is a raw fetch Response, not JSON — every successful extraction shows 'AI extraction failed.' and the preview never renders",
+    "category": "bug",
+    "severity": "critical",
+    "page": "ai-capture",
+    "component": "src/api/adminApi.js / src/components/schooladmin/AIDocumentCapture.js",
+    "evidence": "adminApi.js:19-23 — aiCaptureUpload() does `return apiClient.request('/api/school/ai-capture/', { method:'POST', body: fd })`. apiClient.request() resolves to the RAW fetch Response object (client.js:154 `return response;`), it does NOT call .json(). The component then does `const r = await adminApi.aiCaptureUpload(...)` and `if (r.success) { setResult(r); ... } else { setErr(r.message || 'AI extraction failed.') }` (AIDocumentCapture.js:39-45). A Response object has no `.success`, `.message`, `.structured`, or `.capture_id` properties, so r.success is undefined → the else branch always runs → setErr('AI extraction failed.'). Even on a 200 with extracted rows, the rows preview block (AIDocumentCapture.js:120-165, keyed on `result`) never renders because setResult is never reached. Contrast aiCaptureList (adminApi.js:24-26) which correctly uses apiClient.get (returns parsed JSON) and works.",
+    "userImpact": "A school admin uploads a roster/grade/attendance file, the backend successfully calls Gemini and saves the rows, but the UI shows a red 'Error: AI extraction failed.' and never displays the extracted table. The history row will say status 'done' with a row count, directly contradicting the error message the admin just saw. The core feature of the page is unusable from the user's perspective despite the backend working.",
+    "suggestedFix": "Parse the response in adminApi.aiCaptureUpload: `const res = await apiClient.request('/api/school/ai-capture/', { method:'POST', body: fd }); return res.json();` (mirror the get/post helpers). Same fix applies to adminApi.bulkImport (adminApi.js:34) which has the identical raw-Response bug. Alternatively expose a postForm helper on apiClient that handles FormData and returns .json().",
+    "backendTrace": "POST /api/school/ai-capture/ (school.js:275) → applyAuth → aiCaptureMulter.single('file') → aiCaptureUpload (aiCaptureController.js:117). Endpoint EXISTS, is role-gated and tenant-scoped, and returns a correct JSON body { success:true, capture_id, structured:{rows,columns} } (aiCaptureController.js:159-164). The defect is purely on the frontend integration layer, not the backend."
+   },
+   {
+    "id": "ai-capture-multer-error-not-json",
+    "title": "Multer rejects (oversized / unsupported file) return non-JSON and surface as an opaque 'HTTP 500' to the admin",
+    "category": "poor-ux",
+    "severity": "medium",
+    "page": "ai-capture",
+    "component": "backend_node/src/routes/school.js / src/api/client.js",
+    "evidence": "The route mounts multer directly: `router.post('/school/ai-capture/', applyAuth, aiCaptureMulter.single('file'), aiCaptureUpload)` (school.js:275) with a 25MB limit and a fileFilter that throws on bad types (school.js:256-274). Unlike teacherUpload/studentUpload (school.js:91-131) which wrap multer and convert errors to `res.status(400).json(...)`, this route has no such wrapper, and index.js has NO Express error-handling middleware — only a 404 handler (index.js:162-168). So a multer LIMIT_FILE_SIZE or fileFilter error bubbles to Express's default handler, which returns an HTML error page, not JSON. The client then fails `response.clone().json()` (client.js:131-138) and falls back to `HTTP <status>: <statusText>` (client.js:129). Frontend also has no size check before upload (AIDocumentCapture.js:30-50 just sets the file).",
+    "userImpact": "An admin who picks a file over 25MB, or a slightly off mimetype that slips past the .accept filter, gets a meaningless 'HTTP 500' / generic network error instead of a clear 'file too large (max 25MB)' or 'unsupported file type' message — with no guidance on what to fix.",
+    "suggestedFix": "Wrap aiCaptureMulter like teacherUpload/studentUpload to translate LIMIT_FILE_SIZE and filter errors into res.status(400).json({success:false, message}); and/or add a global Express error-handling middleware in index.js that JSON-ifies multer/other errors. Add a client-side size guard in onPick (reject >25MB with a friendly message).",
+    "backendTrace": "aiCaptureMulter (school.js:256-274) limits to 25MB and filters mimetype/extension. On rejection the error is not caught by any handler (no app.use((err,req,res,next)) in index.js), so Express default HTML response is sent."
+   },
+   {
+    "id": "ai-capture-no-component-styles-responsive",
+    "title": "AIDocumentCapture has no dedicated CSS and no own @media rules; relies entirely on shared ska-* classes + inline styles",
+    "category": "responsiveness",
+    "severity": "low",
+    "page": "ai-capture",
+    "component": "src/components/schooladmin/AIDocumentCapture.js",
+    "evidence": "The root wrapper uses className 'aidc' (AIDocumentCapture.js:62) but a grep for '.aidc' across all of src returned zero CSS matches — the class is purely a hook with no styling. All layout is inline styles plus shared ska-card/ska-input/ska-btn classes (which do carry @media rules in SchoolAdmin.css). The two data tables set fixed inline fontSize 0.8rem and rely on a parent `overflowX:'auto'` wrapper (AIDocumentCapture.js:129-130,173) for horizontal scroll on mobile, and the uploader row uses flexWrap:'wrap' (AIDocumentCapture.js:73). There are no component-specific max-width:600px rules as the project standard mandates.",
+    "userImpact": "On a phone the wide extracted-rows / history tables scroll horizontally (functional but cramped); the uploader controls wrap acceptably. No layout break, but the page is not tuned for small screens the way the standing mobile-responsiveness rule requires.",
+    "suggestedFix": "Add a small .aidc stylesheet (or rules in SchoolAdmin.css) with @media (max-width:600px): reduce table cell padding, ensure the file input and select are full-width, and confirm 44px touch targets on the Extract/Reset buttons; keep the overflowX scroll wrappers as the fallback for wide tables."
+   }
+  ]
+ },
+ {
+  "agentId": "a727b0860adc80b58",
+  "unit": "backend-school-core",
+  "summary": "test",
+  "workingWell": [],
+  "findings": [
+   {
+    "id": "a",
+    "title": "b",
+    "category": "bug",
+    "severity": "low",
+    "page": "c",
+    "component": "d",
+    "evidence": "e",
+    "userImpact": "f",
+    "suggestedFix": "g"
+   }
+  ]
+ },
+ {
+  "agentId": "acc3386f08b321d75",
+  "unit": "backend-finance-attendance-vm",
+  "summary": "Audited the cross-cutting backend that powers the school_admin finance, attendance, report-card, and virtual-meeting pages: routes/finance.js + controllers/financeController.js, routes/principal.js + controllers/principalController.js, routes/live-classes.js + the live-class methods in studentController.js, plus the /api/virtual-meetings/ handlers in superadminDataController.js, and every frontend consumer (financeApi.js, adminApi.js, SAVirtualMeeting.js, bursar/* and principal/* pages). The page-level UX is largely solid end-to-end (VM CRUD, AttendanceReport, FeeCategories, RecordPaymentModal all have real queries plus loading/empty/error states and are correctly token-scoped). The serious problems are at the route layer: the entire /api/principal/* router and almost all of /api/finance/* have NO requireRole and NO requireActiveAccount middleware. They scope by school_id from the token, so they are not cross-tenant, but they are NOT role-gated: any authenticated user who carries a school_id (a teacher, parent, or student) can read the school's finance/analytics and POST to publish report cards, approve/reject grades, record payments, assign fees, and create principal/finance staff accounts. This is a horizontal/vertical privilege-escalation hole the rest of the codebase guards against (the sibling /api/* school CRUD routes use `sla = [requireActiveAccount, requireRole(['superadmin','school_admin'])]`, and finance expense record/review correctly use requireRole — but the other 20+ finance/principal mutations do not). Two write paths also trust client-supplied IDs (assignFees, recordPayment) without confirming the fee category / fee belongs to the caller's school. Separately, BursarHome's quick-action buttons navigate a school_admin to bursar-only page keys through goTo(), which never checks canAccess, so the permission model is bypassed in the UI. live-classes create/update/delete are also ungated.</parameter>\n<parameter name=\"pagesAudited\">[\"fee-dashboard\",\"fee-categories\",\"school-financial-report\",\"report-cards-published\",\"syllabus-progress\",\"attendance-report\",\"vm-parents\",\"vm-staffs\",\"vm-students\",\"finance-users\"]",
+  "workingWell": [
+   "Virtual Meeting (vm-parents/vm-staffs/vm-students) is fully functional end-to-end: SAVirtualMeeting.js CRUD wires to /api/virtual-meetings/ which is role-gated by `sla = [requireActiveAccount, requireRole(['superadmin','school_admin'])]` (superadmin.js:329-332) and tenant-pinned via scopedSchoolId/outsideScope (superadminDataController.js:1686,1735,1756). Has loading, empty, error and toast states.",
+   "AttendanceReport (attendance-report) is clean: principal/AttendanceReport.js calls /api/principal/attendance-report/?days= → getAttendanceReport (principalController.js:442) runs a real school-scoped aggregation with day clamping (max 365) and renders loading/empty/error/low-attendance states.",
+   "FeeCategories (fee-categories) end-to-end works: create modal validates amount>0, calls financeApi.createFeeCategory → createFeeCategory (financeController.js:260) which pins school_id; list has skeleton loading, CTA empty state and error banner.",
+   "Expense workflow has correct separation-of-duties: POST /api/finance/expenses/ is requireRole(CAN_RECORD_EXPENSE) and POST /api/finance/expenses/:id/review/ is requireRole(CAN_APPROVE_EXPENSE) with an individual-level self-approval guard (financeController.js:628) and 409 on already-reviewed.",
+   "RecordPaymentModal is robust: client-side amount/balance validation, student/fee picker, success receipt with integrity hash; recordPayment runs in a transaction and updates the linked fee status atomically (financeController.js:350-416).",
+   "Impersonation write-audit trail is in place: auth.js:34-43 logs every mutating request made under a superadmin impersonation token."
+  ],
+  "findings": [
+   {
+    "id": "principal-router-no-role-gate",
+    "title": "Entire /api/principal/* router has no role gate — any authenticated user can publish report cards, approve/reject grades, and create principal accounts",
+    "category": "security",
+    "severity": "critical",
+    "page": "report-cards-published",
+    "component": "backend_node/src/routes/principal.js",
+    "evidence": "principal.js:15-36 mounts only `router.use(authenticateToken); router.use(schoolScope);` then exposes POST /report-cards/ (publishReportCard), POST /grade-approvals/ (reviewGradeChange), POST /report-cards/comment/, and POST/PUT /principal-users/ with NO requireRole and NO requireActiveAccount. getSchoolFromUser (principalController.js:19-28) returns a school for ANY token that carries school_id (teacher/parent/student all do), so role is never checked. Contrast the sibling shared CRUD which uses `sla = [requireActiveAccount, requireRole(['superadmin','school_admin'])]` (superadmin.js:227).",
+    "userImpact": "A teacher, parent, or student of the school can call POST /api/principal/report-cards/ to publish report cards, POST /api/principal/grade-approvals/ to approve or reject grade-change requests (writing immutable grade-audit events as if they were the principal), and POST /api/principal/principal-users/ to mint a brand-new principal login. Grade integrity and report-card release — the most sensitive academic actions — are unprotected against any logged-in school member.",
+    "suggestedFix": "Add `const requireRole = require('../middleware/requireRole'); const requireActiveAccount = require('../middleware/requireActiveAccount');` and gate the router: `router.use(authenticateToken, schoolScope, requireActiveAccount, requireRole(['superadmin','school_admin','principal']));` (read endpoints can include bursar where appropriate). Mirror the `sla` pattern already used in superadmin.js.",
+    "backendTrace": "routes/principal.js:15-36 → controllers/principalController.js publishReportCard:256 / reviewGradeChange:128 / createPrincipalUser:359 — all execute real writes (transactions + appendGradeEvent) with no role check upstream."
+   },
+   {
+    "id": "finance-router-no-role-gate",
+    "title": "Most /api/finance/* mutations have no role gate — any authenticated user can record payments, assign fees, and create finance/bursar accounts",
+    "category": "security",
+    "severity": "critical",
+    "page": "fee-dashboard",
+    "component": "backend_node/src/routes/finance.js",
+    "evidence": "finance.js:23-26 applies only authenticateToken + schoolScope. requireRole is imported and used on lines 55 and 57 (expenses only). Everything else — POST /payments/ (recordPayment:350), POST /fees/assign/ (assignFees:298), POST /fee-categories/ (createFeeCategory:260), POST /finance-users/ + PUT /finance-users/:id/ (createFinanceUser:696 / updateFinanceUser:732), GET /stats|analytics|fees|payments|overview — has NO requireRole and NO requireActiveAccount. getSchoolFromUser (financeController.js:24-33) resolves a school for any token with school_id.",
+    "userImpact": "Any logged-in member of the school (teacher/parent/student) can read full finance analytics and debtor lists, record arbitrary payments against students, assign fees, and create a new bursar user account (createFinanceUser hashes a default password and inserts a SchoolAdmin row). They could fabricate payment receipts or grant themselves a finance login. The fact that only expense record/review were gated shows the gating was applied unevenly.",
+    "suggestedFix": "Gate the whole router the same way: `router.use(authenticateToken, schoolScope, requireActiveAccount); router.use(requireRole(['superadmin','school_admin','principal','bursar']));` then keep the stricter per-route requireRole on the expense approve/reject (school leadership only). Read-only GETs can share the broad gate; account-creation POSTs should be narrowed to ['superadmin','school_admin'].",
+    "backendTrace": "routes/finance.js:42-54 → recordPayment / assignFees / createFinanceUser all perform real DB writes with no role enforcement."
+   },
+   {
+    "id": "suspended-admin-bypasses-finance-principal",
+    "title": "Finance and principal routers skip requireActiveAccount, so a suspended/rejected school_admin keeps full access",
+    "category": "security",
+    "severity": "high",
+    "page": "fee-dashboard",
+    "component": "backend_node/src/routes/principal.js",
+    "evidence": "The shared school CRUD deliberately re-checks approval per request via `sla = [requireActiveAccount, requireRole(...)]` (superadmin.js:224-227, comment: 'a suspended/rejected school_admin is blocked immediately even with a still-valid token'). Neither finance.js nor principal.js include requireActiveAccount in their `router.use(...)` chain (finance.js:23-26, principal.js:15-18).",
+    "userImpact": "A school_admin whose school was suspended or whose account was deactivated still holds a valid JWT and can continue to record payments, approve grades, publish report cards, and manage staff through the finance/principal endpoints until the token expires — defeating the suspension control that the rest of the platform enforces.",
+    "suggestedFix": "Add requireActiveAccount to the router.use chain on both finance.js and principal.js (after authenticateToken/schoolScope), matching the `sla` pattern.",
+    "backendTrace": "middleware/requireActiveAccount.js:26 exists and is used by superadmin.js but is never wired into finance.js or principal.js."
+   },
+   {
+    "id": "assignfees-recordpayment-idor",
+    "title": "assignFees and recordPayment trust client-supplied fee_category_id / fee_id without verifying they belong to the caller's school",
+    "category": "tenant-isolation",
+    "severity": "high",
+    "page": "fee-categories",
+    "component": "backend_node/src/controllers/financeController.js",
+    "evidence": "assignFees: `const category = await FeeCategory.findByPk(fee_category_id);` (financeController.js:309) — no school_id filter; the created Fee rows are then stamped with the caller's school.id (line 325). recordPayment: `const fee = await Fee.findByPk(fee_id, { transaction });` (financeController.js:377) — no school_id check before mutating fee.amount_paid/status. student_id is likewise taken from the body and never confirmed to be in school.id.",
+    "userImpact": "A school_admin (or, given the missing role gate above, any school member) can pass another school's fee_category_id or fee_id. assignFees would copy a foreign category's amount into their own school's fee ledger; recordPayment would mutate another tenant's Fee row (advancing amount_paid / flipping status to paid) — cross-tenant data corruption driven by a guessable integer id.",
+    "suggestedFix": "Scope every client-supplied id to the resolved school: `FeeCategory.findOne({ where: { id: fee_category_id, school_id: school.id } })`, `Fee.findOne({ where: { id: fee_id, school_id: school.id } })`, and validate student_id belongs to school.id before creating Fee/Payment rows. Return 404 when the id is outside the tenant.",
+    "backendTrace": "financeController.js assignFees:298-348 and recordPayment:350-416 — both create/mutate rows after an unscoped findByPk."
+   },
+   {
+    "id": "live-classes-no-role-gate",
+    "title": "live-classes create/update/delete are ungated — any authenticated user can create or remove a school's live classes",
+    "category": "security",
+    "severity": "high",
+    "page": "vm-staffs",
+    "component": "backend_node/src/routes/live-classes.js",
+    "evidence": "live-classes.js:11-16 applies only `router.use(authenticateToken)` then POST/PATCH/DELETE map to createLiveClass/updateLiveClass/deleteLiveClass. createLiveClass (studentController.js:2168) reads class_id/subject_id from the body, sets school_id from the token and `teacher_id: req.user.id` for any role, with no requireRole. update/delete scope only by school_id (studentController.js:2193,2206).",
+    "userImpact": "A parent or student token can POST /api/live-classes/ to create a live class for any class in their school (and is recorded as the teacher), or DELETE existing ones. No school_admin UI exposes this (adminApi.listLiveClasses at adminApi.js:41 is a dead helper with no consumer), but the endpoints are reachable by any authenticated user.",
+    "suggestedFix": "Add requireRole(['superadmin','school_admin','principal','teacher']) to the write routes in live-classes.js, and validate that class_id/subject_id belong to the caller's school in createLiveClass.",
+    "backendTrace": "routes/live-classes.js:13-16 → studentController.js createLiveClass:2168 / updateLiveClass:2190 / deleteLiveClass:2203 — writes with no role check."
+   },
+   {
+    "id": "bursarhome-quickactions-bypass-permissions",
+    "title": "Finance Command Center quick actions send a school_admin to bursar-only pages, bypassing the permission model",
+    "category": "bug",
+    "severity": "medium",
+    "page": "fee-dashboard",
+    "component": "src/components/bursar/BursarHome.js",
+    "evidence": "BursarHome QUICK_ACTIONS (BursarHome.js:17-25) call navigateTo('payments'|'expenses'|'student-fees'|'finance-team'|'finance-reports'). navigateTo is goTo (SuperadminDashboard.js:622-623) which is just `setActivePage(page)` with NO canAccess check. Those keys render real components via the switch (SuperadminDashboard.js:1469-1474) and are in HANDLED_PAGES (line 376), but in permissions.js they are BURSAR-only (payments:121, expenses:122, student-fees:114, finance-team:115, finance-reports:116) — not granted to school_admin.",
+    "userImpact": "A school_admin who opens the fee-dashboard and clicks 'All Payments', 'Record Expense', 'Student Fees', 'Finance Team', or 'Reports' is navigated to pages the permission config says they cannot access. They load (data is token-scoped so it is their own school, not a leak), but the permission system is silently bypassed and the page has no sidebar entry, leaving the admin on a screen with no nav highlight and no documented access path. It also makes the permission matrix untrustworthy.",
+    "suggestedFix": "Either (a) make goTo enforce canAccess and no-op/redirect when the role lacks the key, or (b) intentionally add these finance keys to school_admin in permissions.js and give them sidebar entries. Decide one source of truth; today the render switch and the permission config disagree.",
+    "backendTrace": "N/A (frontend routing/permission mismatch). Underlying /api/finance/* calls succeed because they are token-scoped."
+   },
+   {
+    "id": "finance-feecategory-no-update-delete",
+    "title": "Fee categories can be created but never edited or deactivated — no update/delete endpoint or UI",
+    "category": "missing-ui",
+    "severity": "low",
+    "page": "fee-categories",
+    "component": "src/components/bursar/FeeCategories.js",
+    "evidence": "financeApi exposes only getFeeCategories and createFeeCategory (financeApi.js:62-73) with the explicit comment 'GET/POST only — no update/delete route'. finance.js has only GET/POST /fee-categories/ (lines 49-50). The FeeCategories card renders an is_active badge (FeeCategories.js:222-224) but there is no control to toggle it and no PUT/DELETE route to back one.",
+    "userImpact": "Once a school_admin creates a fee category with a wrong amount/name, they cannot edit, deactivate, or delete it — they can only create a new one, leaving stale/incorrect categories permanently in the picker. The Active/Inactive badge implies a toggle that does not exist.",
+    "suggestedFix": "Add PUT /api/finance/fee-categories/:id/ and DELETE (or a toggle) in finance.js + financeController, and surface edit/deactivate controls on the card. If deactivation is intended, persist is_active and respect it when listing categories for assignment.",
+    "backendTrace": "routes/finance.js:49-50 — only GET and POST exist for fee-categories."
+   }
+  ]
+ }
+]

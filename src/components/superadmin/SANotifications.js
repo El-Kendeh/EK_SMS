@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import ApiClient from '../../api/client';
+import { canAccess } from '../../config/permissions';
 
 const humanizeType = (t) => {
   if (!t) return 'Security event';
@@ -15,9 +16,13 @@ const SECURITY_SIGNAL = /(login_fail|fail|threat|suspicious|impersonat|lockdown|
    (/api/security-logs/) + the last real backup (/api/admin-settings/).
    No fabricated entries.
    ================================================================ */
-function buildNotifications(schools, gradeAlerts, securityLogs = [], backup = null) {
+function buildNotifications(schools, gradeAlerts, securityLogs = [], backup = null, isSuper = true) {
   const notifs = [];
 
+  /* Application / onboarding notifications are a PLATFORM concern — reviewing school
+     registrations, approvals and rejections is the superadmin's job. A school admin
+     only handles their own school, so these never appear for non-operators. */
+  if (isSuper) {
   /* Application notifications — one per school, sorted by recency */
   const sorted = [...schools].sort(
     (a, b) => new Date(b.registration_date) - new Date(a.registration_date)
@@ -61,6 +66,7 @@ function buildNotifications(schools, gradeAlerts, securityLogs = [], backup = nu
       });
     }
   });
+  } /* end isSuper — application/onboarding notifications */
 
   /* Grade alert notifications — from real /api/grade-alerts/ data */
   const SEVERITY_MAP = { critical: 'critical', high: 'warning', medium: 'warning', low: 'info' };
@@ -203,13 +209,17 @@ function formatFull(iso) {
 /* ================================================================
    Main Component
    ================================================================ */
-export default function SANotifications({ onNavigate, onUnreadChange, schools = [], gradeAlerts = [] }) {
+export default function SANotifications({ onNavigate, onUnreadChange, schools = [], gradeAlerts = [], role = 'superadmin' }) {
+  const isSuper = role === 'superadmin';
   const [securityLogs, setSecurityLogs] = useState([]);
   const [backup,       setBackup]       = useState(null);
 
   /* Pull the real security audit log + last backup so the Security and System
-     categories show actual events instead of a placeholder. Best-effort. */
+     categories show actual events instead of a placeholder. Best-effort.
+     These are platform-operator endpoints (/api/security-logs/, /api/admin-settings/)
+     — a school admin gets 403 and has no business seeing them, so only fetch as super. */
   useEffect(() => {
+    if (!isSuper) { setSecurityLogs([]); setBackup(null); return; }
     let cancelled = false;
     ApiClient.get('/api/security-logs/?limit=25').then(d => {
       if (!cancelled && Array.isArray(d?.logs)) setSecurityLogs(d.logs);
@@ -220,11 +230,11 @@ export default function SANotifications({ onNavigate, onUnreadChange, schools = 
       }
     }).catch(() => {});
     return () => { cancelled = true; };
-  }, []);
+  }, [isSuper]);
 
   const derived = useMemo(
-    () => buildNotifications(schools, gradeAlerts, securityLogs, backup),
-    [schools, gradeAlerts, securityLogs, backup]
+    () => buildNotifications(schools, gradeAlerts, securityLogs, backup, isSuper),
+    [schools, gradeAlerts, securityLogs, backup, isSuper]
   );
   const [notifications, setNotifications] = useState([]);
   const [filter, setFilter]               = useState('all');   // all | unread | application | security | grade | system
@@ -277,10 +287,13 @@ export default function SANotifications({ onNavigate, onUnreadChange, schools = 
   const FILTERS = [
     { key: 'all',         label: 'All' },
     { key: 'unread',      label: `Unread${unreadCount > 0 ? ` (${unreadCount})` : ''}` },
-    { key: 'application', label: 'Applications' },
-    { key: 'security',    label: 'Security' },
+    /* Application / Security / System are platform-operator categories — superadmin only. */
+    ...(isSuper ? [
+      { key: 'application', label: 'Applications' },
+      { key: 'security',    label: 'Security' },
+    ] : []),
     { key: 'grade',       label: 'Grades' },
-    { key: 'system',      label: 'System' },
+    ...(isSuper ? [{ key: 'system', label: 'System' }] : []),
   ];
 
   return (
@@ -312,7 +325,8 @@ export default function SANotifications({ onNavigate, onUnreadChange, schools = 
         {[
           { label: 'Total',        value: notifications.length,                               color: 'var(--sa-text)'   },
           { label: 'Unread',       value: unreadCount,                                         color: 'var(--sa-accent)' },
-          { label: 'Security',     value: notifications.filter(n => n.type === 'security').length, color: 'var(--sa-red)'    },
+          /* Security is a platform-operator metric — only meaningful for superadmin. */
+          ...(isSuper ? [{ label: 'Security', value: notifications.filter(n => n.type === 'security').length, color: 'var(--sa-red)' }] : []),
           { label: 'Grade Alerts', value: notifications.filter(n => n.type === 'grade').length,    color: 'var(--sa-purple)' },
         ].map(card => (
           <div key={card.label} className="sa-card" style={{ padding: '18px 20px', textAlign: 'center' }}>
@@ -413,7 +427,7 @@ export default function SANotifications({ onNavigate, onUnreadChange, schools = 
 
                 {/* Action row */}
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  {notif.actionLabel && onNavigate && (
+                  {notif.actionLabel && onNavigate && canAccess(notif.actionPage, role) && (
                     <button
                       onClick={() => { markRead(notif.id); onNavigate(notif.actionPage); }}
                       style={{

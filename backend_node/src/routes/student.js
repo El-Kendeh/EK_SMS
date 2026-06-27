@@ -142,4 +142,7 @@ router.get('/subjects/:subjectId/deep-dive/', getSubjectDeepDive);
 
 router.get('/live-classes/', listLiveClasses);
 
+// Virtual meetings targeted at this role (read-only; scheduled by the school admin).
+router.get('/virtual-meetings/', require('../controllers/virtualMeetingController').getMyMeetings);
+
 module.exports = router;

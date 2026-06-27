@@ -12,7 +12,6 @@ const IcInfo    = ({ size = 15 }) => Ic(size, <><circle cx="12" cy="12" r="10"/>
 const IcRefresh = ({ size = 15 }) => Ic(size, <><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></>);
 const IcLock    = ({ size = 16 }) => Ic(size, <><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></>);
 const IcDoc     = ({ size = 14 }) => Ic(size, <><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></>);
-const IcSearch  = ({ size = 14 }) => Ic(size, <><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></>);
 const IcEdit    = ({ size = 14 }) => Ic(size, <><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></>);
 const IcCheck   = ({ size = 14 }) => Ic(size, <><polyline points="20 6 9 17 4 12"/></>);
 const IcX       = ({ size = 14 }) => Ic(size, <><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></>);
@@ -138,15 +137,11 @@ export default function SARejectionAudit({ school, onBack, onReconsider }) {
   }, [logs, school.id, reason]);
 
   const isReal      = realEvents.length > 0;
-  const rejectedTs  = realEvents.find(e => e.label === 'Rejection Decision Made')?.ts || school.registration_date;
-  const rejectedBy  = realEvents.find(e => e.label === 'Rejection Decision Made')?.actor || 'Super Admin';
-
-  /* Reconstructed fallback when the live audit log can't be reached */
-  const fallbackEvents = useMemo(() => ([
-    { key: 'f-submit', dot: 'blue',  icon: <IcDoc />,    label: 'Application Submitted',  desc: 'School admin submitted the registration form online.', actor: adminName,   ts: school.registration_date },
-    { key: 'f-review', dot: 'amber', icon: <IcSearch />, label: 'Under Review',           desc: 'Super Admin opened the application for manual review.', actor: 'Super Admin', ts: school.registration_date },
-    { key: 'f-reject', dot: 'red',   icon: <IcX />,      label: 'Rejection Decision Made', desc: `Reason recorded: ${reason}`, actor: 'Super Admin', ts: school.registration_date, highlight: true },
-  ]), [adminName, reason, school.registration_date]);
+  // No fabricated fallback: a missing real event shows "Not recorded" rather than
+  // the registration date dressed up as a rejection time / "Super Admin" as actor.
+  const rejectionEvt = realEvents.find(e => e.label === 'Rejection Decision Made');
+  const rejectedTs  = rejectionEvt ? rejectionEvt.ts : null;
+  const rejectedBy  = rejectionEvt ? rejectionEvt.actor : null;
 
   const archivedNode = {
     key: 'archived', dot: 'purple', icon: <IcArchive />, label: 'Archived',
@@ -154,7 +149,9 @@ export default function SARejectionAudit({ school, onBack, onReconsider }) {
     ts: rejectedTs, derived: true,
   };
 
-  const timeline = (isReal ? [...realEvents, archivedNode] : [...fallbackEvents, archivedNode]);
+  // Only real, logged events. When none exist we render an honest empty state
+  // (below) instead of inventing a reviewer timeline.
+  const timeline = isReal ? [...realEvents, archivedNode] : [];
 
   return (
     <div style={{ maxWidth: 660, margin: '0 auto' }}>
@@ -175,7 +172,7 @@ export default function SARejectionAudit({ school, onBack, onReconsider }) {
           border: '1px solid rgba(16,185,129,0.25)', borderRadius: 20,
           padding: '5px 12px', fontSize: '0.6875rem', fontWeight: 700, flexShrink: 0,
         }}>
-          <span className="sa-live-dot" /> {isReal ? 'Live' : 'Reconstructed'}
+          <span className="sa-live-dot" /> {isReal ? 'Live' : (loading ? 'Syncing…' : 'No events')}
         </span>
       </div>
 
@@ -208,15 +205,17 @@ export default function SARejectionAudit({ school, onBack, onReconsider }) {
         <div className="sa-review-section-body">
           <div className="sa-review-field">
             <span className="sa-review-field-key">Rejected By</span>
-            <span className="sa-review-field-val">{rejectedBy}</span>
+            <span className="sa-review-field-val">{rejectedBy || 'Not recorded'}</span>
           </div>
           <div className="sa-review-field">
             <span className="sa-review-field-key">Date of Rejection</span>
             <span className="sa-review-field-val" style={{ textAlign: 'right' }}>
-              {fmtDateTime(rejectedTs)}
-              <span style={{ display: 'block', fontWeight: 500, fontSize: '0.6875rem', color: 'var(--sa-text-3)' }}>
-                {relTime(rejectedTs, now)}
-              </span>
+              {rejectedTs ? fmtDateTime(rejectedTs) : 'Not recorded'}
+              {rejectedTs && (
+                <span style={{ display: 'block', fontWeight: 500, fontSize: '0.6875rem', color: 'var(--sa-text-3)' }}>
+                  {relTime(rejectedTs, now)}
+                </span>
+              )}
             </span>
           </div>
           <div className="sa-review-field" style={{ borderBottom: 'none' }}>
@@ -251,10 +250,15 @@ export default function SARejectionAudit({ school, onBack, onReconsider }) {
               ? <>Live trail from the security audit log{lastSync ? ` · synced ${relTime(lastSync, now)}` : ''}.</>
               : loading
                 ? 'Loading live audit events…'
-                : 'Reconstructed from the registration record — live audit events were unavailable.'}
+                : 'No detailed audit events were recorded for this school — the summary above reflects its current status.'}
           </p>
 
           <div className="sa-tl">
+            {timeline.length === 0 && (
+              <p style={{ margin: '8px 0', fontSize: '0.8125rem', color: 'var(--sa-text-3)' }}>
+                {loading ? 'Loading audit events…' : 'No audit events recorded for this school.'}
+              </p>
+            )}
             {timeline.map((ev, i) => {
               const last = i === timeline.length - 1;
               return (
@@ -350,7 +354,7 @@ export default function SARejectionAudit({ school, onBack, onReconsider }) {
               Recovery Action
             </p>
             <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--sa-text-2)' }}>
-              Reconsider this application and return it to pending review for re-evaluation.
+              Reopen this rejected application and return it to the school to update and resubmit.
             </p>
           </div>
         </div>

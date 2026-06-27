@@ -49,12 +49,12 @@ async function sendTeacherWelcomeEmail(teacherEmail, teacherName, username, pass
 }
 
 async function sendPasswordResetEmail(userEmail, userName, role, newPassword) {
-  if (!resend) {
-    console.warn('Email skipped: RESEND_API_KEY not configured.');
-    return;
+  if (!resend || !userEmail) {
+    console.warn('Email skipped: RESEND_API_KEY not configured or no recipient.');
+    return false;
   }
 
-  const displayRole = role.replace('_', ' ').toUpperCase();
+  const displayRole = (role || 'user').replace('_', ' ').toUpperCase();
 
   try {
     const { data, error } = await resend.emails.send({
@@ -82,10 +82,12 @@ async function sendPasswordResetEmail(userEmail, userName, role, newPassword) {
       `,
     });
 
-    if (error) console.error('Password Reset Email Error:', error);
-    else console.log('Password reset email sent to:', userEmail, 'ResendID:', data?.id);
+    if (error) { console.error('Password Reset Email Error:', error); return false; }
+    console.log('Password reset email sent to:', userEmail, 'ResendID:', data?.id);
+    return true;
   } catch (err) {
     console.error('Fatal Email Error:', err);
+    return false;
   }
 }
 

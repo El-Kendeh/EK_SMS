@@ -63,7 +63,9 @@ function serializeSchool(school) {
     is_approved: approved,
     is_active: p.is_active !== false,
     registration_date: regDate,
-    approval_date: approved ? regDate : null,
+    // Real approval timestamp (NULL for legacy rows approved before this column
+    // existed) — no longer fabricated from the registration date.
+    approval_date: p.approved_at ? new Date(p.approved_at).toISOString() : null,
     changes_requested: !!p.changes_requested,
     rejection_reason: p.rejection_reason || null,
     principal_name: adminFull || null,
@@ -110,6 +112,8 @@ async function handleSchoolAction(req, res) {
       school.is_active = true;
       school.rejection_reason = null;
       school.changes_requested = false;
+      // Stamp the real first-approval time once; preserve it on any re-approve.
+      if (!alreadyApproved) school.approved_at = new Date();
       await school.save({ transaction });
 
       const emailQueue = [];
@@ -340,32 +344,85 @@ async function endImpersonation(req, res) {
 }
 
 // GET /api/grade-alerts/
+// The grade-integrity feed reads the REAL grade-modification pipeline
+// (pruh_core_modification_request) — the table teachers/parents/students actually
+// write grade-change requests to — instead of the never-populated sa_system_ops_alerts.
+// Returns a complete DTO so the integrity cards, audit detail and notifications can
+// render real school/student/subject/grade/reason/requester/timestamp values.
 async function getGradeAlerts(req, res) {
   try {
-    const rows = await SystemOpsAlert.findAll({
-      where: { trigger_type: { [Op.like]: 'grade%' } },
+    const ModificationRequest = require('../models/ModificationRequest');
+    const Subject = require('../models/Subject');
+
+    const raw = req.query.school_id;
+    const schoolId = raw !== undefined && raw !== '' ? parseInt(raw, 10) : null;
+    const where = {};
+    if (schoolId !== null && !Number.isNaN(schoolId)) where.school_id = schoolId;
+
+    const rows = await ModificationRequest.findAll({
+      where,
       order: [['created_at', 'DESC']],
       limit: 200,
     });
+
+    /* Batch-resolve related names (no N+1). */
+    const uniq = (arr) => [...new Set(arr.filter(Boolean).map(String))];
+    const studentIds   = uniq(rows.map((r) => r.student_id));
+    const subjectIds   = uniq(rows.map((r) => r.subject_id));
+    const schoolIds    = uniq(rows.map((r) => r.school_id));
+    const requesterIds = uniq(rows.map((r) => r.requested_by));
+
+    const students = studentIds.length
+      ? await Student.findAll({ where: { id: { [Op.in]: studentIds } }, attributes: ['id', 'user_id'] })
+      : [];
+    const studentUserId = Object.fromEntries(students.map((s) => [String(s.id), String(s.user_id)]));
+
+    const userIds = uniq([...students.map((s) => s.user_id), ...requesterIds]);
+    const users = userIds.length
+      ? await User.findAll({ where: { id: { [Op.in]: userIds } }, attributes: ['id', 'first_name', 'last_name'] })
+      : [];
+    const userName = Object.fromEntries(
+      users.map((u) => [String(u.id), [u.first_name, u.last_name].filter(Boolean).join(' ').trim()])
+    );
+
+    const subjects = subjectIds.length
+      ? await Subject.findAll({ where: { id: { [Op.in]: subjectIds } }, attributes: ['id', 'name'] })
+      : [];
+    const subjectName = Object.fromEntries(subjects.map((s) => [String(s.id), s.name]));
+
+    const schools = schoolIds.length
+      ? await School.findAll({ where: { id: { [Op.in]: schoolIds } }, attributes: ['id', 'name'] })
+      : [];
+    const schoolName = Object.fromEntries(schools.map((s) => [String(s.id), s.name]));
+
+    const initials = (name) =>
+      (name || '').split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('') || '—';
+    const numOrNull = (v) => { const n = parseFloat(v); return Number.isFinite(n) ? n : null; };
     const mapStatus = (s) => {
-      if (s === 'new') return 'Pending';
-      if (s === 'acknowledged' || s === 'resolved') return 'Approved';
-      return 'Flagged';
+      const v = String(s || '').toLowerCase();
+      if (v === 'approved') return 'Approved';
+      if (v === 'rejected') return 'Flagged';
+      return 'Pending';
     };
 
     const alerts = rows.map((r) => {
-      const bodyText = r.body || '';
-      const titleText = r.title || '';
-      const schoolMatch = bodyText.match(/school[:\s]+([^,\n]+)/i);
-      const studentMatch = bodyText.match(/student[:\s]+([^,\n]+)/i);
-
+      const sName = userName[studentUserId[String(r.student_id)]] || '';
+      const rName = userName[String(r.requested_by)] || 'System';
       return {
         id: r.id,
         status: mapStatus(r.status),
-        school: schoolMatch ? schoolMatch[1].trim() : '',
-        student: studentMatch ? studentMatch[1].trim() : '',
-        subject: bodyText.slice(0, 120),
-        requester: { name: titleText || 'System' },
+        urgency: String(r.status || '').toLowerCase() === 'rejected' ? 'high' : 'normal',
+        school: schoolName[String(r.school_id)] || '',
+        student: sName,
+        subject: subjectName[String(r.subject_id)] || (r.request_type || ''),
+        term: null,
+        oldGrade: r.current_value || '',
+        newGrade: r.requested_value || '',
+        oldScore: numOrNull(r.current_value),
+        newScore: numOrNull(r.requested_value),
+        reason: r.reason || '',
+        requester: { name: rName, initials: initials(rName) },
+        ts: r.created_at,
       };
     });
 
@@ -411,22 +468,12 @@ async function getSystemHealth(req, res) {
   const freeMem = os.freemem();
   const sysMemPct = Math.round(((totalMem - freeMem) / totalMem) * 100);
 
-  const networkInterfaces = os.networkInterfaces();
-  let netIngress = 0;
-  for (const iface of Object.values(networkInterfaces)) {
-    for (const details of iface) {
-      if (details.bytesReceived) {
-        netIngress += details.bytesReceived;
-      }
-    }
-  }
-  const netIngressMB = Math.round((netIngress / (1024 * 1024)) * 100) / 100;
-
+  // Network ingress removed: Node's os.networkInterfaces() exposes no bytesReceived,
+  // so the old tile was always 0. Report only metrics we can actually observe.
   const resources = [
     { label: 'CPU Load', value: cpuLoad, unit: '%' },
     { label: 'Memory Usage', value: sysMemPct, unit: '%' },
     { label: 'Node Heap', value: memoryUsagePct, unit: '%' },
-    { label: 'Network Ingress', value: netIngressMB, unit: ' MB' },
   ];
 
   return res.json(successResponse({

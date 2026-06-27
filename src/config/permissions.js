@@ -32,7 +32,6 @@ export const PAGE_PERMISSIONS = {
   applications:    [ROLES.SUPERADMIN],
   review:          [ROLES.SUPERADMIN],
   'app-history':   [ROLES.SUPERADMIN],
-  'version-compare':[ROLES.SUPERADMIN],
   rejected:        [ROLES.SUPERADMIN],
   'rejection-audit':[ROLES.SUPERADMIN],
   schools:         [ROLES.SUPERADMIN],

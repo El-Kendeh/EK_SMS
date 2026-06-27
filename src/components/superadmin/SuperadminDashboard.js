@@ -3,7 +3,7 @@ import './SA.css';
 import './SuperadminDashboard.css';
 import ApiClient from '../../api/client';
 import { useSchoolBranding } from '../../context/SchoolBrandingContext';
-import { canAccess, ROLE_LABELS } from '../../config/permissions';
+import { canAccess, ROLE_LABELS, PAGE_PERMISSIONS } from '../../config/permissions';
 import PruhLogo from '../PruhLogo';
 import SASchoolScope      from './SASchoolScope';
 
@@ -18,7 +18,6 @@ const SAApplications    = lazy(() => import('./SAApplications'));
 const SAReview          = lazy(() => import('./SAReview'));
 const SASchools         = lazy(() => import('./SASchools'));
 const SAAppHistory      = lazy(() => import('./SAAppHistory'));
-const SAVersionCompare  = lazy(() => import('./SAVersionCompare'));
 const SARejected        = lazy(() => import('./SARejected'));
 const SARejectionAudit  = lazy(() => import('./SARejectionAudit'));
 const SASecurityLogs    = lazy(() => import('./SASecurityLogs'));
@@ -81,6 +80,7 @@ const FinanceReports     = lazy(() => import('../bursar/Reports'));
 const GradeApprovals     = lazy(() => import('../principal/GradeApprovals'));
 const ReportCardApproval = lazy(() => import('../principal/ReportCardApproval'));
 const PrincipalHome      = lazy(() => import('../principal/PrincipalHome'));
+const SchoolAdminHome    = lazy(() => import('../schooladmin/SchoolAdminHome'));
 const PrincipalUsers     = lazy(() => import('../principal/PrincipalUsers'));
 const SyllabusProgress   = lazy(() => import('../principal/SyllabusProgress'));
 const AttendanceReport   = lazy(() => import('../principal/AttendanceReport'));
@@ -160,7 +160,7 @@ const IcMenu = () => (
 /* ================================================================
    Global Search Modal (⌘K / Ctrl+K)
    ================================================================ */
-function GlobalSearch({ pages, schools, onSelect, onClose }) {
+function GlobalSearch({ pages, schools, onSelect, onClose, showSchools = true }) {
   const [q,         setQ]         = useState('');
   const [activeIdx, setActiveIdx] = useState(0);
   const inputRef = useRef(null);
@@ -171,7 +171,10 @@ function GlobalSearch({ pages, schools, onSelect, onClose }) {
   const pageResults   = qLower
     ? pages.filter(p => p.label.toLowerCase().includes(qLower) || (p.section || '').toLowerCase().includes(qLower))
     : pages.slice(0, 10);
-  const schoolResults = qLower
+  /* The tenant directory is a platform-operator concept — only a superadmin searches
+     across schools. School-scoped roles never see school results (their only "school"
+     is their own, and selecting it would just bounce off the goTo role guard). */
+  const schoolResults = (showSchools && qLower)
     ? schools.filter(s => (s.name || '').toLowerCase().includes(qLower) || (s.email || '').toLowerCase().includes(qLower)).slice(0, 5)
     : [];
 
@@ -236,7 +239,7 @@ function GlobalSearch({ pages, schools, onSelect, onClose }) {
                   <button
                     onClick={() => onSelect(item.key)}
                     onMouseEnter={() => setActiveIdx(i)}
-                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '9px 16px', background: i === activeIdx ? 'var(--sa-accent-dim)' : 'none', border: 'none', cursor: 'pointer', textAlign: 'left', color: 'var(--sa-text)', fontFamily: 'var(--sa-font)', transition: 'background 0.1s' }}
+                    style={{ width: '100%', minHeight: 44, display: 'flex', alignItems: 'center', gap: 12, padding: '9px 16px', background: i === activeIdx ? 'var(--sa-accent-dim)' : 'none', border: 'none', cursor: 'pointer', textAlign: 'left', color: 'var(--sa-text)', fontFamily: 'var(--sa-font)', transition: 'background 0.1s' }}
                   >
                     {item.type === 'page'
                       ? <span style={{ width: 20, height: 20, color: 'var(--sa-accent)', flexShrink: 0, display: 'flex' }}>{item.icon}</span>
@@ -269,7 +272,7 @@ function GlobalSearch({ pages, schools, onSelect, onClose }) {
    Page title helper
    ================================================================ */
 function getTitle(page, school) {
-  if ((page === 'review' || page === 'app-history' || page === 'version-compare') && school) return school.name;
+  if ((page === 'review' || page === 'app-history') && school) return school.name;
   if (page === 'rejection-audit' && school) return school.name;
   const map = {
     overview:              'Dashboard',
@@ -364,7 +367,7 @@ function getTitle(page, school) {
    Anything not in this Set falls through to StubPage. Keep in sync with the
    render blocks in <main>. */
 const HANDLED_PAGES = new Set([
-  'overview', 'applications', 'review', 'app-history', 'version-compare', 'rejected',
+  'overview', 'applications', 'review', 'app-history', 'rejected',
   'rejection-audit', 'grade-report', 'grade-requests', 'grade-audit', 'security-logs',
   'forensics', 'alert-broadcast', 'change-alerts', 'system-health', 'schools', 'analytics',
   'benchmarks', 'onboarding', 'governance', 'users', 'notifications', 'settings', 'profile',
@@ -406,6 +409,26 @@ function StubPage({ title }) {
       <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.3 }}>📄</div>
       <h2 style={{ margin: '0 0 8px', color: 'var(--sa-text-1)' }}>{title}</h2>
       <p style={{ margin: 0, color: 'var(--sa-text-3)' }}>This section is under development.</p>
+    </div>
+  );
+}
+
+/* Defense-in-depth fallback: a role landed on a page it is not permitted to see
+   (e.g. an old action button targeting a superadmin-only page). The sidebar already
+   hides these, the render guard below blocks them, and this explains why. */
+function NotAuthorized({ onHome }) {
+  return (
+    <div style={{ padding: '40px', textAlign: 'center' }}>
+      <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.3 }}>🔒</div>
+      <h2 style={{ margin: '0 0 8px', color: 'var(--sa-text-1)' }}>Not available for your role</h2>
+      <p style={{ margin: '0 0 16px', color: 'var(--sa-text-3)' }}>
+        This area is managed at the platform level. You only have access to your own school.
+      </p>
+      {onHome && (
+        <button className="sa-btn sa-btn--ghost sa-btn--sm" onClick={onHome}>
+          Back to dashboard
+        </button>
+      )}
     </div>
   );
 }
@@ -453,6 +476,9 @@ export default function Dashboard({ onNavigate }) {
   const [enterSchoolOpen,  setEnterSchoolOpen]  = useState(false);
   const [enterSchoolQuery, setEnterSchoolQuery] = useState('');
   const [toast,           setToast]           = useState(null);
+  /* Surfaces a failed /api/schools/ load instead of silently showing an empty list
+     (which reads as "no schools" even during an outage). */
+  const [schoolsError,    setSchoolsError]    = useState(null);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
   const [searchOpen,       setSearchOpen]       = useState(false);
   const [secLogFilter,     setSecLogFilter]     = useState('');
@@ -476,7 +502,8 @@ export default function Dashboard({ onNavigate }) {
     try {
       const data = await ApiClient.get('/api/schools/');
       if (data.success) setSchools(data.schools);
-    } catch { /* network error — silently ignore */ }
+      setSchoolsError(null);
+    } catch { setSchoolsError('Could not load schools — check your connection and retry.'); }
     finally { setIsLoading(false); }
   }, []);
 
@@ -561,11 +588,6 @@ export default function Dashboard({ onNavigate }) {
     setActivePage('app-history');
   };
 
-  const handleCompare = (school) => {
-    setSelectedSchool(school);
-    setActivePage('version-compare');
-  };
-
   const handleRejectionAudit = (school) => {
     setSelectedSchool(school);
     setActivePage('rejection-audit');
@@ -620,9 +642,18 @@ export default function Dashboard({ onNavigate }) {
   const GRADE_PAGES = ['grade-report', 'grade-requests', 'grade-audit'];
 
   const goTo = (page) => {
+    /* Defense in depth: never navigate a role into a page it can't access. A
+       school-scoped admin must stay within their own school, so a stray action
+       targeting a superadmin-only page (e.g. an onboarding/application link)
+       redirects to the overview instead of exposing the operator page. Only
+       keys that are explicitly permissioned are gated; unknown drill-down keys
+       fall through to their existing StubPage behaviour. */
+    if (PAGE_PERMISSIONS[page] && !canAccess(page, user?.role)) {
+      page = 'overview';
+    }
     setActivePage(page);
     setSidebarOpen(false);
-    if (!['review', 'app-history', 'version-compare', 'rejection-audit'].includes(page)) {
+    if (!['review', 'app-history', 'rejection-audit'].includes(page)) {
       setSelectedSchool(null);
     }
     if (page !== 'forensics') {
@@ -673,7 +704,7 @@ export default function Dashboard({ onNavigate }) {
       : node
   );
 
-  const isAppRelated   = ['applications', 'review', 'app-history', 'version-compare'].includes(activePage);
+  const isAppRelated   = ['applications', 'review', 'app-history'].includes(activePage);
   const isRejRelated   = ['rejected', 'rejection-audit'].includes(activePage);
   const isSecRelated   = SEC_PAGES.includes(activePage);
   const isGradeRelated = GRADE_PAGES.includes(activePage);
@@ -1095,7 +1126,7 @@ export default function Dashboard({ onNavigate }) {
             </button>
             <button className="sa-notif-btn" onClick={() => goTo('notifications')}>
               <IcBell />
-              {(pendingCount > 0 || unreadNotifCount > 0) && <span className="sa-notif-dot" />}
+              {(((user?.role === 'superadmin') && pendingCount > 0) || unreadNotifCount > 0) && <span className="sa-notif-dot" />}
             </button>
             <div className="sa-avatar-sm" onClick={() => goTo('profile')} title="My profile" style={{ cursor: 'pointer', padding: profileAvatar ? 0 : undefined, overflow: profileAvatar ? 'hidden' : undefined }}>
               {profileAvatar
@@ -1109,10 +1140,27 @@ export default function Dashboard({ onNavigate }) {
         {/* Toast */}
         {toast && <div className={`sa-toast sa-toast--${toast.type}`}>{toast.msg}</div>}
 
+        {/* Schools load error — distinguishes an outage from a genuinely empty list */}
+        {schoolsError && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', margin: '12px 16px 0', padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: 'var(--sa-text)', fontSize: '0.8125rem' }}>
+            <span>{schoolsError}</span>
+            <button
+              className="sa-btn sa-btn--ghost sa-btn--sm"
+              onClick={() => { setIsLoading(true); fetchSchools(); }}
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
         {/* Page content */}
         <main className="sa-content">
           <Suspense fallback={<PageFallback />}>
 
+          {PAGE_PERMISSIONS[activePage] && !canAccess(activePage, user?.role) ? (
+            <NotAuthorized onHome={() => goTo('overview')} />
+          ) : (
+          <>
           {activePage === 'overview' && (
             user?.role === 'principal'
               ? <PrincipalHome navigateTo={goTo} schoolId={schoolId} />
@@ -1120,6 +1168,8 @@ export default function Dashboard({ onNavigate }) {
               ? <BursarHome navigateTo={goTo} schoolId={schoolId} />
               : user?.role === 'student'
               ? <StudentHome navigateTo={(k) => goTo(STUDENT_NAV_MAP[k] || k)} />
+              : user?.role === 'school_admin'
+              ? <SchoolAdminHome navigateTo={goTo} schoolName={schools?.[0]?.name} />
               : (
                 <SAOverview
                   schools={schools}
@@ -1154,16 +1204,6 @@ export default function Dashboard({ onNavigate }) {
             <SAAppHistory
               school={selectedSchool}
               onBack={() => setActivePage('review')}
-              onCompare={() => handleCompare(selectedSchool)}
-            />
-          )}
-
-          {activePage === 'version-compare' && selectedSchool && (
-            <SAVersionCompare
-              school={selectedSchool}
-              onBack={() => setActivePage('app-history')}
-              onApprove={() => handleAction(selectedSchool.id, 'approve')}
-              isLoading={isActionLoading}
             />
           )}
 
@@ -1264,6 +1304,7 @@ export default function Dashboard({ onNavigate }) {
                   onUnreadChange={setUnreadNotifCount}
                   schools={schools}
                   gradeAlerts={gradeAlerts}
+                  role={user?.role}
                 />
           )}
 
@@ -1508,6 +1549,8 @@ export default function Dashboard({ onNavigate }) {
           {!HANDLED_PAGES.has(activePage) && (
             <StubPage title={getTitle(activePage, selectedSchool)} />
           )}
+          </>
+          )}
 
           </Suspense>
         </main>
@@ -1570,8 +1613,9 @@ export default function Dashboard({ onNavigate }) {
       {/* Global Search modal */}
       {searchOpen && (
         <GlobalSearch
-          pages={navItems.filter(n => !['review', 'app-history', 'version-compare', 'rejection-audit', 'grade-audit'].includes(n.key))}
+          pages={navItems.filter(n => !n.action && !['review', 'app-history', 'rejection-audit', 'grade-audit'].includes(n.key))}
           schools={schools}
+          showSchools={user?.role === 'superadmin'}
           onSelect={(key) => { goTo(key); setSearchOpen(false); }}
           onClose={() => setSearchOpen(false)}
         />

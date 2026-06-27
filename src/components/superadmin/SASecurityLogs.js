@@ -27,7 +27,7 @@ export default function SASecurityLogs({ onForensic, initialSearch, onMount }) {
   const [, setLoading] = useState(true);
   const [search, setSearch] = useState(initialSearch || '');
   const [sevFilter, setSevFilter] = useState('all');
-  const [counters, setCounters] = useState({ threats_blocked: 0, active_sessions: 0, failed_logins: 0, flagged_ips: 0 });
+  const [counters, setCounters] = useState({ threats_blocked: 0, active_sessions: 0, failed_logins: 0 });
 
   const fetchLogs = useCallback(async () => {
     setLoading(true);
@@ -50,7 +50,6 @@ export default function SASecurityLogs({ onForensic, initialSearch, onMount }) {
         threats_blocked: data.threats_blocked ?? 0,
         active_sessions: data.active_sessions ?? 0,
         failed_logins:   data.failed_logins_24h ?? 0,
-        flagged_ips:     data.failed_logins_7d ?? 0,
       });
     } catch (err) {
       console.error('Failed to fetch security counters', err);
@@ -87,7 +86,7 @@ export default function SASecurityLogs({ onForensic, initialSearch, onMount }) {
 
   const stats = [
     { label: 'Threats Blocked', value: counters.threats_blocked, icon: <IcShield />, cls: 'sa-stat-icon--red', trend: { dir: 'up', label: 'Live count' } },
-    { label: 'Active Sessions', value: counters.active_sessions, icon: <IcUser />, cls: 'sa-stat-icon--green', trend: { dir: 'flat', label: 'Live count' } },
+    { label: 'Active Users', value: counters.active_sessions, icon: <IcUser />, cls: 'sa-stat-icon--green', trend: { dir: 'flat', label: 'Live count' } },
     { label: 'Failed Logins', value: counters.failed_logins, icon: <IcLock />, cls: 'sa-stat-icon--amber', trend: { dir: 'up', label: 'Live count' } },
     // 'Flagged IPs' removed — getSecurityCounters emits no flagged_ips, so it rendered undefined with a hardcoded trend.
   ];
@@ -234,18 +233,12 @@ export default function SASecurityLogs({ onForensic, initialSearch, onMount }) {
                 <th>Action</th>
                 <th>Actor</th>
                 <th>Source IP</th>
-                <th>Status</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
               {filtered.map(ev => {
                 const cfg = SEVERITY_CFG[ev.severity];
-                const statusColor =
-                  ev.status === 'Blocked' ? 'var(--sa-red)' :
-                    ev.status === 'Flagged' ? 'var(--sa-amber)' :
-                      ev.status === 'Allowed' ? 'var(--sa-green)' :
-                        ev.status === 'Throttled' ? 'var(--sa-purple)' : 'var(--sa-text-2)';
                 const isCritical = ev.severity === 'critical';
                 return (
                   <tr key={ev.id} style={{ cursor: 'pointer' }} onClick={() => onForensic && onForensic(ev)}>
@@ -264,9 +257,6 @@ export default function SASecurityLogs({ onForensic, initialSearch, onMount }) {
                     <td style={{ fontFamily: 'Consolas, monospace', fontSize: '0.75rem', color: 'var(--sa-text)', whiteSpace: 'nowrap' }}>{ev.actor}</td>
                     <td style={{ fontFamily: 'Consolas, monospace', fontSize: '0.75rem', color: isCritical || ev.severity === 'high' ? 'var(--sa-red)' : 'var(--sa-text-2)', whiteSpace: 'nowrap' }}>
                       {ev.ip}
-                    </td>
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      <span style={{ color: statusColor, fontSize: '0.6875rem', fontWeight: 700 }}>{ev.status}</span>
                     </td>
                     <td>
                       <button

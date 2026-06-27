@@ -54,7 +54,7 @@ export default function SAReportsHub({ onNavigate }) {
   const [error, setError]   = useState('');
 
   useEffect(() => {
-    apiGet('/api/superadmin/dashboard/')
+    apiGet('/api/dashboard/')
       .then(d => setCounts(c => ({ ...c, schools: d.schools, users: d.total_users })))
       .catch(() => {});
     apiGet('/api/grade-stats/')
@@ -92,8 +92,8 @@ export default function SAReportsHub({ onNavigate }) {
       desc: 'Every institution on the platform with location, contact and approval status.',
       count: counts.schools != null ? `${counts.schools} schools` : '',
       actions: [
-        { label: 'CSV',  fn: () => downloadAuth('/api/superadmin/sa/export/?format=csv&datasets=schools', 'eksms_schools.csv') },
-        { label: 'JSON', fn: () => downloadAuth('/api/superadmin/sa/export/?format=json&datasets=schools', 'eksms_schools.json') },
+        { label: 'CSV',  fn: () => downloadAuth('/api/sa/export/?format=csv&datasets=schools', 'eksms_schools.csv') },
+        { label: 'JSON', fn: () => downloadAuth('/api/sa/export/?format=json&datasets=schools', 'eksms_schools.json') },
       ],
     },
     {

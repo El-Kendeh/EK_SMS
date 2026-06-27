@@ -76,4 +76,7 @@ router.get('/weekly-digest/', parent.getWeeklyDigest);
 router.get('/voice-digest/', parent.getVoiceDigest);
 router.get('/family-activity/', parent.getFamilyActivity);
 
+// Virtual meetings targeted at parents (read-only; scheduled by the school admin).
+router.get('/virtual-meetings/', require('../controllers/virtualMeetingController').getMyMeetings);
+
 module.exports = router;

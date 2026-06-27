@@ -395,53 +395,30 @@ export default function SAGradeReport({ onViewRequests, onViewDetail }) {
                   <stop offset="100%" stopColor="var(--sa-accent)" stopOpacity="0" />
                 </linearGradient>
               </defs>
-              {/* Anomaly spike marker at ~day 20 */}
-              <line
-                x1={(20 / (chartData.length - 1)) * 400}
-                y1="0"
-                x2={(20 / (chartData.length - 1)) * 400}
-                y2="140"
-                stroke="rgba(239,68,68,0.25)"
-                strokeDasharray="4 3"
-                strokeWidth="1.5"
-              />
               {/* Area fill */}
               <path d={area} fill="url(#giChartGrad)" />
               {/* Line */}
               <path d={line} fill="none" stroke="var(--sa-accent)" strokeWidth="2.5" strokeLinecap="round" />
-              {/* Peak dot */}
-              <circle
-                cx={(20 / (chartData.length - 1)) * 400}
-                cy={140 - (chartData[20] / Math.max(...chartData)) * 130}
-                r="5"
-                fill="var(--sa-red)"
-                stroke="var(--sa-card-bg)"
-                strokeWidth="2"
-              />
             </svg>
           </div>
           {/* X-axis labels */}
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: '0.625rem', color: 'var(--sa-text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-            <span>Week 1</span>
-            <span>Week 2</span>
-            <span style={{ color: 'var(--sa-amber)' }}>Mid-Term</span>
-            <span style={{ color: 'var(--sa-red)', fontWeight: 800 }}>Exam Period</span>
-            <span>Finals</span>
+            <span>Oldest</span>
+            <span>Latest</span>
           </div>
           {/* Legend */}
           <div style={{ display: 'flex', gap: 16, marginTop: 12, flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.6875rem', color: 'var(--sa-text-2)' }}>
               <div style={{ width: 20, height: 3, background: 'var(--sa-accent)', borderRadius: 2 }} /> Modifications
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.6875rem', color: 'var(--sa-text-2)' }}>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--sa-red)' }} /> Anomaly Spike
-            </div>
           </div></>}
         </div>
       </div>
 
       {/* ── Risk Analysis: 2-column grid ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }} className="sa-gi-risk-grid">
+      {/* grid-template-columns comes from .sa-gi-risk-grid (SA.css), which stacks to
+          1fr at <=600px. Keeping it inline here defeated that @media on mobile. */}
+      <div style={{ display: 'grid', gap: 16, marginBottom: 20 }} className="sa-gi-risk-grid">
 
         {/* Schools at Risk */}
         <div className="sa-card">

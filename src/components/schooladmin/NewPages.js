@@ -734,6 +734,10 @@ export function TimetablePage({ school }) {
   };
 
   const handleClear = async () => {
+    const msg = selClass
+      ? 'Clear the timetable for the selected class? This cannot be undone.'
+      : 'Clear the timetable for ALL classes in the school? This cannot be undone.';
+    if (!window.confirm(msg)) return;
     try {
       await ApiClient.delete(`/api/school/timetable/${selClass ? `?class_id=${selClass}` : ''}`);
       setSlots([]); setGenStats(null);

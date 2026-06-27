@@ -1,7 +1,7 @@
 import React from 'react';
 import { FU_ROLES, FU_PERMISSIONS } from './finance.constants';
 import { fmtUsd, fmtUsdCompact, fmtMins } from './finance.utils';
-import { FuRoleBadge, FuRiskPill } from './FinanceUserCard';
+import { FuRoleBadge } from './FinanceUserCard';
 
 const Ic = ({ name, size, style }) => (
   <span className={`ska-icon${size ? ` ska-icon--${size}` : ''}`} aria-hidden="true" style={style}>{name}</span>
@@ -28,7 +28,6 @@ export default function FinanceUserDetails({ u, onClose, onEdit, onToggle }) {
               <h3 className="ska-modal-title">{u.full_name || '—'}</h3>
               <div className="fu-detail__head-meta">
                 <FuRoleBadge role={u.role} size="sm" />
-                <FuRiskPill risk={u.risk} />
                 <span style={{
                   fontSize: '0.75rem',
                   fontWeight: 700,

@@ -34,7 +34,7 @@ const ModificationRequest = require('../models/ModificationRequest');
 const { Op } = require('sequelize');
 const bcrypt = require('bcryptjs');
 const sequelize = require('../config/db');
-const { sendTeacherWelcomeEmail } = require('../utils/email');
+const { sendTeacherWelcomeEmail, sendPasswordResetEmail } = require('../utils/email');
 const { sendSchoolChangesSubmittedEmail } = require('../services/mailer');
 const { requireRoleId } = require('../utils/roleIds');
 
@@ -221,12 +221,12 @@ async function getStudents(req, res) {
     const students = await Student.findAll({
       where,
       include: [
-        { model: User, attributes: ['first_name', 'last_name', 'email'] },
+        { model: User, as: 'user', attributes: ['first_name', 'last_name', 'email'] },
         { model: require('../models/Class'), as: 'classroom', attributes: ['id', 'name'], required: false },
       ],
     });
     const formatted = students.map(s => {
-      const userData = s.User || {};
+      const userData = s.user || {};
       return {
         ...s.toJSON(),
         first_name: userData.first_name,
@@ -252,6 +252,17 @@ async function createStudent(req, res) {
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
     const data = req.body;
+
+    // Validate client-supplied foreign keys belong to this school before creating
+    // anything (a student row must not point at another school's class/year).
+    if (data.classroom_id) {
+      const cls = await Class.findOne({ where: { id: data.classroom_id, school_id: school.id }, transaction });
+      if (!cls) { await transaction.rollback(); return res.status(400).json(errorResponse('Selected class does not belong to your school')); }
+    }
+    if (data.academic_year_id) {
+      const yr = await AcademicYear.findOne({ where: { id: data.academic_year_id, school_id: school.id }, transaction });
+      if (!yr) { await transaction.rollback(); return res.status(400).json(errorResponse('Selected academic year does not belong to your school')); }
+    }
 
     // 1. Create User account for student
     const username = data.student_username || data.admission_number || `stu_${Date.now()}`;
@@ -2030,10 +2041,20 @@ async function getExamOfficers(req, res) {
     const school = await getSchoolFromUser(req);
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
-    const officers = await Teacher.findAll({
-      where: { school_id: school.id, is_examination_officer: true }
+    // Return ALL teachers (the UI splits officers vs non-officers itself), each with
+    // a display name/email from the linked User, under the `teachers` key the UI reads.
+    const rows = await Teacher.findAll({
+      where: { school_id: school.id },
+      include: [{ model: User, as: 'user', attributes: ['first_name', 'last_name', 'email'] }],
     });
-    return res.json(successResponse({ exam_officers: officers }));
+    const teachers = rows.map((t) => ({
+      id: t.id,
+      employee_id: t.employee_id,
+      is_examination_officer: t.is_examination_officer,
+      name: `${t.user?.first_name || ''} ${t.user?.last_name || ''}`.trim() || t.employee_id || `Teacher #${t.id}`,
+      email: t.user?.email || null,
+    }));
+    return res.json(successResponse({ teachers }));
   } catch (err) {
     return res.status(500).json(errorResponse('Failed to fetch exam officers'));
   }
@@ -2167,10 +2188,20 @@ async function getExamOfficers(req, res) {
     const school = await getSchoolFromUser(req);
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
-    const officers = await Teacher.findAll({
-      where: { school_id: school.id, is_examination_officer: true }
+    // Return ALL teachers (the UI splits officers vs non-officers itself), each with
+    // a display name/email from the linked User, under the `teachers` key the UI reads.
+    const rows = await Teacher.findAll({
+      where: { school_id: school.id },
+      include: [{ model: User, as: 'user', attributes: ['first_name', 'last_name', 'email'] }],
     });
-    return res.json(successResponse({ exam_officers: officers }));
+    const teachers = rows.map((t) => ({
+      id: t.id,
+      employee_id: t.employee_id,
+      is_examination_officer: t.is_examination_officer,
+      name: `${t.user?.first_name || ''} ${t.user?.last_name || ''}`.trim() || t.employee_id || `Teacher #${t.id}`,
+      email: t.user?.email || null,
+    }));
+    return res.json(successResponse({ teachers }));
   } catch (err) {
     return res.status(500).json(errorResponse('Failed to fetch exam officers'));
   }
@@ -2686,6 +2717,75 @@ async function getSyllabusStats(req, res) {
   }
 }
 
+/* Reset a school user's password and (best-effort) email them the new credentials.
+   Backs the "Resend Credentials" button. Tenant-scoped: the target user must belong
+   to the caller's own school (verified via the role-specific record, or — for a
+   parent — via a linked student in this school). */
+async function resendCredentials(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+
+    const userId = req.body?.user_id;
+    if (!userId) return res.status(400).json(errorResponse('user_id is required'));
+
+    const user = await User.findByPk(userId);
+    if (!user) return res.status(404).json(errorResponse('User not found'));
+
+    let belongs =
+      (await Teacher.findOne({ where: { user_id: userId, school_id: school.id }, attributes: ['id'] })) ||
+      (await Student.findOne({ where: { user_id: userId, school_id: school.id }, attributes: ['id'] })) ||
+      (await SchoolAdmin.findOne({ where: { user_id: userId, school_id: school.id }, attributes: ['id'] })) ||
+      (await CoreBursar.findOne({ where: { user_id: userId, school_id: school.id }, attributes: ['id'] })) ||
+      (await CorePrincipal.findOne({ where: { user_id: userId, school_id: school.id }, attributes: ['id'] }));
+
+    if (!belongs) {
+      const parent = await Parent.findOne({ where: { user_id: userId }, attributes: ['id'] });
+      if (parent) {
+        const links = await StudentParent.findAll({ where: { parent_id: parent.id }, attributes: ['student_id'] });
+        if (links.length) {
+          belongs = await Student.findOne({
+            where: { id: links.map((l) => l.student_id), school_id: school.id }, attributes: ['id'],
+          });
+        }
+      }
+    }
+    if (!belongs) return res.status(404).json(errorResponse('User is not part of your school'));
+
+    // Fresh temporary password (guaranteed upper/lower/digit/symbol).
+    const rand = require('crypto').randomBytes(9).toString('base64').replace(/[^a-zA-Z0-9]/g, '').slice(0, 8);
+    const newPassword = `Ek${rand}@9`;
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    const displayName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username;
+    let roleName = 'user';
+    try { roleName = (await Role.findByPk(user.role_id))?.name || 'user'; } catch {}
+
+    let emailSent = false;
+    try { emailSent = await sendPasswordResetEmail(user.email, displayName, roleName, newPassword); }
+    catch (e) { console.error('resendCredentials email failed:', e.message); }
+
+    try {
+      await appendSecurityAuditLog({
+        type: 'credentials_resent',
+        severity: 'medium',
+        actor: req.user?.username || String(req.user?.id || 'unknown'),
+        ip: req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || '—',
+        action: `Credentials reset for user #${userId} (${user.username}) in school ${school.id}; email ${emailSent ? 'sent' : 'not sent'}`,
+      });
+    } catch (e) { console.error('audit log failed:', e.message); }
+
+    return res.json(successResponse(
+      { email_sent: emailSent, username: user.username, password: newPassword },
+      emailSent ? 'Credentials emailed to the user.' : 'Password reset — email not sent (no address or mail disabled).'
+    ));
+  } catch (err) {
+    console.error('resendCredentials Error:', err);
+    return res.status(500).json(errorResponse('Failed to reset credentials'));
+  }
+}
+
 module.exports = {
   getSchoolInfo, updateSchoolInfo, checkSchoolName,
   getStudents, createStudent, updateStudent, getNextAdmissionNumber, getStudentStats, promoteStudent,
@@ -2706,7 +2806,7 @@ module.exports = {
   getTeacherAssignments, createTeacherAssignment, deleteTeacherAssignment,
   getExamOfficers, assignExamOfficer,
   getMessages, sendMessage, recordClassAttendance,
-  createParent,
+  createParent, resendCredentials,
   generateTimetable, deleteTimetable, getSchoolTimetable,
   reviewModificationRequest,
   getSyllabusTopics, createSyllabusTopic, updateSyllabusTopic, deleteSyllabusTopic, getSyllabusStats,

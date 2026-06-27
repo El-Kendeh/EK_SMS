@@ -81,6 +81,10 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
   const [fetchError, setFetchError] = useState(null);
+  /* Bumped whenever the auth token/user is swapped (impersonation enter/exit).
+     Used as a React key on the dashboard so it REMOUNTS and re-reads the new
+     identity — without this the shell keeps rendering the old role after a swap. */
+  const [authKey, setAuthKey] = useState(0);
 
   useEffect(() => {
     const path = PAGE_TO_PATH[currentPage] || '/';
@@ -96,6 +100,30 @@ function App() {
     };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
+  /* Impersonation enter/exit dispatches a synthetic 'storage' event after
+     swapping the token+user in localStorage. Re-derive the route from the new
+     user and bump authKey so <SuperadminDashboard> remounts and re-reads the
+     swapped identity (otherwise the operator stays on the superadmin shell until
+     a manual reload). UserContext/SchoolBrandingContext already listen too. */
+  useEffect(() => {
+    const onAuthSwap = () => {
+      const token = localStorage.getItem('token');
+      const userStr = localStorage.getItem('user');
+      if (token && userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          const roles = ['superadmin', 'school_admin', 'principal', 'bursar', 'teacher', 'student', 'parent'];
+          setCurrentPage(roles.includes(user.role) ? 'superadmindashboard' : 'home');
+        } catch { setCurrentPage('home'); }
+      } else {
+        setCurrentPage('home');
+      }
+      setAuthKey(k => k + 1);
+    };
+    window.addEventListener('storage', onAuthSwap);
+    return () => window.removeEventListener('storage', onAuthSwap);
   }, []);
 
   useEffect(() => {
@@ -135,13 +163,20 @@ function App() {
       return;
     }
 
+    // Platform dashboard counts are superadmin-only (the /api/dashboard/ route is
+    // now gated). School staff render the same shell but must not call it, so skip
+    // the fetch for any non-superadmin role to avoid a 403.
+    let role = null;
+    try { role = JSON.parse(localStorage.getItem('user') || '{}').role; } catch { /* ignore */ }
+    if (role !== 'superadmin') { setFetchError(null); return; }
+
     const API_BASE = process.env.REACT_APP_API_URL || process.env.REACT_APP_API_BASE_URL || 'https://backend.pruhsms.africa';
     const abort = new AbortController();
     setFetchError(null);
 
     (async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/superadmin/dashboard`, {
+        const res = await fetch(`${API_BASE}/api/dashboard/`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -186,6 +221,7 @@ function App() {
         {currentPage === 'force-change-password' && <ForceChangePassword onNavigate={setCurrentPage} />}
         {currentPage === 'superadmindashboard' && (
           <SuperadminDashboard
+            key={authKey}
             onNavigate={setCurrentPage}
             data={dashboardData}
             fetchError={fetchError}

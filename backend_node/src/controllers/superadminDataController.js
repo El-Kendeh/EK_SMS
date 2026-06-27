@@ -37,6 +37,12 @@ const Subject = require('../models/Subject');
 const ClassSubject = require('../models/ClassSubject');
 const ClassAssistantTeacher = require('../models/ClassAssistantTeacher');
 const { appendSecurityAuditLog } = require('../utils/auditLog');
+
+// Random, unique temporary password (replaces the shared 'Xxx@123' defaults).
+function genTempPassword() {
+  const rand = require('crypto').randomBytes(9).toString('base64').replace(/[^a-zA-Z0-9]/g, '').slice(0, 8);
+  return `Ek${rand}@9`;
+}
 const { requireRoleId, mapInviteLabelToCode } = require('../utils/roleIds');
 
 const successResponse = (data = {}, message = 'Success') => ({ success: true, message, ...data });
@@ -236,6 +242,14 @@ async function postChangePassword(req, res) {
     if (!current_password || !new_password) {
       return res.status(400).json(errorResponse('Current and new password are required'));
     }
+    // Server-side floor so the policy can't be bypassed via a direct API call
+    // (the client enforces a stronger 12+/complexity rule on top of this).
+    if (String(new_password).length < 8) {
+      return res.status(400).json(errorResponse('New password must be at least 8 characters'));
+    }
+    if (String(new_password) === String(current_password)) {
+      return res.status(400).json(errorResponse('New password must differ from the current password'));
+    }
     const user = await User.findByPk(req.user.id);
     if (!user) return res.status(404).json(errorResponse('User not found', 404));
     const ok = await bcrypt.compare(current_password, user.password);
@@ -285,12 +299,29 @@ async function patchAdminSettings(req, res) {
 }
 
 /* ---------- Users directory ---------- */
+const SA_ROLE_LABEL = {
+  superadmin: 'Super Admin',
+  schooladmin: 'School Admin',
+  principal: 'Principal',
+  bursar: 'Bursar',
+  teacher: 'Teacher',
+  parent: 'Parent',
+  student: 'Student',
+};
+
 function mapUserToSaRow(user, schoolName) {
   const name = [user.first_name, user.last_name].filter(Boolean).join(' ').trim() || user.username;
-  let role = 'User';
-  if (user.is_superuser) role = 'Super Admin';
-  else if (user.is_staff) role = 'Staff Admin';
-  else if (schoolName) role = 'School Admin';
+  // Use the user's REAL seeded role (User defaultScope eager-loads `role`) instead
+  // of guessing from is_staff/is_superuser — which collapsed teachers/principals/
+  // bursars into "Staff Admin" and broke the role filter + Governance counts.
+  const code = (user.role && user.role.code) || '';
+  let role = SA_ROLE_LABEL[code];
+  if (!role) {
+    if (user.is_superuser) role = 'Super Admin';
+    else if (schoolName) role = 'School Admin';
+    else if (user.is_staff) role = 'Staff Admin';
+    else role = 'User';
+  }
   return {
     id: user.id,
     name,
@@ -353,10 +384,32 @@ async function getUsersShort(req, res) {
 
 async function postUsers(req, res) {
   try {
-    const { name, email, role, school } = req.body;
+    const { name, email, role } = req.body;
     if (!name || !email || !role) {
       return res.status(400).json(errorResponse('name, email, and role are required'));
     }
+
+    // Reject unknown role labels instead of silently downgrading to School Admin.
+    const roleCode = mapInviteLabelToCode(role);
+    if (!roleCode) {
+      return res.status(400).json(errorResponse(`Unsupported role "${role}"`));
+    }
+
+    // Resolve the school. Prefer a real school_id; fall back to an exact name match
+    // for back-compat. A School Admin MUST resolve to a real school — never create
+    // an orphaned admin with the SchoolAdmin link silently skipped.
+    let school = null;
+    const schoolIdRaw = req.body.school_id;
+    if (schoolIdRaw !== undefined && schoolIdRaw !== null && String(schoolIdRaw).trim() !== '') {
+      const sid = parseInt(schoolIdRaw, 10);
+      if (!Number.isNaN(sid)) school = await School.findByPk(sid);
+    } else if (req.body.school && String(req.body.school).trim()) {
+      school = await School.findOne({ where: { name: String(req.body.school).trim() } });
+    }
+    if (roleCode === 'schooladmin' && !school) {
+      return res.status(400).json(errorResponse('A valid school is required for a School Admin'));
+    }
+
     const baseUsername = email.split('@')[0].replace(/[^a-zA-Z0-9._-]/g, '').slice(0, 20) || `user${Date.now()}`;
     let username = baseUsername;
     let n = 0;
@@ -368,7 +421,6 @@ async function postUsers(req, res) {
     const parts = String(name).trim().split(/\s+/);
     const first_name = parts[0] || username;
     const last_name = parts.slice(1).join(' ') || '';
-    const roleCode = mapInviteLabelToCode(role);
     const roleId = await requireRoleId(roleCode);
     const user = await User.create({
       username,
@@ -376,25 +428,51 @@ async function postUsers(req, res) {
       password: await bcrypt.hash(tempPass, 10),
       first_name: first_name.slice(0, 150),
       last_name: last_name.slice(0, 150),
-      is_active: false,
+      // Active on creation so the invited user can actually log in with the emailed
+      // credentials (previously created inactive with no activation path).
+      is_active: true,
       role_id: roleId,
     });
     await user.reload();
-    if (role === 'School Admin' && school) {
-      const sch = await School.findOne({ where: { name: school } });
-      if (sch) await SchoolAdmin.create({ user_id: user.id, school_id: sch.id });
+    if (roleCode === 'schooladmin' && school) {
+      await SchoolAdmin.create({ user_id: user.id, school_id: school.id });
     }
+
+    // Deliver the credentials by email (the UI promises this). Best-effort: a mail
+    // failure does not fail user creation. `emailed` is true only when email is
+    // actually configured + dispatched, so the UI can be honest.
+    let emailed = false;
+    if (process.env.RESEND_API_KEY) {
+      try {
+        const { sendPasswordResetEmail } = require('../utils/email');
+        const fullName = `${first_name} ${last_name}`.trim() || username;
+        await sendPasswordResetEmail(String(email).trim(), fullName, roleCode, tempPass);
+        emailed = true;
+      } catch (mailErr) {
+        console.error('Invite email failed:', mailErr.message || mailErr);
+      }
+    } else {
+      console.warn('Invite email skipped: RESEND_API_KEY not configured.');
+    }
+
     await appendSecurityAuditLog({
       type: 'user_created',
       severity: 'medium',
       actor: req.user.username,
       ip: clientIp(req),
-      action: `Invited user ${email} as ${role}`,
+      action: `Invited user ${email} as ${role}${emailed ? ' (credentials emailed)' : ''}`,
       metadata: { user_id: user.id },
     });
-    return res.json(successResponse({
-      user: mapUserToSaRow(user, role === 'School Admin' ? school : ''),
-    }, 'User created'));
+
+    const payload = { user: mapUserToSaRow(user, school ? school.name : ''), emailed };
+    // When we couldn't email, return the temp password ONCE so the operator can
+    // relay it manually (otherwise the account is unusable). Never returned in
+    // prod where email is configured.
+    if (!emailed) payload.tempPassword = tempPass;
+    return res.json(successResponse(
+      payload,
+      emailed ? 'User created and credentials emailed' : 'User created — email not configured; share the temporary password shown'
+    ));
   } catch (err) {
     console.error(err);
     if (err.name === 'SequelizeUniqueConstraintError') {
@@ -407,20 +485,44 @@ async function postUsers(req, res) {
 /* ---------- School & grade stats ---------- */
 async function getSchoolStats(req, res) {
   try {
+    const db = require('../config/db');
     const raw = req.query.school_id;
     const schoolId = raw !== undefined && raw !== '' ? parseInt(raw, 10) : null;
-    const schools = await School.findAll({ attributes: ['id', 'name'] });
-    let list = schools.map((s) => ({
-      school_id: s.id,
-      student_count: 0,
-      teacher_count: 0,
-      active_classes: 0,
-      attendance_rate: 0,
-      avg_performance: 0,
-    }));
-    if (schoolId !== null && !Number.isNaN(schoolId)) {
-      list = list.filter((x) => x.school_id === schoolId);
-    }
+
+    const where = {};
+    if (schoolId !== null && !Number.isNaN(schoolId)) where.id = schoolId;
+    const schools = await School.findAll({ attributes: ['id', 'name', 'is_approved'], where });
+
+    /* One grouped COUNT per entity (no N+1). Returns a { [school_id]: count } map. */
+    const countBySchool = async (Model) => {
+      const rows = await Model.findAll({
+        attributes: ['school_id', [db.fn('COUNT', db.col('id')), 'n']],
+        group: ['school_id'],
+        raw: true,
+      });
+      return Object.fromEntries(rows.map((r) => [String(r.school_id), Number(r.n) || 0]));
+    };
+    const [studentCounts, teacherCounts, classCounts] = await Promise.all([
+      countBySchool(Student),
+      countBySchool(Teacher),
+      countBySchool(ClassModel),
+    ]);
+
+    const list = schools.map((s) => {
+      const key = String(s.id);
+      return {
+        school_id: s.id,
+        school_name: s.name,
+        is_approved: !!s.is_approved,
+        student_count: studentCounts[key] || 0,
+        teacher_count: teacherCounts[key] || 0,
+        active_classes: classCounts[key] || 0,
+        // No real per-school attendance / performance source yet — null so the UI
+        // renders nothing instead of a fabricated 0.
+        attendance_rate: null,
+        avg_performance: null,
+      };
+    });
     return res.json(successResponse({ stats: list }));
   } catch (err) {
     console.error(err);
@@ -472,12 +574,28 @@ async function getGradeStats(req, res) {
       ? Math.round(((totalGrades - pendingReviews) / totalGrades) * 100)
       : 100;
 
+    /* Pass count + letter-grade distribution — feeds the Benchmarks "Pass Rate"
+       KPI and the "Grade Distribution" chart (both previously dead because these
+       fields were never returned). Pass mark = total >= 50. */
+    const passedGrades = await Grade.count({ where: { total: { [Op.gte]: 50 } } });
+    const distRows = await Grade.findAll({
+      attributes: ['grade_letter', [sequelizeDb.fn('COUNT', sequelizeDb.col('id')), 'n']],
+      group: ['grade_letter'],
+      raw: true,
+    });
+    const distribution = {};
+    distRows.forEach((r) => {
+      if (r.grade_letter) distribution[String(r.grade_letter)] = Number(r.n) || 0;
+    });
+
     return res.json(successResponse({
       schools: schoolCount,
       grade_events_30d: gradeEvents30d,
       integrity_score: integrityScore,
       pending_reviews: pendingReviews,
       total_grades: totalGrades,
+      passed: passedGrades,
+      distribution,
       locked_grades: approvedGrades,
       unlocked_grades: totalGrades - approvedGrades,
       rejected_grades: rejectedGrades,
@@ -1434,12 +1552,40 @@ async function getSystemTerms(req, res) {
   }
 }
 
+/* Server-side term-date checks (the frontend only WARNS; a direct API client could
+   previously persist reversed or out-of-year-bounds term dates). Returns a
+   fieldErrors map ({} when valid) in the same shape validateYearPayload uses. */
+function validateTermDates(start_date, end_date, year) {
+  const fieldErrors = {};
+  const hasStart = start_date != null && start_date !== '';
+  const hasEnd = end_date != null && end_date !== '';
+  if (hasStart && hasEnd && new Date(end_date) <= new Date(start_date)) {
+    fieldErrors.end_date = 'End date must be after the start date.';
+  }
+  // Within the parent year's bounds — only when the year itself is dated.
+  if (year && year.start_date && year.end_date) {
+    const ys = new Date(year.start_date);
+    const ye = new Date(year.end_date);
+    if (hasStart && (new Date(start_date) < ys || new Date(start_date) > ye)) {
+      fieldErrors.start_date = 'Start date must fall within the academic year.';
+    }
+    if (hasEnd && (new Date(end_date) < ys || new Date(end_date) > ye)) {
+      fieldErrors.end_date = fieldErrors.end_date || 'End date must fall within the academic year.';
+    }
+  }
+  return fieldErrors;
+}
+
 async function createSystemTerm(req, res) {
   try {
     const { system_academic_year_id, name, start_date, end_date } = req.body;
     if (!system_academic_year_id || !name) return res.status(400).json(errorResponse('academic_year_id and name are required'));
     const year = await SystemAcademicYear.findByPk(system_academic_year_id);
     if (!year) return res.status(400).json(errorResponse('Academic year not found'));
+    const fieldErrors = validateTermDates(start_date, end_date, year);
+    if (Object.keys(fieldErrors).length) {
+      return res.status(400).json({ success: false, message: 'Please fix the highlighted fields.', fieldErrors });
+    }
     const row = await SystemTerm.create({
       system_academic_year_id,
       name: String(name).slice(0, 100),
@@ -1467,14 +1613,27 @@ async function updateSystemTerm(req, res) {
     const { name, start_date, end_date, system_academic_year_id } = req.body;
     const row = await SystemTerm.findByPk(id);
     if (!row) return res.status(404).json(errorResponse('Not found', 404));
+
+    // Validate the EFFECTIVE dates (incoming value if provided, else current) against
+    // the effective year, before mutating anything.
+    const effStart = start_date !== undefined ? (start_date || null) : row.start_date;
+    const effEnd = end_date !== undefined ? (end_date || null) : row.end_date;
+    let year;
+    if (system_academic_year_id !== undefined) {
+      year = await SystemAcademicYear.findByPk(system_academic_year_id);
+      if (!year) return res.status(400).json(errorResponse('Academic year not found'));
+    } else {
+      year = await SystemAcademicYear.findByPk(row.system_academic_year_id);
+    }
+    const fieldErrors = validateTermDates(effStart, effEnd, year);
+    if (Object.keys(fieldErrors).length) {
+      return res.status(400).json({ success: false, message: 'Please fix the highlighted fields.', fieldErrors });
+    }
+
     if (name !== undefined) row.name = String(name).slice(0, 100);
     if (start_date !== undefined) row.start_date = start_date || null;
     if (end_date !== undefined) row.end_date = end_date || null;
-    if (system_academic_year_id !== undefined) {
-      const year = await SystemAcademicYear.findByPk(system_academic_year_id);
-      if (!year) return res.status(400).json(errorResponse('Academic year not found'));
-      row.system_academic_year_id = system_academic_year_id;
-    }
+    if (system_academic_year_id !== undefined) row.system_academic_year_id = system_academic_year_id;
     row.updated_at = new Date();
     await row.save();
     return res.json(successResponse({}, 'Term updated'));
@@ -1550,11 +1709,35 @@ async function getInstitutionTypes(req, res) {
   }
 }
 
+/* Shared validator for single-name catalog taxonomies (institution/school/syllabus
+   types, class subtypes, academic systems, grading templates, capacity categories).
+   Trims, rejects empty/over-long, and rejects a case-insensitive duplicate (excluding
+   self on update). Returns { ok, fieldErrors, value } where value is the trimmed name
+   to persist — mirrors validateYearPayload's 400 + fieldErrors contract the UI handles. */
+async function validateCatalogName(Model, name, { excludeId, maxLen = 100 } = {}) {
+  const fieldErrors = {};
+  const trimmed = String(name == null ? '' : name).trim();
+  if (!trimmed) {
+    fieldErrors.name = 'Name is required.';
+    return { ok: false, fieldErrors, value: trimmed };
+  }
+  if (trimmed.length > maxLen) {
+    fieldErrors.name = `Name must be ${maxLen} characters or fewer.`;
+    return { ok: false, fieldErrors, value: trimmed };
+  }
+  const where = { [Op.and]: [sequelize.where(sequelize.fn('LOWER', sequelize.col('name')), trimmed.toLowerCase())] };
+  if (excludeId) where[Op.and].push({ id: { [Op.ne]: excludeId } });
+  const dup = await Model.findOne({ where });
+  if (dup) fieldErrors.name = 'An entry with this name already exists.';
+  return { ok: Object.keys(fieldErrors).length === 0, fieldErrors, value: trimmed };
+}
+
 async function createInstitutionType(req, res) {
   try {
     const { name } = req.body;
-    if (!name) return res.status(400).json(errorResponse('Name is required'));
-    const row = await InstitutionType.create({ name: String(name).slice(0, 100) });
+    const v = await validateCatalogName(InstitutionType, name);
+    if (!v.ok) return res.status(400).json({ success: false, message: 'Please fix the highlighted fields.', fieldErrors: v.fieldErrors });
+    const row = await InstitutionType.create({ name: v.value });
     return res.json(successResponse({ id: row.id }, 'Institution type created'));
   } catch (err) {
     console.error(err);
@@ -1568,7 +1751,11 @@ async function updateInstitutionType(req, res) {
     const { name } = req.body;
     const row = await InstitutionType.findByPk(id);
     if (!row) return res.status(404).json(errorResponse('Not found', 404));
-    if (name !== undefined) row.name = String(name).slice(0, 100);
+    if (name !== undefined) {
+      const v = await validateCatalogName(InstitutionType, name, { excludeId: row.id });
+      if (!v.ok) return res.status(400).json({ success: false, message: 'Please fix the highlighted fields.', fieldErrors: v.fieldErrors });
+      row.name = v.value;
+    }
     row.updated_at = new Date();
     await row.save();
     return res.json(successResponse({}, 'Institution type updated'));
@@ -1777,8 +1964,9 @@ async function getCapacityCategories(req, res) {
 async function createCapacityCategory(req, res) {
   try {
     const { name } = req.body;
-    if (!name) return res.status(400).json(errorResponse('Name is required'));
-    const row = await CapacityCategory.create({ name: String(name).slice(0, 100) });
+    const v = await validateCatalogName(CapacityCategory, name);
+    if (!v.ok) return res.status(400).json({ success: false, message: 'Please fix the highlighted fields.', fieldErrors: v.fieldErrors });
+    const row = await CapacityCategory.create({ name: v.value });
     return res.json(successResponse({ id: row.id }, 'Capacity category created'));
   } catch (err) {
     console.error(err);
@@ -1792,7 +1980,11 @@ async function updateCapacityCategory(req, res) {
     const { name } = req.body;
     const row = await CapacityCategory.findByPk(id);
     if (!row) return res.status(404).json(errorResponse('Not found', 404));
-    if (name !== undefined) row.name = String(name).slice(0, 100);
+    if (name !== undefined) {
+      const v = await validateCatalogName(CapacityCategory, name, { excludeId: row.id });
+      if (!v.ok) return res.status(400).json({ success: false, message: 'Please fix the highlighted fields.', fieldErrors: v.fieldErrors });
+      row.name = v.value;
+    }
     row.updated_at = new Date();
     await row.save();
     return res.json(successResponse({}, 'Capacity category updated'));
@@ -1807,6 +1999,20 @@ async function deleteCapacityCategory(req, res) {
     const { id } = req.params;
     const row = await CapacityCategory.findByPk(id);
     if (!row) return res.status(404).json(errorResponse('Not found', 404));
+
+    // Guard against orphaning dependent School Capacity tiers (capacity_category_id,
+    // no DB cascade). Block by default; cascade only on an explicit forced delete.
+    const usedCount = await SchoolCapacity.count({ where: { capacity_category_id: id } });
+    const force = req.query.force === '1' || (req.body && req.body.force === true);
+    if (usedCount > 0 && !force) {
+      return res.status(409).json({
+        success: false,
+        message: `This category is used by ${usedCount} capacity tier(s). Deleting it removes them too.`,
+        requiresForce: true,
+        school_capacity_count: usedCount,
+      });
+    }
+    if (force) await SchoolCapacity.destroy({ where: { capacity_category_id: id } });
     await row.destroy();
     return res.json(successResponse({}, 'Capacity category deleted'));
   } catch (err) {
@@ -1940,7 +2146,9 @@ async function createCountry(req, res) {
   try {
     const { name } = req.body;
     if (!name) return res.status(400).json(errorResponse('Name is required'));
-    const row = await Country.create({ name: String(name).slice(0, 100) });
+    // Active on create so a newly added country reaches the registration dropdowns
+    // immediately (the model defaults is_active=false; SA can still deactivate).
+    const row = await Country.create({ name: String(name).slice(0, 100), is_active: true });
     return res.json(successResponse({ id: row.id }, 'Country created'));
   } catch (err) {
     console.error(err);
@@ -1969,6 +2177,25 @@ async function deleteCountry(req, res) {
     const { id } = req.params;
     const row = await Country.findByPk(id);
     if (!row) return res.status(404).json(errorResponse('Not found', 404));
+
+    // Guard against orphaning child regions/cities (they reference country_id with no
+    // DB cascade). Block by default; cascade only on an explicit forced delete.
+    const regionCount = await Region.count({ where: { country_id: id } });
+    const cityCount = await City.count({ where: { country_id: id } });
+    const force = req.query.force === '1' || (req.body && req.body.force === true);
+    if ((regionCount > 0 || cityCount > 0) && !force) {
+      return res.status(409).json({
+        success: false,
+        message: `This country has ${regionCount} region(s) and ${cityCount} city(ies). Deleting it removes them too.`,
+        requiresForce: true,
+        region_count: regionCount,
+        city_count: cityCount,
+      });
+    }
+    if (force) {
+      await City.destroy({ where: { country_id: id } });
+      await Region.destroy({ where: { country_id: id } });
+    }
     await row.destroy();
     return res.json(successResponse({}, 'Country deleted'));
   } catch (err) {
@@ -1999,13 +2226,15 @@ async function getRegions(req, res) {
     const where = {};
     if (country_id) where.country_id = country_id;
     const rows = await Region.findAll({ where, order: [['created_at', 'DESC']] });
-    const regions = await Promise.all(rows.map(async r => {
-      let countryName = null;
-      try {
-        const c = await Country.findByPk(r.country_id);
-        if (c) countryName = c.name;
-      } catch {}
-      return { id: r.id, country_id: r.country_id, country_name: countryName, name: r.name, is_active: Boolean(r.is_active), created_at: r.created_at, updated_at: r.updated_at };
+    // Bulk-resolve country names in ONE query instead of a findByPk per row (N+1).
+    const countryIds = [...new Set(rows.map(r => r.country_id).filter(v => v != null))];
+    const countryRows = countryIds.length
+      ? await Country.findAll({ where: { id: { [Op.in]: countryIds } }, attributes: ['id', 'name'] })
+      : [];
+    const countryName = Object.fromEntries(countryRows.map(c => [String(c.id), c.name]));
+    const regions = rows.map(r => ({
+      id: r.id, country_id: r.country_id, country_name: countryName[String(r.country_id)] || null,
+      name: r.name, is_active: Boolean(r.is_active), created_at: r.created_at, updated_at: r.updated_at,
     }));
     return res.json(successResponse({ regions }));
   } catch (err) {
@@ -2020,7 +2249,7 @@ async function createRegion(req, res) {
     if (!country_id || !name) return res.status(400).json(errorResponse('country_id and name are required'));
     const country = await Country.findByPk(country_id);
     if (!country) return res.status(400).json(errorResponse('Country not found'));
-    const row = await Region.create({ country_id, name: String(name).slice(0, 100) });
+    const row = await Region.create({ country_id, name: String(name).slice(0, 100), is_active: true });
     return res.json(successResponse({ id: row.id }, 'Region created'));
   } catch (err) {
     console.error(err);
@@ -2054,6 +2283,20 @@ async function deleteRegion(req, res) {
     const { id } = req.params;
     const row = await Region.findByPk(id);
     if (!row) return res.status(404).json(errorResponse('Not found', 404));
+
+    // Guard against orphaning child cities (they reference region_id with no DB
+    // cascade). Block by default; cascade only on an explicit forced delete.
+    const cityCount = await City.count({ where: { region_id: id } });
+    const force = req.query.force === '1' || (req.body && req.body.force === true);
+    if (cityCount > 0 && !force) {
+      return res.status(409).json({
+        success: false,
+        message: `This region has ${cityCount} city(ies). Deleting it removes them too.`,
+        requiresForce: true,
+        city_count: cityCount,
+      });
+    }
+    if (force) await City.destroy({ where: { region_id: id } });
     await row.destroy();
     return res.json(successResponse({}, 'Region deleted'));
   } catch (err) {
@@ -2084,17 +2327,19 @@ async function getCities(req, res) {
     const where = {};
     if (country_id) where.country_id = country_id;
     const rows = await City.findAll({ where, order: [['created_at', 'DESC']] });
-    const cities = await Promise.all(rows.map(async r => {
-      let countryName = null, regionName = null;
-      try {
-        const c = await Country.findByPk(r.country_id);
-        if (c) countryName = c.name;
-      } catch {}
-      try {
-        const reg = await Region.findByPk(r.region_id);
-        if (reg) regionName = reg.name;
-      } catch {}
-      return { id: r.id, country_id: r.country_id, country_name: countryName, region_id: r.region_id, region_name: regionName, name: r.name, is_active: Boolean(r.is_active), created_at: r.created_at, updated_at: r.updated_at };
+    // Bulk-resolve country + region names in two queries instead of two findByPk per row (N+1).
+    const countryIds = [...new Set(rows.map(r => r.country_id).filter(v => v != null))];
+    const regionIds = [...new Set(rows.map(r => r.region_id).filter(v => v != null))];
+    const [countryRows, regionRows] = await Promise.all([
+      countryIds.length ? Country.findAll({ where: { id: { [Op.in]: countryIds } }, attributes: ['id', 'name'] }) : [],
+      regionIds.length ? Region.findAll({ where: { id: { [Op.in]: regionIds } }, attributes: ['id', 'name'] }) : [],
+    ]);
+    const countryName = Object.fromEntries(countryRows.map(c => [String(c.id), c.name]));
+    const regionName = Object.fromEntries(regionRows.map(r => [String(r.id), r.name]));
+    const cities = rows.map(r => ({
+      id: r.id, country_id: r.country_id, country_name: countryName[String(r.country_id)] || null,
+      region_id: r.region_id, region_name: regionName[String(r.region_id)] || null,
+      name: r.name, is_active: Boolean(r.is_active), created_at: r.created_at, updated_at: r.updated_at,
     }));
     return res.json(successResponse({ cities }));
   } catch (err) {
@@ -2112,7 +2357,7 @@ async function createCity(req, res) {
     const region = await Region.findByPk(region_id);
     if (!region) return res.status(400).json(errorResponse('Region not found'));
     if (Number(region.country_id) !== Number(country_id)) return res.status(400).json(errorResponse('Region does not belong to selected country'));
-    const row = await City.create({ country_id, region_id, name: String(name).slice(0, 100) });
+    const row = await City.create({ country_id, region_id, name: String(name).slice(0, 100), is_active: true });
     return res.json(successResponse({ id: row.id }, 'City created'));
   } catch (err) {
     console.error(err);
@@ -2191,8 +2436,9 @@ async function getSchoolTypes(req, res) {
 async function createSchoolType(req, res) {
   try {
     const { name } = req.body;
-    if (!name) return res.status(400).json(errorResponse('name is required'));
-    const row = await SchoolType.create({ name: String(name).slice(0, 100) });
+    const v = await validateCatalogName(SchoolType, name);
+    if (!v.ok) return res.status(400).json({ success: false, message: 'Please fix the highlighted fields.', fieldErrors: v.fieldErrors });
+    const row = await SchoolType.create({ name: v.value });
     return res.json(successResponse({ id: row.id }, 'School type created'));
   } catch (err) {
     console.error(err);
@@ -2206,7 +2452,11 @@ async function updateSchoolType(req, res) {
     const { name } = req.body;
     const row = await SchoolType.findByPk(id);
     if (!row) return res.status(404).json(errorResponse('Not found', 404));
-    if (name !== undefined) row.name = String(name).slice(0, 100);
+    if (name !== undefined) {
+      const v = await validateCatalogName(SchoolType, name, { excludeId: row.id });
+      if (!v.ok) return res.status(400).json({ success: false, message: 'Please fix the highlighted fields.', fieldErrors: v.fieldErrors });
+      row.name = v.value;
+    }
     row.updated_at = new Date();
     await row.save();
     return res.json(successResponse({}, 'School type updated'));
@@ -2259,8 +2509,9 @@ async function getSyllabusTypes(req, res) {
 async function createSyllabusType(req, res) {
   try {
     const { name } = req.body;
-    if (!name) return res.status(400).json(errorResponse('name is required'));
-    const row = await SyllabusType.create({ name: String(name).slice(0, 100) });
+    const v = await validateCatalogName(SyllabusType, name);
+    if (!v.ok) return res.status(400).json({ success: false, message: 'Please fix the highlighted fields.', fieldErrors: v.fieldErrors });
+    const row = await SyllabusType.create({ name: v.value });
     return res.json(successResponse({ id: row.id }, 'Syllabus type created'));
   } catch (err) {
     console.error(err);
@@ -2274,7 +2525,11 @@ async function updateSyllabusType(req, res) {
     const { name } = req.body;
     const row = await SyllabusType.findByPk(id);
     if (!row) return res.status(404).json(errorResponse('Not found', 404));
-    if (name !== undefined) row.name = String(name).slice(0, 100);
+    if (name !== undefined) {
+      const v = await validateCatalogName(SyllabusType, name, { excludeId: row.id });
+      if (!v.ok) return res.status(400).json({ success: false, message: 'Please fix the highlighted fields.', fieldErrors: v.fieldErrors });
+      row.name = v.value;
+    }
     row.updated_at = new Date();
     await row.save();
     return res.json(successResponse({}, 'Syllabus type updated'));
@@ -2323,8 +2578,9 @@ async function getClassSubtypes(req, res) {
 async function createClassSubtype(req, res) {
   try {
     const { name } = req.body;
-    if (!name) return res.status(400).json(errorResponse('name is required'));
-    const row = await ClassSubtype.create({ name: String(name).slice(0, 100) });
+    const v = await validateCatalogName(ClassSubtype, name);
+    if (!v.ok) return res.status(400).json({ success: false, message: 'Please fix the highlighted fields.', fieldErrors: v.fieldErrors });
+    const row = await ClassSubtype.create({ name: v.value });
     return res.json(successResponse({ id: row.id }, 'Class subtype created'));
   } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
 }
@@ -2333,7 +2589,11 @@ async function updateClassSubtype(req, res) {
     const { name } = req.body;
     const row = await ClassSubtype.findByPk(req.params.id);
     if (!row) return res.status(404).json(errorResponse('Not found', 404));
-    if (name !== undefined) row.name = String(name).slice(0, 100);
+    if (name !== undefined) {
+      const v = await validateCatalogName(ClassSubtype, name, { excludeId: row.id });
+      if (!v.ok) return res.status(400).json({ success: false, message: 'Please fix the highlighted fields.', fieldErrors: v.fieldErrors });
+      row.name = v.value;
+    }
     row.updated_at = new Date(); await row.save();
     return res.json(successResponse({}, 'Class subtype updated'));
   } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
@@ -2543,8 +2803,9 @@ async function getAcademicSystems(req, res) {
 async function createAcademicSystem(req, res) {
   try {
     const { name } = req.body;
-    if (!name) return res.status(400).json(errorResponse('name is required'));
-    const row = await AcademicSystem.create({ name: String(name).slice(0, 150) });
+    const v = await validateCatalogName(AcademicSystem, name, { maxLen: 150 });
+    if (!v.ok) return res.status(400).json({ success: false, message: 'Please fix the highlighted fields.', fieldErrors: v.fieldErrors });
+    const row = await AcademicSystem.create({ name: v.value });
     return res.json(successResponse({ id: row.id }, 'Academic system created'));
   } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
 }
@@ -2553,7 +2814,11 @@ async function updateAcademicSystem(req, res) {
     const row = await AcademicSystem.findByPk(req.params.id);
     if (!row) return res.status(404).json(errorResponse('Not found', 404));
     const { name } = req.body;
-    if (name !== undefined) row.name = String(name).slice(0, 150);
+    if (name !== undefined) {
+      const v = await validateCatalogName(AcademicSystem, name, { excludeId: row.id, maxLen: 150 });
+      if (!v.ok) return res.status(400).json({ success: false, message: 'Please fix the highlighted fields.', fieldErrors: v.fieldErrors });
+      row.name = v.value;
+    }
     row.updated_at = new Date();
     await row.save();
     return res.json(successResponse({}, 'Academic system updated'));
@@ -2588,8 +2853,9 @@ async function getGradingSystems(req, res) {
 async function createGradingSystem(req, res) {
   try {
     const { name } = req.body;
-    if (!name) return res.status(400).json(errorResponse('name is required'));
-    const row = await GradingSystem.create({ name: String(name).slice(0, 150) });
+    const v = await validateCatalogName(GradingSystem, name, { maxLen: 150 });
+    if (!v.ok) return res.status(400).json({ success: false, message: 'Please fix the highlighted fields.', fieldErrors: v.fieldErrors });
+    const row = await GradingSystem.create({ name: v.value });
     return res.json(successResponse({ id: row.id }, 'Grading system created'));
   } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
 }
@@ -2598,7 +2864,11 @@ async function updateGradingSystem(req, res) {
     const row = await GradingSystem.findByPk(req.params.id);
     if (!row) return res.status(404).json(errorResponse('Not found', 404));
     const { name } = req.body;
-    if (name !== undefined) row.name = String(name).slice(0, 150);
+    if (name !== undefined) {
+      const v = await validateCatalogName(GradingSystem, name, { excludeId: row.id, maxLen: 150 });
+      if (!v.ok) return res.status(400).json({ success: false, message: 'Please fix the highlighted fields.', fieldErrors: v.fieldErrors });
+      row.name = v.value;
+    }
     row.updated_at = new Date();
     await row.save();
     return res.json(successResponse({}, 'Grading system updated'));
@@ -2712,6 +2982,12 @@ async function assignClassSubjects(req, res) {
     if (denyCrossTenant(req, res, cls.school_id, 'classes')) return;
     const { subject_ids } = req.body;
     if (!Array.isArray(subject_ids)) return res.status(400).json(errorResponse('subject_ids must be an array'));
+    // Reject any subject that doesn't belong to this class's school (no cross-tenant linking).
+    const uniqSubjectIds = [...new Set(subject_ids)];
+    if (uniqSubjectIds.length > 0) {
+      const valid = await Subject.count({ where: { id: { [Op.in]: uniqSubjectIds }, school_id: cls.school_id } });
+      if (valid !== uniqSubjectIds.length) return res.status(400).json(errorResponse('One or more subjects do not belong to this school'));
+    }
     await ClassSubject.destroy({ where: { class_id: classId } });
     if (subject_ids.length > 0) {
       await ClassSubject.bulkCreate(subject_ids.map(sid => ({ class_id: classId, subject_id: sid })), { ignoreDuplicates: true });
@@ -2726,6 +3002,10 @@ async function assignClassTeacher(req, res) {
     if (!cls) return res.status(404).json(errorResponse('Class not found', 404));
     if (denyCrossTenant(req, res, cls.school_id, 'classes')) return;
     const { teacher_id } = req.body;
+    if (teacher_id) {
+      const t = await Teacher.findByPk(teacher_id);
+      if (!t || String(t.school_id) !== String(cls.school_id)) return res.status(400).json(errorResponse('Teacher does not belong to this school'));
+    }
     cls.class_teacher_id = teacher_id || null;
     await cls.save();
     return res.json(successResponse({ class_teacher_id: cls.class_teacher_id }, 'Class teacher updated'));
@@ -2744,6 +3024,12 @@ async function assignClassMultipleTeachers(req, res) {
     const maxTeachers = cls.max_teachers || 10;
     if (teacher_ids.length > maxTeachers) {
       return res.status(400).json(errorResponse(`Maximum ${maxTeachers} teacher(s) allowed per class, but ${teacher_ids.length} provided.`));
+    }
+    // Reject any teacher that doesn't belong to this class's school (no cross-tenant linking).
+    const uniqTeacherIds = [...new Set(teacher_ids)];
+    if (uniqTeacherIds.length > 0) {
+      const valid = await Teacher.count({ where: { id: { [Op.in]: uniqTeacherIds }, school_id: cls.school_id } });
+      if (valid !== uniqTeacherIds.length) return res.status(400).json(errorResponse('One or more teachers do not belong to this school'));
     }
     await ClassAssistantTeacher.destroy({ where: { class_id: classId } });
     if (teacher_ids.length > 0) {
@@ -2782,6 +3068,12 @@ async function assignSubjectClasses(req, res) {
     if (denyCrossTenant(req, res, sub.school_id, 'subjects')) return;
     const { class_ids } = req.body;
     if (!Array.isArray(class_ids)) return res.status(400).json(errorResponse('class_ids must be an array'));
+    // Reject any class that doesn't belong to this subject's school (no cross-tenant linking).
+    const uniqClassIds = [...new Set(class_ids)];
+    if (uniqClassIds.length > 0) {
+      const valid = await ClassModel.count({ where: { id: { [Op.in]: uniqClassIds }, school_id: sub.school_id } });
+      if (valid !== uniqClassIds.length) return res.status(400).json(errorResponse('One or more classes do not belong to this school'));
+    }
     await ClassSubject.destroy({ where: { subject_id: subjectId } });
     if (class_ids.length > 0) {
       await ClassSubject.bulkCreate(class_ids.map(cid => ({ class_id: cid, subject_id: subjectId })), { ignoreDuplicates: true });
@@ -2796,12 +3088,15 @@ async function assignSubjectTeacher(req, res) {
     if (!sub) return res.status(404).json(errorResponse('Subject not found', 404));
     if (denyCrossTenant(req, res, sub.school_id, 'subjects')) return;
     const { teacher_id } = req.body;
+    let affected = 0;
     if (teacher_id) {
-      await ClassSubject.update({ teacher_id }, { where: { subject_id: subjectId } });
+      const t = await Teacher.findByPk(teacher_id);
+      if (!t || String(t.school_id) !== String(sub.school_id)) return res.status(400).json(errorResponse('Teacher does not belong to this school'));
+      [affected] = await ClassSubject.update({ teacher_id }, { where: { subject_id: subjectId } });
     } else {
-      await ClassSubject.update({ teacher_id: null }, { where: { subject_id: subjectId } });
+      [affected] = await ClassSubject.update({ teacher_id: null }, { where: { subject_id: subjectId } });
     }
-    return res.json(successResponse({}, 'Subject teacher updated'));
+    return res.json(successResponse({ affected }, 'Subject teacher updated'));
   } catch (err) { console.error(err); return res.status(500).json(errorResponse('Server error')); }
 }
 async function getSubjectAssignedClasses(req, res) {
@@ -3029,7 +3324,7 @@ async function createSuperStudent(req, res) {
 
     /* Create student user account */
     const username = data.username || `${data.first_name.toLowerCase()}.${data.last_name.toLowerCase()}_${Date.now()}`;
-    const studentPw = data.password || 'Student@123';
+    const studentPw = data.password || genTempPassword();
     const hashedPassword = await bcrypt.hash(studentPw, 10);
     const studentRoleId = await requireRoleId('student');
     const user = await User.create({
@@ -3088,7 +3383,7 @@ async function createSuperStudent(req, res) {
 
     async function registerParent(p) {
       if (!p.name) return null;
-      const pw = p.password || 'Parent@123';
+      const pw = p.password || genTempPassword();
       const pUser = await User.create({
         username: p.username || `parent.${p.name.toLowerCase().replace(/\s+/g,'.')}_${Date.now()}`,
         password: await bcrypt.hash(pw, 10),
@@ -3129,6 +3424,16 @@ async function createSuperStudent(req, res) {
       if (r) registeredParents.push(r);
     }
 
+    try {
+      await appendSecurityAuditLog({
+        type: 'student_created',
+        severity: 'low',
+        actor: req.user?.username || 'unknown',
+        ip: clientIp(req),
+        action: `Student created: ${data.first_name} ${data.last_name} (school ${data.school_id})${registeredParents.length ? `, +${registeredParents.length} parent account(s)` : ''}`,
+      });
+    } catch (e) { console.error('audit log failed:', e.message); }
+
     return res.json(successResponse({
       id: student.id, user_id: user.id, username, password: studentPw,
       parents: registeredParents,
@@ -3168,6 +3473,15 @@ async function updateSuperStudent(req, res) {
     if (upd.vaccinations !== undefined) upd.vaccinations = sanitizeVaccinations(upd.vaccinations);
     if (req.file) upd.passport_picture = `/uploads/students/${req.file.filename}`;
     await Student.update(upd, { where: { id: student.id } });
+    try {
+      await appendSecurityAuditLog({
+        type: 'student_updated',
+        severity: data.password ? 'medium' : 'low',
+        actor: req.user?.username || 'unknown',
+        ip: clientIp(req),
+        action: `Student updated: #${student.id} (school ${student.school_id})${data.password ? ' — login password reset' : ''}`,
+      });
+    } catch (e) { console.error('audit log failed:', e.message); }
     return res.json(successResponse({}, 'Student updated'));
   } catch (err) { console.error(err); return res.status(500).json(errorResponse('Server error')); }
 }
@@ -3181,6 +3495,15 @@ async function deleteSuperStudent(req, res) {
     await Student.destroy({ where: { id: student.id }, transaction });
     await User.destroy({ where: { id: student.user_id }, transaction });
     await transaction.commit();
+    try {
+      await appendSecurityAuditLog({
+        type: 'student_deleted',
+        severity: 'high',
+        actor: req.user?.username || 'unknown',
+        ip: clientIp(req),
+        action: `Student permanently deleted: #${student.id} (school ${student.school_id}) — student record + login removed`,
+      });
+    } catch (e) { console.error('audit log failed:', e.message); }
     return res.json(successResponse({}, 'Student deleted'));
   } catch (err) { await transaction.rollback(); console.error(err); return res.status(500).json(errorResponse('Server error')); }
 }
@@ -3192,6 +3515,15 @@ async function toggleSuperStudentStatus(req, res) {
     if (outsideScope(scopedSchoolId(req), student.school_id)) return res.status(404).json(errorResponse('Not found', 404));
     student.is_active = !student.is_active;
     await student.save();
+    try {
+      await appendSecurityAuditLog({
+        type: 'student_status_changed',
+        severity: 'low',
+        actor: req.user?.username || 'unknown',
+        ip: clientIp(req),
+        action: `Student #${student.id} ${student.is_active ? 'activated' : 'deactivated'} (school ${student.school_id})`,
+      });
+    } catch (e) { console.error('audit log failed:', e.message); }
     return res.json(successResponse({ is_active: student.is_active }, `Status changed to ${student.is_active ? 'active' : 'inactive'}`));
   } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
 }
@@ -3203,6 +3535,15 @@ async function blockSuperStudent(req, res) {
     if (outsideScope(scopedSchoolId(req), student.school_id)) return res.status(404).json(errorResponse('Not found', 404));
     student.status = student.status === 'blocked' ? 'active' : 'blocked';
     await student.save();
+    try {
+      await appendSecurityAuditLog({
+        type: 'student_blocked',
+        severity: 'medium',
+        actor: req.user?.username || 'unknown',
+        ip: clientIp(req),
+        action: `Student #${student.id} ${student.status === 'blocked' ? 'blocked' : 'unblocked'} (school ${student.school_id})`,
+      });
+    } catch (e) { console.error('audit log failed:', e.message); }
     return res.json(successResponse({ status: student.status }, `Student ${student.status === 'blocked' ? 'blocked' : 'unblocked'}`));
   } catch (err) { console.error(err); return res.status(500).json(errorResponse('Internal server error', 500)); }
 }
@@ -3279,7 +3620,8 @@ async function createSuperParent(req, res) {
     }
 
     const username = data.username || `parent.${data.first_name.toLowerCase()}.${data.last_name.toLowerCase()}_${Date.now()}`;
-    const hashedPassword = await bcrypt.hash(data.password || 'Parent@123', 10);
+    const parentPw = data.password || genTempPassword();
+    const hashedPassword = await bcrypt.hash(parentPw, 10);
     const parentRoleId = await requireRoleId('parent');
     const user = await User.create({
       username, password: hashedPassword,
@@ -3306,7 +3648,7 @@ async function createSuperParent(req, res) {
     }
 
     await transaction.commit();
-    return res.json(successResponse({ id: parent.id, user_id: user.id, username }, 'Parent created'));
+    return res.json(successResponse({ id: parent.id, user_id: user.id, username, password: parentPw }, 'Parent created'));
   } catch (err) { await transaction.rollback(); console.error(err); return res.status(500).json(errorResponse('Server error')); }
 }
 
@@ -3557,8 +3899,13 @@ async function createSuperTeacher(req, res) {
     if (forcedSchool !== null) data.school_id = forcedSchool;
 
     const username = data.username || `teacher.${data.first_name.toLowerCase()}.${data.last_name.toLowerCase()}_${Date.now()}`;
-    const teacherPw = data.password || 'Teacher@123';
+    const teacherPw = data.password || genTempPassword();
     const hashedPassword = await bcrypt.hash(teacherPw, 10);
+    // Reject a duplicate employee_id within the same school (no DB unique index exists).
+    if (data.school_id) {
+      const dupT = await Teacher.findOne({ where: { school_id: data.school_id, employee_id: data.employee_id }, attributes: ['id'] });
+      if (dupT) return res.status(409).json(errorResponse('A teacher with this employee ID already exists in this school'));
+    }
     const teacherRoleId = await requireRoleId('teacher');
     const user = await User.create({
       username, password: hashedPassword,
@@ -3596,7 +3943,9 @@ async function createSuperTeacher(req, res) {
       profile_picture: picPath,
       bio: data.bio, linkedin_url: data.linkedin_url,
       degrees: data.degrees || [], certifications: data.certifications || [],
-      must_change_password: data.must_change_password,
+      // Force a password change on first login when the admin left the password
+      // blank (the shared default 'Teacher@123' was used). Teacher login gates on this.
+      must_change_password: data.must_change_password ?? !data.password,
       status: 'active', is_active: true,
     });
 
@@ -3736,7 +4085,7 @@ async function createSuperBursar(req, res) {
     if (forcedSchool === -1) return res.status(403).json(errorResponse('No school is linked to your account', 403));
     if (forcedSchool !== null) data.school_id = forcedSchool;
     const username = data.username || `bursar.${data.first_name.toLowerCase()}.${data.last_name.toLowerCase()}_${Date.now()}`;
-    const pw = data.password || 'Bursar@123';
+    const pw = data.password || genTempPassword();
     const hashedPassword = await bcrypt.hash(pw, 10);
     const bursarRoleId = await requireRoleId('bursar');
     const user = await User.create({
@@ -3888,7 +4237,7 @@ async function createSuperPrincipal(req, res) {
     if (forcedSchool === -1) return res.status(403).json(errorResponse('No school is linked to your account', 403));
     if (forcedSchool !== null) data.school_id = forcedSchool;
     const username = data.username || `principal.${data.first_name.toLowerCase()}.${data.last_name.toLowerCase()}_${Date.now()}`;
-    const pw = data.password || 'Principal@123';
+    const pw = data.password || genTempPassword();
     const user = await User.create({
       username, password: await bcrypt.hash(pw, 10), email: data.email || null,
       first_name: data.first_name, last_name: data.last_name,

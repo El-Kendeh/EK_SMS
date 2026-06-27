@@ -47,7 +47,7 @@ const {
   // Messages
   getMessages, sendMessage, recordClassAttendance,
   // Parent
-  createParent,
+  createParent, resendCredentials,
   // Timetable
   generateTimetable, deleteTimetable, getSchoolTimetable,
   // Modification requests
@@ -320,6 +320,9 @@ router.delete('/school/teacher-assignments/:id/', applyAuth, deleteTeacherAssign
 // ==================== EXAM OFFICERS ====================
 router.get('/school/exam-officers/', applyAuth, getExamOfficers);
 router.post('/school/exam-officers/', applyAuth, assignExamOfficer);
+
+// Reset a school user's password and email them new credentials (Resend Credentials button).
+router.post('/school/users/resend-credentials/', applyAuth, resendCredentials);
 
 // ==================== MESSAGES ====================
 router.get('/school/messages/', applyAuth, getMessages);

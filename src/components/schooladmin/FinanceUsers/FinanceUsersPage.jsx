@@ -1,15 +1,9 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import ApiClient from '../../../api/client';
-import { summariseUsers, heatSummary, generateAlerts } from './finance.utils';
-import StatsCards          from './StatsCards';
-import ActivityPanel       from './ActivityPanel';
-import AlertsPanel         from './AlertsPanel';
-import TransactionHeat     from './TransactionHeat';
 import FiltersBar          from './FiltersBar';
 import FinanceUserCard     from './FinanceUserCard';
 import FinanceUserDetails  from './FinanceUserDetails';
 import AddFinanceUserForm  from './AddFinanceUserForm';
-import IntegrityPanel      from './IntegrityPanel';
 import './FinanceUsers.css';
 
 const Ic = ({ name, size, style }) => (
@@ -46,9 +40,11 @@ export default function FinanceUsersPage({ school }) {
   }, []);
   useEffect(() => { load(); }, [load]);
 
-  const summary = useMemo(() => summariseUsers(rawUsers), [rawUsers]);
-  const heat    = useMemo(() => heatSummary(rawUsers), [rawUsers]);
-  const alerts  = useMemo(() => generateAlerts(rawUsers), [rawUsers]);
+  // Real count from the backend. The previous "summary" aggregates (transactions
+  // today, volume, risk levels, transaction heat, alerts) were derived from fields
+  // the backend never returns, so those dashboards were removed rather than shown
+  // as fabricated zeros. Restore them only once the API computes real figures.
+  const total = rawUsers.length;
 
   const handleCreate = async (payload) => {
     setSaving(true);
@@ -96,7 +92,7 @@ export default function FinanceUsersPage({ school }) {
       <div className="fu-page__head">
         <div>
           <h1 className="ska-page-title">Finance Users</h1>
-          <p className="ska-page-sub">{school?.name} — Access control &amp; transaction authority</p>
+          <p className="ska-page-sub">{school?.name} — Access control</p>
         </div>
         <button
           className={`ska-btn ${showForm ? 'ska-btn--ghost' : 'ska-btn--primary'}`}
@@ -108,20 +104,6 @@ export default function FinanceUsersPage({ school }) {
 
       <Banner msg={banner} />
 
-      <StatsCards summary={summary} loading={loading} />
-
-      {!loading && summary.total > 0 && (
-        <ActivityPanel summary={summary} />
-      )}
-
-      {!loading && summary.total > 0 && (
-        <TransactionHeat heat={heat} />
-      )}
-
-      {!loading && summary.total > 0 && (
-        <AlertsPanel alerts={alerts} />
-      )}
-
       {showForm && (
         <AddFinanceUserForm
           existingEmails={existingEmails}
@@ -130,7 +112,7 @@ export default function FinanceUsersPage({ school }) {
           onCancel={() => setShowForm(false)} />
       )}
 
-      {!loading && summary.total > 0 && (
+      {!loading && total > 0 && (
         <FiltersBar
           search={search}             onSearch={setSearch}
           roleFilter={roleFilter}     onRole={setRoleFilter}
@@ -143,7 +125,7 @@ export default function FinanceUsersPage({ school }) {
           <Ic name="hourglass_empty" size="xl" style={{ color: 'var(--ska-text-3)' }} />
           <p className="fu-empty__title">Loading finance users…</p>
         </div>
-      ) : summary.total === 0 ? (
+      ) : total === 0 ? (
         <div className="fu-empty fu-empty--cta">
           <div className="fu-empty__icon-wrap">
             <Ic name="account_balance" />
@@ -173,8 +155,6 @@ export default function FinanceUsersPage({ school }) {
           ))}
         </div>
       )}
-
-      <IntegrityPanel summary={summary} />
 
       {detailsUser && (
         <FinanceUserDetails

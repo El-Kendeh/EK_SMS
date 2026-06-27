@@ -898,11 +898,11 @@ export default function SAStudents() {
             </div>
             {filteredStudents.map(s => (
               <div key={s.id} className="sard-tr" style={{ '--data-cols': isSchoolAdmin ? 3 : 4 }}>
-                <span className="sard-td">
+                <span className="sard-td" data-label="Name">
                   {s.first_name} {s.last_name}
                 </span>
-                <span className="sard-td">{s.admission_number || '—'}</span>
-                <span className="sard-td">
+                <span className="sard-td" data-label="Admission No">{s.admission_number || '—'}</span>
+                <span className="sard-td" data-label="Status">
                   <span className={`sast-badge sast-badge--${s.is_active ? 'active' : 'inactive'}`}>
                     {s.is_active ? 'Active' : 'Inactive'}
                   </span>
@@ -911,11 +911,11 @@ export default function SAStudents() {
                   )}
                 </span>
                 {!isSchoolAdmin && (
-                  <span className="sard-td">
+                  <span className="sard-td" data-label="School">
                     {schools.find(sc => String(sc.id) === String(s.school_id))?.name || '—'}
                   </span>
                 )}
-                <span className="sard-td sard-td--date">{fmtDate(s.created_at)}</span>
+                <span className="sard-td sard-td--date" data-label="Added">{fmtDate(s.created_at)}</span>
                 <span className="sard-td sard-td--actions">
                   {deleteId === s.id ? (
                     <span className="sast-del-confirm">

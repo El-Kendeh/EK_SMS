@@ -96,20 +96,27 @@ router.use(authenticateToken);
 router.use(schoolScope);
 
 /* ── Shared routes (accessible by multiple roles) ── */
-router.get('/dashboard/', getDashboard);
-router.get('/grade-alerts/', getGradeAlerts);
 /* Shared (NOT superadmin-gated): the caller holds a school_admin impersonation
    token here, so closing the session can't sit behind requireRole(['superadmin']). */
 router.post('/impersonate/end/', endImpersonation);
 router.get('/profile/', data.getProfile);
 router.patch('/profile/', data.patchProfile);
 router.post('/change-password/', data.postChangePassword);
-router.get('/admin-settings/', data.getAdminSettings);
-router.patch('/admin-settings/', data.patchAdminSettings);
 
 /* ── Superadmin-only routes ── */
 const sa = express.Router();
 sa.use(requireRole(['superadmin']));
+
+/* Operator-only platform reads/writes. These were previously mounted on the
+   shared router above, which let ANY authenticated user (incl. an impersonating
+   school_admin) read global platform counts (/dashboard/), read cross-school
+   grade-modification alerts (/grade-alerts/), and read AND WRITE the single
+   global settings row (/admin-settings/ — branding, maintenance_mode,
+   lockdown_state, custom_roles…). Gated to superadmin here. */
+sa.get('/dashboard/', getDashboard);
+sa.get('/grade-alerts/', getGradeAlerts);
+sa.get('/admin-settings/', data.getAdminSettings);
+sa.patch('/admin-settings/', data.patchAdminSettings);
 
 sa.get('/schools/', getAllSchools);
 sa.post('/schools/approve/', handleSchoolAction);

@@ -2855,38 +2855,83 @@ async function getStudentReportCards(req, res) {
     const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
     if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
 
-    const { student_id, term_id } = req.query;
-    if (!student_id) return res.status(400).json(errorResponse('student_id is required'));
+    // studentId comes from the route param — the UI sends no query string, so the old
+    // `req.query.student_id` check always 400'd (audit #28).
+    const studentId = req.params.studentId || req.query.student_id;
+    const { term_id } = req.query;
+    if (!studentId) return res.status(400).json(errorResponse('student id is required'));
 
-    const where = { student_id, school_id: teacher.school_id };
+    // Ownership + name (the alias is `user`, not `User` — fixes the always-"Unknown" bug #4).
+    const student = await Student.findOne({
+      where: { id: studentId, school_id: teacher.school_id },
+      include: [{ model: User, as: 'user', attributes: ['first_name', 'last_name', 'email'] }],
+    });
+    if (!student) return res.status(403).json(errorResponse('You are not authorised to view this student'));
+
+    const where = { student_id: studentId, school_id: teacher.school_id };
     if (term_id) where.term_id = term_id;
-
     const grades = await Grade.findAll({
       where,
       include: [
         { model: Subject, as: 'subject', attributes: ['id', 'name', 'code'] },
-        { model: Term, as: 'term', attributes: ['id', 'name'] },
+        { model: Term, as: 'term', attributes: ['id', 'name', 'academic_year_id'] },
       ],
     });
 
-    const student = await Student.findOne({
-      where: { id: student_id, school_id: teacher.school_id },
-      include: [{ model: User, as: 'user', attributes: ['first_name', 'last_name', 'email'] }],
+    // Classmates' grades for class-rank computation.
+    const classmates = student.classroom_id ? await Student.findAll({
+      where: { classroom_id: student.classroom_id, school_id: teacher.school_id, status: 'active' }, attributes: ['id'],
+    }) : [];
+    const classSize = classmates.length;
+    const classGrades = classmates.length ? await Grade.findAll({
+      where: { student_id: classmates.map(c => c.id), school_id: teacher.school_id }, attributes: ['student_id', 'term_id', 'total'], raw: true,
+    }) : [];
+
+    // One report card per term (the UI renders a card with term/year/average/rank/publish
+    // state — it previously got flat per-subject rows and rendered nothing usable, #31).
+    const byTerm = {};
+    grades.forEach(g => {
+      const tid = g.term_id;
+      if (!byTerm[tid]) byTerm[tid] = { term_id: tid, term: g.term?.name || 'Term', academic_year_id: g.term?.academic_year_id, totals: [], allApproved: true, lastApprovedAt: null, subjects: [] };
+      const b = byTerm[tid];
+      if (g.total != null) b.totals.push(g.total);
+      if (g.approval_status !== 'approved') b.allApproved = false;
+      if (g.approved_at && (!b.lastApprovedAt || new Date(g.approved_at) > new Date(b.lastApprovedAt))) b.lastApprovedAt = g.approved_at;
+      b.subjects.push({ subject: g.subject?.name, total: g.total, grade_letter: g.grade_letter });
     });
 
-    const report_cards = grades.map(g => ({
-      subject: g.subject?.name || 'Unknown',
-      term: g.term?.name || 'Unknown',
-      ca: g.ca,
-      midterm: g.midterm,
-      final: g.final,
-      total: g.total,
-      grade_letter: g.grade_letter,
-      remarks: g.remarks,
-    }));
+    const ayIds = [...new Set(Object.values(byTerm).map(b => b.academic_year_id).filter(Boolean))];
+    const ays = ayIds.length ? await AcademicYear.findAll({ where: { id: ayIds }, attributes: ['id', 'name'], raw: true }) : [];
+    const ayName = Object.fromEntries(ays.map(a => [a.id, a.name]));
+
+    const report_cards = Object.values(byTerm).map(b => {
+      const avg = b.totals.length ? Math.round(b.totals.reduce((a, x) => a + x, 0) / b.totals.length) : null;
+      let class_rank = null;
+      if (avg != null && classGrades.length) {
+        const perStudent = {};
+        classGrades.filter(g => String(g.term_id) === String(b.term_id) && g.total != null)
+          .forEach(g => { (perStudent[g.student_id] = perStudent[g.student_id] || []).push(g.total); });
+        const avgs = Object.values(perStudent).map(arr => arr.reduce((a, x) => a + x, 0) / arr.length);
+        class_rank = 1 + avgs.filter(a => a > avg).length;
+      }
+      const published = b.allApproved && b.totals.length > 0;
+      return {
+        id: `${studentId}-${b.term_id}`,
+        term: b.term,
+        academic_year: ayName[b.academic_year_id] || '',
+        average_score: avg,
+        class_rank,
+        class_size: classSize || null,
+        is_published: published,
+        published_at: published ? b.lastApprovedAt : null,
+        pdf_url: null, // no PDF generation yet — the UI hides the button when null
+        qr_code: null,
+        subjects: b.subjects,
+      };
+    });
 
     return res.json(successResponse({
-      student_name: student?.User ? `${student.User.first_name} ${student.User.last_name}` : 'Unknown',
+      student_name: student?.user ? `${student.user.first_name} ${student.user.last_name}` : 'Unknown',
       admission_number: student?.admission_number,
       report_cards,
     }));

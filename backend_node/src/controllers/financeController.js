@@ -299,20 +299,33 @@ async function assignFees(req, res) {
   const transaction = await sequelize.transaction();
   try {
     const school = await getSchoolFromUser(req);
-    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+    if (!school) { await transaction.rollback(); return res.status(401).json(errorResponse('Not authenticated')); }
 
     const { fee_category_id, student_ids, term_id, discount } = req.body;
     if (!fee_category_id || !student_ids || !student_ids.length) {
+      await transaction.rollback();
       return res.status(400).json(errorResponse('fee_category_id and student_ids are required'));
     }
 
-    const category = await FeeCategory.findByPk(fee_category_id);
-    if (!category) return res.status(404).json(errorResponse('Fee category not found'));
+    // Scope every client-supplied id to the caller's school (prevents pulling a
+    // foreign school's category/term, or assigning fees to another school's students).
+    const category = await FeeCategory.findOne({ where: { id: fee_category_id, school_id: school.id } });
+    if (!category) { await transaction.rollback(); return res.status(404).json(errorResponse('Fee category not found')); }
 
-    const term = term_id ? await Term.findByPk(term_id) : null;
+    const term = term_id ? await Term.findOne({ where: { id: term_id, school_id: school.id } }) : null;
+    if (term_id && !term) { await transaction.rollback(); return res.status(404).json(errorResponse('Term not found')); }
+
+    const schoolStudents = await Student.findAll({
+      where: { id: student_ids, school_id: school.id },
+      attributes: ['id'],
+      transaction,
+    });
+    const validIds = new Set(schoolStudents.map((s) => String(s.id)));
+    if (!validIds.size) { await transaction.rollback(); return res.status(404).json(errorResponse('No matching students in this school')); }
 
     let count = 0;
     for (const sid of student_ids) {
+      if (!validIds.has(String(sid))) continue; // skip ids that aren't this school's students
       const existing = await Fee.findOne({
         where: { school_id: school.id, student_id: sid, fee_category_id, term_id: term?.id || null },
         transaction,
@@ -351,10 +364,19 @@ async function recordPayment(req, res) {
   const transaction = await sequelize.transaction();
   try {
     const school = await getSchoolFromUser(req);
-    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+    if (!school) { await transaction.rollback(); return res.status(401).json(errorResponse('Not authenticated')); }
 
     const { student_id, fee_id, amount, payment_method, reference, notes, paid_by } = req.body;
-    if (!student_id || !amount) return res.status(400).json(errorResponse('student_id and amount are required'));
+    if (!student_id || !amount) { await transaction.rollback(); return res.status(400).json(errorResponse('student_id and amount are required')); }
+
+    // Validate the student belongs to this school before writing any payment row
+    // (reused below for the notification, so no second lookup is needed).
+    const student = await Student.findOne({
+      where: { id: student_id, school_id: school.id },
+      include: [{ model: User, as: 'user', attributes: ['first_name', 'last_name'] }],
+      transaction,
+    });
+    if (!student) { await transaction.rollback(); return res.status(404).json(errorResponse('Student not found in this school')); }
 
     const receiptNumber = `RCP-${Date.now().toString(36).toUpperCase()}`;
     const paymentHash = `${student_id}-${fee_id || 'none'}-${amount}-${Date.now()}`.replace(/[^a-zA-Z0-9-]/g, '');
@@ -374,7 +396,8 @@ async function recordPayment(req, res) {
     }, { transaction });
 
     if (fee_id) {
-      const fee = await Fee.findByPk(fee_id, { transaction });
+      // Scope the fee to this school so a foreign fee_id can't be mutated.
+      const fee = await Fee.findOne({ where: { id: fee_id, school_id: school.id }, transaction });
       if (fee) {
         const newPaid = (fee.amount_paid || 0) + amount;
         await fee.update({
@@ -383,11 +406,6 @@ async function recordPayment(req, res) {
         }, { transaction });
       }
     }
-
-    const student = await Student.findByPk(student_id, {
-      include: [{ model: User, as: 'user', attributes: ['first_name', 'last_name'] }],
-      transaction,
-    });
 
     await Notification.create({
       school_id: school.id,

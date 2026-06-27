@@ -7,6 +7,7 @@ import { useTicker } from '../../hooks/useTicker';
 import TamperCounter from './TamperCounter';
 import StreaksCard from './StreaksCard';
 import VoiceSummary from '../common/VoiceSummary';
+import UpcomingMeetings from '../shared/UpcomingMeetings';
 import {
   getTermProgress,
   ordinalSuffix,
@@ -140,6 +141,8 @@ function StudentHomeLite({ profile, summary, grades, recentNotifs, loading, navi
           </p>
         </div>
       </div>
+
+      <UpcomingMeetings endpoint="/api/student/virtual-meetings/" />
 
       {/* Subjects list */}
       <div className="stu-lite-section">
@@ -332,6 +335,8 @@ export default function StudentHome({ navigateTo }) {
           </button>
         </div>
       </div>
+
+      <UpcomingMeetings endpoint="/api/student/virtual-meetings/" />
 
       {/* Trust / integrity banner with live tamper counter */}
       <div className="stu-trust-banner stu-trust-banner--rich">

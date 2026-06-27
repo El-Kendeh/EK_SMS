@@ -11,7 +11,9 @@ async function requireRoleId(code) {
   return row.id;
 }
 
-/** Maps superadmin UI labels to `roles.code`. */
+/** Maps superadmin UI labels to `roles.code`. Returns null for an unknown label
+ *  so the caller can reject it — NEVER silently defaults to 'schooladmin' (that
+ *  let "Exam Officer"/"Finance Officer" invites quietly become School Admins). */
 function mapInviteLabelToCode(label) {
   const m = String(label || '').trim();
   if (m === 'Super Admin') return 'superadmin';
@@ -21,7 +23,7 @@ function mapInviteLabelToCode(label) {
   if (m === 'Principal') return 'principal';
   if (m === 'Bursar') return 'bursar';
   if (m === 'Student') return 'student';
-  return 'schooladmin';
+  return null;
 }
 
 module.exports = { requireRoleId, mapInviteLabelToCode };

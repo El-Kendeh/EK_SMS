@@ -160,13 +160,6 @@ export default function SASystemHealth() {
             })}
           </div>
 
-          {/* Recent Activity */}
-          <div className="sa-card">
-            <div className="sa-card-head"><p className="sa-card-title">Recent Activity</p></div>
-            <div className="sa-card-body" style={{ paddingBottom: 8 }}>
-              <p style={{ fontSize: '0.8125rem', color: 'var(--sa-text-3)', padding: '8px 0' }}>No recent system activity recorded.</p>
-            </div>
-          </div>
         </>
       )}
     </div>

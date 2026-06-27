@@ -1,3 +1,4 @@
+import UpcomingMeetings from '../shared/UpcomingMeetings';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTeacher } from '../../context/TeacherContext';
@@ -133,6 +134,7 @@ export default function TeacherHome({ navigateTo }) {
 
   return (
     <div className="tch-home">
+      <UpcomingMeetings endpoint="/api/teacher/virtual-meetings/" />
 
       {/* ── Greeting banner ───────────────────────────────────────── */}
       <motion.div className="tch-home__banner"
