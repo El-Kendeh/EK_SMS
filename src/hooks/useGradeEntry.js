@@ -3,7 +3,32 @@ import { teacherApi } from '../api/teacherApi';
 import { useTeacher } from '../context/TeacherContext';
 import { calculateGradeLetter } from '../utils/gradeUtils';
 
-export function useGradeEntry(classId) {
+const AVATAR_COLOURS = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#14b8a6'];
+function avatarColorFor(str = '') {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  return AVATAR_COLOURS[Math.abs(hash) % AVATAR_COLOURS.length];
+}
+
+// The roster endpoint returns raw rows (id/first_name/last_name/full_name/...) with no
+// currentGrade/initials/avatarColor/studentNumber — GradeEntryRow read those unguarded and
+// crashed the whole screen (audit #14). Normalise each row into the shape the row expects.
+function normaliseStudent(s) {
+  const fullName = s.fullName || s.full_name || `${s.first_name || ''} ${s.last_name || ''}`.trim() || 'Student';
+  return {
+    ...s,
+    fullName,
+    studentNumber: s.studentNumber || s.admission_number || '',
+    initials: fullName.split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase() || 'S',
+    avatarColor: s.avatarColor || avatarColorFor(fullName),
+    currentGrade: s.currentGrade || {
+      id: null, score: null, status: 'draft', remarks: '', gradeLetter: null,
+      lastUpdated: null, hasModificationAttempt: false,
+    },
+  };
+}
+
+export function useGradeEntry(classId, subjectId, termId) {
   const { setAutoSaveStatus } = useTeacher();
   const [students, setStudents] = useState([]);
   const [scheme, setScheme] = useState(null);
@@ -23,7 +48,8 @@ export function useGradeEntry(classId) {
     ])
       .then(([studsRes, schemeData]) => {
         if (cancelled) return;
-        const studsArray = studsRes?.students || studsRes?.data || (Array.isArray(studsRes) ? studsRes : []);
+        const rawStuds = studsRes?.students || studsRes?.data || (Array.isArray(studsRes) ? studsRes : []);
+        const studsArray = rawStuds.map(normaliseStudent);
         setStudents(studsArray);
         setScheme(schemeData);
         // Initialize local grades from student data
@@ -57,14 +83,14 @@ export function useGradeEntry(classId) {
     setAutoSaveStatus('saving');
     autoSaveTimer.current = setTimeout(async () => {
       try {
-        await teacherApi.saveGradeDraft({ classId, studentId, field, value });
+        await teacherApi.saveGradeDraft({ classId, subject_id: subjectId, term_id: termId, studentId, field, value });
         setAutoSaveStatus('saved');
         setTimeout(() => setAutoSaveStatus('idle'), 2000);
       } catch {
         setAutoSaveStatus('error');
       }
     }, 1500);
-  }, [classId, setAutoSaveStatus]);
+  }, [classId, subjectId, termId, setAutoSaveStatus]);
 
   const getComputedGradeLetter = useCallback((studentId) => {
     if (!scheme) return null;
@@ -80,8 +106,8 @@ export function useGradeEntry(classId) {
       gradeLetter: getComputedGradeLetter(id),
     })).filter(g => g.score !== '' && g.score !== null && g.score !== undefined);
 
-    return teacherApi.submitGradesForLocking(gradesArray, subjectId, termId);
-  }, [localGrades, getComputedGradeLetter]);
+    return teacherApi.submitGradesForLocking(gradesArray, subjectId, termId, classId);
+  }, [localGrades, getComputedGradeLetter, classId]);
 
   return {
     students,

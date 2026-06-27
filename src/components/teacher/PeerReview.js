@@ -9,19 +9,21 @@ export default function PeerReview() {
   const [adding, setAdding] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
-  const [form, setForm] = useState({ toTeacher: '', subject: '', score: 4, comment: '', anonymous: true });
+  const [colleagues, setColleagues] = useState([]);
+  const [form, setForm] = useState({ revieweeId: '', subject: '', score: 4, comment: '', anonymous: true });
 
   const refresh = () => teacherApi.getPeerReviews().then(setData).catch(() => setError('Could not load reviews.'));
   useEffect(() => { refresh(); }, []);
+  useEffect(() => { teacherApi.getColleagues().then(setColleagues).catch(() => {}); }, []);
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!form.toTeacher || !form.comment) return;
+    if (!form.revieweeId || !form.comment) return;
     setBusy(true);
     try {
       await teacherApi.submitPeerReview(form);
       setAdding(false);
-      setForm({ toTeacher: '', subject: '', score: 4, comment: '', anonymous: true });
+      setForm({ revieweeId: '', subject: '', score: 4, comment: '', anonymous: true });
       refresh();
     } catch { setError('Could not submit.'); }
     finally { setBusy(false); }
@@ -82,7 +84,12 @@ export default function PeerReview() {
             </button>
           ) : (
             <motion.form className="prv__form" onSubmit={submit} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-              <label><span>Colleague</span><input value={form.toTeacher} onChange={(e) => setForm({ ...form, toTeacher: e.target.value })} placeholder="Mrs. Aisha Bah" required /></label>
+              <label><span>Colleague</span>
+                <select value={form.revieweeId} onChange={(e) => setForm({ ...form, revieweeId: e.target.value })} required>
+                  <option value="">Select a colleague…</option>
+                  {colleagues.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </label>
               <label><span>Subject they teach</span><input value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} placeholder="Biology" /></label>
               <label><span>Score (1–5)</span><input type="number" min={1} max={5} step={0.5} value={form.score} onChange={(e) => setForm({ ...form, score: Number(e.target.value) })} /></label>
               <label><span>Comment</span><textarea rows={3} value={form.comment} onChange={(e) => setForm({ ...form, comment: e.target.value })} required /></label>

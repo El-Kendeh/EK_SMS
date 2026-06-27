@@ -6,7 +6,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { I18nProvider } from '../../context/I18nContext';
 import { useTeacherClasses } from '../../hooks/useTeacherClasses';
 import { useTeacherProfile } from '../../hooks/useTeacherProfile';
-import { useSchoolContext } from '../../hooks/useSchoolContext';
+import { useSchoolContext, SchoolContextProvider } from '../../hooks/useSchoolContext';
 import { useSchoolBranding } from '../../context/SchoolBrandingContext';
 
 // Existing sections
@@ -84,7 +84,6 @@ const SECTION_PATHS = {
   'student-threads':  '/teacher/student-threads',
   'office-hours':     '/teacher/office-hours',
   behaviour:          '/teacher/behaviour',
-  substitute:         '/teacher/substitute',
   'lesson-plans':     '/teacher/lesson-plans',
   'live-classes':     '/teacher/live-classes',
   'print-roster':     '/teacher/print-roster',
@@ -92,6 +91,8 @@ const SECTION_PATHS = {
   performance:        '/teacher/performance',
   'peer-review':      '/teacher/peer-review',
   'safe-report':      '/teacher/safe-report',
+  // 'substitute' intentionally omitted — feature parked (was non-functional security
+  // theater: tokens were never persisted/enforced). Audit #84.
   verify:             '/teacher/verify',
   'where-ive-been':   '/teacher/where-ive-been',
 };
@@ -159,7 +160,6 @@ const NAV_GROUPS = [
       { key: 'performance',       icon: 'leaderboard',      label: 'My performance' },
       { key: 'peer-review',       icon: 'group',            label: 'Peer review' },
       { key: 'where-ive-been',    icon: 'history',          label: 'Where I\'ve been' },
-      { key: 'substitute',        icon: 'key',              label: 'Substitute mode' },
       { key: 'print-roster',      icon: 'print',            label: 'Print roster' },
       { key: 'timetable',         icon: 'calendar_today',   label: 'Timetable' },
       { key: 'profile',           icon: 'person',           label: 'Profile' },
@@ -475,12 +475,14 @@ function TeacherDashboardInner({ onNavigate }) {
 
 export default function TeacherDashboard({ onNavigate }) {
   return (
-    <I18nProvider>
-      <TeacherProvider>
-        <TeacherNotificationProvider>
-          <TeacherDashboardInner onNavigate={onNavigate} />
-        </TeacherNotificationProvider>
-      </TeacherProvider>
-    </I18nProvider>
+    <SchoolContextProvider>
+      <I18nProvider>
+        <TeacherProvider>
+          <TeacherNotificationProvider>
+            <TeacherDashboardInner onNavigate={onNavigate} />
+          </TeacherNotificationProvider>
+        </TeacherProvider>
+      </I18nProvider>
+    </SchoolContextProvider>
   );
 }

@@ -3,20 +3,15 @@ import { teacherApi } from '../../api/teacherApi';
 import { Skeleton } from '../common/Skeleton';
 import './TeacherChannelPreferences.css';
 
-const CATEGORIES = [
-  { key: 'gradePosted',         label: 'Grade-related events',     icon: 'auto_stories' },
-  { key: 'modificationAttempt', label: 'Modification attempt',     icon: 'shield' },
-  { key: 'message',             label: 'Student / parent messages',icon: 'chat' },
-  { key: 'parentReply',         label: 'Parent reply / objection', icon: 'family_restroom' },
-  { key: 'conferenceBooked',    label: 'Conference booked',        icon: 'co_present' },
-  { key: 'systemAlert',         label: 'System / admin alerts',    icon: 'campaign' },
-];
-
+// The backend stores 5 global per-channel toggles (push/email/sms/in_app/whatsapp).
+// The old 6×4 category×channel matrix had no backing schema — every box loaded
+// unchecked and per-category granularity was silently dropped on save (audit #88).
 const CHANNELS = [
-  { key: 'inApp', label: 'In-app',  icon: 'circle_notifications' },
-  { key: 'push',  label: 'Push',    icon: 'notifications_active' },
-  { key: 'email', label: 'Email',   icon: 'mail' },
-  { key: 'sms',   label: 'SMS',     icon: 'sms', cost: true },
+  { key: 'in_app',   label: 'In-app',   icon: 'circle_notifications', desc: 'Alerts inside the dashboard' },
+  { key: 'push',     label: 'Push',     icon: 'notifications_active',  desc: 'Browser / device push' },
+  { key: 'email',    label: 'Email',    icon: 'mail',                 desc: 'To your registered email' },
+  { key: 'sms',      label: 'SMS',      icon: 'sms',                  desc: 'Time-critical alerts only (cost applies)' },
+  { key: 'whatsapp', label: 'WhatsApp', icon: 'chat',                 desc: 'Via WhatsApp where available' },
 ];
 
 export default function TeacherChannelPreferences() {
@@ -29,12 +24,7 @@ export default function TeacherChannelPreferences() {
     teacherApi.getChannelPreferences().then(setPrefs).catch(() => setError('Could not load preferences.'));
   }, []);
 
-  const toggle = (channel, category) => {
-    setPrefs((cur) => ({
-      ...cur,
-      [channel]: { ...cur[channel], [category]: !cur[channel][category] },
-    }));
-  };
+  const toggle = (ch) => setPrefs((cur) => ({ ...cur, [ch]: !cur[ch] }));
 
   const save = async () => {
     setSaving(true); setError(null);
@@ -50,38 +40,32 @@ export default function TeacherChannelPreferences() {
     <div className="tcp">
       <header>
         <h2><span className="material-symbols-outlined">tune</span> Notification preferences</h2>
-        <p>Choose which channels deliver each kind of alert. SMS is reserved for time-critical alerts (cost applies).</p>
+        <p>Choose how you receive alerts. SMS is reserved for time-critical alerts (cost applies).</p>
       </header>
-      <div className="tcp__grid">
-        <div className="tcp__row tcp__row--head">
-          <div></div>
-          {CHANNELS.map((c) => (
-            <div key={c.key} className="tcp__head-cell">
-              <span className="material-symbols-outlined">{c.icon}</span>
-              <span>{c.label}</span>
-              {c.cost && <small>cost</small>}
-            </div>
-          ))}
-        </div>
-        {CATEGORIES.map((cat) => (
-          <div key={cat.key} className="tcp__row">
-            <div className="tcp__cat-cell">
-              <span className="material-symbols-outlined">{cat.icon}</span>
-              <span>{cat.label}</span>
-            </div>
-            {CHANNELS.map((ch) => (
-              <label key={ch.key} className="tcp__cell">
-                <input
-                  type="checkbox"
-                  checked={!!prefs[ch.key]?.[cat.key]}
-                  onChange={() => toggle(ch.key, cat.key)}
-                />
-                <span className="tcp__switch" aria-hidden="true" />
-              </label>
-            ))}
-          </div>
+
+      <div className="tcp__channels">
+        {CHANNELS.map((ch) => (
+          <label
+            key={ch.key}
+            className="tcp__channel"
+            style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 4px', borderBottom: '1px solid var(--tch-border, rgba(0,0,0,0.08))', cursor: 'pointer' }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 22, opacity: 0.8 }}>{ch.icon}</span>
+            <span style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+              <strong style={{ fontSize: 14 }}>{ch.label}</strong>
+              <small style={{ fontSize: 12, opacity: 0.65 }}>{ch.desc}</small>
+            </span>
+            <input
+              type="checkbox"
+              checked={!!prefs[ch.key]}
+              onChange={() => toggle(ch.key)}
+              style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }}
+            />
+            <span className="tcp__switch" aria-hidden="true" />
+          </label>
         ))}
       </div>
+
       <footer>
         {savedAt && <span className="tcp__saved">Saved {savedAt.toLocaleTimeString()}</span>}
         {error && <span className="tcp__error">{error}</span>}

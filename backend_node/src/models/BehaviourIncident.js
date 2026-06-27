@@ -7,8 +7,11 @@ const BehaviourIncident = sequelize.define('BehaviourIncident', {
   student_id: { type: DataTypes.BIGINT, allowNull: false },
   reported_by: { type: DataTypes.BIGINT },
   incident_type: { type: DataTypes.STRING(100) },
+  title: { type: DataTypes.STRING(255) },
   severity: { type: DataTypes.STRING(50) },
   description: { type: DataTypes.TEXT },
+  // JSON array of uploaded evidence file URLs.
+  evidence: { type: DataTypes.TEXT },
   action_taken: { type: DataTypes.TEXT },
   follow_up_required: { type: DataTypes.BOOLEAN, defaultValue: false },
   follow_up_date: { type: DataTypes.DATE },

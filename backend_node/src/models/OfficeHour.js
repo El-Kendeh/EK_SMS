@@ -10,6 +10,10 @@ const OfficeHour = sequelize.define('OfficeHour', {
   end_time: { type: DataTypes.STRING(10) },
   slot_duration_minutes: { type: DataTypes.INTEGER, defaultValue: 30 },
   max_bookings: { type: DataTypes.INTEGER, defaultValue: 1 },
+  // Teacher publishes a room, subject, and audience (student|parent) per slot.
+  room: { type: DataTypes.STRING(120) },
+  subject: { type: DataTypes.STRING(120) },
+  audience: { type: DataTypes.STRING(20), defaultValue: 'student' },
   is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
   created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
 }, {

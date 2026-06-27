@@ -47,11 +47,9 @@ export default function GradeCompletionScreen({ navigateTo }) {
     if (cls.draft === 0) return;
     setLocking(p => ({ ...p, [cls.id]: true }));
     try {
-      const res = await teacherApi.submitGradesForLocking(
-        Array.from({ length: cls.draft }, (_, i) => ({ studentId: null })),
-        cls.subject?.id,
-        currentTerm?.id,
-      );
+      // Lock every draft grade for this class+term server-side (audit #21) — the old
+      // code sent fabricated rows with null studentIds and locked nothing.
+      const res = await teacherApi.lockClassDrafts(cls.id, currentTerm?.id);
       setLockResults(p => ({ ...p, [cls.id]: res.success ? 'success' : 'error' }));
     } catch {
       setLockResults(p => ({ ...p, [cls.id]: 'error' }));

@@ -2133,6 +2133,54 @@ async function getSubjectDeepDive(req, res) {
 
 async function listLiveClasses(req, res) {
   try {
+    const role = req.user?.role;
+    const isStaff = ['teacher', 'staff', 'school_admin', 'principal', 'superadmin'].includes(role);
+
+    if (isStaff) {
+      // Teacher/staff view — the teacher portal calls this and previously got a 404
+      // because the handler assumed a Student row (audit #71). Returns `live_classes`
+      // with the status/classroom/scheduled_start fields the teacher UI reads (#72).
+      const Teacher = require('../models/Teacher');
+      const Class = require('../models/Class');
+      const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
+      const schoolId = req.schoolId || req.user.school_id || teacher?.school_id;
+      const where = { school_id: schoolId, is_active: true };
+      if (role === 'teacher') where.teacher_id = req.user.id;
+
+      const rows = await LiveClass.findAll({
+        where,
+        include: [{ model: Subject, as: 'subject', attributes: ['id', 'name', 'code'] }],
+        order: [['scheduled_at', 'ASC']],
+      });
+
+      const classIds = [...new Set(rows.map(lc => lc.class_id).filter(Boolean))];
+      const classes = classIds.length ? await Class.findAll({ where: { id: classIds }, attributes: ['id', 'name'], raw: true }) : [];
+      const classMap = Object.fromEntries(classes.map(c => [c.id, c.name]));
+
+      const now = Date.now();
+      const live_classes = rows.map(lc => {
+        let status = lc.status || 'scheduled';
+        if (status === 'scheduled' && lc.scheduled_at) {
+          const start = new Date(lc.scheduled_at).getTime();
+          const end = start + (lc.duration_minutes || 60) * 60 * 1000;
+          if (now >= start && now <= end) status = 'live';
+          else if (now > end) status = 'ended';
+        }
+        return {
+          id: lc.id,
+          title: lc.title,
+          description: lc.description,
+          meeting_url: lc.meeting_url,
+          scheduled_start: lc.scheduled_at,
+          duration_minutes: lc.duration_minutes,
+          status,
+          classroom: lc.class_id ? { id: lc.class_id, name: classMap[lc.class_id] || '' } : null,
+          subject: lc.subject ? { id: lc.subject.id, name: lc.subject.name } : null,
+        };
+      });
+      return res.json(successResponse({ live_classes }));
+    }
+
     const student = await getStudentFromUser(req);
     if (!student) return res.status(404).json(errorResponse('Student not found'));
 
@@ -2167,17 +2215,37 @@ async function listLiveClasses(req, res) {
 
 async function createLiveClass(req, res) {
   try {
-    const { title, description, meeting_url, scheduled_at, duration_minutes, class_id, subject_id } = req.body;
+    const b = req.body;
+    const schoolId = req.schoolId || req.user.school_id;
+    // Accept both the teacher UI's names (classroom_id/scheduled_start/meeting_provider)
+    // and the original names — the teacher payload didn't match before (audit #72).
+    const classId = b.class_id || b.classroom_id || null;
+    const scheduledAt = b.scheduled_at || b.scheduled_start || null;
+    let meetingUrl = b.meeting_url || '';
+    if ((b.meeting_provider === 'jitsi' || !b.meeting_provider) && !meetingUrl) {
+      meetingUrl = `https://meet.jit.si/EK${schoolId || 'x'}-${Date.now().toString(36)}`;
+    }
+
+    // Ownership: a teacher may only schedule for a class they teach (audit #80).
+    if (req.user.role === 'teacher' && classId) {
+      const Teacher = require('../models/Teacher');
+      const Class = require('../models/Class');
+      const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
+      const ownsClass = teacher && await Class.findOne({ where: { id: classId, class_teacher_id: teacher.id }, attributes: ['id'] });
+      if (!ownsClass) return res.status(403).json(errorResponse('You are not assigned to this class'));
+    }
+
     const liveClass = await LiveClass.create({
-      school_id: (req.schoolId || req.user.school_id),
+      school_id: schoolId,
       teacher_id: req.user.id,
-      title,
-      description,
-      meeting_url,
-      scheduled_at,
-      duration_minutes,
-      class_id,
-      subject_id,
+      title: b.title,
+      description: b.description,
+      meeting_url: meetingUrl,
+      scheduled_at: scheduledAt,
+      duration_minutes: b.duration_minutes,
+      class_id: classId,
+      subject_id: b.subject_id || null,
+      status: 'scheduled',
       is_active: true,
     });
     return res.json(successResponse({ liveClass: { id: liveClass.id, title: liveClass.title, meetingUrl: liveClass.meeting_url, scheduledAt: liveClass.scheduled_at } }, 'Live class created'));
@@ -2192,7 +2260,17 @@ async function updateLiveClass(req, res) {
     const { id } = req.params;
     const liveClass = await LiveClass.findOne({ where: { id, school_id: (req.schoolId || req.user.school_id) } });
     if (!liveClass) return res.status(404).json(errorResponse('Live class not found'));
-    await liveClass.update(req.body);
+    // A teacher may only modify their own sessions (audit #80).
+    if (req.user.role === 'teacher' && liveClass.teacher_id !== req.user.id) {
+      return res.status(403).json(errorResponse('You can only modify your own live classes'));
+    }
+    // Whitelist updatable fields; accept the teacher UI's scheduled_start alias.
+    const allowed = {};
+    ['title', 'description', 'meeting_url', 'scheduled_at', 'duration_minutes', 'class_id', 'subject_id', 'status', 'is_active'].forEach(k => {
+      if (req.body[k] !== undefined) allowed[k] = req.body[k];
+    });
+    if (req.body.scheduled_start !== undefined) allowed.scheduled_at = req.body.scheduled_start;
+    await liveClass.update(allowed);
     return res.json(successResponse({ message: 'Live class updated' }));
   } catch (err) {
     console.error('updateLiveClass Error:', err);
@@ -2205,6 +2283,9 @@ async function deleteLiveClass(req, res) {
     const { id } = req.params;
     const liveClass = await LiveClass.findOne({ where: { id, school_id: (req.schoolId || req.user.school_id) } });
     if (!liveClass) return res.status(404).json(errorResponse('Live class not found'));
+    if (req.user.role === 'teacher' && liveClass.teacher_id !== req.user.id) {
+      return res.status(403).json(errorResponse('You can only delete your own live classes'));
+    }
     await liveClass.update({ is_active: false });
     return res.json(successResponse({ message: 'Live class deleted' }));
   } catch (err) {

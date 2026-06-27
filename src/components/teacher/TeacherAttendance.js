@@ -29,6 +29,7 @@ export default function TeacherAttendance() {
   const [sessionNote, setSessionNote] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
   const [showHistory, setShowHistory] = useState(false);
   const [students, setStudents] = useState([]);
   const [loadingStudents, setLoadingStudents] = useState(false);
@@ -93,13 +94,12 @@ export default function TeacherAttendance() {
 
   const handleSubmit = async () => {
     setSubmitting(true);
+    setSubmitError('');
     try {
       const records = students.map(s => ({
         student_id: s.id,
         status: attendance[s.id] || 'absent',
       }));
-      await teacherApi.getTeacherTimetable(); // POST attendance via the real endpoint
-      // For now, simulate success since the POST endpoint uses /api/teacher/attendance/
       const res = await fetch('/api/teacher/attendance/', {
         method: 'POST',
         headers: {
@@ -113,13 +113,16 @@ export default function TeacherAttendance() {
           notes: sessionNote,
         }),
       });
-      const data = await res.json();
-      if (data.success) {
+      const data = await res.json().catch(() => ({}));
+      // Only confirm when the server actually persisted the register. Previously the
+      // catch faked success even when nothing saved (audit #42).
+      if (res.ok && data.success) {
         setSubmitted(true);
+      } else {
+        setSubmitError(data.message || 'Could not save attendance. Please try again.');
       }
     } catch {
-      // Still mark as submitted for UX
-      setSubmitted(true);
+      setSubmitError('Network error — attendance was not saved. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -129,6 +132,7 @@ export default function TeacherAttendance() {
     setAttendance({});
     setSessionNote('');
     setSubmitted(false);
+    setSubmitError('');
   };
 
   return (
@@ -330,6 +334,13 @@ export default function TeacherAttendance() {
                       <span className="material-symbols-outlined">{submitting ? 'sync' : 'how_to_reg'}</span>
                       {submitting ? 'Submitting…' : `Submit Attendance (${students.length} students)`}
                     </button>
+
+                    {submitError && (
+                      <p className="ta-unmarked-hint" style={{ color: 'var(--tch-danger, #ef4444)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>error</span>
+                        {submitError}
+                      </p>
+                    )}
 
                     {!allMarked && students.length > 0 && (
                       <p className="ta-unmarked-hint">

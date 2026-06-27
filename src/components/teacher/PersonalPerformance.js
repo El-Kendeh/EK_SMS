@@ -55,31 +55,31 @@ export default function PersonalPerformance() {
 
       <div className="pp__grid">
         <section className="pp__card pp__card--trend">
-          <h3>Class average — term over term</h3>
+          <h3>Class average — by subject</h3>
           <TrendChart points={d.classAverages} />
         </section>
 
         <section className="pp__card">
           <h3>Grading timeliness</h3>
           <div className="pp__big">
-            <strong>{d.gradingTimelinessDays}d</strong>
-            <span>average from "due" to "submitted"</span>
+            <strong>{d.gradingTimelinessDays != null ? `${d.gradingTimelinessDays}d` : '—'}</strong>
+            <span>{d.gradingTimelinessDays != null ? 'average from "due" to "submitted"' : 'Not tracked yet'}</span>
           </div>
         </section>
 
         <section className="pp__card">
           <h3>Parent feedback</h3>
           <div className="pp__big">
-            <strong>{d.parentFeedbackAvg}/5</strong>
-            <span>across {d.parentFeedbackCount} responses</span>
+            <strong>{d.parentFeedbackAvg != null ? `${d.parentFeedbackAvg}/5` : '—'}</strong>
+            <span>{d.parentFeedbackAvg != null ? `across ${d.parentFeedbackCount} responses` : 'No feedback collected yet'}</span>
           </div>
         </section>
 
         <section className="pp__card">
           <h3>Attendance timeliness</h3>
           <div className="pp__big">
-            <strong>{d.attendanceTimelinessPct}%</strong>
-            <span>of registers closed on time</span>
+            <strong>{d.attendanceTimelinessPct != null ? `${d.attendanceTimelinessPct}%` : '—'}</strong>
+            <span>{d.attendanceTimelinessPct != null ? 'of registers closed on time' : 'Not tracked yet'}</span>
           </div>
         </section>
       </div>

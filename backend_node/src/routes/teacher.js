@@ -1,6 +1,25 @@
 const express = require('express');
 const router = express.Router();
 const authenticateToken = require('../middleware/auth');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+// Disk storage for teacher uploads (lesson resources, behaviour-incident evidence).
+// Served statically at /uploads/teacher/ (see index.js: app.use('/uploads', static)).
+const teacherUploadStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = path.join(__dirname, '../../uploads/teacher/');
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const base = path.basename(file.originalname, ext).replace(/[^a-z0-9_-]/gi, '_').slice(0, 40);
+    cb(null, `${base}-${Date.now()}${ext}`);
+  },
+});
+const teacherUpload = multer({ storage: teacherUploadStorage, limits: { fileSize: 50 * 1024 * 1024 } });
 
 const {
   getTeacherMe,
@@ -51,6 +70,7 @@ const {
   getTeacherPerformance,
   getPeerReviews,
   submitPeerReview,
+  getColleagues,
   getSpotlightStudent,
   setSpotlightStudent,
   getCohortCompare,
@@ -165,7 +185,7 @@ router.get('/students/:studentId/report-cards/', getStudentReportCards);
 
 // Resources
 router.get('/resources/', getResources);
-router.post('/resources/', uploadResource);
+router.post('/resources/', teacherUpload.single('file'), uploadResource);
 router.delete('/resources/:id/', deleteResource);
 
 // Feedback
@@ -197,7 +217,7 @@ router.post('/student-threads/:studentId/', sendStudentMessage);
 
 // Behaviour
 router.get('/behaviour-incidents/', getBehaviourIncidents);
-router.post('/behaviour-incidents/', fileBehaviourIncident);
+router.post('/behaviour-incidents/', teacherUpload.array('evidence', 5), fileBehaviourIncident);
 
 // Substitute Mode
 router.post('/substitute-token/', issueSubstituteToken);
@@ -224,6 +244,7 @@ router.get('/workload/', getTeacherWorkload);
 router.get('/performance/', getTeacherPerformance);
 router.get('/peer-reviews/', getPeerReviews);
 router.post('/peer-reviews/', submitPeerReview);
+router.get('/colleagues/', getColleagues);
 router.get('/spotlight/', getSpotlightStudent);
 router.post('/spotlight/', setSpotlightStudent);
 router.get('/cohort-compare/', getCohortCompare);
@@ -243,5 +264,8 @@ router.post('/timetable/generate/', generateTimetable);
 // Grading scheme (read-only for teachers)
 const { getGradingScheme } = require('../controllers/schoolController');
 router.get('/grading-scheme/', getGradingScheme);
+
+// Virtual meetings targeted at this role (read-only; scheduled by the school admin).
+router.get('/virtual-meetings/', require('../controllers/virtualMeetingController').getMyMeetings);
 
 module.exports = router;

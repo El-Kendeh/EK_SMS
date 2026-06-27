@@ -20,7 +20,9 @@ async function getCategories(req, res) {
       order: [['name', 'ASC']],
     });
 
-    return res.json(successResponse({ categories }));
+    // Return school_id so an authenticated caller (e.g. the teacher) can capture it here
+    // and then submit the report ANONYMOUSLY (no token) with school_id passed explicitly.
+    return res.json(successResponse({ categories, school_id: school }));
   } catch (err) {
     console.error('getCategories Error:', err);
     return res.status(500).json(errorResponse(`Failed to fetch categories`));
@@ -60,18 +62,22 @@ async function submitReport(req, res) {
 
 async function checkStatus(req, res) {
   try {
-    const { follow_up_key } = req.params || req.query;
+    // The route param is :key — the old code read req.params.follow_up_key (undefined)
+    // and `req.params || req.query` never falls through, so it always 400'd (audit #86).
+    const follow_up_key = req.params.key || req.query.follow_up_key;
     if (!follow_up_key) return res.status(400).json(errorResponse('follow_up_key is required'));
 
     const report = await WhistleblowerReport.findOne({ where: { follow_up_key } });
     if (!report) return res.status(404).json(errorResponse('Report not found'));
 
     return res.json(successResponse({
+      ticketId: report.id,
       id: report.id,
       title: report.title,
       status: report.status,
       severity: report.severity,
       created_at: report.created_at,
+      updates: [],
     }));
   } catch (err) {
     console.error('checkStatus Error:', err);

@@ -433,6 +433,8 @@ async function migrate() {
         \`start_date\` DATE,
         \`end_date\` DATE,
         \`is_active\` TINYINT(1) DEFAULT 0,
+        \`status\` ENUM('draft','active','closed','archived') NOT NULL DEFAULT 'draft',
+        \`deleted_at\` DATETIME NULL,
         \`created_at\` DATETIME DEFAULT CURRENT_TIMESTAMP,
         \`updated_at\` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
@@ -707,6 +709,7 @@ async function migrate() {
       { name: 'estimated_teachers', def: 'INT DEFAULT NULL' },
       { name: 'grading_system',     def: 'VARCHAR(255) DEFAULT NULL' },
       { name: 'language',           def: 'VARCHAR(50) DEFAULT NULL' },
+      { name: 'approved_at',        def: 'DATETIME DEFAULT NULL' },
     ];
     for (const { name, def } of schoolColumns) {
       try {
@@ -731,6 +734,96 @@ async function migrate() {
       try {
         await sequelize.query(`ALTER TABLE \`pruh_core_class\` ADD COLUMN \`${name}\` ${def}`);
         console.log(`✓ Column added: pruh_core_class.${name}`);
+      } catch (e) {
+        if (e.message && e.message.includes('Duplicate column')) {
+          console.log(`  (column ${name} already exists)`);
+        } else {
+          console.log(`  (column ${name}: ${e.message})`);
+        }
+      }
+    }
+
+    // Add missing columns to pruh_core_grade (teacher-side grade locking — audit #15/#16)
+    const gradeColumns = [
+      { name: 'is_locked', def: 'TINYINT(1) NOT NULL DEFAULT 0' },
+      { name: 'locked_at', def: 'DATETIME DEFAULT NULL' },
+      { name: 'locked_by', def: 'BIGINT DEFAULT NULL' },
+    ];
+    for (const { name, def } of gradeColumns) {
+      try {
+        await sequelize.query(`ALTER TABLE \`pruh_core_grade\` ADD COLUMN \`${name}\` ${def}`);
+        console.log(`✓ Column added: pruh_core_grade.${name}`);
+      } catch (e) {
+        if (e.message && e.message.includes('Duplicate column')) {
+          console.log(`  (column ${name} already exists)`);
+        } else {
+          console.log(`  (column ${name}: ${e.message})`);
+        }
+      }
+    }
+
+    // Add missing column to pruh_core_peer_review (anonymity flag — audit #74)
+    const peerReviewColumns = [
+      { name: 'anonymous', def: 'TINYINT(1) NOT NULL DEFAULT 1' },
+    ];
+    for (const { name, def } of peerReviewColumns) {
+      try {
+        await sequelize.query(`ALTER TABLE \`pruh_core_peer_review\` ADD COLUMN \`${name}\` ${def}`);
+        console.log(`✓ Column added: pruh_core_peer_review.${name}`);
+      } catch (e) {
+        if (e.message && e.message.includes('Duplicate column')) {
+          console.log(`  (column ${name} already exists)`);
+        } else {
+          console.log(`  (column ${name}: ${e.message})`);
+        }
+      }
+    }
+
+    // Add missing columns to pruh_core_behaviour_incident (title/evidence — audit #46)
+    const behaviourColumns = [
+      { name: 'title', def: 'VARCHAR(255) NULL' },
+      { name: 'evidence', def: 'TEXT NULL' },
+    ];
+    for (const { name, def } of behaviourColumns) {
+      try {
+        await sequelize.query(`ALTER TABLE \`pruh_core_behaviour_incident\` ADD COLUMN \`${name}\` ${def}`);
+        console.log(`✓ Column added: pruh_core_behaviour_incident.${name}`);
+      } catch (e) {
+        if (e.message && e.message.includes('Duplicate column')) {
+          console.log(`  (column ${name} already exists)`);
+        } else {
+          console.log(`  (column ${name}: ${e.message})`);
+        }
+      }
+    }
+
+    // Add missing columns to pruh_core_office_hour (room/subject/audience — audit #61)
+    const officeHourColumns = [
+      { name: 'room', def: 'VARCHAR(120) NULL' },
+      { name: 'subject', def: 'VARCHAR(120) NULL' },
+      { name: 'audience', def: "VARCHAR(20) NULL DEFAULT 'student'" },
+    ];
+    for (const { name, def } of officeHourColumns) {
+      try {
+        await sequelize.query(`ALTER TABLE \`pruh_core_office_hour\` ADD COLUMN \`${name}\` ${def}`);
+        console.log(`✓ Column added: pruh_core_office_hour.${name}`);
+      } catch (e) {
+        if (e.message && e.message.includes('Duplicate column')) {
+          console.log(`  (column ${name} already exists)`);
+        } else {
+          console.log(`  (column ${name}: ${e.message})`);
+        }
+      }
+    }
+
+    // Add missing column to pruh_core_live_class (teacher live-class status — audit #71/#72)
+    const liveClassColumns = [
+      { name: 'status', def: "VARCHAR(20) NOT NULL DEFAULT 'scheduled'" },
+    ];
+    for (const { name, def } of liveClassColumns) {
+      try {
+        await sequelize.query(`ALTER TABLE \`pruh_core_live_class\` ADD COLUMN \`${name}\` ${def}`);
+        console.log(`✓ Column added: pruh_core_live_class.${name}`);
       } catch (e) {
         if (e.message && e.message.includes('Duplicate column')) {
           console.log(`  (column ${name} already exists)`);

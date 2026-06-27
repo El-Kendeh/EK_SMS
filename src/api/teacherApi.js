@@ -46,12 +46,31 @@ export const teacherApi = {
     return res.json();
   },
 
-  async submitGradesForLocking(gradesArray, subjectId, termId) {
+  async submitGradesForLocking(gradesArray, subjectId, termId, classId) {
     const student_ids = gradesArray.map(g => g.studentId).filter(Boolean);
+    // Send the actual scores. Previously only student_ids were sent, so the backend
+    // parsed NaN and locked nothing while the UI claimed success (audit #15).
+    const grades = gradesArray.map(g => ({
+      studentId: g.studentId,
+      score: g.score,
+      total: g.score,
+      remarks: g.remarks,
+      grade_letter: g.gradeLetter,
+    }));
     const res = await fetch(`${API_BASE}/api/teacher/grades/lock/`, {
       method: 'POST',
       headers: authHeaders(),
-      body: JSON.stringify({ student_ids, subject_id: subjectId, term_id: termId }),
+      body: JSON.stringify({ student_ids, subject_id: subjectId, term_id: termId, class_id: classId, grades }),
+    });
+    return res.json();
+  },
+
+  // Lock every remaining draft grade for a class this term (Grade Completion bulk action).
+  async lockClassDrafts(classId, termId, subjectId) {
+    const res = await fetch(`${API_BASE}/api/teacher/grades/lock/`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ lock_all: true, class_id: classId, term_id: termId, subject_id: subjectId }),
     });
     return res.json();
   },
@@ -130,17 +149,35 @@ export const teacherApi = {
   },
 
   async getNotifications() {
-    // This endpoint is for school admins only - return empty for teachers
-    // Teachers don't have access to school-wide notifications
-    return { success: true, notifications: [] };
+    // Call the real teacher endpoint (was a hardcoded empty stub — audit #55) and map
+    // the backend's snake_case fields to the camelCase the UI reads (audit #68).
+    try {
+      const res = await fetch(`${API_BASE}/api/teacher/notifications/`, { headers: authHeaders() });
+      if (!res.ok) return { success: true, notifications: [] };
+      const data = await res.json();
+      const SECURITY_TYPES = ['security', 'forensic', 'modification_attempt', 'tamper', 'alert', 'warning'];
+      const notifications = (data.notifications || []).map(n => ({
+        id: n.id,
+        title: n.title,
+        message: n.message,
+        type: n.type,
+        isRead: !!n.is_read,
+        is_read: !!n.is_read,
+        createdAt: n.created_at,
+        created_at: n.created_at,
+        isSecurityAlert: SECURITY_TYPES.includes(String(n.type || '').toLowerCase()),
+      }));
+      return { success: true, notifications, unread: data.unread };
+    } catch {
+      return { success: true, notifications: [] };
+    }
   },
 
-  async markNotificationRead(id) {
-    const res = await fetch(`${API_BASE}/api/school/notifications/${id}/read/`, {
-      method: 'POST',
-      headers: authHeaders(),
-    });
-    return res.json();
+  async markNotificationRead() {
+    // Notifications are school-wide (no per-user read model yet), so mark-read is kept
+    // client-side/optimistic — a server write would mark it read for the whole school,
+    // and the old /api/school/ route 403s for teachers.
+    return { success: true };
   },
 
   async markAllNotificationsRead() {
@@ -398,14 +435,26 @@ export const teacherApi = {
 
   // ── Where I've Been (teacher's own access log) ─────────────────────
   async getWhereIveBeen() {
+    // Component does setEntries(result) then entries.map — return the bare array (audit #89).
     const res = await fetch(`${API_BASE}/api/teacher/access-log/`, { headers: authHeaders() });
-    return res.json();
+    const data = await res.json().catch(() => ({}));
+    return data.access_log || [];
   },
 
   // ── Channel preferences ─────────────────────────────────────────────
   async getChannelPreferences() {
+    // Flatten the backend's { preferences: { inApp:{enabled}, ... } } into the 5 plain
+    // booleans the simplified UI uses (audit #88).
     const res = await fetch(`${API_BASE}/api/teacher/channel-preferences/`, { headers: authHeaders() });
-    return res.json();
+    const data = await res.json().catch(() => ({}));
+    const p = data.preferences || {};
+    return {
+      in_app: p.inApp?.enabled ?? true,
+      push: p.push?.enabled ?? true,
+      email: p.email?.enabled ?? true,
+      sms: p.sms?.enabled ?? false,
+      whatsapp: p.whatsapp?.enabled ?? false,
+    };
   },
   async updateChannelPreferences(prefs) {
     const res = await fetch(`${API_BASE}/api/teacher/channel-preferences/`, {
@@ -416,24 +465,48 @@ export const teacherApi = {
 
   // ── Whistleblower (anonymous safe report) ──────────────────────────
   async getWhistleblowerCategories() {
-    const res = await fetch(`${API_BASE}/api/whistleblower/categories/`);
-    return res.json();
+    // Authenticated so the backend resolves + returns school_id, which we capture and use
+    // for the ANONYMOUS submit below (audit #86). Categories themselves aren't sensitive.
+    const res = await fetch(`${API_BASE}/api/whistleblower/categories/`, { headers: authHeaders() });
+    const data = await res.json().catch(() => ({}));
+    const categories = (data.categories || []).map(c => ({ id: c.id, label: c.name || c.label || 'Report' }));
+    return { categories, schoolId: data.school_id || null };
   },
-  async submitWhistleblowerReport({ category, message }) {
+  async submitWhistleblowerReport({ categoryId, title, description, severity, schoolId }) {
+    // ANONYMOUS: deliberately send NO Authorization header so the request carries no
+    // identity, and the stored report has no actor (audit #85). school_id only routes it.
     const res = await fetch(`${API_BASE}/api/whistleblower/submit/`, {
-      method: 'POST', headers: authHeaders(), body: JSON.stringify({ category, message }),
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        category_id: categoryId || null,
+        title,
+        description,
+        severity: severity || 'medium',
+        school_id: schoolId,
+        reporter_type: 'anonymous',
+      }),
     });
-    return res.json();
+    const data = await res.json().catch(() => ({}));
+    return {
+      ...data,
+      followUpKey: data.follow_up_key,
+      note: data.success ? 'Your report was received by the compliance office.' : (data.message || 'Could not submit the report.'),
+    };
   },
   async checkWhistleblowerStatus(key) {
     const res = await fetch(`${API_BASE}/api/whistleblower/${encodeURIComponent(key)}/`);
-    return res.json();
+    const data = await res.json().catch(() => ({}));
+    return { ...data, ticketId: data.ticketId || data.id, updates: data.updates || [] };
   },
 
   // ── Teacher-published office hours (slot-management side) ──────────
   async getMyOfficeHourSlots() {
+    // Return the bare array — the component does slots.reduce() and crashed on the
+    // {success, slots} wrapper before (audit #61).
     const res = await fetch(`${API_BASE}/api/teacher/office-hours/`, { headers: authHeaders() });
-    return res.json();
+    const data = await res.json().catch(() => ({}));
+    return data.slots || [];
   },
   async publishOfficeHourSlot({ start, durationMin, room, subject, audience }) {
     const res = await fetch(`${API_BASE}/api/teacher/office-hours/`, {
@@ -452,7 +525,8 @@ export const teacherApi = {
   // ── Teacher ↔ Parent threads ───────────────────────────────────────
   async getParentThreads() {
     const res = await fetch(`${API_BASE}/api/teacher/parent-threads/`, { headers: authHeaders() });
-    return res.json();
+    const data = await res.json().catch(() => ({}));
+    return data.threads || [];
   },
   async sendParentMessage(childId, text) {
     const res = await fetch(`${API_BASE}/api/teacher/parent-threads/${childId}/`, {
@@ -464,7 +538,8 @@ export const teacherApi = {
   // ── Teacher ↔ Student two-way threads (upgrade of FeedbackScreen) ──
   async getStudentThreads() {
     const res = await fetch(`${API_BASE}/api/teacher/student-threads/`, { headers: authHeaders() });
-    return res.json();
+    const data = await res.json().catch(() => ({}));
+    return data.threads || [];
   },
   async sendStudentMessage(studentId, text) {
     const res = await fetch(`${API_BASE}/api/teacher/student-threads/${studentId}/`, {
@@ -514,9 +589,11 @@ export const teacherApi = {
 
   // ── Lesson plans ────────────────────────────────────────────────────
   async getLessonPlans({ classId } = {}) {
+    // Component does setPlans(result) then plans.map — return the bare array (audit #73).
     const q = classId ? `?class_id=${classId}` : '';
     const res = await fetch(`${API_BASE}/api/teacher/lesson-plans/${q}`, { headers: authHeaders() });
-    return res.json();
+    const data = await res.json().catch(() => ({}));
+    return Array.isArray(data) ? data : (data.lesson_plans || []);
   },
   async upsertLessonPlan(plan) {
     const method = plan.id ? 'PUT' : 'POST';
@@ -527,8 +604,10 @@ export const teacherApi = {
 
   // ── Bulk feedback templates ────────────────────────────────────────
   async getFeedbackTemplates() {
+    // Component does templates.slice() — return the bare array, not the wrapper (audit #65).
     const res = await fetch(`${API_BASE}/api/teacher/feedback-templates/`, { headers: authHeaders() });
-    return res.json();
+    const data = await res.json().catch(() => ({}));
+    return Array.isArray(data) ? data : (data.templates || []);
   },
   async addFeedbackTemplate({ label, text }) {
     const res = await fetch(`${API_BASE}/api/teacher/feedback-templates/`, {
@@ -571,12 +650,20 @@ export const teacherApi = {
     const res = await fetch(`${API_BASE}/api/teacher/peer-reviews/`, { headers: authHeaders() });
     return res.json();
   },
-  async submitPeerReview({ toTeacher, subject, score, comment, anonymous }) {
+  async submitPeerReview({ revieweeId, subject, score, comment, anonymous }) {
+    // Send reviewee_id (from the colleague picker) — the backend needs an id, not a name
+    // (audit #74). subject maps to category, score to rating.
     const res = await fetch(`${API_BASE}/api/teacher/peer-reviews/`, {
       method: 'POST', headers: authHeaders(),
-      body: JSON.stringify({ to_teacher: toTeacher, subject, score, comment, anonymous: !!anonymous }),
+      body: JSON.stringify({ reviewee_id: revieweeId, category: subject || 'general', rating: score, comment, anonymous: !!anonymous }),
     });
     return res.json();
+  },
+
+  async getColleagues() {
+    const res = await fetch(`${API_BASE}/api/teacher/colleagues/`, { headers: authHeaders() });
+    const data = await res.json().catch(() => ({}));
+    return data.colleagues || [];
   },
 
   // ── Spotlight student ──────────────────────────────────────────────

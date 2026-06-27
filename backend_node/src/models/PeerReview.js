@@ -9,6 +9,7 @@ const PeerReview = sequelize.define('PeerReview', {
   category: { type: DataTypes.STRING(100) },
   rating: { type: DataTypes.INTEGER },
   comment: { type: DataTypes.TEXT },
+  anonymous: { type: DataTypes.BOOLEAN, defaultValue: true },
   created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
 }, {
   tableName: 'pruh_core_peer_review',

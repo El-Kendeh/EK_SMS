@@ -45,14 +45,23 @@ function ToggleRow({ label, description, checked, onChange }) {
 
 export default function TeacherSettings({ onLogout }) {
   const { profile } = useTeacherProfile();
-  const [prefs, setPrefs] = useState(DEFAULT_PREFS);
+  // Persisted locally so the toggles survive a reload (audit #91 — they used to reset
+  // every time). Channel delivery itself is controlled by the Channel Preferences screen.
+  const [prefs, setPrefs] = useState(() => {
+    try { return { ...DEFAULT_PREFS, ...JSON.parse(localStorage.getItem('teacher_notif_prefs') || '{}') }; }
+    catch { return DEFAULT_PREFS; }
+  });
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [passwordFields, setPasswordFields] = useState({ current: '', next: '', confirm: '' });
   const [passwordMsg, setPasswordMsg] = useState(null);
   const [exportMsg, setExportMsg] = useState(null);
 
   const togglePref = (key) => {
-    setPrefs(p => ({ ...p, [key]: !p[key] }));
+    setPrefs(p => {
+      const next = { ...p, [key]: !p[key] };
+      try { localStorage.setItem('teacher_notif_prefs', JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
   };
 
   const handleChangePassword = async (e) => {
@@ -91,9 +100,9 @@ export default function TeacherSettings({ onLogout }) {
   };
 
   const handleExport = (format) => {
-    setExportMsg({ text: `Generating ${format} export…` });
-    setTimeout(() => setExportMsg({ text: `${format} export ready.`, success: true }), 1800);
-    setTimeout(() => setExportMsg(null), 4000);
+    // Honest: there is no export backend yet, so don't fake a "ready" download (audit #92).
+    setExportMsg({ text: `${format} export isn't available yet — contact your school admin for an official records copy.` });
+    setTimeout(() => setExportMsg(null), 6000);
   };
 
   return (

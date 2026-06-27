@@ -12,6 +12,8 @@ const LiveClass = sequelize.define('LiveClass', {
   meeting_url: { type: DataTypes.STRING(500) },
   scheduled_at: { type: DataTypes.DATE },
   duration_minutes: { type: DataTypes.INTEGER },
+  // scheduled | live (derived) | ended | cancelled — the teacher UI is built around this.
+  status: { type: DataTypes.STRING, defaultValue: 'scheduled' },
   is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
   created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
 }, {

@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { teacherApi } from '../../api/teacherApi';
-import { useAutoSave } from '../../hooks/useAutoSave';
 import './TeacherWhistleblower.css';
 
 export default function TeacherWhistleblower() {
   const [tab, setTab] = useState('submit');
   const [categories, setCategories] = useState([]);
-  const [category, setCategory] = useState('corruption');
-  const [message, setMessage, draftMeta] = useAutoSave('teacher_whistle_draft', '');
+  const [category, setCategory] = useState('');
+  const [schoolId, setSchoolId] = useState(null);
+  // In-memory only — NOT auto-saved to localStorage. A sensitive disclosure must not
+  // persist on a shared/managed device (audit #94).
+  const [message, setMessage] = useState('');
   const [submitted, setSubmitted] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [followKey, setFollowKey] = useState('');
@@ -16,15 +18,22 @@ export default function TeacherWhistleblower() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    teacherApi.getWhistleblowerCategories().then((c) => { setCategories(c); if (c[0]) setCategory(c[0].id); }).catch(() => {});
+    teacherApi.getWhistleblowerCategories().then(({ categories: cats, schoolId: sid }) => {
+      setCategories(cats); setSchoolId(sid);
+      if (cats[0]) setCategory(cats[0].id);
+    }).catch(() => {});
   }, []);
 
   const submit = async () => {
     if (!message.trim()) return;
     setSubmitting(true); setError(null);
     try {
-      const res = await teacherApi.submitWhistleblowerReport({ category, message });
-      setSubmitted(res); setMessage(''); draftMeta.clear();
+      const title = message.trim().split('\n')[0].slice(0, 80) || 'Anonymous report';
+      const res = await teacherApi.submitWhistleblowerReport({
+        categoryId: category, title, description: message.trim(), severity: 'medium', schoolId,
+      });
+      if (res.followUpKey) { setSubmitted(res); setMessage(''); }
+      else setError(res.note || 'We could not deliver the report. Try again later.');
     } catch { setError('We could not deliver the report. Try again later.'); }
     finally { setSubmitting(false); }
   };
@@ -76,9 +85,6 @@ export default function TeacherWhistleblower() {
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Describe what you saw or experienced. Include dates and people if you wish, or stay vague — both work."
             />
-            {draftMeta.restored && message && (
-              <small className="twb__draft-pill"><span className="material-symbols-outlined">save</span> Draft restored</small>
-            )}
           </label>
           {error && <div className="twb__error">{error}</div>}
           <div className="twb__actions">

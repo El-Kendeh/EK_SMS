@@ -17,6 +17,12 @@ const Grade = sequelize.define('Grade', {
   approval_status: { type: DataTypes.STRING, defaultValue: 'pending' },
   approved_by: { type: DataTypes.BIGINT },
   approved_at: { type: DataTypes.DATE },
+  // Teacher-side lock: once a teacher locks a grade it is immutable to them
+  // (corrections must go through a modification request). Distinct from principal
+  // approval — a grade can be locked+pending before it is approved.
+  is_locked: { type: DataTypes.BOOLEAN, defaultValue: false },
+  locked_at: { type: DataTypes.DATE },
+  locked_by: { type: DataTypes.BIGINT },
   // Report-card publication: approval makes a grade visible as a grade;
   // publication releases the compiled report card to students/parents.
   is_published: { type: DataTypes.BOOLEAN, defaultValue: false },

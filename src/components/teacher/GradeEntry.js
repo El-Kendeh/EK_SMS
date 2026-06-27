@@ -63,7 +63,8 @@ function GradingSchemeCard({ scheme, collapsed, onToggle }) {
 
 export default function GradeEntry({ navigateTo }) {
   const { assignedClasses, selectedClassId, setSelectedClassId, autoSaveStatus, currentTerm, setActionFeedback } = useTeacher();
-  const { students, scheme, loading, error, localGrades, updateGrade, getComputedGradeLetter, submitGrades } = useGradeEntry(selectedClassId);
+  const selectedClass = assignedClasses.find(c => c.id === selectedClassId);
+  const { students, scheme, loading, error, localGrades, updateGrade, getComputedGradeLetter, submitGrades } = useGradeEntry(selectedClassId, selectedClass?.subject?.id, currentTerm?.id);
 
   const [schemeCollapsed, setSchemeCollapsed] = useState(true);
   const [selected, setSelected] = useState({});
@@ -72,8 +73,6 @@ export default function GradeEntry({ navigateTo }) {
   const [modGrade, setModGrade] = useState(null);
   const [submitResult, setSubmitResult] = useState(null);
   const [search, setSearch] = useState('');
-
-  const selectedClass = assignedClasses.find(c => c.id === selectedClassId);
 
   const filteredStudents = useMemo(() => {
     if (!search) return students;

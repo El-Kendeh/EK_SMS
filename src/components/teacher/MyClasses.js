@@ -17,7 +17,7 @@ export default function MyClasses({ navigateTo }) {
 
   const filtered = assignedClasses.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
-    c.subject.name.toLowerCase().includes(search.toLowerCase())
+    (c.subject?.name || '').toLowerCase().includes(search.toLowerCase())
   );
 
   const handleEnterGrades = (cls) => {
@@ -71,12 +71,12 @@ export default function MyClasses({ navigateTo }) {
                       {cls.room}
                     </p>
                   </div>
-                  <span className={`tch-badge ${cls.subject.category === 'elective' ? 'tch-badge--blue' : 'tch-badge--primary'}`}>
-                    {cls.subject.code}
+                  <span className={`tch-badge ${cls.subject?.category === 'elective' ? 'tch-badge--blue' : 'tch-badge--primary'}`}>
+                    {cls.subject?.code || '—'}
                   </span>
                 </div>
 
-                <p className="myclasses-card__subject">{cls.subject.name}</p>
+                <p className="myclasses-card__subject">{cls.subject?.name || 'No subject assigned'}</p>
 
                 {/* Enhanced status badge */}
                 <div className="myclasses-card__stats-row">

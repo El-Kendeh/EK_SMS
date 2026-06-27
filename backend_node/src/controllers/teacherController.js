@@ -12,6 +12,23 @@ const GradingScheme = require('../models/GradingScheme');
 const Notification = require('../models/Notification');
 const Exam = require('../models/Exam');
 const ForensicEvent = require('../models/ForensicEvent');
+// Models previously referenced as bare identifiers without being imported — every
+// handler touching these threw ReferenceError at runtime (audit #106). Imported here.
+const Message = require('../models/Message');
+const Assignment = require('../models/Assignment');
+const LearningResource = require('../models/LearningResource');
+const OfficeHour = require('../models/OfficeHour');
+const PeerReview = require('../models/PeerReview');
+const SpotlightStudent = require('../models/SpotlightStudent');
+const BehaviourIncident = require('../models/BehaviourIncident');
+const LessonPlan = require('../models/LessonPlan');
+const ChannelPreference = require('../models/ChannelPreference');
+const WhistleblowerReport = require('../models/WhistleblowerReport');
+const WhistleblowerCategory = require('../models/WhistleblowerCategory');
+const SecurityAuditLog = require('../models/SecurityAuditLog');
+const Attendance = require('../models/Attendance');
+const ModificationRequest = require('../models/ModificationRequest');
+const ExamResult = require('../models/ExamResult');
 const { Op } = require('sequelize');
 const sequelize = require('../config/db');
 const { appendGradeEvent, appendGradeEventSafe } = require('../utils/gradeEvent');
@@ -109,9 +126,45 @@ async function getTeacherClasses(req, res) {
       ],
     });
 
-    // Flatten to match frontend shape
-    const formatted = classes.map(cls => {
+    // Resolve the school's active term so grade stats reflect the current term only.
+    const activeTerm = await Term.findOne({
+      where: { school_id: teacher.school_id, is_active: true },
+      order: [['start_date', 'DESC']],
+    });
+
+    // Flatten to match frontend shape, enriching each class with a real student
+    // count and real per-term grade stats (audit #2/#7/#20 — these were hardcoded
+    // to {0,0,0,0}, so every home/classes/completion card showed fake zeros).
+    const formatted = await Promise.all(classes.map(async (cls) => {
       const subjects = (cls.classSubjects || []).map(cs => cs.subject).filter(Boolean);
+
+      const studentCount = await Student.count({
+        where: { classroom_id: cls.id, school_id: teacher.school_id, status: 'active' },
+      });
+
+      // Expected grade entries this term = students × subjects taught in the class.
+      const expected = studentCount * (subjects.length || 1);
+      let gradeStats = { total: expected, locked: 0, draft: 0, pending: 0 };
+
+      if (activeTerm) {
+        const rows = await Grade.findAll({
+          where: { school_id: teacher.school_id, classroom_id: cls.id, term_id: activeTerm.id },
+          attributes: ['is_locked', 'approval_status'],
+          raw: true,
+        });
+        // locked = finalised by the teacher (is_locked) or principal-approved;
+        // pending = awaiting principal; draft = still editable. (pending overlaps
+        // locked once a grade is locked-and-awaiting-approval — that's intentional.)
+        let locked = 0, draft = 0, pending = 0;
+        rows.forEach(r => {
+          const st = r.approval_status;
+          if (r.is_locked || st === 'approved') locked += 1;
+          if (st === 'pending') pending += 1;
+          if (!r.is_locked && st !== 'approved' && st !== 'pending') draft += 1;
+        });
+        gradeStats = { total: expected, locked, draft, pending };
+      }
+
       return {
         id: cls.id,
         name: cls.name,
@@ -124,9 +177,10 @@ async function getTeacherClasses(req, res) {
         colour_tag: cls.colour_tag || '',
         subject: subjects[0] || null,
         subjects,
-        gradeStats: { total: 0, locked: 0, draft: 0, pending: 0 },
+        studentCount,
+        gradeStats,
       };
-    });
+    }));
 
     return res.json(successResponse({ classes: formatted }));
   } catch (err) {
@@ -227,25 +281,40 @@ async function saveGradeDraft(req, res) {
     if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
 
     const { classId, studentId, field, value } = req.body;
+    const subjectId = req.body.subject_id || req.body.subjectId || null;
+    const termId = req.body.term_id || req.body.termId || null;
     if (!studentId || !field) return res.status(400).json(errorResponse('studentId and field are required'));
 
-    const grade = await Grade.findOne({
-      where: { student_id: studentId, school_id: teacher.school_id },
-    });
+    // The grade table has ca/midterm/final/total — there is no `score` column, so the
+    // single-score entry field maps to `total` (audit #24).
+    const dbField = field === 'score' ? 'total' : field;
+    const numeric = ['ca', 'midterm', 'final', 'total'].includes(dbField);
+    const storedValue = numeric ? (value === '' || value === null || value === undefined ? null : parseFloat(value)) : value;
+
+    // Scope the lookup by subject + term (+ classroom) so editing one subject can't
+    // overwrite a different subject's grade for the same student (audit #113).
+    const lookup = { student_id: studentId, school_id: teacher.school_id };
+    if (subjectId) lookup.subject_id = subjectId;
+    if (termId) lookup.term_id = termId;
+    if (classId) lookup.classroom_id = classId;
+
+    const grade = await Grade.findOne({ where: lookup });
 
     if (grade) {
-      const oldValue = grade[field];
-      const updateData = {};
-      updateData[field] = value;
-      if (['ca', 'midterm', 'final'].includes(field)) {
-        const ca = field === 'ca' ? parseFloat(value) : grade.ca || 0;
-        const midterm = field === 'midterm' ? parseFloat(value) : grade.midterm || 0;
-        const finalExam = field === 'final' ? parseFloat(value) : grade.final || 0;
+      // Locked grades are immutable to the teacher — corrections go via a modification request.
+      if (grade.is_locked) {
+        return res.status(423).json(errorResponse('This grade is locked. File a modification request to change it.'));
+      }
+      const oldValue = grade[dbField];
+      const updateData = { [dbField]: storedValue };
+      if (['ca', 'midterm', 'final'].includes(dbField)) {
+        const ca = dbField === 'ca' ? (parseFloat(value) || 0) : (grade.ca || 0);
+        const midterm = dbField === 'midterm' ? (parseFloat(value) || 0) : (grade.midterm || 0);
+        const finalExam = dbField === 'final' ? (parseFloat(value) || 0) : (grade.final || 0);
         updateData.total = ca + midterm + finalExam;
       }
-      // Any edit to an already-reviewed grade invalidates its approval and any
-      // published report card — it must go back through the principal.
-      if (grade.approval_status !== 'pending') {
+      // Editing an already-approved/published grade sends it back through the principal.
+      if (grade.approval_status === 'approved') {
         updateData.approval_status = 'pending';
         updateData.approved_by = null;
         updateData.approved_at = null;
@@ -258,22 +327,23 @@ async function saveGradeDraft(req, res) {
         grade_id: grade.id, school_id: grade.school_id, student_id: grade.student_id,
         subject_id: grade.subject_id, term_id: grade.term_id,
         actor_user_id: req.user?.id, actor_name: req.user?.username,
-        event_type: 'update', field, old_value: oldValue, new_value: value,
+        event_type: 'update', field: dbField, old_value: oldValue, new_value: storedValue,
         approval_status_after: updateData.approval_status || grade.approval_status,
       });
     } else {
       const createData = {
         school_id: teacher.school_id,
         student_id: studentId,
-        subject_id: classId || null,
-        term_id: req.body.term_id || 1,
+        subject_id: subjectId || null,
+        term_id: termId || 1,
         classroom_id: classId || null,
+        approval_status: 'draft',
+        [dbField]: storedValue,
       };
-      createData[field] = value;
-      if (['ca', 'midterm', 'final'].includes(field)) {
-        const ca = field === 'ca' ? parseFloat(value) : 0;
-        const midterm = field === 'midterm' ? parseFloat(value) : 0;
-        const finalExam = field === 'final' ? parseFloat(value) : 0;
+      if (['ca', 'midterm', 'final'].includes(dbField)) {
+        const ca = dbField === 'ca' ? (parseFloat(value) || 0) : 0;
+        const midterm = dbField === 'midterm' ? (parseFloat(value) || 0) : 0;
+        const finalExam = dbField === 'final' ? (parseFloat(value) || 0) : 0;
         createData.total = ca + midterm + finalExam;
       }
       const created = await Grade.create(createData);
@@ -281,8 +351,8 @@ async function saveGradeDraft(req, res) {
         grade_id: created.id, school_id: created.school_id, student_id: created.student_id,
         subject_id: created.subject_id, term_id: created.term_id,
         actor_user_id: req.user?.id, actor_name: req.user?.username,
-        event_type: 'create', field, old_value: null, new_value: value,
-        approval_status_after: 'pending',
+        event_type: 'create', field: dbField, old_value: null, new_value: storedValue,
+        approval_status_after: 'draft',
       });
     }
 
@@ -297,15 +367,48 @@ async function submitGradesForLocking(req, res) {
   const transaction = await sequelize.transaction();
   try {
     const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
-    if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
+    if (!teacher) { await transaction.rollback(); return res.status(404).json(errorResponse('Teacher profile not found')); }
 
-    const { student_ids, subject_id, term_id, grades } = req.body;
+    const { student_ids, subject_id, term_id, grades, lock_all, class_id } = req.body;
+
+    // ── Bulk path: lock every remaining draft grade for a class this term ──
+    // (Grade Completion "Lock N" button — audit #21.) Locks across all the class's
+    // subjects so the count matches the draft total shown on the card.
+    if (lock_all) {
+      if (!class_id || !term_id) {
+        await transaction.rollback();
+        return res.status(400).json(errorResponse('class_id and term_id are required to lock all drafts'));
+      }
+      const ownsClass = await Class.findOne({ where: { id: class_id, class_teacher_id: teacher.id }, attributes: ['id'], transaction });
+      if (!ownsClass) { await transaction.rollback(); return res.status(403).json(errorResponse('You are not assigned to this class')); }
+
+      const draftWhere = { school_id: teacher.school_id, classroom_id: class_id, term_id, approval_status: 'draft' };
+      if (subject_id) draftWhere.subject_id = subject_id;
+      const drafts = await Grade.findAll({ where: draftWhere, transaction });
+      const lockedAt = new Date();
+      let bulkCount = 0;
+      for (const g of drafts) {
+        await g.update({ approval_status: 'pending', is_locked: true, locked_at: lockedAt, locked_by: teacher.id }, { transaction });
+        await appendGradeEvent({
+          grade_id: g.id, school_id: g.school_id, student_id: g.student_id,
+          subject_id: g.subject_id, term_id: g.term_id,
+          actor_user_id: req.user?.id, actor_name: req.user?.username,
+          event_type: 'lock', field: 'is_locked', old_value: false, new_value: true,
+          approval_status_after: 'pending',
+        }, { transaction });
+        bulkCount += 1;
+      }
+      await transaction.commit();
+      return res.json(successResponse({ count: bulkCount, locked: bulkCount }, `${bulkCount} grade(s) locked`));
+    }
+
     if (!student_ids || !subject_id || !term_id) {
+      await transaction.rollback();
       return res.status(400).json(errorResponse('student_ids, subject_id, and term_id are required'));
     }
 
     const term = await Term.findByPk(term_id);
-    if (!term) return res.status(404).json(errorResponse('Term not found'));
+    if (!term) { await transaction.rollback(); return res.status(404).json(errorResponse('Term not found')); }
 
     const gradingScheme = await GradingScheme.findOne({ where: { school_id: teacher.school_id } });
     const boundaries = gradingScheme ? JSON.parse(gradingScheme.boundaries || '{}') : {};
@@ -336,7 +439,7 @@ async function submitGradesForLocking(req, res) {
         student_id: sid,
         subject_id,
         term_id,
-        classroom_id: gradeData.classroom_id || null,
+        classroom_id: gradeData.classroom_id || class_id || null,
         ca,
         midterm,
         final: finalExam,
@@ -346,6 +449,10 @@ async function submitGradesForLocking(req, res) {
         approval_status: 'pending',
         approved_by: null,
         approved_at: null,
+        // Real teacher-side lock (audit #16) — immutable to the teacher from now on.
+        is_locked: true,
+        locked_at: new Date(),
+        locked_by: teacher.id,
         is_published: false,
         published_at: null,
         published_by: null,
@@ -386,7 +493,7 @@ async function submitGradesForLocking(req, res) {
     }, { transaction });
 
     await transaction.commit();
-    return res.json(successResponse({ count }, `${count} grade(s) submitted successfully`));
+    return res.json(successResponse({ count, locked: count }, `${count} grade(s) submitted successfully`));
   } catch (err) {
     await transaction.rollback();
     console.error('submitGradesForLocking Error:', err);
@@ -569,22 +676,39 @@ async function recordClassAttendance(req, res) {
       return res.status(400).json(errorResponse('classroom_id and records array are required'));
     }
 
-    const Attendance = require('../models/Attendance');
-    const today = date || new Date().toISOString().split('T')[0];
-
-    const created = [];
-    for (const r of records) {
-      const [record] = await Attendance.upsert({
-        student_id: r.student_id,
-        classroom_id,
-        date: today,
-        status: r.status || 'absent',
-        notes: notes || null,
-      });
-      created.push(record);
+    // Ownership: only allow recording attendance for a class this teacher owns.
+    const ownsClass = await Class.findOne({
+      where: { id: classroom_id, class_teacher_id: teacher.id },
+      attributes: ['id'],
+    });
+    if (!ownsClass) {
+      return res.status(403).json(errorResponse('You are not assigned to this class'));
     }
 
-    return res.json(successResponse({ count: created.length, date: today }, 'Attendance recorded'));
+    const today = date || new Date().toISOString().split('T')[0];
+
+    // Persist each student's status. The Attendance model requires school_id and uses
+    // a `remarks` column (not `notes`) — both were missing/wrong before, so the insert
+    // always threw and nothing saved while the UI faked success (audit #42).
+    let saved = 0;
+    for (const r of records) {
+      if (!r || !r.student_id) continue;
+      const [row] = await Attendance.findOrCreate({
+        where: { student_id: r.student_id, classroom_id, date: today },
+        defaults: {
+          school_id: teacher.school_id,
+          student_id: r.student_id,
+          classroom_id,
+          date: today,
+          status: r.status || 'absent',
+          remarks: notes || null,
+        },
+      });
+      await row.update({ status: r.status || 'absent', remarks: notes || null });
+      saved += 1;
+    }
+
+    return res.json(successResponse({ count: saved, date: today }, 'Attendance recorded'));
   } catch (err) {
     console.error('recordClassAttendance Error:', err);
     return res.status(500).json(errorResponse('Failed to record attendance'));
@@ -772,9 +896,10 @@ async function getFeedbackStudents(req, res) {
 
     const classes = await Class.findAll({
       where: { class_teacher_id: teacher.id },
-      attributes: ['id'],
+      attributes: ['id', 'name'],
     });
     const classIds = classes.map(c => c.id);
+    const classNameMap = Object.fromEntries(classes.map(c => [c.id, c.name]));
 
     const students = await Student.findAll({
       where: { classroom_id: { [Op.in]: classIds }, school_id: teacher.school_id, status: 'active' },
@@ -782,13 +907,31 @@ async function getFeedbackStudents(req, res) {
       order: [[sequelize.fn('lower', sequelize.col('user.first_name')), 'ASC']],
     });
 
-    const formatted = students.map(s => ({
-      id: s.id,
-      full_name: `${s.user?.first_name || ''} ${s.user?.last_name || ''}`.trim(),
-      admission_number: s.admission_number,
-      classroom_id: s.classroom_id,
-      email: s.user?.email || '',
-    }));
+    // Unread replies from each student to this teacher (drives the unread badge).
+    const unreadRows = await Message.findAll({
+      where: { school_id: teacher.school_id, recipient_id: teacher.id, recipient_type: 'teacher', is_read: false },
+      attributes: ['sender_id', [sequelize.fn('COUNT', sequelize.col('id')), 'cnt']],
+      group: ['sender_id'], raw: true,
+    });
+    const unreadMap = {};
+    unreadRows.forEach(r => { unreadMap[r.sender_id] = parseInt(r.cnt, 10) || 0; });
+
+    // Emit the field names the UI reads (name/className/class_id/unreadCount) — it
+    // previously got full_name/classroom_id and rendered blank rows (audit #56).
+    const formatted = students.map(s => {
+      const name = `${s.user?.first_name || ''} ${s.user?.last_name || ''}`.trim();
+      return {
+        id: s.id,
+        name,
+        full_name: name,
+        className: classNameMap[s.classroom_id] || '',
+        class_id: s.classroom_id,
+        classroom_id: s.classroom_id,
+        admission_number: s.admission_number,
+        email: s.user?.email || '',
+        unreadCount: unreadMap[s.id] || 0,
+      };
+    });
 
     return res.json(successResponse({ students: formatted }));
   } catch (err) {
@@ -802,19 +945,33 @@ async function getFeedbackMessages(req, res) {
     const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
     if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
 
+    // Scope to the selected student's conversation (both directions) — previously this
+    // ignored :studentId and returned EVERY message the teacher ever sent, with no text
+    // (UI reads m.message/m.sender) (audit #57).
+    const { studentId } = req.params;
+
     const messages = await Message.findAll({
-      where: { school_id: teacher.school_id, sender_id: teacher.id },
-      order: [['created_at', 'DESC']],
-      limit: 50,
+      where: {
+        school_id: teacher.school_id,
+        [Op.or]: [
+          { sender_id: teacher.id, recipient_id: studentId },
+          { sender_id: studentId, recipient_id: teacher.id },
+        ],
+      },
+      order: [['created_at', 'ASC']],
+      limit: 200,
     });
+
+    // Opening the thread clears the student's unread replies to this teacher.
+    await Message.update(
+      { is_read: true },
+      { where: { school_id: teacher.school_id, sender_id: studentId, recipient_id: teacher.id, is_read: false } }
+    );
 
     const formatted = messages.map(m => ({
       id: m.id,
-      subject: m.subject,
-      body: m.body,
-      recipient_type: m.recipient_type,
-      recipient_id: m.recipient_id,
-      is_read: m.is_read,
+      message: m.body,
+      sender: m.sender_type || (String(m.sender_id) === String(teacher.id) ? 'teacher' : 'student'),
       created_at: m.created_at,
     }));
 
@@ -830,21 +987,33 @@ async function sendFeedback(req, res) {
     const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
     if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
 
-    const { recipient_id, recipient_type, subject, body } = req.body;
-    if (!recipient_id || !body) return res.status(400).json(errorResponse('recipient_id and body are required'));
+    // The student id comes from the URL; the UI posts just { message } (audit #58).
+    const { studentId } = req.params;
+    const recipient_id = req.body.recipient_id || studentId;
+    const body = req.body.body || req.body.message;
+    if (!recipient_id || !body) return res.status(400).json(errorResponse('message is required'));
+
+    // Ownership: only message students in this teacher's classes (audit #64).
+    const classes = await Class.findAll({ where: { class_teacher_id: teacher.id }, attributes: ['id'] });
+    const classIds = classes.map(c => c.id);
+    const student = await Student.findOne({ where: { id: recipient_id, school_id: teacher.school_id }, attributes: ['id', 'classroom_id'] });
+    if (!student || (classIds.length > 0 && !classIds.includes(student.classroom_id))) {
+      return res.status(403).json(errorResponse('You can only message students in your classes'));
+    }
 
     const message = await Message.create({
       school_id: teacher.school_id,
       sender_id: teacher.id,
       sender_type: 'teacher',
       recipient_id,
-      recipient_type: recipient_type || 'student',
-      subject: subject || 'Feedback',
+      recipient_type: 'student',
+      subject: req.body.subject || 'Feedback',
       body,
+      thread_id: `t${teacher.id}-s${recipient_id}`,
       is_read: false,
     });
 
-    return res.json(successResponse({ id: message.id }, 'Feedback sent'));
+    return res.json(successResponse({ id: message.id, message: body, sender: 'teacher', created_at: message.created_at }, 'Feedback sent'));
   } catch (err) {
     console.error('sendFeedback Error:', err);
     return res.status(500).json(errorResponse('Failed to send feedback'));
@@ -881,8 +1050,13 @@ async function getTeacherAccessLog(req, res) {
       limit: 50,
     });
 
+    // Emit section/device/accessedAt (what the UI renders) alongside the raw fields —
+    // the component got type/action/timestamp and showed blank rows (audit #89).
     const access_log = logs.map(l => ({
       id: l.id,
+      section: l.action || l.type || 'Activity',
+      device: l.ip || '—',
+      accessedAt: l.ts,
       type: l.type,
       action: l.action,
       severity: l.severity,
@@ -1048,8 +1222,18 @@ async function getTeacherOfficeHours(req, res) {
       order: [['date', 'ASC']],
     });
 
+    // Emit the shape the slot-management UI reads (start/durationMin/room/subject/
+    // audience/booked) — it previously got date/start_time and crashed on the wrapper
+    // object (audit #61).
     const slots = officeHours.map(oh => ({
       id: oh.id,
+      start: oh.date,
+      durationMin: oh.slot_duration_minutes,
+      room: oh.room || '',
+      subject: oh.subject || '',
+      audience: oh.audience || 'student',
+      booked: false,
+      claimedBy: null,
       date: oh.date,
       start_time: oh.start_time,
       end_time: oh.end_time,
@@ -1070,17 +1254,31 @@ async function createTeacherOfficeHour(req, res) {
     const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
     if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
 
-    const { date, start_time, end_time, slot_duration_minutes, max_bookings } = req.body;
-    if (!date || !start_time || !end_time) return res.status(400).json(errorResponse('date, start_time, and end_time are required'));
+    // The UI publishes { start (datetime), duration_min, room, subject, audience }.
+    // Derive date/start_time/end_time from start (the old handler demanded fields the
+    // UI never sent → always 400; audit #61).
+    const b = req.body;
+    const start = b.start || b.date;
+    if (!start) return res.status(400).json(errorResponse('start is required'));
+    const durationMin = Number(b.duration_min || b.durationMin || b.slot_duration_minutes) || 30;
+    const startDate = new Date(start);
+    if (isNaN(startDate.getTime())) return res.status(400).json(errorResponse('start is not a valid date/time'));
+    const pad = (n) => String(n).padStart(2, '0');
+    const startTime = b.start_time || `${pad(startDate.getHours())}:${pad(startDate.getMinutes())}`;
+    const endDate = new Date(startDate.getTime() + durationMin * 60000);
+    const endTime = b.end_time || `${pad(endDate.getHours())}:${pad(endDate.getMinutes())}`;
 
     const officeHour = await OfficeHour.create({
       school_id: teacher.school_id,
       teacher_id: teacher.id,
-      date,
-      start_time,
-      end_time,
-      slot_duration_minutes: slot_duration_minutes || 30,
-      max_bookings: max_bookings || 1,
+      date: startDate,
+      start_time: startTime,
+      end_time: endTime,
+      slot_duration_minutes: durationMin,
+      max_bookings: b.max_bookings || 1,
+      room: b.room || '',
+      subject: b.subject || '',
+      audience: b.audience || 'student',
       is_active: true,
     });
 
@@ -1096,9 +1294,11 @@ async function deleteTeacherOfficeHour(req, res) {
     const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
     if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
 
-    const { id } = req.params;
+    // The route param is :slotId, not :id — the old handler read req.params.id and
+    // always 404'd (audit #62).
+    const slotId = req.params.slotId || req.params.id;
     const officeHour = await OfficeHour.findOne({
-      where: { id, teacher_id: teacher.id, school_id: teacher.school_id },
+      where: { id: slotId, teacher_id: teacher.id, school_id: teacher.school_id },
     });
 
     if (!officeHour) return res.status(404).json(errorResponse('Office hour not found'));
@@ -1125,32 +1325,39 @@ async function getParentThreads(req, res) {
           { recipient_id: teacher.id, recipient_type: 'teacher', sender_type: 'parent' },
         ],
       },
-      order: [['created_at', 'DESC']],
+      order: [['created_at', 'ASC']],
     });
 
-    const threadMap = {};
+    // Group by the child the thread is about (encoded in thread_id as `pc-<childId>`).
+    // The component wants an ARRAY of { childId, parentName, relationship, childName,
+    // unread, messages:[{id,text,sender,sentAt}] } — it got a {threads} wrapper (audit #60).
+    const byChild = {};
     messages.forEach(m => {
-      const threadId = m.thread_id || `thread-${m.id}`;
-      if (!threadMap[threadId]) {
-        threadMap[threadId] = {
-          id: threadId,
-          subject: m.subject,
-          last_message: m.body,
-          last_message_at: m.created_at,
-          is_read: m.is_read,
-          message_count: 0,
-          recipient_type: m.sender_id === teacher.id ? m.recipient_type : m.sender_type,
-        };
-      }
-      threadMap[threadId].message_count++;
-      if (new Date(m.created_at) > new Date(threadMap[threadId].last_message_at)) {
-        threadMap[threadId].last_message = m.body;
-        threadMap[threadId].last_message_at = m.created_at;
-        threadMap[threadId].is_read = m.is_read;
-      }
+      const fromTeacher = String(m.sender_id) === String(teacher.id);
+      const childId = (m.thread_id && m.thread_id.startsWith('pc-')) ? m.thread_id.slice(3) : String(m.recipient_id || m.sender_id);
+      if (!childId) return;
+      if (!byChild[childId]) byChild[childId] = { messages: [], unread: 0 };
+      byChild[childId].messages.push({ id: m.id, text: m.body, sender: fromTeacher ? 'teacher' : 'parent', sentAt: m.created_at });
+      if (!fromTeacher && !m.is_read) byChild[childId].unread += 1;
     });
 
-    const threads = Object.values(threadMap).sort((a, b) => new Date(b.last_message_at) - new Date(a.last_message_at));
+    const childIds = Object.keys(byChild);
+    const students = childIds.length ? await Student.findAll({
+      where: { id: childIds, school_id: teacher.school_id },
+      include: [{ model: User, as: 'user', attributes: ['first_name', 'last_name'] }],
+    }) : [];
+    const childMap = Object.fromEntries(students.map(s => [String(s.id), `${s.user?.first_name || ''} ${s.user?.last_name || ''}`.trim() || 'Student']));
+
+    // (Resolving the specific guardian name/relationship from the child link is a
+    // follow-up — kept generic so the thread renders and sends.)
+    const threads = childIds.map(childId => ({
+      childId,
+      parentName: 'Parent/Guardian',
+      relationship: 'Guardian',
+      childName: childMap[childId] || `Student #${childId}`,
+      unread: byChild[childId].unread,
+      messages: byChild[childId].messages,
+    }));
 
     return res.json(successResponse({ threads }));
   } catch (err) {
@@ -1164,22 +1371,24 @@ async function sendParentMessage(req, res) {
     const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
     if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
 
-    const { recipient_id, subject, body, thread_id } = req.body;
-    if (!recipient_id || !body) return res.status(400).json(errorResponse('recipient_id and body are required'));
+    // childId from the URL; the UI posts just { text } (audit #60).
+    const { childId } = req.params;
+    const body = req.body.body || req.body.text;
+    if (!childId || !body) return res.status(400).json(errorResponse('text is required'));
 
     const message = await Message.create({
       school_id: teacher.school_id,
       sender_id: teacher.id,
       sender_type: 'teacher',
-      recipient_id,
+      recipient_id: childId,
       recipient_type: 'parent',
-      subject: subject || 'Message from Teacher',
+      subject: req.body.subject || 'Message from Teacher',
       body,
-      thread_id: thread_id || `thread-${Date.now()}`,
+      thread_id: `pc-${childId}`,
       is_read: false,
     });
 
-    return res.json(successResponse({ id: message.id }, 'Message sent'));
+    return res.json(successResponse({ id: message.id, text: body, sender: 'teacher', sentAt: message.created_at }, 'Message sent'));
   } catch (err) {
     console.error('sendParentMessage Error:', err);
     return res.status(500).json(errorResponse('Failed to send message'));
@@ -1199,32 +1408,42 @@ async function getStudentThreads(req, res) {
           { recipient_id: teacher.id, recipient_type: 'teacher', sender_type: 'student' },
         ],
       },
-      order: [['created_at', 'DESC']],
+      order: [['created_at', 'ASC']],
     });
 
-    const threadMap = {};
+    // Group by the student on the other end. The component wants an ARRAY of
+    // { studentId, studentName, classroom, unread, messages:[{id,text,sender,sentAt}] }
+    // — it previously got a {threads} wrapper keyed by thread_id and crashed (audit #59).
+    const byStudent = {};
     messages.forEach(m => {
-      const threadId = m.thread_id || `thread-${m.id}`;
-      if (!threadMap[threadId]) {
-        threadMap[threadId] = {
-          id: threadId,
-          subject: m.subject,
-          last_message: m.body,
-          last_message_at: m.created_at,
-          is_read: m.is_read,
-          message_count: 0,
-          recipient_type: m.sender_id === teacher.id ? m.recipient_type : m.sender_type,
-        };
-      }
-      threadMap[threadId].message_count++;
-      if (new Date(m.created_at) > new Date(threadMap[threadId].last_message_at)) {
-        threadMap[threadId].last_message = m.body;
-        threadMap[threadId].last_message_at = m.created_at;
-        threadMap[threadId].is_read = m.is_read;
-      }
+      const fromTeacher = String(m.sender_id) === String(teacher.id);
+      const studentId = fromTeacher ? m.recipient_id : m.sender_id;
+      if (!studentId) return;
+      if (!byStudent[studentId]) byStudent[studentId] = { messages: [], unread: 0 };
+      byStudent[studentId].messages.push({ id: m.id, text: m.body, sender: fromTeacher ? 'teacher' : 'student', sentAt: m.created_at });
+      if (!fromTeacher && !m.is_read) byStudent[studentId].unread += 1;
     });
 
-    const threads = Object.values(threadMap).sort((a, b) => new Date(b.last_message_at) - new Date(a.last_message_at));
+    // Include every student in the teacher's classes so a thread can be started fresh.
+    const classes = await Class.findAll({ where: { class_teacher_id: teacher.id }, attributes: ['id', 'name'] });
+    const classIds = classes.map(c => c.id);
+    const classNameMap = Object.fromEntries(classes.map(c => [c.id, c.name]));
+    const students = await Student.findAll({
+      where: { classroom_id: { [Op.in]: classIds }, school_id: teacher.school_id, status: 'active' },
+      include: [{ model: User, as: 'user', attributes: ['first_name', 'last_name'] }],
+      order: [[sequelize.fn('lower', sequelize.col('user.first_name')), 'ASC']],
+    });
+
+    const threads = students.map(s => {
+      const t = byStudent[s.id] || { messages: [], unread: 0 };
+      return {
+        studentId: s.id,
+        studentName: `${s.user?.first_name || ''} ${s.user?.last_name || ''}`.trim() || 'Student',
+        classroom: classNameMap[s.classroom_id] || '',
+        unread: t.unread,
+        messages: t.messages,
+      };
+    });
 
     return res.json(successResponse({ threads }));
   } catch (err) {
@@ -1238,8 +1457,11 @@ async function sendStudentMessage(req, res) {
     const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
     if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
 
-    const { recipient_id, subject, body, thread_id } = req.body;
-    if (!recipient_id || !body) return res.status(400).json(errorResponse('recipient_id and body are required'));
+    // studentId from the URL; the UI posts just { text } (audit #59).
+    const { studentId } = req.params;
+    const recipient_id = req.body.recipient_id || studentId;
+    const body = req.body.body || req.body.text;
+    if (!recipient_id || !body) return res.status(400).json(errorResponse('text is required'));
 
     const message = await Message.create({
       school_id: teacher.school_id,
@@ -1247,13 +1469,13 @@ async function sendStudentMessage(req, res) {
       sender_type: 'teacher',
       recipient_id,
       recipient_type: 'student',
-      subject: subject || 'Message from Teacher',
+      subject: req.body.subject || 'Message from Teacher',
       body,
-      thread_id: thread_id || `thread-${Date.now()}`,
+      thread_id: `t${teacher.id}-s${recipient_id}`,
       is_read: false,
     });
 
-    return res.json(successResponse({ id: message.id }, 'Message sent'));
+    return res.json(successResponse({ id: message.id, text: body, sender: 'teacher', sentAt: message.created_at }, 'Message sent'));
   } catch (err) {
     console.error('sendStudentMessage Error:', err);
     return res.status(500).json(errorResponse('Failed to send message'));
@@ -1271,18 +1493,30 @@ async function getBehaviourIncidents(req, res) {
       limit: 50,
     });
 
-    const formatted = incidents.map(i => ({
-      id: i.id,
-      student_id: i.student_id,
-      incident_type: i.incident_type,
-      severity: i.severity,
-      description: i.description,
-      action_taken: i.action_taken,
-      follow_up_required: i.follow_up_required,
-      follow_up_date: i.follow_up_date,
-      parent_notified: i.parent_notified,
-      created_at: i.created_at,
-    }));
+    // Map to the field names the list reads (type/title/notes/studentId/reportedAt) —
+    // it previously got incident_type/description/created_at and showed blanks (audit #47).
+    const formatted = incidents.map(i => {
+      let evidence = [];
+      try { evidence = i.evidence ? JSON.parse(i.evidence) : []; } catch { evidence = []; }
+      return {
+        id: i.id,
+        studentId: i.student_id,
+        student_id: i.student_id,
+        type: i.incident_type,
+        incident_type: i.incident_type,
+        title: i.title || i.incident_type,
+        severity: i.severity,
+        notes: i.description,
+        description: i.description,
+        evidence,
+        action_taken: i.action_taken,
+        follow_up_required: i.follow_up_required,
+        follow_up_date: i.follow_up_date,
+        parent_notified: i.parent_notified,
+        reportedAt: i.created_at,
+        created_at: i.created_at,
+      };
+    });
 
     return res.json(successResponse({ incidents: formatted }));
   } catch (err) {
@@ -1296,22 +1530,40 @@ async function fileBehaviourIncident(req, res) {
     const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
     if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
 
-    const { student_id, incident_type, severity, description, action_taken, follow_up_required, follow_up_date, parent_notified } = req.body;
-    if (!student_id || !incident_type || !description) {
-      return res.status(400).json(errorResponse('student_id, incident_type, and description are required'));
+    // multer parses the multipart body; the UI sends type/title/notes + evidence files
+    // (audit #46). Accept those names (and the snake_case originals).
+    const student_id = req.body.student_id;
+    const incident_type = req.body.incident_type || req.body.type;
+    const severity = req.body.severity || 'medium';
+    const title = req.body.title || '';
+    const description = req.body.description || req.body.notes || '';
+    if (!student_id || !incident_type) {
+      return res.status(400).json(errorResponse('student and incident type are required'));
     }
+
+    // Ownership: only file incidents for students in this teacher's classes.
+    const classes = await Class.findAll({ where: { class_teacher_id: teacher.id }, attributes: ['id'] });
+    const classIds = classes.map(c => c.id);
+    const student = await Student.findOne({ where: { id: student_id, school_id: teacher.school_id }, attributes: ['id', 'classroom_id'] });
+    if (!student || (classIds.length > 0 && !classIds.includes(student.classroom_id))) {
+      return res.status(403).json(errorResponse('You can only file incidents for students in your classes'));
+    }
+
+    const evidence = (req.files || []).map(f => `/uploads/teacher/${f.filename}`);
 
     const incident = await BehaviourIncident.create({
       school_id: teacher.school_id,
       student_id,
       reported_by: teacher.id,
       incident_type,
-      severity: severity || 'medium',
+      title,
+      severity,
       description,
-      action_taken: action_taken || '',
-      follow_up_required: follow_up_required || false,
-      follow_up_date: follow_up_date || null,
-      parent_notified: parent_notified || false,
+      evidence: JSON.stringify(evidence),
+      action_taken: req.body.action_taken || '',
+      follow_up_required: req.body.follow_up_required === 'true' || req.body.follow_up_required === true || false,
+      follow_up_date: req.body.follow_up_date || null,
+      parent_notified: req.body.parent_notified === 'true' || req.body.parent_notified === true || false,
     });
 
     return res.json(successResponse({ id: incident.id }, 'Incident filed'));
@@ -1365,19 +1617,31 @@ async function getLessonPlans(req, res) {
       limit: 50,
     });
 
-    const formatted = lessonPlans.map(lp => ({
-      id: lp.id,
-      class_id: lp.class_id,
-      subject_id: lp.subject_id,
-      date: lp.date,
-      topic: lp.topic,
-      objectives: lp.objectives,
-      activities: lp.activities,
-      materials: lp.materials,
-      homework: lp.homework,
-      reflection: lp.reflection,
-      created_at: lp.created_at,
-    }));
+    // Emit title/weekOf and objectives-as-array (the composer reads those); keep the
+    // raw topic/date too (audit #73).
+    const formatted = lessonPlans.map(lp => {
+      let objectives = [];
+      try { objectives = lp.objectives ? JSON.parse(lp.objectives) : []; }
+      catch { objectives = lp.objectives ? [lp.objectives] : []; }
+      if (!Array.isArray(objectives)) objectives = objectives ? [String(objectives)] : [];
+      return {
+        id: lp.id,
+        classId: lp.class_id,
+        subjectId: lp.subject_id,
+        class_id: lp.class_id,
+        subject_id: lp.subject_id,
+        title: lp.topic,
+        topic: lp.topic,
+        weekOf: lp.date ? new Date(lp.date).toISOString().split('T')[0] : '',
+        date: lp.date,
+        objectives,
+        activities: lp.activities,
+        materials: lp.materials,
+        homework: lp.homework,
+        reflection: lp.reflection,
+        created_at: lp.created_at,
+      };
+    });
 
     return res.json(successResponse({ lesson_plans: formatted }));
   } catch (err) {
@@ -1391,8 +1655,17 @@ async function upsertLessonPlan(req, res) {
     const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
     if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
 
-    const { id, class_id, subject_id, date, topic, objectives, activities, materials, homework, reflection } = req.body;
-    if (!date || !topic) return res.status(400).json(errorResponse('date and topic are required'));
+    // Accept the composer's field names (title/weekOf/classId/subjectId, objectives as an
+    // array) — the old handler required date+topic and 400'd on every save (audit #73).
+    const b = req.body;
+    const id = b.id;
+    const topic = b.topic || b.title;
+    if (!topic) return res.status(400).json(errorResponse('title is required'));
+    const date = b.date || b.weekOf || new Date().toISOString().split('T')[0];
+    const class_id = b.class_id ?? b.classId ?? null;
+    const subject_id = b.subject_id ?? b.subjectId ?? null;
+    const objectives = Array.isArray(b.objectives) ? JSON.stringify(b.objectives) : (b.objectives ?? null);
+    const { activities, materials, homework, reflection } = b;
 
     let lessonPlan;
     if (id) {
@@ -1492,7 +1765,32 @@ async function recommendResource(req, res) {
 
 async function referToCounsellor(req, res) {
   try {
-    return res.json(successResponse({ referralId: `REF-${Date.now().toString(36).toUpperCase()}` }));
+    const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
+    if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
+
+    const { student_id, reason, notify_parent } = req.body;
+    if (!student_id || !reason) return res.status(400).json(errorResponse('student_id and reason are required'));
+
+    const student = await Student.findOne({
+      where: { id: student_id, school_id: teacher.school_id },
+      include: [{ model: User, as: 'user', attributes: ['first_name', 'last_name'] }],
+    });
+    if (!student) return res.status(404).json(errorResponse('Student not found in your school'));
+    const studentName = `${student.user?.first_name || ''} ${student.user?.last_name || ''}`.trim() || `#${student_id}`;
+
+    // Persist a durable, auditable referral record routed for pastoral review.
+    // Previously this wrote nothing and returned a fake id while the UI promised the
+    // counsellor would see it (audit #43 — safeguarding). A dedicated counsellor-queue
+    // model + real parent-notification delivery is a recommended follow-up.
+    const note = await Notification.create({
+      school_id: teacher.school_id,
+      title: 'Counsellor referral',
+      message: `${studentName} referred for pastoral support${notify_parent ? ' (parent to be notified)' : ''}: ${reason}`,
+      type: 'counsellor_referral',
+      is_read: false,
+    });
+
+    return res.json(successResponse({ referralId: `REF-${note.id}`, persisted: true }));
   } catch (err) {
     console.error('referToCounsellor Error:', err);
     return res.status(500).json(errorResponse('Failed to refer'));
@@ -1504,37 +1802,86 @@ async function getTeacherWorkload(req, res) {
     const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
     if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
 
-    const startOfWeek = new Date();
-    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
-    startOfWeek.setHours(0, 0, 0, 0);
+    // The UI wants thisWeek as day buckets [{day:'mon', items:[{kind,label,start,...}]}] —
+    // it previously got a flat assignment list and showed "No items" every day (audit #76).
+    const TimetableSlot = require('../models/TimetableSlot');
+    const DAY_IDS = ['mon', 'tue', 'wed', 'thu', 'fri'];
+    const buckets = { mon: [], tue: [], wed: [], thu: [], fri: [] };
+
+    const myClasses = await Class.findAll({ where: { class_teacher_id: teacher.id }, attributes: ['id'] });
+    const myClassIds = myClasses.map(c => c.id);
+
+    // Class periods from the teacher's own timetable slots.
+    const slots = await TimetableSlot.findAll({
+      where: { school_id: teacher.school_id, teacher_id: teacher.id, is_break: false },
+      order: [['day', 'ASC'], ['period', 'ASC']],
+    });
+    const slotSubjectIds = [...new Set(slots.map(s => s.subject_id).filter(Boolean))];
+    const slotClassIds = [...new Set(slots.map(s => s.class_id).filter(Boolean))];
+    const [subs, cls] = await Promise.all([
+      slotSubjectIds.length ? Subject.findAll({ where: { id: slotSubjectIds }, attributes: ['id', 'name'], raw: true }) : [],
+      slotClassIds.length ? Class.findAll({ where: { id: slotClassIds }, attributes: ['id', 'name'], raw: true }) : [],
+    ]);
+    const subMap = Object.fromEntries(subs.map(s => [s.id, s.name]));
+    const clsMap = Object.fromEntries(cls.map(c => [c.id, c.name]));
+    slots.forEach(s => {
+      const dayId = DAY_IDS[s.day];
+      if (!dayId) return;
+      buckets[dayId].push({
+        kind: 'class',
+        label: `${subMap[s.subject_id] || 'Class'}${clsMap[s.class_id] ? ' · ' + clsMap[s.class_id] : ''}`,
+        start: s.start_time || '',
+        durationMin: null,
+      });
+    });
+
+    // This Monday → next Monday.
+    const weekStart = new Date();
+    weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
+    weekStart.setHours(0, 0, 0, 0);
+    const weekEnd = new Date(weekStart.getTime() + 7 * 86400000);
+    const dayIdForDate = (d) => {
+      const wd = new Date(d).getDay();
+      return (wd >= 1 && wd <= 5) ? DAY_IDS[wd - 1] : null;
+    };
 
     const assignments = await Assignment.findAll({
-      where: { teacher_id: teacher.id, school_id: teacher.school_id, created_at: { [Op.gte]: startOfWeek } },
-      attributes: ['id', 'title', 'due_date', 'created_at'],
+      where: { teacher_id: teacher.id, school_id: teacher.school_id },
+      attributes: ['id', 'title', 'due_date'],
+    });
+    assignments.forEach(a => {
+      if (!a.due_date) return;
+      const due = new Date(a.due_date);
+      if (due < weekStart || due >= weekEnd) return;
+      const dayId = dayIdForDate(due);
+      if (dayId) buckets[dayId].push({ kind: 'assignment-due', label: a.title || 'Assignment', dueAt: a.due_date });
     });
 
-    const pendingGrades = await Grade.count({
-      where: { school_id: teacher.school_id, approval_status: 'draft' },
+    const officeHours = await OfficeHour.findAll({ where: { teacher_id: teacher.id, school_id: teacher.school_id, is_active: true } });
+    officeHours.forEach(oh => {
+      if (!oh.date) return;
+      const d = new Date(oh.date);
+      if (d < weekStart || d >= weekEnd) return;
+      const dayId = dayIdForDate(d);
+      if (dayId) buckets[dayId].push({ kind: 'office-hour', label: `${oh.subject || 'Office hour'}${oh.room ? ' · ' + oh.room : ''}`, start: oh.start_time || '', durationMin: oh.slot_duration_minutes });
     });
 
+    const thisWeek = DAY_IDS.map(day => ({ day, items: buckets[day] }));
+
+    // Scope pending grades to THIS teacher's classes (was school-wide — audit #81).
+    const pendingGrades = myClassIds.length ? await Grade.count({
+      where: { school_id: teacher.school_id, classroom_id: { [Op.in]: myClassIds }, approval_status: 'draft' },
+    }) : 0;
     const pendingAssignments = await Assignment.count({
       where: { teacher_id: teacher.id, school_id: teacher.school_id, due_date: { [Op.gte]: new Date() } },
     });
-
     const pendingMessages = await Message.count({
-      where: { school_id: teacher.school_id, sender_id: teacher.id, is_read: false },
+      where: { school_id: teacher.school_id, recipient_id: teacher.id, recipient_type: 'teacher', is_read: false },
     });
-
-    const thisWeek = assignments.map(a => ({
-      id: a.id,
-      title: a.title,
-      due_date: a.due_date,
-      type: 'assignment',
-    }));
 
     return res.json(successResponse({
       thisWeek,
-      totalHours: thisWeek.length * 2,
+      totalHours: slots.length,
       pendingGrades,
       pendingAssignments,
       pendingMessages,
@@ -1574,18 +1921,17 @@ async function getTeacherPerformance(req, res) {
       total_students: totals.length,
     }));
 
-    const messages = await Message.findAll({
-      where: { school_id: teacher.school_id, sender_id: teacher.id },
-      order: [['created_at', 'DESC']],
-      limit: 20,
-    });
-
     return res.json(successResponse({
-      classAverages,
-      gradingTimelinessDays: 3,
-      parentFeedbackAvg: messages.length ? 4.2 : 0,
-      parentFeedbackCount: messages.length,
-      attendanceTimelinessPct: 95,
+      // Add value/term so the chart plots (it reads p.value/p.term — audit #79).
+      classAverages: classAverages.map(c => ({ ...c, value: c.average, term: c.subject, label: c.subject })),
+      // These were hardcoded constants (3 days, 4.2/5, 95%) presented as real metrics
+      // (audit #77). There is no grading-timeliness / parent-rating / attendance-
+      // timeliness data source yet, so return null and let the UI show "—" rather than
+      // invent numbers. (Computing them for real is a follow-up.)
+      gradingTimelinessDays: null,
+      parentFeedbackAvg: null,
+      parentFeedbackCount: 0,
+      attendanceTimelinessPct: null,
     }));
   } catch (err) {
     console.error('getTeacherPerformance Error:', err);
@@ -1613,16 +1959,12 @@ async function getPeerReviews(req, res) {
     const ratings = receivedAboutMe.map(r => r.rating).filter(Boolean);
     const avg = ratings.length ? Math.round((ratings.reduce((a, b) => a + b, 0) / ratings.length) * 10) / 10 : 0;
 
-    const breakdown = {};
+    // Count of reviews per star (1–5) — the UI reads breakdown[5..1] as star buckets, so
+    // keying it by category produced an all-zero distribution (audit #75).
+    const breakdown = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
     receivedAboutMe.forEach(r => {
-      if (r.category) {
-        if (!breakdown[r.category]) breakdown[r.category] = [];
-        if (r.rating) breakdown[r.category].push(r.rating);
-      }
-    });
-    const breakdownAvg = {};
-    Object.entries(breakdown).forEach(([cat, vals]) => {
-      breakdownAvg[cat] = vals.length ? Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10 : 0;
+      const star = Math.round(r.rating);
+      if (star >= 1 && star <= 5) breakdown[star] += 1;
     });
 
     const recentComments = receivedAboutMe
@@ -1630,19 +1972,32 @@ async function getPeerReviews(req, res) {
       .slice(0, 5)
       .map(r => ({ comment: r.comment, category: r.category, created_at: r.created_at }));
 
+    // Resolve reviewee names so "Reviews I've given" shows a colleague, not an id (#75).
+    const revieweeIds = [...new Set(givenByMe.map(r => r.reviewee_id).filter(Boolean))];
+    const revTeachers = revieweeIds.length ? await Teacher.findAll({ where: { id: revieweeIds }, attributes: ['id', 'user_id'], raw: true }) : [];
+    const revUserIds = revTeachers.map(t => t.user_id).filter(Boolean);
+    const revUsers = revUserIds.length ? await User.findAll({ where: { id: revUserIds }, attributes: ['id', 'first_name', 'last_name'], raw: true }) : [];
+    const revUserName = Object.fromEntries(revUsers.map(u => [String(u.id), `${u.first_name || ''} ${u.last_name || ''}`.trim()]));
+    const nameByTeacherId = {};
+    revTeachers.forEach(t => { nameByTeacherId[String(t.id)] = revUserName[String(t.user_id)] || `Teacher #${t.id}`; });
+
     return res.json(successResponse({
       givenByMe: givenByMe.map(r => ({
         id: r.id,
         reviewee_id: r.reviewee_id,
+        toTeacher: nameByTeacherId[String(r.reviewee_id)] || `Teacher #${r.reviewee_id}`,
+        subject: r.category,
         category: r.category,
+        score: r.rating,
         rating: r.rating,
         comment: r.comment,
+        anonymous: !!r.anonymous,
         created_at: r.created_at,
       })),
       receivedAboutMe: {
         average: avg,
         count: receivedAboutMe.length,
-        breakdown: breakdownAvg,
+        breakdown,
         recentComments,
       },
     }));
@@ -1657,22 +2012,49 @@ async function submitPeerReview(req, res) {
     const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
     if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
 
-    const { reviewee_id, category, rating, comment } = req.body;
-    if (!reviewee_id || !category) return res.status(400).json(errorResponse('reviewee_id and category are required'));
+    const { reviewee_id, rating, comment, anonymous } = req.body;
+    const category = req.body.category || req.body.subject || 'general';
+    if (!reviewee_id) return res.status(400).json(errorResponse('Please choose a colleague to review'));
+    if (String(reviewee_id) === String(teacher.id)) return res.status(400).json(errorResponse('You cannot review yourself'));
 
     const review = await PeerReview.create({
       school_id: teacher.school_id,
       reviewer_id: teacher.id,
       reviewee_id,
       category,
-      rating: rating || null,
+      rating: rating != null ? Math.round(Number(rating)) : null,
       comment: comment || '',
+      anonymous: anonymous === undefined ? true : !!anonymous,
     });
 
     return res.json(successResponse({ id: review.id }, 'Review submitted'));
   } catch (err) {
     console.error('submitPeerReview Error:', err);
     return res.status(500).json(errorResponse('Failed to submit review'));
+  }
+}
+
+async function getColleagues(req, res) {
+  try {
+    const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
+    if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
+
+    const teachers = await Teacher.findAll({
+      where: { school_id: teacher.school_id, id: { [Op.ne]: teacher.id } },
+      attributes: ['id', 'user_id'],
+    });
+    const userIds = teachers.map(t => t.user_id).filter(Boolean);
+    const users = userIds.length ? await User.findAll({ where: { id: userIds }, attributes: ['id', 'first_name', 'last_name'], raw: true }) : [];
+    const userName = Object.fromEntries(users.map(u => [String(u.id), `${u.first_name || ''} ${u.last_name || ''}`.trim()]));
+    const colleagues = teachers.map(t => ({
+      id: t.id,
+      name: userName[String(t.user_id)] || `Teacher #${t.id}`,
+    }));
+
+    return res.json(successResponse({ colleagues }));
+  } catch (err) {
+    console.error('getColleagues Error:', err);
+    return res.json(successResponse({ colleagues: [] }));
   }
 }
 
@@ -2039,6 +2421,29 @@ async function getClassAnalytics(req, res) {
     const lowest = totals.length ? Math.min(...totals) : 0;
     const passed = totals.filter(t => t >= 40).length;
 
+    // Per-term average for this class so the Term-over-Term trend chart can render — the
+    // endpoint returned no `trend`, so the chart was permanently dead (audit #48).
+    const allGrades = await Grade.findAll({
+      where: { classroom_id: class_id, school_id: teacher.school_id },
+      attributes: ['term_id', 'total'],
+      raw: true,
+    });
+    const byTerm = {};
+    allGrades.forEach(g => {
+      if (g.total == null) return;
+      (byTerm[g.term_id] = byTerm[g.term_id] || []).push(g.total);
+    });
+    const termIds = Object.keys(byTerm);
+    const terms = termIds.length ? await Term.findAll({ where: { id: termIds }, attributes: ['id', 'name'], raw: true }) : [];
+    const termNameMap = Object.fromEntries(terms.map(t => [String(t.id), t.name]));
+    const trend = termIds
+      .map(tid => {
+        const arr = byTerm[tid];
+        const a = Math.round(arr.reduce((x, y) => x + y, 0) / arr.length);
+        return { term_id: tid, term: termNameMap[tid] || `Term ${tid}`, term_name: termNameMap[tid] || `Term ${tid}`, average: a, value: a };
+      })
+      .sort((x, y) => Number(x.term_id) - Number(y.term_id));
+
     return res.json(successResponse({
       average: avg,
       highest,
@@ -2046,6 +2451,7 @@ async function getClassAnalytics(req, res) {
       pass_rate: totals.length ? Math.round(passed / totals.length * 100) : 0,
       total_students: totals.length,
       term_id,
+      trend,
     }));
   } catch (err) {
     console.error('getClassAnalytics Error:', err);
@@ -2144,12 +2550,47 @@ async function getTeacherExams(req, res) {
     const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
     if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
 
-    const exams = await Exam.findAll({
-      where: { school_id: teacher.school_id, is_active: true },
-      order: [['date', 'DESC']],
-    });
+    const { class_id } = req.query;
+    const where = { school_id: teacher.school_id, is_active: true };
+    if (class_id) where.classroom_id = class_id;
 
-    return res.json(successResponse({ exams }));
+    const exams = await Exam.findAll({ where, order: [['date', 'DESC']] });
+
+    // Resolve classroom + subject names and per-exam result counts (the UI shows these
+    // and previously got raw Exam rows with none of them — audit #35).
+    const classIds = [...new Set(exams.map(e => e.classroom_id).filter(Boolean))];
+    const subjectIds = [...new Set(exams.map(e => e.subject_id).filter(Boolean))];
+    const [classes, subjects] = await Promise.all([
+      classIds.length ? Class.findAll({ where: { id: { [Op.in]: classIds } }, attributes: ['id', 'name'], raw: true }) : [],
+      subjectIds.length ? Subject.findAll({ where: { id: { [Op.in]: subjectIds } }, attributes: ['id', 'name'], raw: true }) : [],
+    ]);
+    const classMap = Object.fromEntries(classes.map(c => [c.id, c.name]));
+    const subjectMap = Object.fromEntries(subjects.map(s => [s.id, s.name]));
+
+    const examIds = exams.map(e => e.id);
+    const counts = examIds.length ? await ExamResult.findAll({
+      where: { exam_id: { [Op.in]: examIds } },
+      attributes: ['exam_id', [sequelize.fn('COUNT', sequelize.col('id')), 'cnt']],
+      group: ['exam_id'], raw: true,
+    }) : [];
+    const countMap = {};
+    counts.forEach(c => { countMap[c.exam_id] = parseInt(c.cnt, 10) || 0; });
+
+    const formatted = exams.map(e => ({
+      id: e.id,
+      name: e.name,
+      exam_type: e.exam_type || null,
+      classroom: classMap[e.classroom_id] || '',
+      subject: subjectMap[e.subject_id] || '',
+      date: e.date ? new Date(e.date).toISOString().split('T')[0] : '',
+      total_marks: e.total_marks,
+      result_count: countMap[e.id] || 0,
+      classroom_id: e.classroom_id,
+      subject_id: e.subject_id,
+      term_id: e.term_id,
+    }));
+
+    return res.json(successResponse({ exams: formatted }));
   } catch (err) {
     console.error('getTeacherExams Error:', err);
     return res.status(500).json(errorResponse('Failed to fetch exams'));
@@ -2162,40 +2603,48 @@ async function getExamResults(req, res) {
     if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
 
     const { examId } = req.params;
-    const { class_id, subject_id } = req.query;
 
     const exam = await Exam.findOne({
       where: { id: examId, school_id: teacher.school_id },
     });
     if (!exam) return res.status(404).json(errorResponse('Exam not found'));
 
-    const where = { school_id: teacher.school_id };
-    if (class_id) where.classroom_id = class_id;
-    if (subject_id) where.subject_id = subject_id;
-    if (exam.term_id) where.term_id = exam.term_id;
+    const [klass, subject] = await Promise.all([
+      exam.classroom_id ? Class.findByPk(exam.classroom_id, { attributes: ['id', 'name'] }) : null,
+      exam.subject_id ? Subject.findByPk(exam.subject_id, { attributes: ['id', 'name'] }) : null,
+    ]);
 
-    const grades = await Grade.findAll({
-      where,
-      include: [
-        { model: Subject, as: 'subject', attributes: ['id', 'name'] },
-        { model: Term, as: 'term', attributes: ['id', 'name'] },
-      ],
+    // Return the exam's class roster, each row carrying that student's existing exam
+    // mark. Previously this returned term Grade rows with no student_name/marks and no
+    // `exam` object, so the entry table rendered blank (audit #35).
+    const students = await Student.findAll({
+      where: { classroom_id: exam.classroom_id, school_id: teacher.school_id, status: 'active' },
+      include: [{ model: User, as: 'user', attributes: ['first_name', 'last_name'] }],
+      order: [[sequelize.fn('lower', sequelize.col('user.first_name')), 'ASC']],
     });
+    const existing = await ExamResult.findAll({ where: { exam_id: examId, school_id: teacher.school_id }, raw: true });
+    const markMap = {};
+    existing.forEach(er => { markMap[er.student_id] = er; });
 
-    const results = grades.map(g => ({
-      id: g.id,
-      student_id: g.student_id,
-      subject: g.subject?.name || 'Unknown',
-      term: g.term?.name || 'Unknown',
-      ca: g.ca,
-      midterm: g.midterm,
-      final: g.final,
-      total: g.total,
-      grade_letter: g.grade_letter,
-      approval_status: g.approval_status,
+    const results = students.map(s => ({
+      student_id: s.id,
+      student_name: `${s.user?.first_name || ''} ${s.user?.last_name || ''}`.trim() || 'Student',
+      marks: markMap[s.id] ? markMap[s.id].marks : null,
+      remarks: markMap[s.id] ? (markMap[s.id].remarks || '') : '',
     }));
 
-    return res.json(successResponse({ results, exam_name: exam.name }));
+    return res.json(successResponse({
+      exam: {
+        id: exam.id,
+        name: exam.name,
+        classroom: klass?.name || '',
+        subject: subject?.name || '',
+        date: exam.date ? new Date(exam.date).toISOString().split('T')[0] : '',
+        total_marks: exam.total_marks,
+      },
+      results,
+      exam_name: exam.name,
+    }));
   } catch (err) {
     console.error('getExamResults Error:', err);
     return res.status(500).json(errorResponse('Failed to fetch results'));
@@ -2216,22 +2665,27 @@ async function saveExamResults(req, res) {
     });
     if (!exam) return res.status(404).json(errorResponse('Exam not found'));
 
+    // Ownership: only the class teacher may enter this exam's results. Previously any
+    // teacher in the school could write these (audit #36).
+    if (exam.classroom_id) {
+      const ownsClass = await Class.findOne({ where: { id: exam.classroom_id, class_teacher_id: teacher.id }, attributes: ['id'] });
+      if (!ownsClass) return res.status(403).json(errorResponse("You are not assigned to this exam's class"));
+    }
+
+    // Persist into ExamResult (keyed exam_id + student_id) — NOT the term Grade. The old
+    // code blind-upserted a Grade row (reading r.score/r.total which the client never
+    // sends) and nulled the student's existing ca/midterm (audit #30). Exam marks now
+    // live in their own table and never touch term grades.
     let count = 0;
     for (const r of results) {
-      if (!r.student_id) continue;
-      await Grade.upsert({
-        school_id: teacher.school_id,
-        student_id: r.student_id,
-        subject_id: r.subject_id || exam.subject_id,
-        term_id: r.term_id || exam.term_id,
-        classroom_id: r.classroom_id || exam.classroom_id,
-        final: r.score || r.total,
-        total: r.total || r.score,
-        grade_letter: r.grade_letter || '',
-        remarks: r.remarks || '',
-      }, {
-        conflictFields: ['school_id', 'student_id', 'subject_id', 'term_id'],
+      if (!r || !r.student_id) continue;
+      const marks = (r.marks === undefined || r.marks === null || r.marks === '') ? null : parseFloat(r.marks);
+      if (marks === null || isNaN(marks)) continue;
+      const [row] = await ExamResult.findOrCreate({
+        where: { exam_id: examId, student_id: r.student_id },
+        defaults: { school_id: teacher.school_id, exam_id: examId, student_id: r.student_id, marks, remarks: r.remarks || '' },
       });
+      await row.update({ marks, remarks: r.remarks || '' });
       count++;
     }
 
@@ -2247,11 +2701,23 @@ async function getAnnouncements(req, res) {
     const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
     if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
 
-    const announcements = await Notification.findAll({
-      where: { school_id: teacher.school_id },
+    // Only this teacher's own announcements — previously this returned every school-wide
+    // notification, mislabeled as the teacher's, with none of the fields the UI reads
+    // (audit #66).
+    const rows = await Notification.findAll({
+      where: { school_id: teacher.school_id, user_id: req.user.id, type: { [Op.like]: 'announcement%' } },
       order: [['created_at', 'DESC']],
-      limit: 20,
+      limit: 30,
     });
+
+    const announcements = rows.map(n => ({
+      id: n.id,
+      subject: n.title,
+      body: n.message,
+      recipient_role: (n.type || '').split(':')[1] || 'all',
+      is_broadcast: true,
+      created_at: n.created_at,
+    }));
 
     return res.json(successResponse({ announcements }));
   } catch (err) {
@@ -2265,16 +2731,27 @@ async function sendAnnouncement(req, res) {
     const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
     if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
 
-    const { title, message, type } = req.body;
+    // UI sends { subject, body, recipient_role }; the old handler read title/message/type
+    // and dropped all three (audit #63). Map them, encode the audience in `type`, and
+    // stamp the teacher as creator (user_id) so getAnnouncements can scope to them.
+    const subject = req.body.subject || req.body.title;
+    const body = req.body.body || req.body.message;
+    const recipientRole = req.body.recipient_role || 'all';
+    if (!subject || !body) return res.status(400).json(errorResponse('subject and body are required'));
+
     const announcement = await Notification.create({
       school_id: teacher.school_id,
-      title,
-      message,
-      type: type || 'info',
+      user_id: req.user.id,
+      title: subject,
+      message: body,
+      type: `announcement:${recipientRole}`,
       is_read: false,
     });
 
-    return res.json(successResponse({ announcement }, 'Announcement sent'));
+    return res.json(successResponse({
+      id: announcement.id,
+      announcement: { id: announcement.id, subject, body, recipient_role: recipientRole, created_at: announcement.created_at },
+    }, 'Announcement sent'));
   } catch (err) {
     console.error('sendAnnouncement Error:', err);
     return res.status(500).json(errorResponse('Failed to send announcement'));
@@ -2344,9 +2821,25 @@ async function sendMessage(req, res) {
 
 async function getStudentGradeHistory(req, res) {
   try {
+    const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
+    if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
+
     const { studentId } = req.params;
+
+    // Tenant scoping: confirm the student belongs to THIS teacher's school before
+    // returning anything. Previously this endpoint had no scoping at all, letting any
+    // teacher read any student's grades across schools (audit #108 — cross-tenant IDOR).
+    // (Tightening to per-class ownership within the school is a recommended follow-up.)
+    const student = await Student.findOne({
+      where: { id: studentId, school_id: teacher.school_id },
+      attributes: ['id'],
+    });
+    if (!student) {
+      return res.status(403).json(errorResponse('You are not authorised to view this student'));
+    }
+
     const grades = await Grade.findAll({
-      where: { student_id: studentId },
+      where: { student_id: studentId, school_id: teacher.school_id },
       include: [{ model: Subject, as: 'subject', attributes: ['id', 'name'] }, { model: Term, as: 'term', attributes: ['id', 'name'] }],
       order: [['created_at', 'DESC']],
     });
@@ -2447,24 +2940,46 @@ async function uploadResource(req, res) {
     const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
     if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
 
-    const { class_id, subject_id, title, description, resource_type, file_path, url } = req.body;
+    const { class_id, subject_id, title, description, resource_type } = req.body;
     if (!title) return res.status(400).json(errorResponse('title is required'));
+
+    // Persist the uploaded file. The route now has multer (audit #44) — req.file is the
+    // saved file; link-type resources still pass a url in the body.
+    let file_path = req.body.file_path || '';
+    let url = req.body.url || '';
+    if (req.file) {
+      file_path = req.file.filename;
+      url = `/uploads/teacher/${req.file.filename}`;
+    }
 
     const resource = await LearningResource.create({
       school_id: teacher.school_id,
-      class_id,
-      subject_id,
+      class_id: class_id || null,
+      subject_id: subject_id || null,
       teacher_id: teacher.id,
       title,
       description: description || '',
       resource_type: resource_type || 'document',
-      file_path: file_path || '',
-      url: url || '',
+      file_path,
+      url,
       is_active: true,
       download_count: 0,
     });
 
-    return res.json(successResponse({ id: resource.id }, 'Resource uploaded'));
+    return res.json(successResponse({
+      id: resource.id,
+      url: resource.url,
+      resource: {
+        id: resource.id,
+        title: resource.title,
+        description: resource.description,
+        resource_type: resource.resource_type,
+        file_path: resource.file_path,
+        url: resource.url,
+        class_id: resource.class_id,
+        created_at: resource.created_at,
+      },
+    }, 'Resource uploaded'));
   } catch (err) {
     console.error('uploadResource Error:', err);
     return res.status(500).json(errorResponse('Failed to upload resource'));
@@ -2577,6 +3092,7 @@ module.exports = {
   getTeacherPerformance,
   getPeerReviews,
   submitPeerReview,
+  getColleagues,
   getSpotlightStudent,
   setSpotlightStudent,
   getCohortCompare,

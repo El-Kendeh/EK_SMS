@@ -19,7 +19,7 @@ export default function GradeEntryRow({
   onRequestMod,
   tabIndex,
 }) {
-  const grade = student.currentGrade;
+  const grade = student.currentGrade || {};
   const isLocked = grade.status === 'locked';
   const validation = validateScore(localScore);
   const statusCfg = getStatusConfig(grade.status);
