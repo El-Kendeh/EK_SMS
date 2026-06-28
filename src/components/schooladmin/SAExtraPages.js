@@ -7,6 +7,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ApiClient from '../../api/client';
 import { useTerms } from '../../hooks/useTerms';
+import './SchoolAdmin.css';
 
 /* ── Shared helpers ──────────────────────────────────────────── */
 const Ic = ({ name, size, style, className = '' }) => (

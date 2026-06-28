@@ -46,7 +46,7 @@ function fmtDate(dateStr) {
 
 const PAGE_SIZE = 10;
 
-export default function SASchools({ schools, onReview }) {
+export default function SASchools({ schools, onReview, onEnter }) {
   const [search,   setSearch]   = useState('');
   const [statusF,  setStatusF]  = useState('all');
   const [page,     setPage]     = useState(1);
@@ -228,6 +228,16 @@ export default function SASchools({ schools, onReview }) {
                               >
                                 <IcEye /> View Details
                               </button>
+                              {onEnter && school.is_approved && school.is_active !== false && (
+                                <button
+                                  style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 14px', border: 'none', borderTop: '1px solid var(--sa-border)', background: 'transparent', color: 'var(--sa-text)', fontSize: '0.875rem', cursor: 'pointer', fontFamily: 'var(--sa-font)', textAlign: 'left' }}
+                                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                  onClick={() => { onEnter(school); setMenuOpen(null); }}
+                                >
+                                  <IcSchool /> Enter as admin
+                                </button>
+                              )}
                             </div>
                           )}
                         </div>

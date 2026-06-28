@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import './SARefDataManager.css'; // .sard-* table/card/button design system reused by this page
 import './SAStudents.css';
 
 /* ---- API base ---- */
@@ -467,7 +468,7 @@ export default function SAStudents() {
   /* ============================================================
      Tab content renderer
      ============================================================ */
-  function Field({ label, name, type = 'text', required, placeholder, span }) {
+  function Field({ label, name, type = 'text', required, placeholder, span, autoComplete = 'off' }) {
     const isTextarea = type === 'textarea';
     return (
       <div className="sast-field" style={span ? { gridColumn: `span ${span}` } : {}}>
@@ -487,7 +488,7 @@ export default function SAStudents() {
             value={formData[name]}
             onChange={e => setField(name, e.target.value)}
             placeholder={placeholder || ''}
-            autoComplete="off"
+            autoComplete={autoComplete}
           />
         )}
       </div>
@@ -559,11 +560,11 @@ export default function SAStudents() {
               <Field label="First Name" name="first_name" required placeholder="Aminata" />
               <Field label="Last Name"  name="last_name"  required placeholder="Koroma" />
               <Field label="Email"      name="email"      type="email" placeholder="student@school.edu.sl" />
-              <Field label="Username"   name="username"   placeholder="aminata.koroma" />
+              <Field label="Username"   name="username"   placeholder="aminata.koroma" autoComplete="new-password" />
             </div>
 
             <div className="sast-grid-2" style={{ marginBottom: 12 }}>
-              <Field label={editId ? 'New Password (leave blank to keep)' : 'Password'} name="password" type="password" placeholder="Auto-generated if blank" />
+              <Field label={editId ? 'New Password (leave blank to keep)' : 'Password'} name="password" type="password" placeholder="Auto-generated if blank" autoComplete="new-password" />
               {!isSchoolAdmin && (
                 <div className="sast-field">
                   <label className="sast-label">School *</label>

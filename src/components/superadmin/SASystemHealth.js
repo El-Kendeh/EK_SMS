@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import ApiClient from '../../api/client';
 
 /* ---- Icons ---- */
@@ -25,6 +25,10 @@ export default function SASystemHealth() {
   const [loading, setLoading] = useState(true);
   const [uptimeSecs, setUptimeSecs] = useState(0);
   const [lastChecked, setLastChecked] = useState(null);
+  // Last server uptime reading + when we received it. The displayed uptime is
+  // computed from real elapsed time since, so it re-syncs every poll and reflects
+  // a backend restart within one poll instead of free-running forever.
+  const uptimeBase = useRef({ secs: 0, at: Date.now() });
 
   const fetchHealth = useCallback(async () => {
     try {
@@ -33,6 +37,7 @@ export default function SASystemHealth() {
         setMetrics(data);
         setUptimeSecs(data.uptime);
         setLastChecked(new Date());
+        uptimeBase.current = { secs: data.uptime, at: Date.now() };
       }
     } catch (err) {
       console.error('Health check failed', err);
@@ -47,9 +52,13 @@ export default function SASystemHealth() {
     return () => clearInterval(interval);
   }, [fetchHealth]);
 
-  /* Live counter for aesthetic uptime */
+  /* Tick the displayed uptime from the last server reading + real elapsed time
+     (not a free-running +1/s counter that drifts past the true value or ignores a
+     backend restart). */
   useEffect(() => {
-    const timer = setInterval(() => setUptimeSecs(s => s + 1), 1000);
+    const timer = setInterval(() => {
+      setUptimeSecs(uptimeBase.current.secs + Math.floor((Date.now() - uptimeBase.current.at) / 1000));
+    }, 1000);
     return () => clearInterval(timer);
   }, []);
 

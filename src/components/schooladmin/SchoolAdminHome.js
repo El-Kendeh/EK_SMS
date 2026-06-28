@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import ApiClient from '../../api/client';
+import './SchoolAdmin.css';
 
 /*
  * SchoolAdminHome — the school_admin landing page (activePage 'overview').

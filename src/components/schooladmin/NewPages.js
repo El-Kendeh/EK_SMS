@@ -4,6 +4,7 @@
  */
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ApiClient from '../../api/client';
+import './SchoolAdmin.css';
 import AddTeacherWizard from './Teachers/AddTeacherWizard';
 import BulkImportModal from './Teachers/BulkImportModal';
 import PhoneInput from '../shared/PhoneInput';
@@ -3652,6 +3653,7 @@ function _LegacyAddTeacherWizard_DEPRECATED({ school, onSave, onCancel, existing
                         type={type}
                         value={form[key]}
                         placeholder={placeholder}
+                        autoComplete={key === 'email' ? 'new-password' : 'off'}
                         style={fieldErrors[key] ? { borderColor: 'var(--ska-error)' } : {}}
                         onChange={e => { setForm(f => ({ ...f, [key]: e.target.value })); setFieldErrors(p => ({ ...p, [key]: '' })); }}
                         onBlur={() => {
@@ -3687,6 +3689,7 @@ function _LegacyAddTeacherWizard_DEPRECATED({ school, onSave, onCancel, existing
                         type={showPass ? 'text' : 'password'}
                         value={form.password}
                         placeholder="Create a secure password (min 8 chars)"
+                        autoComplete="new-password"
                         onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
                         style={{ paddingRight: 44 }}
                       />

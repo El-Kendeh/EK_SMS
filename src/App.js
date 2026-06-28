@@ -10,6 +10,19 @@ import ForceChangePassword from './components/ForceChangePassword';
 import VerifyPage from './components/student/VerifyPage';
 import ApiClient from './api/client';
 
+/* Every signed-in role renders the same dashboard shell (page key
+   'superadmindashboard'), but the URL reflects the role — so a school admin
+   sees /school-admin, a principal /principal, etc., instead of /superadmin. */
+const DASHBOARD_PATH_BY_ROLE = {
+  superadmin:   '/superadmin',
+  school_admin: '/school-admin',
+  principal:    '/principal',
+  bursar:       '/bursar',
+  teacher:      '/teacher',
+  student:      '/student',
+  parent:       '/parent',
+};
+
 const PAGE_TO_PATH = {
   home: '/',
   landing: '/',
@@ -25,6 +38,12 @@ const PATH_TO_PAGE = {
   '/register': 'register',
   '/force-password': 'force-change-password',
   '/superadmin': 'superadmindashboard',
+  '/school-admin': 'superadmindashboard',
+  '/principal': 'superadmindashboard',
+  '/bursar': 'superadmindashboard',
+  '/teacher': 'superadmindashboard',
+  '/student': 'superadmindashboard',
+  '/parent': 'superadmindashboard',
 };
 
 /* ── Impersonation banner (shown when a superadmin is viewing as a school admin) ── */
@@ -102,11 +121,17 @@ function MainApp() {
   const [authKey, setAuthKey] = useState(0);
 
   useEffect(() => {
-    const path = PAGE_TO_PATH[currentPage] || '/';
+    let path = PAGE_TO_PATH[currentPage] || '/';
+    if (currentPage === 'superadmindashboard') {
+      // Derive the path from the signed-in (or impersonated) role.
+      let role = null;
+      try { role = JSON.parse(localStorage.getItem('user') || '{}').role; } catch { /* ignore */ }
+      path = DASHBOARD_PATH_BY_ROLE[role] || '/superadmin';
+    }
     if (window.location.pathname !== path) {
       window.history.pushState(null, '', path);
     }
-  }, [currentPage]);
+  }, [currentPage, authKey]);
 
   useEffect(() => {
     const onPop = () => {

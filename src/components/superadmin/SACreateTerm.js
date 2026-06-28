@@ -32,6 +32,25 @@ async function nodePost(path, body) {
   return res.json();
 }
 
+async function nodePatch(path, body) {
+  const res = await fetch(`${NODE_URL}${path}`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${getToken()}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body || {}),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+async function nodeDelete(path) {
+  const res = await fetch(`${NODE_URL}${path}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${getToken()}`, 'Content-Type': 'application/json' },
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
 /* ------------------------------------------------------------------ */
 /*  Icons                                                               */
 /* ------------------------------------------------------------------ */
@@ -119,6 +138,10 @@ export default function SACreateTerm({ onSave, initialYearId = null }) {
   const [rollingOutTermId, setRollingOutTermId] = useState(null);
   const [yearRollingOut,   setYearRollingOut]   = useState(false);
   const [rolloutMsg,       setRolloutMsg]       = useState({ type: '', text: '' });
+  /* term lifecycle (deactivate / delete) */
+  const [togglingTermId,  setTogglingTermId]  = useState(null);
+  const [deletingTermId,  setDeletingTermId]  = useState(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
   /* ---- load years on mount ---- */
   useEffect(() => {
@@ -195,6 +218,43 @@ export default function SACreateTerm({ onSave, initialYearId = null }) {
       setRollingOutTermId(null);
     }
   };
+
+  /* Deactivate the active term (PATCH toggle) — lets an operator unset a wrong term
+     without leaving the rollout cascade. */
+  const handleToggleTerm = async (termId) => {
+    setTogglingTermId(termId);
+    setRolloutMsg({ type: '', text: '' });
+    try {
+      const data = await nodePatch(`/api/system-terms/${termId}/toggle/`, {});
+      if (!data.success) { setRolloutMsg({ type: 'error', text: data.message || 'Failed to update term.' }); return; }
+      const refreshed = await nodeGet(`/api/system-terms/?academic_year_id=${yearId}`);
+      if (refreshed.success) setExistingTerms(refreshed.terms || []);
+    } catch (err) {
+      setRolloutMsg({ type: 'error', text: err.message || 'Network error.' });
+    } finally {
+      setTogglingTermId(null);
+    }
+  };
+
+  /* Delete a mistyped/duplicate term (two-step confirm on the button). */
+  const handleDeleteTerm = async (termId) => {
+    setConfirmDeleteId(null);
+    setDeletingTermId(termId);
+    setRolloutMsg({ type: '', text: '' });
+    try {
+      const data = await nodeDelete(`/api/system-terms/${termId}/`);
+      if (!data.success) { setRolloutMsg({ type: 'error', text: data.message || 'Failed to delete term.' }); return; }
+      const refreshed = await nodeGet(`/api/system-terms/?academic_year_id=${yearId}`);
+      if (refreshed.success) setExistingTerms(refreshed.terms || []);
+      setRolloutMsg({ type: 'success', text: 'Term deleted.' });
+    } catch (err) {
+      setRolloutMsg({ type: 'error', text: err.message || 'Network error.' });
+    } finally {
+      setDeletingTermId(null);
+    }
+  };
+
+  const termActionBtn = { padding: '3px 9px', fontSize: '0.7rem', fontWeight: 700, borderRadius: 6, background: 'transparent', border: '1px solid var(--sa-border)', color: 'var(--sa-text-2)', cursor: 'pointer', whiteSpace: 'nowrap' };
 
   const handleRolloutYear = async () => {
     if (!yearId) return;
@@ -365,21 +425,45 @@ export default function SACreateTerm({ onSave, initialYearId = null }) {
                       <span className="sact-term-dates">
                         {t.start_date ? `${fmtDate(t.start_date)} – ${fmtDate(t.end_date)}` : 'No dates'}
                       </span>
-                      {t.is_active
-                        ? <span className="sact-badge-active">Active</span>
-                        : (
-                          <button
-                            type="button"
-                            className={`sact-btn-rollout${rollingOutTermId === t.id ? ' loading' : ''}`}
-                            onClick={() => handleRolloutTerm(t.id)}
-                            disabled={!!rollingOutTermId || yearRollingOut}
-                            title="Roll out this term (set as active)"
-                          >
-                            {rollingOutTermId === t.id ? <IcSpinner /> : <IcRocket />}
-                            {rollingOutTermId === t.id ? 'Rolling…' : 'Roll Out'}
-                          </button>
-                        )
-                      }
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
+                        {t.is_active
+                          ? (
+                            <>
+                              <span className="sact-badge-active">Active</span>
+                              <button
+                                type="button"
+                                style={termActionBtn}
+                                onClick={() => handleToggleTerm(t.id)}
+                                disabled={togglingTermId === t.id}
+                                title="Deactivate this term"
+                              >
+                                {togglingTermId === t.id ? '…' : 'Deactivate'}
+                              </button>
+                            </>
+                          )
+                          : (
+                            <button
+                              type="button"
+                              className={`sact-btn-rollout${rollingOutTermId === t.id ? ' loading' : ''}`}
+                              onClick={() => handleRolloutTerm(t.id)}
+                              disabled={!!rollingOutTermId || yearRollingOut}
+                              title="Roll out this term (set as active)"
+                            >
+                              {rollingOutTermId === t.id ? <IcSpinner /> : <IcRocket />}
+                              {rollingOutTermId === t.id ? 'Rolling…' : 'Roll Out'}
+                            </button>
+                          )
+                        }
+                        <button
+                          type="button"
+                          style={{ ...termActionBtn, color: confirmDeleteId === t.id ? 'var(--sa-red, #ef4444)' : 'var(--sa-text-2)', borderColor: confirmDeleteId === t.id ? 'var(--sa-red, #ef4444)' : 'var(--sa-border)' }}
+                          onClick={() => (confirmDeleteId === t.id ? handleDeleteTerm(t.id) : setConfirmDeleteId(t.id))}
+                          disabled={deletingTermId === t.id}
+                          title="Delete this term"
+                        >
+                          {deletingTermId === t.id ? 'Deleting…' : confirmDeleteId === t.id ? 'Confirm?' : 'Delete'}
+                        </button>
+                      </span>
                     </div>
                   ))}
                 </div>

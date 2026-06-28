@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { adminApi } from '../../api/adminApi';
+import './SchoolAdmin.css';
 
 const DOC_TYPES = [
   { key: 'student_roster',   label: 'Student Roster' },

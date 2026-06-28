@@ -213,22 +213,26 @@ export default function SANotifications({ onNavigate, onUnreadChange, schools = 
   const isSuper = role === 'superadmin';
   const [securityLogs, setSecurityLogs] = useState([]);
   const [backup,       setBackup]       = useState(null);
+  const [loading,      setLoading]      = useState(true);
 
   /* Pull the real security audit log + last backup so the Security and System
      categories show actual events instead of a placeholder. Best-effort.
      These are platform-operator endpoints (/api/security-logs/, /api/admin-settings/)
      — a school admin gets 403 and has no business seeing them, so only fetch as super. */
   useEffect(() => {
-    if (!isSuper) { setSecurityLogs([]); setBackup(null); return; }
+    if (!isSuper) { setSecurityLogs([]); setBackup(null); setLoading(false); return; }
     let cancelled = false;
-    ApiClient.get('/api/security-logs/?limit=25').then(d => {
-      if (!cancelled && Array.isArray(d?.logs)) setSecurityLogs(d.logs);
-    }).catch(() => {});
-    ApiClient.get('/api/admin-settings/').then(d => {
-      if (!cancelled && d?.success && d.settings) {
-        setBackup({ last_backup_at: d.settings.last_backup_at, last_backup_meta: d.settings.last_backup_meta });
-      }
-    }).catch(() => {});
+    setLoading(true);
+    Promise.allSettled([
+      ApiClient.get('/api/security-logs/?limit=25').then(d => {
+        if (!cancelled && Array.isArray(d?.logs)) setSecurityLogs(d.logs);
+      }),
+      ApiClient.get('/api/admin-settings/').then(d => {
+        if (!cancelled && d?.success && d.settings) {
+          setBackup({ last_backup_at: d.settings.last_backup_at, last_backup_meta: d.settings.last_backup_meta });
+        }
+      }),
+    ]).finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [isSuper]);
 
@@ -358,7 +362,7 @@ export default function SANotifications({ onNavigate, onUnreadChange, schools = 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {filtered.length === 0 && (
           <div className="sa-card" style={{ padding: '48px', textAlign: 'center', color: 'var(--sa-text-3)' }}>
-            <p style={{ fontSize: '0.9375rem', margin: 0 }}>No notifications to show</p>
+            <p style={{ fontSize: '0.9375rem', margin: 0 }}>{loading ? 'Loading notifications…' : 'No notifications to show'}</p>
           </div>
         )}
 

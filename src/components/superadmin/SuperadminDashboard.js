@@ -1272,7 +1272,7 @@ export default function Dashboard({ onNavigate }) {
           )}
 
           {activePage === 'schools' && (
-            <SASchools schools={schools} onReview={handleReview} onAction={handleAction} />
+            <SASchools schools={schools} onReview={handleReview} onAction={handleAction} onEnter={enterSchool} />
           )}
 
           {activePage === 'analytics' && (

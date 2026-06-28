@@ -27,3 +27,20 @@
   .tt-asi--busy .material-symbols-outlined,
   .tt-asi.is-pulse { animation: none; }
 }
+
+/* Mobile: shrink the pill so it never overflows a cramped header */
+@media (max-width: 600px) {
+  .tt-asi { gap: 5px; padding: 3px 8px; font-size: 11px; max-width: 46vw; overflow: hidden; }
+  .tt-asi .material-symbols-outlined { font-size: 13px; }
+}
+
+/* Small phones: tighter still */
+@media (max-width: 400px) {
+  .tt-asi { gap: 4px; padding: 3px 7px; font-size: 10.5px; max-width: 42vw; }
+}
+
+/* Tiny phones: collapse to an icon-only chip (hides the trailing text node) */
+@media (max-width: 360px) {
+  .tt-asi { gap: 0; padding: 4px; font-size: 0; max-width: none; border-radius: 999px; }
+  .tt-asi .material-symbols-outlined { font-size: 15px; }
+}

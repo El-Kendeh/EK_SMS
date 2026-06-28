@@ -487,3 +487,28 @@
     font-size: 1.1rem;
   }
 }
+
+/* ============================================================
+   Table column layout — SAStudents reuses the .sard-* grid table
+   from SARefDataManager.css, but its rows have a different shape:
+   N data columns (--data-cols) + ADDED (date) + ACTIONS, i.e. two
+   trailing columns, not the three SARefDataManager defines. Re-map
+   the grid template for this page only (scoped to .sast-wrap so it
+   never affects the Ref-Data page). Desktop only — at ≤600px the
+   shared stylesheet stacks each row into a labelled card.
+   ============================================================ */
+@media (min-width: 601px) {
+  .sast-wrap .sard-thead,
+  .sast-wrap .sard-tr {
+    grid-template-columns: repeat(var(--data-cols, 1), minmax(0, 1fr)) 132px 200px;
+  }
+  /* ACTIONS column holds 4–5 icon buttons; keep them on one row, right-aligned */
+  .sast-wrap .sard-td--actions,
+  .sast-wrap .sard-th--actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: nowrap;
+  }
+}
