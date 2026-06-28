@@ -12,6 +12,8 @@ const Teacher = require('../models/Teacher');
 const Notification = require('../models/Notification');
 const ClassSubject = require('../models/ClassSubject');
 const ForensicEvent = require('../models/ForensicEvent');
+const GradeEvent = require('../models/GradeEvent');
+const { mapGradeEvents } = require('../utils/gradeHistory');
 const SecurityAuditLog = require('../models/SecurityAuditLog');
 const Fee = require('../models/Fee');
 const Payment = require('../models/Payment');
@@ -254,16 +256,27 @@ async function getGradesSummary(req, res) {
 
 async function getGradeHistory(req, res) {
   try {
+    const student = await getStudentFromUser(req);
+    if (!student) return res.status(404).json(errorResponse('Student not found'));
+
     const { gradeId } = req.params;
     const grade = await Grade.findByPk(gradeId);
     if (!grade) return res.status(404).json(errorResponse('Grade not found'));
+    // IDOR guard: a student may only inspect the audit trail of their OWN grade.
+    if (String(grade.student_id) !== String(student.id)) {
+      return res.status(403).json(errorResponse('Not authorized to view this grade'));
+    }
 
-    const events = await ForensicEvent.findAll({
+    // A grade's history is the append-only, hash-chained GradeEvent trail. The old query
+    // hit ForensicEvent.grade_id — a column that doesn't exist (every call 500'd); ForensicEvent
+    // carries no grade linkage at all. GradeEvent (pruh_core_grade_event) is keyed by grade_id.
+    const events = await GradeEvent.findAll({
       where: { grade_id: gradeId },
-      order: [['created_at', 'DESC']],
+      order: [['created_at', 'ASC']],
     });
 
-    return res.json(successResponse({ history: events }));
+    // Shared mapper so the student panel and parent drawer read the same shape.
+    return res.json(successResponse({ history: mapGradeEvents(events) }));
   } catch (err) {
     console.error('getGradeHistory Error:', err);
     return res.status(500).json(errorResponse(`Failed to fetch grade history`));
@@ -899,9 +912,13 @@ async function getSecurityHealth(req, res) {
 
     const user = await User.findByPk(student.user_id);
 
+    // sa_security_audit_log columns are: id, type, severity, actor, ip, action,
+    // metadata_json, ts (timestamps:false). The old query used user_id/created_at
+    // and the mapping read ip_address/user_agent/created_at — none of which exist
+    // (every call 500'd). The log is keyed by `actor` (the username), ordered by `ts`.
     const logs = await SecurityAuditLog.findAll({
-      where: { user_id: user?.id },
-      order: [['created_at', 'DESC']],
+      where: { actor: user?.username },
+      order: [['ts', 'DESC']],
       limit: 10,
     });
 
@@ -911,11 +928,11 @@ async function getSecurityHealth(req, res) {
       twoFactorEnabled: user?.two_factor_enabled || false,
       trustedDevices: [],
       loginHistory: logs.map(l => ({
-        location: l.ip_address || 'Unknown',
-        ip: l.ip_address,
-        device: l.user_agent || 'Unknown',
-        time: l.created_at,
-        success: true,
+        location: l.ip || 'Unknown',
+        ip: l.ip || null,
+        device: l.action || 'Account activity',
+        time: l.ts,
+        success: (l.severity || 'info') !== 'critical',
       })),
     }));
   } catch (err) {

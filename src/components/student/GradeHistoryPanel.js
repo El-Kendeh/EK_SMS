@@ -30,7 +30,10 @@ export default function GradeHistoryPanel({ grade, onClose }) {
     if (!grade) return;
     setLoading(true);
     studentApi.getGradeHistory(grade.id)
-      .then((data) => setHistory(data))
+      // The API resolves to the response envelope { success, history: [...] }, not a bare
+      // array — unwrap it (mirrors the parent drawer). Storing the envelope here made
+      // history.some()/.map() throw once the endpoint started returning 200. (sweep #2)
+      .then((data) => setHistory(Array.isArray(data) ? data : (data?.history || [])))
       .catch(() => setHistory([]))
       .finally(() => setLoading(false));
   }, [grade]);

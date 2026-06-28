@@ -901,8 +901,10 @@ async function getTeacherModificationSummary(req, res) {
 async function getTeacherAcademicCalendar(req, res) {
   try {
     const Term = require('../models/Term');
+    // 'academic_year' is not a Term column (it's academic_year_id) and was never used in
+    // the response below — selecting it threw "Unknown column". Dropped it entirely.
     const terms = await Term.findAll({
-      attributes: ['id', 'name', 'start_date', 'end_date', 'academic_year'],
+      attributes: ['id', 'name', 'start_date', 'end_date'],
       order: [['start_date', 'ASC']],
     });
 

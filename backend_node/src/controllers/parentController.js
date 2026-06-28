@@ -11,6 +11,9 @@ const Teacher = require('../models/Teacher');
 const Notification = require('../models/Notification');
 const SecurityAuditLog = require('../models/SecurityAuditLog');
 const ForensicEvent = require('../models/ForensicEvent');
+const GradeEvent = require('../models/GradeEvent');
+const GradeReceipt = require('../models/GradeReceipt');
+const { mapGradeEvents } = require('../utils/gradeHistory');
 const Fee = require('../models/Fee');
 const Payment = require('../models/Payment');
 const FeeCategory = require('../models/FeeCategory');
@@ -140,13 +143,23 @@ async function getChildGrades(req, res) {
 async function getChildGradeHistory(req, res) {
   try {
     const { gradeId } = req.params;
+    const grade = await Grade.findByPk(gradeId);
+    if (!grade) return res.status(404).json(errorResponse('Grade not found'));
+    // A parent may only inspect the audit trail of a grade belonging to one of their children.
+    const studentIds = await getParentStudentIds(req);
+    if (!studentIds.map(String).includes(String(grade.student_id))) {
+      return res.status(403).json(errorResponse('Not authorized to view this grade'));
+    }
 
-    const events = await ForensicEvent.findAll({
+    // Same fix as the student portal: a grade's history is the hash-chained GradeEvent
+    // trail, not ForensicEvent (which has no grade_id column and 500'd on every call).
+    const events = await GradeEvent.findAll({
       where: { grade_id: gradeId },
-      order: [['created_at', 'DESC']],
+      order: [['created_at', 'ASC']],
     });
 
-    return res.json(successResponse({ history: events }));
+    // Shared mapper so the parent drawer and student panel read the same shape.
+    return res.json(successResponse({ history: mapGradeEvents(events) }));
   } catch (err) {
     console.error('getChildGradeHistory Error:', err);
     return res.status(500).json(errorResponse(`Failed to fetch history`));
@@ -683,23 +696,26 @@ async function verifyHash(req, res) {
     if (!hash) return res.status(400).json(errorResponse('hash is required'));
 
     if (type === 'grade') {
-      const grade = await Grade.findOne({
-        where: { payment_hash: hash },
-        include: [
-          { model: Subject, as: 'subject', attributes: ['name', 'code'] },
-          { model: Term, as: 'term', attributes: ['name'] },
-        ],
-      });
-      if (grade) {
+      // The grade verification hash lives on GradeReceipt.verification_hash — the batch
+      // receipt produced when a teacher locks grades. The old query hit Grade.payment_hash,
+      // a column that doesn't exist (every grade-verify 500'd). A receipt is a BATCH (count +
+      // average), not a single grade, so we report batch fields. Mirrors routes/verify.js.
+      const rec = await GradeReceipt.findOne({ where: { verification_hash: hash } });
+      if (rec) {
+        const [subject, term] = await Promise.all([
+          rec.subject_id ? Subject.findByPk(rec.subject_id).catch(() => null) : null,
+          rec.term_id ? Term.findByPk(rec.term_id).catch(() => null) : null,
+        ]);
         return res.json(successResponse({
           valid: true,
           type: 'grade',
           data: {
-            subject: grade.subject?.name || '',
-            term: grade.term?.name || '',
-            total: grade.total,
-            grade_letter: grade.grade_letter,
-            created_at: grade.created_at,
+            subject: subject?.name || '',
+            term: term?.name || '',
+            count: rec.count,
+            average: rec.average,
+            chain_position: rec.chain_position,
+            created_at: rec.submitted_at,
           },
         }));
       }
