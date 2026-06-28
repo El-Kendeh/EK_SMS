@@ -688,8 +688,10 @@ async function getFinanceUsers(req, res) {
 
     const admins = await SchoolAdmin.findAll({
       where: { school_id: school.id },
-      include: [{ model: User, as: 'user', attributes: ['id', 'username', 'first_name', 'last_name', 'email', 'phone'] }],
-      order: [['created_at', 'DESC']],
+      // NOTE: the User model has no `phone` column — selecting it threw
+      // "Unknown column 'user.phone'" and 500'd every finance-users fetch.
+      include: [{ model: User, as: 'user', attributes: ['id', 'username', 'first_name', 'last_name', 'email'] }],
+      order: [['id', 'DESC']], // pruh_core_schooladmin has timestamps:false / no created_at
     });
 
     const users = admins.map(a => ({

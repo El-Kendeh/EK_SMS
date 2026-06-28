@@ -66,7 +66,7 @@ async function getChildren(req, res) {
     const students = await Student.findAll({
       where: { id: { [Op.in]: studentIds } },
       include: [
-        { model: User, as: 'user', attributes: ['id', 'username', 'first_name', 'last_name', 'email', 'phone'] },
+        { model: User, as: 'user', attributes: ['id', 'username', 'first_name', 'last_name', 'email'] }, // users has no phone column
         { model: Class, as: 'classroom', attributes: ['id', 'name'] },
       ],
     });
@@ -1144,7 +1144,7 @@ async function getCoGuardians(req, res) {
       where: {
         student_id: { [Op.in]: studentIds },
       },
-      include: [{ model: User, as: 'guardian', attributes: ['id', 'first_name', 'last_name', 'email', 'phone'] }],
+      include: [{ model: User, as: 'guardian', attributes: ['id', 'first_name', 'last_name', 'email'] }], // users has no phone column
       order: [['created_at', 'DESC']],
     });
 

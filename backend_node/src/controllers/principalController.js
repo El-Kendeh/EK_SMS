@@ -333,8 +333,8 @@ async function getPrincipalUsers(req, res) {
 
     const admins = await SchoolAdmin.findAll({
       where: { school_id: school.id },
-      include: [{ model: User, as: 'user', attributes: ['id', 'username', 'first_name', 'last_name', 'email', 'phone'] }],
-      order: [['created_at', 'DESC']],
+      include: [{ model: User, as: 'user', attributes: ['id', 'username', 'first_name', 'last_name', 'email'] }], // users has no phone column
+      order: [['id', 'DESC']], // pruh_core_schooladmin has timestamps:false / no created_at
     });
 
     const users = admins.map(a => ({

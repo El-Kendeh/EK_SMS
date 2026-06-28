@@ -68,8 +68,17 @@ The H13 finding (school_admin writes to a single global `SuperadminSettings` row
 
 Frontend verified with a clean CRA production build ("Compiled successfully", no warnings) and backend with syntax + runtime load.
 
+## Security check (follow-up)
+
+| Item | File | Change |
+|---|---|---|
+| grade-alerts | `superadmin/SuperadminDashboard.js` | `/api/grade-alerts/` is already superadmin-only on the backend (school_admin → 403, no cross-school leak — the audit-note worry doesn't hold). Stopped the shell from fetching it for non-superadmin (was a swallowed 403). |
+| `/api/school/*` read gate | `backend_node/src/routes/school.js` | `schoolWriteGuard` only gated writes, so any authenticated tenant user could GET the school's PII/staff/finance listings. Added `LEADERSHIP_READ` (superadmin/school_admin/principal) on students/teachers/teacher-assignments/exam-officers/principal-users/finance-users/grades/analytics/messages/ai-capture-list, and `FINANCE_READ` (+bursar) on finance stats/fees/expenses. Reference/theming reads (info/terms/classes/academic-years/grading-scheme/stats) stay cross-role as intended. Verified live: leadership → 200, teacher → 403, reference reads → 200. |
+| finance/principal-users 500 (bonus) | `financeController.js`, `principalController.js` | `getFinanceUsers`/`getPrincipalUsers` selected `user.phone` (no such column) and ordered by `SchoolAdmin.created_at` (`timestamps:false`, no such column) → every call 500'd, breaking both pages. Removed `phone` from the User include and ordered by `id`. Verified live: both → 200. |
+
 ## Still open
 
+- ⚠️ **Same `user.phone` 500 in the parent portal** — `parentController.js:69` (parent profile) and `:1147` (co-guardians) select the non-existent `user.phone` and will 500 identically. Out of this pass's school-admin scope — flagged for a parent-portal fix.
 - **H13** — resolved above (security already fixed; only cosmetic preference-persistence remains, deferred).
 - The Tier-4 / remaining medium-low UX items in the main report (orphan stub aliasing, mobile data-labels, dropdown persistence, dead-code removal, etc.).
 - UI refinement worth noting: `UpcomingMeetings` is mounted at the top of each portal home and in StudentHome's main (non-low-data) path; the low-data StudentHomeLite path is not yet wired.

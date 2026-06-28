@@ -138,7 +138,8 @@ router.get('/check-school-name/', checkSchoolName);
 // Reads (GET) are allowed for ANY authenticated user scoped to their own school —
 // this is intentional and cross-role: the dashboard theming (`GET /school/info/`)
 // runs for every role, and principal/bursar/teacher/parent dashboards legitimately
-// read terms/classes/students/academic-years here.
+// read terms/classes/academic-years/grading-scheme here. Sensitive people/finance
+// LISTINGS are the exception, gated below via LEADERSHIP_READ / FINANCE_READ.
 //
 // MUTATIONS (POST/PUT/PATCH/DELETE) are restricted to school_admin + superadmin via
 // `schoolWriteGuard`. This closes the privilege-escalation hole where any authenticated
@@ -158,12 +159,18 @@ function schoolWriteGuard(req, res, next) {
 // bypasses it. See EK_SMS/schoolAdminUIFix/02-security-and-risks.md (approval gate).
 const applyAuth = [authenticateToken, requireActiveAccount, schoolScope, schoolWriteGuard];
 
+// schoolWriteGuard only gates writes, so sensitive LISTINGS were readable by any
+// authenticated tenant user (student/parent/teacher). These endpoints are only ever
+// called by the school-admin / leadership UIs, so gate their reads explicitly.
+const LEADERSHIP_READ = requireRole(['superadmin', 'school_admin', 'principal']);
+const FINANCE_READ = requireRole(['superadmin', 'school_admin', 'principal', 'bursar']);
+
 // ==================== SCHOOL INFO ====================
 router.get('/school/info/', applyAuth, getSchoolInfo);
 router.post('/school/info/', applyAuth, upload.single('badge'), updateSchoolInfo);
 
 // ==================== STUDENTS ====================
-router.get('/school/students/', applyAuth, getStudents);
+router.get('/school/students/', applyAuth, LEADERSHIP_READ, getStudents);
 router.post('/school/students/', applyAuth, studentUpload, createStudent);
 router.put('/school/students/:id/', applyAuth, studentUpload, updateStudent);
 router.get('/school/students/next-admission-number/', applyAuth, getNextAdmissionNumber);
@@ -171,7 +178,7 @@ router.get('/school/student-stats/', applyAuth, getStudentStats);
 router.post('/school/students/:id/promote/', applyAuth, promoteStudent);
 
 // ==================== TEACHERS ====================
-router.get('/school/teachers/', applyAuth, getTeachers);
+router.get('/school/teachers/', applyAuth, LEADERSHIP_READ, getTeachers);
 router.post('/school/teachers/', applyAuth, teacherUpload, createTeacher);
 router.put('/school/teachers/:id/', applyAuth, updateTeacher);
 router.get('/school/teacher-stats/', applyAuth, getTeacherStats);
@@ -273,10 +280,10 @@ const aiCaptureMulter = multer({
   limits: { fileSize: 25 * 1024 * 1024 }, // 25MB
 });
 router.post('/school/ai-capture/', applyAuth, aiCaptureMulter.single('file'), aiCaptureUpload);
-router.get('/school/ai-capture/list/', applyAuth, aiCaptureList);
+router.get('/school/ai-capture/list/', applyAuth, LEADERSHIP_READ, aiCaptureList);
 
 // ==================== GRADES ====================
-router.get('/school/grades/', applyAuth, getGrades);
+router.get('/school/grades/', applyAuth, LEADERSHIP_READ, getGrades);
 router.post('/school/grades/', applyAuth, saveGrades);
 
 // ==================== ATTENDANCE ====================
@@ -304,28 +311,28 @@ router.get('/school/notifications/', applyAuth, getNotifications);
 router.post('/school/notifications/', applyAuth, createNotification);
 
 // ==================== ANALYTICS ====================
-router.get('/school/analytics/', applyAuth, getAnalytics);
+router.get('/school/analytics/', applyAuth, LEADERSHIP_READ, getAnalytics);
 
 // ==================== FINANCE ====================
-router.get('/school/finance/stats/', applyAuth, getFinanceStats);
-router.get('/school/finance/fees/', applyAuth, getFinanceFees);
+router.get('/school/finance/stats/', applyAuth, FINANCE_READ, getFinanceStats);
+router.get('/school/finance/fees/', applyAuth, FINANCE_READ, getFinanceFees);
 router.post('/school/finance/expenses/', applyAuth, recordExpense);
-router.get('/school/finance/expenses/', applyAuth, getExpenses);
+router.get('/school/finance/expenses/', applyAuth, FINANCE_READ, getExpenses);
 
 // ==================== TEACHER ASSIGNMENTS ====================
-router.get('/school/teacher-assignments/', applyAuth, getTeacherAssignments);
+router.get('/school/teacher-assignments/', applyAuth, LEADERSHIP_READ, getTeacherAssignments);
 router.post('/school/teacher-assignments/', applyAuth, createTeacherAssignment);
 router.delete('/school/teacher-assignments/:id/', applyAuth, deleteTeacherAssignment);
 
 // ==================== EXAM OFFICERS ====================
-router.get('/school/exam-officers/', applyAuth, getExamOfficers);
+router.get('/school/exam-officers/', applyAuth, LEADERSHIP_READ, getExamOfficers);
 router.post('/school/exam-officers/', applyAuth, assignExamOfficer);
 
 // Reset a school user's password and email them new credentials (Resend Credentials button).
 router.post('/school/users/resend-credentials/', applyAuth, resendCredentials);
 
 // ==================== MESSAGES ====================
-router.get('/school/messages/', applyAuth, getMessages);
+router.get('/school/messages/', applyAuth, LEADERSHIP_READ, getMessages);
 router.post('/school/messages/', applyAuth, sendMessage);
 router.post('/school/attendance/class/', applyAuth, recordClassAttendance);
 
@@ -333,12 +340,12 @@ router.post('/school/attendance/class/', applyAuth, recordClassAttendance);
 router.post('/school/parents/', applyAuth, createParent);
 
 // ==================== PRINCIPAL USERS ====================
-router.get('/school/principal-users/', applyAuth, getPrincipalUsers);
+router.get('/school/principal-users/', applyAuth, LEADERSHIP_READ, getPrincipalUsers);
 router.post('/school/principal-users/', applyAuth, createPrincipalUser);
 router.put('/school/principal-users/:id/', applyAuth, updatePrincipalUser);
 
 // ==================== FINANCE USERS ====================
-router.get('/school/finance-users/', applyAuth, getFinanceUsers);
+router.get('/school/finance-users/', applyAuth, LEADERSHIP_READ, getFinanceUsers);
 router.post('/school/finance-users/', applyAuth, createFinanceUser);
 router.put('/school/finance-users/:id/', applyAuth, updateFinanceUser);
 

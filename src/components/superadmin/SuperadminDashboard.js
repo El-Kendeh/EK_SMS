@@ -526,12 +526,15 @@ export default function Dashboard({ onNavigate }) {
       setUser(parsed);
       if (parsed.role === 'superadmin') {
         fetchSchools();
+        // Grade-modification alerts are a platform-wide operator feed
+        // (/api/grade-alerts/ is superadmin-only). Only fetch for superadmin so
+        // tenant roles don't fire a swallowed 403 or surface cross-school alerts.
+        fetchGradeAlerts();
       } else if (parsed.school_id) {
         fetchMySchool(parsed.school_id);
       } else {
         setIsLoading(false);
       }
-      fetchGradeAlerts();
     } catch { onNavigate && onNavigate('home'); }
   }, [onNavigate, fetchSchools, fetchMySchool, fetchGradeAlerts]);
 
