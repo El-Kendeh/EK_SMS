@@ -329,8 +329,10 @@ export const teacherApi = {
   },
 
   async getAcademicCalendar() {
+    // The teacher route exists at /api/teacher/academic-calendar/ — the old
+    // /api/school/ path had no route and 404'd, leaving the strip always empty (audit #12).
     try {
-      const res = await fetch('/api/school/academic-calendar/', { headers: authHeaders() });
+      const res = await fetch('/api/teacher/academic-calendar/', { headers: authHeaders() });
       if (!res.ok) return { events: [] };
       return res.json();
     } catch { return { events: [] }; }

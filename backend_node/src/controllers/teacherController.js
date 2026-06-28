@@ -30,6 +30,7 @@ const Attendance = require('../models/Attendance');
 const ModificationRequest = require('../models/ModificationRequest');
 const ExamResult = require('../models/ExamResult');
 const GradeReceipt = require('../models/GradeReceipt');
+const GradeEvent = require('../models/GradeEvent');
 const crypto = require('crypto');
 const { Op } = require('sequelize');
 const sequelize = require('../config/db');
@@ -305,6 +306,15 @@ async function saveGradeDraft(req, res) {
     if (grade) {
       // Locked grades are immutable to the teacher — corrections go via a modification request.
       if (grade.is_locked) {
+        // Record the blocked tamper attempt in the append-only ledger so the tamper
+        // counter reflects REAL blocked edits, not a heuristic guess (audit #27).
+        await appendGradeEventSafe({
+          grade_id: grade.id, school_id: grade.school_id, student_id: grade.student_id,
+          subject_id: grade.subject_id, term_id: grade.term_id,
+          actor_user_id: req.user?.id, actor_name: req.user?.username,
+          event_type: 'blocked', field: dbField, old_value: grade[dbField], new_value: storedValue,
+          approval_status_after: grade.approval_status,
+        });
         return res.status(423).json(errorResponse('This grade is locked. File a modification request to change it.'));
       }
       const oldValue = grade[dbField];
@@ -1049,14 +1059,19 @@ async function getTeacherTamperCount(req, res) {
     const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
     if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
 
-    const total = await ForensicEvent.count({
-      where: { actor: req.user.id.toString() },
+    // Real, defensible numbers (audit #27): blocked = actual blocked grade-edit attempts
+    // logged in the append-only ledger; successful is always 0 — a locked grade cannot be
+    // tampered, which is the whole point. (The old code counted generic ForensicEvents and
+    // invented "successful = total - blocked", an alarming meaningless guess.)
+    const { class_id } = req.query;
+    const blocked = await GradeEvent.count({
+      where: { actor_user_id: req.user.id, event_type: 'blocked' },
     });
-    const blocked = await ForensicEvent.count({
-      where: { actor: req.user.id.toString(), resolved: true, severity: 'high' },
-    });
+    const gradeWhere = { school_id: teacher.school_id, is_locked: true };
+    if (class_id) gradeWhere.classroom_id = class_id;
+    const protectedCount = await Grade.count({ where: gradeWhere });
 
-    return res.json(successResponse({ total, blocked, successful: total - blocked }));
+    return res.json(successResponse({ total: blocked, blocked, successful: 0, protected: protectedCount }));
   } catch (err) {
     console.error('getTeacherTamperCount Error:', err);
     return res.json(successResponse({ total: 0, blocked: 0, successful: 0 }));
@@ -3126,20 +3141,22 @@ async function getAcademicCalendar(req, res) {
     const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
     if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
 
+    // Resolve academic-year names separately — the Term→AcademicYear association isn't
+    // registered, so the eager include 500'd (audit #12).
     const terms = await Term.findAll({
       where: { school_id: teacher.school_id },
-      include: [{ model: AcademicYear, as: 'academicYear', attributes: ['id', 'name'] }],
       order: [['start_date', 'ASC']],
     });
+    const ayIds = [...new Set(terms.map(t => t.academic_year_id).filter(Boolean))];
+    const ays = ayIds.length ? await AcademicYear.findAll({ where: { id: ayIds }, attributes: ['id', 'name'], raw: true }) : [];
+    const ayName = Object.fromEntries(ays.map(a => [a.id, a.name]));
 
-    const events = terms.map(t => ({
-      id: `term-${t.id}`,
-      title: t.name,
-      start: t.start_date,
-      end: t.end_date,
-      type: 'term',
-      academic_year: t.academicYear?.name || '',
-    }));
+    const events = [];
+    terms.forEach(t => {
+      const yr = ayName[t.academic_year_id] || '';
+      if (t.start_date) events.push({ id: `term-start-${t.id}`, title: `${t.name} begins`, start: t.start_date, end: t.start_date, type: 'term', academic_year: yr });
+      if (t.end_date) events.push({ id: `term-end-${t.id}`, title: `${t.name} ends`, start: t.end_date, end: t.end_date, type: 'term', academic_year: yr });
+    });
 
     return res.json(successResponse({ events }));
   } catch (err) {
