@@ -33,6 +33,7 @@ const {
   getTeacherExamDuties,
   getTeacherAttendanceStatus,
   recordClassAttendance,
+  getClassAttendance,
   getTeacherAtRiskStudents,
   getTeacherModificationSummary,
   getTeacherAcademicCalendar,
@@ -149,6 +150,7 @@ router.get('/exam-duties/', getTeacherExamDuties);
 
 // Attendance & Analytics
 router.get('/attendance/status/', getTeacherAttendanceStatus);
+router.get('/attendance/', getClassAttendance);
 router.post('/attendance/', recordClassAttendance);
 router.get('/at-risk-students/', getTeacherAtRiskStudents);
 router.get('/analytics/', getClassAnalytics);
@@ -159,8 +161,10 @@ router.get('/notifications/', getTeacherNotifications);
 
 // Modification Requests
 router.get('/modification-requests/', getModificationRequests);
-router.post('/modification-requests/', submitModificationRequest);
-router.post('/modification-requests/withdraw/', withdrawModificationRequest);
+// multer so the optional evidence file (multipart) is parsed (audit #29/#44).
+router.post('/modification-requests/', teacherUpload.single('evidence_file'), submitModificationRequest);
+// withdraw needs the request id in the path (audit #33) — the handler reads req.params.id.
+router.post('/modification-requests/:id/withdraw/', withdrawModificationRequest);
 
 // Assignments
 router.get('/assignments/', getAssignments);

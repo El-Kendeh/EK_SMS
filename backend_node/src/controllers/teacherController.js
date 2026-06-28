@@ -619,7 +619,7 @@ async function getTeacherTimetable(req, res) {
     }));
   } catch (err) {
     console.error('getTeacherTimetable Error:', err);
-    return res.json(successResponse({ timetable: { periods: [] } }));
+    return res.status(500).json(errorResponse("getTeacherTimetable failed"));
   }
 }
 
@@ -653,7 +653,7 @@ async function getTeacherExamDuties(req, res) {
     return res.json(successResponse({ duties: formatted }));
   } catch (err) {
     console.error('getTeacherExamDuties Error:', err);
-    return res.json(successResponse({ duties: [] }));
+    return res.status(500).json(errorResponse("getTeacherExamDuties failed"));
   }
 }
 
@@ -663,40 +663,67 @@ async function getTeacherAttendanceStatus(req, res) {
     if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
 
     const Class = require('../models/Class');
+    const Attendance = require('../models/Attendance');
     const classes = await Class.findAll({
       where: { class_teacher_id: teacher.id },
       attributes: ['id', 'name'],
     });
 
     const today = new Date().toISOString().split('T')[0];
-    const Attendance = require('../models/Attendance');
-    let atRisk = [];
 
-    if (Attendance) {
-      atRisk = await Attendance.findAll({
-        where: { teacher_id: teacher.id, date: today },
-        attributes: ['student_id', 'student_name', 'classroom', 'status'],
+    // Per class: real roster size, whether today's register exists, and the present count
+    // — all were hardcoded to false/0 before (audit #6/#49/#118).
+    const classStatus = [];
+    for (const c of classes) {
+      const total = await Student.count({
+        where: { classroom_id: c.id, school_id: teacher.school_id, status: 'active' },
+      });
+      const todays = await Attendance.findAll({
+        where: { classroom_id: c.id, date: today },
+        attributes: ['status'],
+        raw: true,
+      });
+      const present = todays.filter(a => a.status === 'present' || a.status === 'late').length;
+      classStatus.push({
+        id: c.id,
+        classroom_name: c.name,
+        taken: todays.length > 0,
+        total_students: total,
+        present_count: present,
       });
     }
 
-    return res.json(successResponse({
-      classes: classes.map(c => ({
-        id: c.id,
-        classroom_name: c.name,
-        taken: false,
-        total_students: 0,
-        present_count: 0,
-      })),
-      at_risk: atRisk.map(a => ({
-        id: a.student_id,
-        name: a.student_name,
-        classroom: a.classroom,
-        att_rate: 70,
-      })),
-    }));
+    // At-risk: students in the teacher's classes whose real attendance rate (from the
+    // ledger) is below 75% — not a blanket hardcoded 70 (audit #6/#49/#118).
+    const classIds = classes.map(c => c.id);
+    const at_risk = [];
+    if (classIds.length) {
+      const roster = await Student.findAll({
+        where: { classroom_id: classIds, school_id: teacher.school_id, status: 'active' },
+        include: [{ model: User, as: 'user', attributes: ['first_name', 'last_name'] }],
+        attributes: ['id', 'classroom_id'],
+      });
+      for (const s of roster) {
+        const recs = await Attendance.findAll({ where: { student_id: s.id }, attributes: ['status'], raw: true });
+        if (recs.length < 4) continue; // too little data to flag fairly
+        const present = recs.filter(a => a.status === 'present' || a.status === 'late').length;
+        const rate = Math.round((present / recs.length) * 100);
+        if (rate < 75) {
+          at_risk.push({
+            id: s.id,
+            name: s.user ? `${s.user.first_name} ${s.user.last_name}`.trim() : `Student ${s.id}`,
+            classroom: classes.find(c => c.id === s.classroom_id)?.name || '',
+            att_rate: rate,
+          });
+        }
+      }
+      at_risk.sort((a, b) => a.att_rate - b.att_rate);
+    }
+
+    return res.json(successResponse({ classes: classStatus, at_risk }));
   } catch (err) {
     console.error('getTeacherAttendanceStatus Error:', err);
-    return res.json(successResponse({ classes: [], at_risk: [] }));
+    return res.status(500).json(errorResponse('Failed to fetch attendance status'));
   }
 }
 
@@ -746,6 +773,36 @@ async function recordClassAttendance(req, res) {
   } catch (err) {
     console.error('recordClassAttendance Error:', err);
     return res.status(500).json(errorResponse('Failed to record attendance'));
+  }
+}
+
+// Recorded register for a class on a given day — backs attendance pre-fill so re-opening a
+// marked class shows the saved statuses (audit #50 — the UI used to read the timetable here).
+async function getClassAttendance(req, res) {
+  try {
+    const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
+    if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
+
+    const { class_id, date } = req.query;
+    if (!class_id) return res.status(400).json(errorResponse('class_id is required'));
+
+    const Attendance = require('../models/Attendance');
+    const day = date || new Date().toISOString().split('T')[0];
+    const rows = await Attendance.findAll({
+      where: { classroom_id: class_id, school_id: teacher.school_id, date: day },
+      attributes: ['student_id', 'status', 'date', 'remarks'],
+      raw: true,
+    });
+    const records = rows.map(r => ({
+      student_id: r.student_id,
+      status: r.status,
+      date: r.date instanceof Date ? r.date.toISOString().split('T')[0] : String(r.date).split('T')[0],
+      remarks: r.remarks || null,
+    }));
+    return res.json(successResponse({ records }));
+  } catch (err) {
+    console.error('getClassAttendance Error:', err);
+    return res.status(500).json(errorResponse('Failed to fetch attendance'));
   }
 }
 
@@ -800,7 +857,7 @@ async function getTeacherAtRiskStudents(req, res) {
     return res.json(successResponse({ students: atRisk }));
   } catch (err) {
     console.error('getTeacherAtRiskStudents Error:', err);
-    return res.json(successResponse({ students: [] }));
+    return res.status(500).json(errorResponse("getTeacherAtRiskStudents failed"));
   }
 }
 
@@ -825,7 +882,7 @@ async function getTeacherModificationSummary(req, res) {
     return res.json(successResponse({ pending, approved, rejected }));
   } catch (err) {
     console.error('getTeacherModificationSummary Error:', err);
-    return res.json(successResponse({ pending: 0, approved: 0, rejected: 0 }));
+    return res.status(500).json(errorResponse("getTeacherModificationSummary failed"));
   }
 }
 
@@ -852,7 +909,7 @@ async function getTeacherAcademicCalendar(req, res) {
     return res.json(successResponse({ events }));
   } catch (err) {
     console.error('getTeacherAcademicCalendar Error:', err);
-    return res.json(successResponse({ events: [] }));
+    return res.status(500).json(errorResponse("getTeacherAcademicCalendar failed"));
   }
 }
 
@@ -888,7 +945,7 @@ async function getTeacherStudentActivity(req, res) {
     return res.json(successResponse({ activities }));
   } catch (err) {
     console.error('getTeacherStudentActivity Error:', err);
-    return res.json(successResponse({ activities: [] }));
+    return res.status(500).json(errorResponse("getTeacherStudentActivity failed"));
   }
 }
 
@@ -970,7 +1027,7 @@ async function getFeedbackStudents(req, res) {
     return res.json(successResponse({ students: formatted }));
   } catch (err) {
     console.error('getFeedbackStudents Error:', err);
-    return res.json(successResponse({ students: [] }));
+    return res.status(500).json(errorResponse("getFeedbackStudents failed"));
   }
 }
 
@@ -1012,7 +1069,7 @@ async function getFeedbackMessages(req, res) {
     return res.json(successResponse({ messages: formatted }));
   } catch (err) {
     console.error('getFeedbackMessages Error:', err);
-    return res.json(successResponse({ messages: [] }));
+    return res.status(500).json(errorResponse("getFeedbackMessages failed"));
   }
 }
 
@@ -1074,7 +1131,7 @@ async function getTeacherTamperCount(req, res) {
     return res.json(successResponse({ total: blocked, blocked, successful: 0, protected: protectedCount }));
   } catch (err) {
     console.error('getTeacherTamperCount Error:', err);
-    return res.json(successResponse({ total: 0, blocked: 0, successful: 0 }));
+    return res.status(500).json(errorResponse("getTeacherTamperCount failed"));
   }
 }
 
@@ -1106,7 +1163,7 @@ async function getTeacherAccessLog(req, res) {
     return res.json(successResponse({ access_log }));
   } catch (err) {
     console.error('getTeacherAccessLog Error:', err);
-    return res.json(successResponse({ access_log: [] }));
+    return res.status(500).json(errorResponse("getTeacherAccessLog failed"));
   }
 }
 
@@ -1138,7 +1195,7 @@ async function getTeacherChannelPreferences(req, res) {
     return res.json(successResponse({ preferences }));
   } catch (err) {
     console.error('getTeacherChannelPreferences Error:', err);
-    return res.json(successResponse({ preferences: {} }));
+    return res.status(500).json(errorResponse("getTeacherChannelPreferences failed"));
   }
 }
 
@@ -1195,7 +1252,7 @@ async function getTeacherWhistleblowerCategories(req, res) {
     return res.json(successResponse({ categories: formatted }));
   } catch (err) {
     console.error('getTeacherWhistleblowerCategories Error:', err);
-    return res.json(successResponse({ categories: [] }));
+    return res.status(500).json(errorResponse("getTeacherWhistleblowerCategories failed"));
   }
 }
 
@@ -1247,7 +1304,7 @@ async function checkWhistleblowerStatus(req, res) {
     }));
   } catch (err) {
     console.error('checkWhistleblowerStatus Error:', err);
-    return res.json(successResponse({ status: 'unknown' }));
+    return res.status(500).json(errorResponse("checkWhistleblowerStatus failed"));
   }
 }
 
@@ -1284,7 +1341,7 @@ async function getTeacherOfficeHours(req, res) {
     return res.json(successResponse({ slots }));
   } catch (err) {
     console.error('getTeacherOfficeHours Error:', err);
-    return res.json(successResponse({ slots: [] }));
+    return res.status(500).json(errorResponse("getTeacherOfficeHours failed"));
   }
 }
 
@@ -1401,7 +1458,7 @@ async function getParentThreads(req, res) {
     return res.json(successResponse({ threads }));
   } catch (err) {
     console.error('getParentThreads Error:', err);
-    return res.json(successResponse({ threads: [] }));
+    return res.status(500).json(errorResponse("getParentThreads failed"));
   }
 }
 
@@ -1487,7 +1544,7 @@ async function getStudentThreads(req, res) {
     return res.json(successResponse({ threads }));
   } catch (err) {
     console.error('getStudentThreads Error:', err);
-    return res.json(successResponse({ threads: [] }));
+    return res.status(500).json(errorResponse("getStudentThreads failed"));
   }
 }
 
@@ -1560,7 +1617,7 @@ async function getBehaviourIncidents(req, res) {
     return res.json(successResponse({ incidents: formatted }));
   } catch (err) {
     console.error('getBehaviourIncidents Error:', err);
-    return res.json(successResponse({ incidents: [] }));
+    return res.status(500).json(errorResponse("getBehaviourIncidents failed"));
   }
 }
 
@@ -1636,7 +1693,7 @@ async function listSubstituteTokens(req, res) {
     return res.json(successResponse({ tokens: [] }));
   } catch (err) {
     console.error('listSubstituteTokens Error:', err);
-    return res.json(successResponse({ tokens: [] }));
+    return res.status(500).json(errorResponse("listSubstituteTokens failed"));
   }
 }
 
@@ -1685,7 +1742,7 @@ async function getLessonPlans(req, res) {
     return res.json(successResponse({ lesson_plans: formatted }));
   } catch (err) {
     console.error('getLessonPlans Error:', err);
-    return res.json(successResponse({ lesson_plans: [] }));
+    return res.status(500).json(errorResponse("getLessonPlans failed"));
   }
 }
 
@@ -1768,7 +1825,7 @@ async function getFeedbackTemplates(req, res) {
     return res.json(successResponse({ templates }));
   } catch (err) {
     console.error('getFeedbackTemplates Error:', err);
-    return res.json(successResponse({ templates: [] }));
+    return res.status(500).json(errorResponse("getFeedbackTemplates failed"));
   }
 }
 
@@ -1963,7 +2020,7 @@ async function getTeacherWorkload(req, res) {
     }));
   } catch (err) {
     console.error('getTeacherWorkload Error:', err);
-    return res.json(successResponse({ thisWeek: [] }));
+    return res.status(500).json(errorResponse("getTeacherWorkload failed"));
   }
 }
 
@@ -2010,7 +2067,7 @@ async function getTeacherPerformance(req, res) {
     }));
   } catch (err) {
     console.error('getTeacherPerformance Error:', err);
-    return res.json(successResponse({}));
+    return res.status(500).json(errorResponse("getTeacherPerformance failed"));
   }
 }
 
@@ -2078,7 +2135,7 @@ async function getPeerReviews(req, res) {
     }));
   } catch (err) {
     console.error('getPeerReviews Error:', err);
-    return res.json(successResponse({ givenByMe: [], receivedAboutMe: {} }));
+    return res.status(500).json(errorResponse("getPeerReviews failed"));
   }
 }
 
@@ -2129,7 +2186,7 @@ async function getColleagues(req, res) {
     return res.json(successResponse({ colleagues }));
   } catch (err) {
     console.error('getColleagues Error:', err);
-    return res.json(successResponse({ colleagues: [] }));
+    return res.status(500).json(errorResponse("getColleagues failed"));
   }
 }
 
@@ -2168,7 +2225,7 @@ async function getSpotlightStudent(req, res) {
     }));
   } catch (err) {
     console.error('getSpotlightStudent Error:', err);
-    return res.json(successResponse({}));
+    return res.status(500).json(errorResponse("getSpotlightStudent failed"));
   }
 }
 
@@ -2248,7 +2305,7 @@ async function getCohortCompare(req, res) {
     return res.json(successResponse({ thisYearPerSubject }));
   } catch (err) {
     console.error('getCohortCompare Error:', err);
-    return res.json(successResponse({ thisYearPerSubject: [] }));
+    return res.status(500).json(errorResponse("getCohortCompare failed"));
   }
 }
 
@@ -2280,7 +2337,7 @@ async function getVoiceDigest(req, res) {
     return res.json(successResponse({ text }));
   } catch (err) {
     console.error('getVoiceDigest Error:', err);
-    return res.json(successResponse({ text: '' }));
+    return res.status(500).json(errorResponse("getVoiceDigest failed"));
   }
 }
 
@@ -2311,7 +2368,7 @@ async function getGradeReceipts(req, res) {
     return res.json(successResponse({ receipts }));
   } catch (err) {
     console.error('getGradeReceipts Error:', err);
-    return res.json(successResponse({ receipts: [] }));
+    return res.status(500).json(errorResponse("getGradeReceipts failed"));
   }
 }
 
@@ -2347,7 +2404,7 @@ async function getGradeReceipt(req, res) {
     }));
   } catch (err) {
     console.error('getGradeReceipt Error:', err);
-    return res.json(successResponse({}));
+    return res.status(500).json(errorResponse("getGradeReceipt failed"));
   }
 }
 
@@ -2397,8 +2454,10 @@ async function getModificationRequests(req, res) {
     const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
     if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
 
+    // requested_by is the teacher row id (that's what submit/withdraw use) — the old query
+    // filtered by req.user.id and so always came back empty (audit #110).
     const requests = await ModificationRequest.findAll({
-      where: { requested_by: req.user.id, school_id: teacher.school_id },
+      where: { requested_by: teacher.id, school_id: teacher.school_id },
       include: [
         { model: Subject, as: 'subject', attributes: ['id', 'name'] },
         { model: Student, as: 'student', include: [{ model: User, as: 'user', attributes: ['first_name', 'last_name'] }] },
@@ -2406,20 +2465,28 @@ async function getModificationRequests(req, res) {
       order: [['created_at', 'DESC']],
     });
 
-    const formatted = requests.map(r => ({
-      id: r.id,
-      student_id: r.student_id,
-      student_name: r.student?.user ? `${r.student.user.first_name} ${r.student.user.last_name}` : 'Unknown',
-      subject_id: r.subject_id,
-      subject_name: r.subject?.name || 'Unknown',
-      request_type: r.request_type,
-      reason: r.reason,
-      current_value: r.current_value,
-      requested_value: r.requested_value,
-      status: r.status,
-      reviewed_at: r.reviewed_at,
-      created_at: r.created_at,
-    }));
+    // Emit both naming conventions so the card renders regardless of which it reads
+    // (UI expects student/subject/current_score/proposed_score; audit #32).
+    const formatted = requests.map(r => {
+      const studentName = r.student?.user ? `${r.student.user.first_name} ${r.student.user.last_name}`.trim() : 'Unknown';
+      const subjectName = r.subject?.name || 'Unknown';
+      return {
+        id: r.id,
+        student_id: r.student_id,
+        student: studentName, student_name: studentName,
+        subject_id: r.subject_id,
+        subject: subjectName, subject_name: subjectName,
+        request_type: r.request_type,
+        reason: r.reason,
+        current_score: r.current_value, current_value: r.current_value,
+        proposed_score: r.requested_value, requested_value: r.requested_value,
+        evidence_url: r.evidence_url || null,
+        status: r.status,
+        review_reason: r.review_reason || null,
+        reviewed_at: r.reviewed_at,
+        created_at: r.created_at,
+      };
+    });
 
     return res.json(successResponse({ requests: formatted }));
   } catch (err) {
@@ -2433,19 +2500,40 @@ async function submitModificationRequest(req, res) {
     const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
     if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
 
-    const { student_id, subject_id, grade_id, request_type, reason, current_value, requested_value } = req.body;
-    if (!request_type || !reason) return res.status(400).json(errorResponse('request_type and reason are required'));
+    // The grade-correction form sends grade_id + proposed_score + reason (+ optional
+    // evidence file). Derive request_type / student / subject / current value from the
+    // grade so the teacher only supplies the new score and a justification (audit #29 —
+    // the old code rejected every submission for a request_type the UI never sends).
+    const grade_id = req.body.grade_id || req.body.gradeId || null;
+    const reason = (req.body.reason || '').trim();
+    const proposedRaw = req.body.requested_value ?? req.body.proposed_score ?? req.body.proposedScore;
+    if (!reason || proposedRaw === undefined || proposedRaw === null || String(proposedRaw).trim() === '') {
+      return res.status(400).json(errorResponse('A proposed value and a reason are required'));
+    }
+
+    let student_id = req.body.student_id || null;
+    let subject_id = req.body.subject_id || null;
+    let current_value = req.body.current_value ?? null;
+    if (grade_id) {
+      const grade = await Grade.findOne({ where: { id: grade_id, school_id: teacher.school_id } });
+      if (grade) {
+        student_id = student_id || grade.student_id;
+        subject_id = subject_id || grade.subject_id;
+        if (current_value === null || current_value === undefined) current_value = grade.total;
+      }
+    }
+
+    const evidence_url = req.file ? `/uploads/teacher/${req.file.filename}` : null;
 
     const request = await ModificationRequest.create({
       school_id: teacher.school_id,
-      student_id: student_id || null,
-      subject_id: subject_id || null,
-      grade_id: grade_id || null,
+      student_id, subject_id, grade_id,
       requested_by: teacher.id,
-      request_type,
+      request_type: req.body.request_type || 'grade',
       reason,
-      current_value: current_value || '',
-      requested_value: requested_value || '',
+      current_value: current_value != null ? String(current_value) : '',
+      requested_value: String(proposedRaw),
+      evidence_url,
       status: 'pending',
     });
 
@@ -3128,11 +3216,48 @@ async function deleteResource(req, res) {
 }
 
 async function generateTimetable(req, res) {
+  // Timetabling is finalised by the school admin — the teacher action submits PREFERENCES.
+  // The old stub did nothing yet the UI said "submitted for admin review" (audit #78/#117).
+  // Now we record the preferences and notify the school's admins so that claim is true.
   try {
-    return res.json(successResponse({}, 'Timetable generated'));
+    const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
+    if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
+
+    const c = req.body || {};
+    const parts = [];
+    if (c.max_periods_per_day) parts.push(`Max ${c.max_periods_per_day} periods/day`);
+    if (c.preferred_free_day) parts.push(`Preferred free day: ${c.preferred_free_day}`);
+    if (c.avoid_first_period) parts.push('Avoid first period');
+    if (c.avoid_last_period) parts.push('Avoid last period');
+    if (c.notes) parts.push(`Notes: ${String(c.notes).slice(0, 300)}`);
+    const summary = parts.length ? parts.join(' · ') : 'No specific constraints provided.';
+
+    const Notification = require('../models/Notification');
+    const teacherName = req.user?.username || `Teacher ${teacher.id}`;
+    const title = 'Timetable preference submitted';
+    const message = `${teacherName} submitted timetable preferences for review: ${summary}`;
+
+    // School admins are linked to a school via SchoolAdmin (the users table has no
+    // school_id) — that wrong join 500'd this handler in testing.
+    const SchoolAdmin = require('../models/SchoolAdmin');
+    const admins = await SchoolAdmin.findAll({
+      where: { school_id: teacher.school_id },
+      attributes: ['user_id'],
+      raw: true,
+    });
+    if (admins.length) {
+      await Notification.bulkCreate(admins.map(a => ({
+        school_id: teacher.school_id, user_id: a.user_id, title, message, type: 'timetable_suggestion',
+      })));
+    } else {
+      // No admin user on record — still log it school-wide so the preference isn't lost.
+      await Notification.create({ school_id: teacher.school_id, user_id: null, title, message, type: 'timetable_suggestion' });
+    }
+
+    return res.json(successResponse({ notified: admins.length }, 'Preferences submitted for admin review'));
   } catch (err) {
     console.error('generateTimetable Error:', err);
-    return res.status(500).json(errorResponse('Failed to generate timetable'));
+    return res.status(500).json(errorResponse('Failed to submit timetable preferences'));
   }
 }
 
@@ -3177,6 +3302,7 @@ module.exports = {
   getTeacherExamDuties,
   getTeacherAttendanceStatus,
   recordClassAttendance,
+  getClassAttendance,
   getTeacherAtRiskStudents,
   getTeacherModificationSummary,
   getTeacherAcademicCalendar,

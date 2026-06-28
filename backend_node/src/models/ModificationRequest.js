@@ -12,9 +12,11 @@ const ModificationRequest = sequelize.define('ModificationRequest', {
   reason: { type: DataTypes.TEXT },
   current_value: { type: DataTypes.STRING(255) },
   requested_value: { type: DataTypes.STRING(255) },
+  evidence_url: { type: DataTypes.STRING(500) },
   status: { type: DataTypes.STRING(50), defaultValue: 'pending' },
   reviewed_by: { type: DataTypes.BIGINT },
   reviewed_at: { type: DataTypes.DATE },
+  review_reason: { type: DataTypes.TEXT },
   created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
 }, {
   tableName: 'pruh_core_modification_request',

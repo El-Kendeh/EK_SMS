@@ -143,6 +143,36 @@ export default function ClassAnalytics() {
     : 1;
 
   const handleExport = () => {
+    // Real export: build a CSV of the analytics and download it. The old handler just
+    // flashed "Exported!" with a timer and produced no file (audit #52).
+    if (!analytics) return;
+    const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const rows = [
+      ['Class', selectedClass?.name || ''],
+      ['Subject', selectedClass?.subject?.name || ''],
+      ['Class average', `${analytics.classAverage}% (${analytics.classAverageLetter})`],
+      ['Pass rate', `${analytics.passRate}%`],
+      ['Students scored', analytics.totalScored],
+      [],
+      ['Grade', 'Count'],
+      ...analytics.distribution.map(d => [d.letter, d.count]),
+      [],
+      ['Top performers', 'Score', 'Grade'],
+      ...analytics.topPerformers.map(p => [p.studentName, p.score, p.gradeLetter]),
+      [],
+      ['At risk', 'Score', 'Grade'],
+      ...analytics.atRisk.map(p => [p.studentName, p.score, p.gradeLetter]),
+    ];
+    const csv = rows.map(r => r.map(esc).join(',')).join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `class-analytics-${(selectedClass?.name || 'class').replace(/\s+/g, '-')}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
     setExportDone(true);
     setTimeout(() => setExportDone(false), 3000);
   };
@@ -160,8 +190,8 @@ export default function ClassAnalytics() {
         </div>
         {analytics && (
           <button className="tch-btn tch-btn--ghost tch-btn--sm" onClick={handleExport}>
-            <span className="material-symbols-outlined">{exportDone ? 'check' : 'picture_as_pdf'}</span>
-            {exportDone ? 'Exported!' : 'Export PDF Report'}
+            <span className="material-symbols-outlined">{exportDone ? 'check' : 'download'}</span>
+            {exportDone ? 'Downloaded!' : 'Export CSV'}
           </button>
         )}
       </div>

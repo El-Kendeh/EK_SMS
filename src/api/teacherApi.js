@@ -124,10 +124,9 @@ export const teacherApi = {
   },
 
   async withdrawModificationRequest(requestId) {
-    const res = await fetch(`${API_BASE}/api/teacher/modification-requests/`, {
+    const res = await fetch(`${API_BASE}/api/teacher/modification-requests/${requestId}/withdraw/`, {
       method: 'POST',
       headers: authHeaders(),
-      body: JSON.stringify({ action: 'withdraw', request_id: requestId }),
     });
     return res.json();
   },
@@ -146,6 +145,14 @@ export const teacherApi = {
     const res = await fetch(`${API_BASE}/api/teacher/timetable/`, { headers: authHeaders() });
     const data = await res.json().catch(() => null);
     return data?.timetable || { periods: [] };
+  },
+
+  async getClassAttendance(classId, date) {
+    // Recorded register for pre-fill (audit #50). Returns { records: [{student_id, status, date}] }.
+    const qs = new URLSearchParams({ class_id: classId, ...(date ? { date } : {}) }).toString();
+    const res = await fetch(`${API_BASE}/api/teacher/attendance/?${qs}`, { headers: authHeaders() });
+    if (!res.ok) return { records: [] };
+    return res.json();
   },
 
   async getNotifications() {

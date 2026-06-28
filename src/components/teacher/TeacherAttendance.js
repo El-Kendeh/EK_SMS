@@ -48,7 +48,9 @@ export default function TeacherAttendance() {
 
     Promise.all([
       teacherApi.getClassStudents(selectedClassId),
-      teacherApi.getTeacherTimetable().catch(() => ({ records: [] })),
+      // Pull the recorded register for today so a previously-marked class pre-fills
+      // (audit #50 — this used to read the timetable, which has no attendance records).
+      teacherApi.getClassAttendance(selectedClassId, todayISO).catch(() => ({ records: [] })),
     ])
       .then(([studData, attData]) => {
         const list = studData.students || (Array.isArray(studData) ? studData : []);
