@@ -240,6 +240,11 @@ router.put('/classes/:id/', sla, data.updateSuperClass);
 router.delete('/classes/:id/', sla, data.deleteSuperClass);
 router.patch('/classes/:id/toggle/', sla, data.toggleSuperClassStatus);
 
+/* Class Subtypes — READ-only for school_admin so the SAClasses "Class Subtype"
+   dropdown populates (it was 403-ing on the superadmin-only sa route → empty).
+   Management (create/update/delete/toggle) stays superadmin-only on `sa` below. */
+router.get('/class-subtypes/', sla, data.getClassSubtypes);
+
 /* Subjects CRUD */
 router.get('/subjects/', sla, data.getSuperSubjects);
 router.post('/subjects/', sla, data.createSuperSubject);

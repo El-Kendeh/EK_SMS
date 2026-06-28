@@ -70,9 +70,6 @@ export default function FinanceUsersPage({ school }) {
     }
   };
 
-  const handleEdit = (u) =>
-    setBanner({ type: 'ok', text: `Edit Role: open ${u.full_name}'s role editor (coming soon).` });
-
   const visibleUsers = rawUsers.filter(u => {
     if (roleFilter !== 'all'   && u.role !== roleFilter) return false;
     if (statusFilter === 'active'    && !u.is_active) return false;
@@ -150,7 +147,6 @@ export default function FinanceUsersPage({ school }) {
             <FinanceUserCard key={u.id}
               u={u}
               onView={setDetailsUser}
-              onEdit={handleEdit}
               onToggle={handleToggle} />
           ))}
         </div>
@@ -160,7 +156,6 @@ export default function FinanceUsersPage({ school }) {
         <FinanceUserDetails
           u={detailsUser}
           onClose={() => setDetailsUser(null)}
-          onEdit={(u) => { setDetailsUser(null); handleEdit(u); }}
           onToggle={handleToggle} />
       )}
     </div>

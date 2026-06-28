@@ -635,23 +635,14 @@ async function getActivityFeed(req, res) {
     const school = await getSchoolFromUser(req);
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
-    const logs = await SecurityAuditLog.findAll({
-      where: { school_id: school.id },
-      order: [['created_at', 'DESC']],
-      limit: 20,
-    });
-
+    // SecurityAuditLog is platform-wide (no school_id column — not tenant-scoped);
+    // it both 500'd here and would leak other schools' audit events into a tenant
+    // feed. Use only the tenant-scoped Notification table.
     const notifications = await Notification.findAll({
       where: { school_id: school.id },
       order: [['created_at', 'DESC']],
-      limit: 10,
+      limit: 15,
     });
-
-    const events = logs.map(l => ({
-      kind: 'admin',
-      text: l.action || 'System event',
-      at: l.created_at,
-    }));
 
     const notifEvents = notifications.map(n => ({
       kind: n.type === 'alert' ? 'request' : 'announce',
@@ -660,7 +651,7 @@ async function getActivityFeed(req, res) {
     }));
 
     return res.json(successResponse({
-      items: [...events, ...notifEvents].slice(0, 15),
+      items: notifEvents.slice(0, 15),
     }));
   } catch (err) {
     console.error('getActivityFeed Error:', err);

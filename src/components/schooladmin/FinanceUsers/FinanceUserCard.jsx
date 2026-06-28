@@ -39,7 +39,7 @@ export function FuRiskPill({ risk }) {
  *   Today's Activity  →  Total Activity  →  Last Active  →
  *   Actions
  */
-export default function FinanceUserCard({ u, onView, onEdit, onToggle }) {
+export default function FinanceUserCard({ u, onView, onToggle }) {
   const r           = FU_ROLES[u.role] || FU_ROLES.Cashier;
   const allowed     = u.perms || [];
   const allowedList = FU_PERMISSIONS.filter(p => allowed.includes(p.key));
@@ -126,9 +126,6 @@ export default function FinanceUserCard({ u, onView, onEdit, onToggle }) {
       <div className="fu-card__actions">
         <button className="ska-btn ska-btn--sm ska-btn--ghost" onClick={() => onView(u)}>
           <Ic name="visibility" size="sm" /> View
-        </button>
-        <button className="ska-btn ska-btn--sm ska-btn--ghost" onClick={() => onEdit(u)}>
-          <Ic name="manage_accounts" size="sm" /> Edit Role
         </button>
         <button
           className={`ska-btn ska-btn--sm ${u.is_active ? 'ska-btn--danger' : 'ska-btn--approve'}`}

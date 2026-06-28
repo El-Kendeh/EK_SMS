@@ -11,7 +11,7 @@ const Ic = ({ name, size, style }) => (
  * Full-detail modal for a finance user. Reuses the role badge + risk pill
  * from the card so visual identity stays consistent.
  */
-export default function FinanceUserDetails({ u, onClose, onEdit, onToggle }) {
+export default function FinanceUserDetails({ u, onClose, onToggle }) {
   const r = FU_ROLES[u.role] || FU_ROLES.Cashier;
   const initials = (u.full_name || u.email || '?').trim().charAt(0).toUpperCase();
 
@@ -135,9 +135,6 @@ export default function FinanceUserDetails({ u, onClose, onEdit, onToggle }) {
           <div className="ska-modal-actions">
             <button className="ska-btn ska-btn--ghost" onClick={onClose}>Close</button>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button className="ska-btn ska-btn--ghost" onClick={() => onEdit(u)}>
-                <Ic name="edit" size="sm" /> Edit Role
-              </button>
               <button
                 className={`ska-btn ${u.is_active ? 'ska-btn--danger' : 'ska-btn--approve'}`}
                 onClick={() => onToggle(u)}>

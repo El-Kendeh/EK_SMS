@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { ROLE_LABELS } from '../../config/permissions';
 import ApiClient from '../../api/client';
 
 /* ================================================================
@@ -97,6 +98,7 @@ function fmtRelative(ts) {
    Main Component
    ================================================================ */
 export default function SAProfile({ user, onBack, onAvatarChange }) {
+  const roleLabel = ROLE_LABELS[user?.role] || 'Super Admin';
   const fileInputRef = useRef(null);
 
   /* Profile (incl. the base64 avatar) is persisted in localStorage PER USER so it
@@ -296,8 +298,8 @@ export default function SAProfile({ user, onBack, onAvatarChange }) {
 
           {/* Name + role */}
           <div className="sp-avatar-info">
-            <p className="sp-avatar-name">{fullName || email || 'Super Admin'}</p>
-            <span className="sp-role-badge">Super Admin</span>
+            <p className="sp-avatar-name">{fullName || email || roleLabel}</p>
+            <span className="sp-role-badge">{roleLabel}</span>
             <p className="sp-avatar-joined">Member since {joinDate}</p>
           </div>
 
@@ -415,7 +417,7 @@ export default function SAProfile({ user, onBack, onAvatarChange }) {
           <div className="sp-account-grid">
             {[
               { label: 'Username',     value: user?.username || 'ek_sms0000' },
-              { label: 'Role',         value: 'Super Administrator' },
+              { label: 'Role',         value: roleLabel },
               { label: 'Account ID',   value: `UID-${String(user?.id || '0001').padStart(4,'0')}` },
               { label: 'Member Since', value: joinDate },
               { label: 'Last Login',   value: lastLogin },

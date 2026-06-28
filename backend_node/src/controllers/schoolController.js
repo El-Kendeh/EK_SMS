@@ -1655,7 +1655,7 @@ async function getExams(req, res) {
       return {
         id: e.id, name: e.name, date: e.date, term_id: e.term_id,
         subject_id: e.subject_id, classroom_id: e.classroom_id,
-        total_marks: e.total_marks, is_active: e.is_active,
+        total_marks: e.total_marks, exam_type: e.exam_type, is_active: e.is_active,
         subject: subjMap[String(e.subject_id)] || '—',
         classroom: classMap[String(e.classroom_id)] || '—',
         result_count,
@@ -1673,9 +1673,10 @@ async function createExam(req, res) {
     const school = await getSchoolFromUser(req);
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
-    const { term_id, name, date, subject_id, classroom_id, total_marks } = req.body;
+    const { term_id, name, date, subject_id, classroom_id, total_marks, exam_type } = req.body;
     const exam = await Exam.create({
       school_id: school.id, term_id, name, date, subject_id, classroom_id, total_marks,
+      exam_type: exam_type || 'final',
     });
 
     return res.json(successResponse({ exam }, 'Exam created'));

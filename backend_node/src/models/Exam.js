@@ -10,6 +10,7 @@ const Exam = sequelize.define('Exam', {
   subject_id: { type: DataTypes.BIGINT },
   classroom_id: { type: DataTypes.BIGINT },
   total_marks: { type: DataTypes.FLOAT, defaultValue: 100 },
+  exam_type: { type: DataTypes.STRING(30), defaultValue: 'final' }, // C.A./Mid-Term/Final/Mock/Quiz
   is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
   created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
 }, {
