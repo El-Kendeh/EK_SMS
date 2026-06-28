@@ -9,7 +9,11 @@ export default function ExamDuties() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    teacherApi.getExamDuties?.().then(setDuties).catch(() => setError('Could not load duties.'));
+    // The API returns { duties: [...] } — unwrap it; mapping the wrapper object as an
+    // array threw 'duties.map is not a function' and blanked the page (audit follow-up).
+    teacherApi.getExamDuties?.()
+      .then(data => setDuties(Array.isArray(data) ? data : (data?.duties || [])))
+      .catch(() => setError('Could not load duties.'));
   }, []);
 
   if (!duties && !error) return <div className="exd"><Skeleton height={240} radius={14} /></div>;
@@ -27,12 +31,12 @@ export default function ExamDuties() {
           <motion.li key={d.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
             <div className="exd__icon"><span className="material-symbols-outlined">{d.role === 'invigilator' ? 'how_to_reg' : 'visibility'}</span></div>
             <div className="exd__body">
-              <strong>{d.exam}</strong>
-              <span>{new Date(d.date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })} · {d.start}–{d.end} · {d.room}</span>
+              <strong>{d.exam_name}</strong>
+              <span>{d.date ? new Date(d.date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) : 'Date TBC'} · {d.start_time || '—'}–{d.end_time || '—'} · {d.venue || 'Venue TBC'}</span>
               <small>Role: {d.role}</small>
             </div>
-            <span className={`exd__pill ${d.confirmed ? 'is-ok' : 'is-pending'}`}>
-              {d.confirmed ? 'Confirmed' : 'Pending'}
+            <span className={`exd__pill ${d.status === 'completed' ? 'is-ok' : 'is-pending'}`}>
+              {d.status === 'completed' ? 'Completed' : 'Upcoming'}
             </span>
           </motion.li>
         ))}

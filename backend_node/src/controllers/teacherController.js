@@ -786,6 +786,15 @@ async function getClassAttendance(req, res) {
     const { class_id, date } = req.query;
     if (!class_id) return res.status(400).json(errorResponse('class_id is required'));
 
+    // Ownership: only the class teacher may read a class register — matches
+    // recordClassAttendance / getTeacherAttendanceStatus. Without this any teacher could
+    // read another teacher's register by guessing a class_id (intra-school IDOR).
+    const ownsClass = await Class.findOne({
+      where: { id: class_id, class_teacher_id: teacher.id },
+      attributes: ['id'],
+    });
+    if (!ownsClass) return res.status(403).json(errorResponse('You are not assigned to this class'));
+
     const Attendance = require('../models/Attendance');
     const day = date || new Date().toISOString().split('T')[0];
     const rows = await Attendance.findAll({

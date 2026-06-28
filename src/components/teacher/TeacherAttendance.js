@@ -102,23 +102,17 @@ export default function TeacherAttendance() {
         student_id: s.id,
         status: attendance[s.id] || 'absent',
       }));
-      const res = await fetch('/api/teacher/attendance/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({
-          classroom_id: selectedClassId,
-          date: todayISO,
-          records,
-          notes: sessionNote,
-        }),
+      // Go through teacherApi (API_BASE) — a raw relative fetch hit the SPA origin and
+      // never reached the backend, so the register never saved (audit follow-up).
+      const { ok, data } = await teacherApi.recordAttendance({
+        classroom_id: selectedClassId,
+        date: todayISO,
+        records,
+        notes: sessionNote,
       });
-      const data = await res.json().catch(() => ({}));
       // Only confirm when the server actually persisted the register. Previously the
       // catch faked success even when nothing saved (audit #42).
-      if (res.ok && data.success) {
+      if (ok && data.success) {
         setSubmitted(true);
       } else {
         setSubmitError(data.message || 'Could not save attendance. Please try again.');

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { teacherApi } from '../../api/teacherApi';
 import { useTeacherProfile } from '../../hooks/useTeacherProfile';
 import { formatRelativeTime } from '../../utils/teacherUtils';
 import './TeacherSettings.css';
@@ -75,19 +76,10 @@ export default function TeacherSettings({ onLogout }) {
       return;
     }
     try {
-      const res = await fetch('/api/teacher/change-password/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({
-          current_password: passwordFields.current,
-          new_password: passwordFields.next,
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
+      // Through teacherApi (API_BASE) — a raw relative fetch hit the SPA origin and never
+      // reached the backend, so the change always errored (audit follow-up).
+      const { ok, data } = await teacherApi.changeTeacherPassword(passwordFields.current, passwordFields.next);
+      if (ok && data.success) {
         setPasswordMsg({ type: 'success', text: 'Password changed successfully.' });
         setPasswordFields({ current: '', next: '', confirm: '' });
         setTimeout(() => { setShowPasswordForm(false); setPasswordMsg(null); }, 2000);

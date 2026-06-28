@@ -155,6 +155,23 @@ export const teacherApi = {
     return res.json();
   },
 
+  async recordAttendance(payload) {
+    // Submit the register. Goes through API_BASE — a raw relative fetch hit the SPA
+    // origin (no proxy/rewrite) and never reached the backend, so nothing ever saved.
+    const res = await fetch(`${API_BASE}/api/teacher/attendance/`, {
+      method: 'POST', headers: authHeaders(), body: JSON.stringify(payload),
+    });
+    return { ok: res.ok, data: await res.json().catch(() => ({})) };
+  },
+
+  async changeTeacherPassword(currentPassword, newPassword) {
+    const res = await fetch(`${API_BASE}/api/teacher/change-password/`, {
+      method: 'POST', headers: authHeaders(),
+      body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+    });
+    return { ok: res.ok, data: await res.json().catch(() => ({})) };
+  },
+
   async getNotifications() {
     // Call the real teacher endpoint (was a hardcoded empty stub — audit #55) and map
     // the backend's snake_case fields to the camelCase the UI reads (audit #68).
@@ -205,7 +222,7 @@ export const teacherApi = {
 
   async getStudentActivity() {
     try {
-      const res = await fetch('/api/teacher/student-activity/', { headers: authHeaders() });
+      const res = await fetch(`${API_BASE}/api/teacher/student-activity/`, { headers: authHeaders() });
       if (!res.ok) return { activities: [] };
       return res.json();
     } catch { return { activities: [] }; }
@@ -214,14 +231,14 @@ export const teacherApi = {
   async getAssignments(classId) {
     try {
       const params = classId ? `?class_id=${classId}` : '';
-      const res = await fetch(`/api/teacher/assignments/${params}`, { headers: authHeaders() });
+      const res = await fetch(`${API_BASE}/api/teacher/assignments/${params}`, { headers: authHeaders() });
       if (!res.ok) return { assignments: [] };
       return res.json();
     } catch { return { assignments: [] }; }
   },
 
   async createAssignment(payload) {
-    const res = await fetch('/api/teacher/assignments/', {
+    const res = await fetch(`${API_BASE}/api/teacher/assignments/`, {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify(payload),
@@ -230,7 +247,7 @@ export const teacherApi = {
   },
 
   async deleteAssignment(id) {
-    const res = await fetch(`/api/teacher/assignments/${id}/`, {
+    const res = await fetch(`${API_BASE}/api/teacher/assignments/${id}/`, {
       method: 'DELETE',
       headers: authHeaders(),
     });
@@ -241,19 +258,19 @@ export const teacherApi = {
   async getTeacherExams(classId) {
     try {
       const params = classId ? `?class_id=${classId}` : '';
-      const res = await fetch(`/api/teacher/exam-list/${params}`, { headers: authHeaders() });
+      const res = await fetch(`${API_BASE}/api/teacher/exam-list/${params}`, { headers: authHeaders() });
       if (!res.ok) return { exams: [] };
       return res.json();
     } catch { return { exams: [] }; }
   },
 
   async getExamResults(examId) {
-    const res = await fetch(`/api/teacher/exams/${examId}/results/`, { headers: authHeaders() });
+    const res = await fetch(`${API_BASE}/api/teacher/exams/${examId}/results/`, { headers: authHeaders() });
     return res.json();
   },
 
   async saveExamResults(examId, results) {
-    const res = await fetch(`/api/teacher/exams/${examId}/results/`, {
+    const res = await fetch(`${API_BASE}/api/teacher/exams/${examId}/results/`, {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({ results }),
@@ -264,14 +281,14 @@ export const teacherApi = {
   // Announcements (replaces stub messages)
   async getAnnouncements() {
     try {
-      const res = await fetch('/api/teacher/announcements/', { headers: authHeaders() });
+      const res = await fetch(`${API_BASE}/api/teacher/announcements/`, { headers: authHeaders() });
       if (!res.ok) return { announcements: [] };
       return res.json();
     } catch { return { announcements: [] }; }
   },
 
   async sendAnnouncement(payload) {
-    const res = await fetch('/api/teacher/announcements/', {
+    const res = await fetch(`${API_BASE}/api/teacher/announcements/`, {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify(payload),
@@ -282,7 +299,7 @@ export const teacherApi = {
   // Attendance status (per-class today summary)
   async getAttendanceStatus() {
     try {
-      const res = await fetch('/api/teacher/attendance/status/', { headers: authHeaders() });
+      const res = await fetch(`${API_BASE}/api/teacher/attendance/status/`, { headers: authHeaders() });
       if (!res.ok) return { classes: [], at_risk: [] };
       return res.json();
     } catch { return { classes: [], at_risk: [] }; }
@@ -291,7 +308,7 @@ export const teacherApi = {
   // Student academic history
   async getStudentGradeHistory(studentId) {
     try {
-      const res = await fetch(`/api/teacher/students/${studentId}/grades/`, { headers: authHeaders() });
+      const res = await fetch(`${API_BASE}/api/teacher/students/${studentId}/grades/`, { headers: authHeaders() });
       if (!res.ok) return { history: [] };
       return res.json();
     } catch { return { history: [] }; }
@@ -300,7 +317,7 @@ export const teacherApi = {
   // Student report cards
   async getStudentReportCards(studentId) {
     try {
-      const res = await fetch(`/api/teacher/students/${studentId}/report-cards/`, { headers: authHeaders() });
+      const res = await fetch(`${API_BASE}/api/teacher/students/${studentId}/report-cards/`, { headers: authHeaders() });
       if (!res.ok) return { report_cards: [] };
       return res.json();
     } catch { return { report_cards: [] }; }
@@ -309,14 +326,14 @@ export const teacherApi = {
   async getMessages(classId) {
     try {
       const params = classId ? `?class_id=${classId}` : '';
-      const res = await fetch(`/api/teacher/messages/${params}`, { headers: authHeaders() });
+      const res = await fetch(`${API_BASE}/api/teacher/messages/${params}`, { headers: authHeaders() });
       if (!res.ok) return { threads: [] };
       return res.json();
     } catch { return { threads: [] }; }
   },
 
   async sendMessage(payload) {
-    const res = await fetch('/api/teacher/messages/', {
+    const res = await fetch(`${API_BASE}/api/teacher/messages/`, {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify(payload),
@@ -326,7 +343,7 @@ export const teacherApi = {
 
   async generateTimetable(constraints) {
     try {
-      const res = await fetch('/api/teacher/timetable/generate/', {
+      const res = await fetch(`${API_BASE}/api/teacher/timetable/generate/`, {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify(constraints),
@@ -339,7 +356,7 @@ export const teacherApi = {
     // The teacher route exists at /api/teacher/academic-calendar/ — the old
     // /api/school/ path had no route and 404'd, leaving the strip always empty (audit #12).
     try {
-      const res = await fetch('/api/teacher/academic-calendar/', { headers: authHeaders() });
+      const res = await fetch(`${API_BASE}/api/teacher/academic-calendar/`, { headers: authHeaders() });
       if (!res.ok) return { events: [] };
       return res.json();
     } catch { return { events: [] }; }
@@ -347,7 +364,7 @@ export const teacherApi = {
 
   async getAtRiskStudents() {
     try {
-      const res = await fetch('/api/teacher/at-risk-students/', { headers: authHeaders() });
+      const res = await fetch(`${API_BASE}/api/teacher/at-risk-students/`, { headers: authHeaders() });
       if (!res.ok) return { students: [] };
       return res.json();
     } catch { return { students: [] }; }
@@ -355,7 +372,7 @@ export const teacherApi = {
 
   async getModificationSummary() {
     try {
-      const res = await fetch('/api/teacher/modification-requests/summary/', { headers: authHeaders() });
+      const res = await fetch(`${API_BASE}/api/teacher/modification-requests/summary/`, { headers: authHeaders() });
       if (!res.ok) return { pending: 0, approved: 0, rejected: 0 };
       return res.json();
     } catch { return { pending: 0, approved: 0, rejected: 0 }; }
@@ -363,7 +380,7 @@ export const teacherApi = {
 
   async getExamDuties() {
     try {
-      const res = await fetch('/api/teacher/exam-duties/', { headers: authHeaders() });
+      const res = await fetch(`${API_BASE}/api/teacher/exam-duties/`, { headers: authHeaders() });
       if (!res.ok) return { duties: [] };
       return res.json();
     } catch { return { duties: [] }; }
@@ -375,7 +392,7 @@ export const teacherApi = {
       if (classId) params.append('class_id', classId);
       if (type) params.append('type', type);
       const qs = params.toString();
-      const res = await fetch(`/api/teacher/resources/${qs ? '?' + qs : ''}`, { headers: authHeaders() });
+      const res = await fetch(`${API_BASE}/api/teacher/resources/${qs ? '?' + qs : ''}`, { headers: authHeaders() });
       if (!res.ok) return { resources: [] };
       return res.json();
     } catch { return { resources: [] }; }
@@ -383,7 +400,7 @@ export const teacherApi = {
 
   async uploadResource(formData) {
     const token = localStorage.getItem('token');
-    const res = await fetch('/api/teacher/resources/', {
+    const res = await fetch(`${API_BASE}/api/teacher/resources/`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
       body: formData,
@@ -392,7 +409,7 @@ export const teacherApi = {
   },
 
   async deleteResource(id) {
-    const res = await fetch(`/api/teacher/resources/${id}/`, {
+    const res = await fetch(`${API_BASE}/api/teacher/resources/${id}/`, {
       method: 'DELETE',
       headers: authHeaders(),
     });
@@ -402,7 +419,7 @@ export const teacherApi = {
   async getFeedbackStudents(classId) {
     try {
       const params = classId ? `?class_id=${classId}` : '';
-      const res = await fetch(`/api/teacher/feedback/students/${params}`, { headers: authHeaders() });
+      const res = await fetch(`${API_BASE}/api/teacher/feedback/students/${params}`, { headers: authHeaders() });
       if (!res.ok) return { students: [] };
       return res.json();
     } catch { return { students: [] }; }
@@ -410,14 +427,14 @@ export const teacherApi = {
 
   async getFeedbackMessages(studentId) {
     try {
-      const res = await fetch(`/api/teacher/feedback/${studentId}/`, { headers: authHeaders() });
+      const res = await fetch(`${API_BASE}/api/teacher/feedback/${studentId}/`, { headers: authHeaders() });
       if (!res.ok) return { messages: [] };
       return res.json();
     } catch { return { messages: [] }; }
   },
 
   async sendFeedback(studentId, message) {
-    const res = await fetch(`/api/teacher/feedback/${studentId}/`, {
+    const res = await fetch(`${API_BASE}/api/teacher/feedback/${studentId}/`, {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({ message }),
@@ -439,6 +456,9 @@ export const teacherApi = {
   async getTamperCount(classId) {
     const q = classId ? `?class_id=${classId}` : '';
     const res = await fetch(`${API_BASE}/api/teacher/tamper-count/${q}`, { headers: authHeaders() });
+    // Guard !res.ok so an error body ({success:false,...}) isn't stored as a false
+    // all-clear (the component reads total/blocked/successful directly).
+    if (!res.ok) return { total: 0, blocked: 0, successful: 0, protected: 0, error: true };
     return res.json();
   },
 
