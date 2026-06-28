@@ -430,7 +430,9 @@ function LinkModal({ parent, onLink, onClose }) {
   useEffect(() => {
     // School-scoped on the backend → a school_admin gets their students (→ picker);
     // an unscoped superadmin gets none, so the raw-ID input stays as a fallback.
-    req('GET', '/api/students/').then(d => setStudents(d.students || [])).catch(() => {});
+    // L5: request a high limit so the picker isn't capped at the default 100
+    // (older students were silently unselectable). Raw-ID input stays as a fallback.
+    req('GET', '/api/students/?limit=2000').then(d => setStudents(d.students || [])).catch(() => {});
   }, []);
 
   const submit = (e) => {

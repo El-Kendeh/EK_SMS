@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './SARefDataManager.css'; // .sard-* table/card/button design system reused by this page
 import './SAStudents.css';
+import ResendCredentialsButton from '../schooladmin/ResendCredentialsButton'; // L2: now that POST /api/school/users/resend-credentials/ exists
 
 /* ---- API base ---- */
 const NODE_URL = (
@@ -939,6 +940,10 @@ export default function SAStudents() {
                         title="Edit student"
                         onClick={() => openEdit(s)}
                       ><IcEdit /></button>
+                      {s.user_id && (
+                        <ResendCredentialsButton userId={s.user_id} label="" size="sm"
+                          confirmLabel="Reset this student's password and email them new credentials?" />
+                      )}
                       <button
                         className={`sard-icon-btn${s.is_active ? ' sard-icon-btn--toggle-on' : ''}`}
                         title={s.is_active ? 'Deactivate' : 'Activate'}

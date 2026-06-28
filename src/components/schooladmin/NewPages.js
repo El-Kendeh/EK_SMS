@@ -490,7 +490,9 @@ export function ExamsPage({ school }) {
                           </td>
                           <td>
                             {marks[r.student_id] ? (
-                              <span style={{ display: 'inline-block', padding: '2px 12px', borderRadius: 20, fontWeight: 800, fontSize: '0.875rem', background: `${letterColor(letter)}22`, color: letterColor(letter) }}>{letter}</span>
+                              // L14: approximate preview (default 80/65/50/40 bands, not the school's
+                              // grading scheme). Marks are stored as numbers; the official letter is derived elsewhere.
+                              <span title="Approximate — default 80/65/50/40 bands, not the school's grading scheme" style={{ display: 'inline-block', padding: '2px 12px', borderRadius: 20, fontWeight: 800, fontSize: '0.875rem', background: `${letterColor(letter)}22`, color: letterColor(letter) }}>{letter}<span style={{ opacity: 0.6, fontSize: '0.7em' }}>≈</span></span>
                             ) : <span style={{ color: 'var(--ska-text-3)' }}>—</span>}
                           </td>
                         </tr>
@@ -713,6 +715,9 @@ export function TimetablePage({ school }) {
       .filter(n => !isNaN(n) && n >= 1 && n <= ppd);
 
   const handleGenerate = async () => {
+    // L13: Generate always rebuilds EVERY class's timetable (not just the selected
+    // View Class), so make that explicit before replacing existing schedules.
+    if (!window.confirm('Generate the timetable for ALL classes? This replaces every class’s current timetable.')) return;
     setGenerating(true); setBanner(null); setGenStats(null);
     try {
       const res = await ApiClient.post('/api/school/timetable/generate/', {
@@ -953,12 +958,10 @@ export { default as ParentsPage } from './Parents/ParentsPage';
 export { default as FinanceUsersPage } from './FinanceUsers/FinanceUsersPage';
 
 
-/* ============================================================
-   PRINCIPAL PAGE — refactored into ./Principal/ as a School
-   Command Dashboard. Re-exported as PrincipalUsersPage so
-   dashboard.js's existing import keeps working.
-   ============================================================ */
-export { default as PrincipalUsersPage } from './Principal/PrincipalPage';
+/* PRINCIPAL PAGE (./Principal/PrincipalPage) is dead code — never imported or
+   rendered (the live 'principal' page is SAPrincipal -> SAStaffManager). The
+   re-export was removed so the ~10-file Principal/ tree is tree-shaken out of the
+   bundle. Principal.css there is still imported by live pages, so the folder stays. */
 
 
 /* ============================================================

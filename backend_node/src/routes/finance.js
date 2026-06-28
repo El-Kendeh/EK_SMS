@@ -12,7 +12,7 @@ const {
   getTeacherInsights, getActivityFeed, getSyllabusProgress,
   getFinanceUsers, createFinanceUser, updateFinanceUser,
   getFinanceStats, getFinanceAnalytics, getFinanceFees, recordExpense, getExpenses, reviewExpense,
-  getFeeCategories, createFeeCategory, assignFees,
+  getFeeCategories, createFeeCategory, updateFeeCategory, assignFees,
   recordPayment, getPayments, getStudentFees,
 } = require('../controllers/financeController');
 
@@ -63,6 +63,7 @@ router.get('/analytics/', getFinanceAnalytics);
 router.get('/fees/', getFinanceFees);
 router.get('/fee-categories/', getFeeCategories);
 router.post('/fee-categories/', requireRole(FINANCE_WRITE), createFeeCategory);
+router.put('/fee-categories/:id/', requireRole(FINANCE_WRITE), updateFeeCategory);
 router.post('/fees/assign/', requireRole(FINANCE_WRITE), assignFees);
 router.post('/payments/', requireRole(FINANCE_WRITE), recordPayment);
 router.get('/payments/', getPayments);

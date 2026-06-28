@@ -278,6 +278,31 @@ async function createFeeCategory(req, res) {
   }
 }
 
+// L17: edit a fee category, or deactivate it (safer than a hard delete that could
+// orphan assigned Fee rows). Tenant-scoped to the caller's school.
+async function updateFeeCategory(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return res.status(401).json(errorResponse('Not authenticated'));
+
+    const cat = await FeeCategory.findOne({ where: { id: req.params.id, school_id: school.id } });
+    if (!cat) return res.status(404).json(errorResponse('Fee category not found'));
+
+    const { name, description, amount, frequency, is_active } = req.body;
+    if (name !== undefined) cat.name = name;
+    if (description !== undefined) cat.description = description;
+    if (amount !== undefined && amount !== null) cat.amount = amount;
+    if (frequency !== undefined) cat.frequency = frequency;
+    if (is_active !== undefined) cat.is_active = is_active;
+    await cat.save();
+
+    return res.json(successResponse({ category: cat }, 'Fee category updated'));
+  } catch (err) {
+    console.error('updateFeeCategory Error:', err);
+    return res.status(500).json(errorResponse('Failed to update fee category'));
+  }
+}
+
 async function getFeeCategories(req, res) {
   try {
     const school = await getSchoolFromUser(req);
@@ -719,6 +744,13 @@ async function createFinanceUser(req, res) {
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
     const { full_name, email, phone, username, password, role, access_level } = req.body;
+    // Cross-store guard (M9): the same person managed as a Bursar already has a User
+    // with this email. Block the duplicate with a clear message (instead of a raw
+    // unique-constraint error) and point the admin to the other manager.
+    if (email) {
+      const dup = await User.findOne({ where: { email } });
+      if (dup) return res.status(409).json(errorResponse('A user with this email already exists. If they are already a Bursar, manage them on the Bursars page instead of creating a duplicate finance login.'));
+    }
     const bcrypt = require('bcryptjs');
     const hashedPassword = await bcrypt.hash(password || 'Finance@123', 10);
     const { requireRoleId } = require('../utils/roleIds');
@@ -1193,7 +1225,7 @@ async function getSyllabusProgress(req, res) {
 
 module.exports = {
   getFinanceStats, getFinanceAnalytics, getFinanceFees, recordExpense, getExpenses, reviewExpense,
-  getFeeCategories, createFeeCategory, assignFees,
+  getFeeCategories, createFeeCategory, updateFeeCategory, assignFees,
   recordPayment, getPayments, getStudentFees,
   getFinanceUsers, createFinanceUser, updateFinanceUser,
   getOverview, listGradeApprovals, reviewGradeChange,

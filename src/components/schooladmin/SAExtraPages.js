@@ -1088,9 +1088,8 @@ export function RoomsPage() {
                 {Object.entries(ROOM_TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
             </label>
-            <label className="ska-form-group"><span>Notes</span>
-              <textarea className="ska-input" rows={2} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Optional notes about this room" style={{ resize: 'vertical' }} />
-            </label>
+            {/* Notes field removed (L12): there is no notes column on pruh_core_room,
+                so createRoom/updateRoom silently dropped it — collecting discarded data. */}
             <button type="submit" className="ska-btn ska-btn--primary" disabled={saving || !form.name.trim()}>
               {saving ? 'Saving…' : editRoom ? 'Update Room' : 'Create Room'}
             </button>

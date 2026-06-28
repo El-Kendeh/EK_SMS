@@ -51,9 +51,9 @@ const KINDS = {
     defaultPw: 'Principal@123',
   },
   bursar: {
-    title: 'Bursars · Finance Users',
+    title: 'Bursars (HR records)',
     singular: 'Bursar',
-    sub: 'Register bursars (finance users) with full employment records and login credentials.',
+    sub: 'Full employment / HR records for finance staff. For login & access management, use the Finance Users page.',
     endpoint: '/api/bursars/',
     listKey: 'bursars',
     defaultPw: 'Bursar@123',

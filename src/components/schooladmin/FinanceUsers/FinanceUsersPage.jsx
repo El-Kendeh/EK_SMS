@@ -89,7 +89,7 @@ export default function FinanceUsersPage({ school }) {
       <div className="fu-page__head">
         <div>
           <h1 className="ska-page-title">Finance Users</h1>
-          <p className="ska-page-sub">{school?.name} — Access control</p>
+          <p className="ska-page-sub">{school?.name} — finance login and access (use the Bursars page for full HR records)</p>
         </div>
         <button
           className={`ska-btn ${showForm ? 'ska-btn--ghost' : 'ska-btn--primary'}`}

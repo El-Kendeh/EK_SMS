@@ -254,6 +254,9 @@ function MeetingForm({ meta, isSuper, schools, editItem, onSave, onClose }) {
     e.preventDefault();
     setErr('');
     if (!String(form.title || '').trim()) { setErr('Title is required.'); return; }
+    // L16: a meeting with no link or no time is a dead card — require both.
+    if (!/^https?:\/\//i.test(String(form.meeting_url || '').trim())) { setErr('A valid join link (http/https) is required.'); return; }
+    if (!String(form.scheduled_at || '').trim()) { setErr('A date and time is required.'); return; }
     const payload = {
       title: form.title,
       description: form.description || '',

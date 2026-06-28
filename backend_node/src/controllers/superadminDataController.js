@@ -3321,6 +3321,11 @@ async function createSuperStudent(req, res) {
     if (!data.school_id) return res.status(400).json(errorResponse('school_id is required'));
     const school = await School.findByPk(data.school_id);
     if (!school) return res.status(400).json(errorResponse('School not found'));
+    // L3: reject a duplicate admission number within the same school (no DB unique index).
+    if (data.admission_number) {
+      const dupAdm = await Student.findOne({ where: { school_id: data.school_id, admission_number: data.admission_number }, attributes: ['id'] });
+      if (dupAdm) return res.status(409).json(errorResponse('A student with this admission number already exists in this school'));
+    }
 
     /* Create student user account */
     const username = data.username || `${data.first_name.toLowerCase()}.${data.last_name.toLowerCase()}_${Date.now()}`;
@@ -4084,6 +4089,12 @@ async function createSuperBursar(req, res) {
     const forcedSchool = scopedSchoolId(req);
     if (forcedSchool === -1) return res.status(403).json(errorResponse('No school is linked to your account', 403));
     if (forcedSchool !== null) data.school_id = forcedSchool;
+    // Cross-store guard (M9): block creating a bursar whose email already belongs to
+    // a Finance User (same person, other store) with a clear message.
+    if (data.email) {
+      const dupUser = await User.findOne({ where: { email: data.email } });
+      if (dupUser) return res.status(409).json(errorResponse('A user with this email already exists. If they are already a Finance User, manage them on the Finance Users page instead of creating a duplicate bursar.'));
+    }
     const username = data.username || `bursar.${data.first_name.toLowerCase()}.${data.last_name.toLowerCase()}_${Date.now()}`;
     const pw = data.password || genTempPassword();
     const hashedPassword = await bcrypt.hash(pw, 10);
@@ -4112,7 +4123,7 @@ async function createSuperBursar(req, res) {
       emergency_contact_phone: data.emergency_contact_phone,
       emergency_contact_relationship: data.emergency_contact_relationship,
       profile_picture: picPath, bio: data.bio,
-      must_change_password: data.must_change_password,
+      must_change_password: data.must_change_password ?? !data.password,
       status: 'active', is_active: true,
     });
     return res.json(successResponse({ id: bursar.id, user_id: user.id, username, password: pw }, 'Bursar created'));
@@ -4255,7 +4266,7 @@ async function createSuperPrincipal(req, res) {
       bank_name: data.bank_name, bank_account_number: data.bank_account_number, bank_account_name: data.bank_account_name,
       emergency_contact_name: data.emergency_contact_name, emergency_contact_phone: data.emergency_contact_phone,
       emergency_contact_relationship: data.emergency_contact_relationship,
-      profile_picture: picPath, bio: data.bio, must_change_password: data.must_change_password,
+      profile_picture: picPath, bio: data.bio, must_change_password: data.must_change_password ?? !data.password,
       status: 'active', is_active: true,
     });
     return res.json(successResponse({ id: principal.id, user_id: user.id, username, password: pw }, 'Principal created'));

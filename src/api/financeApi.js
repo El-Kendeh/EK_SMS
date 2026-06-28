@@ -71,6 +71,10 @@ export const financeApi = {
       applicable_classes: applicableClasses && applicableClasses.length ? applicableClasses : null,
     });
   },
+  // L17: edit a category, or deactivate it (is_active:false) — safer than delete.
+  async updateFeeCategory(id, payload) {
+    return apiClient.put(`/api/finance/fee-categories/${id}/`, payload);
+  },
 
   /* ── Payments ─────────────────────────────────────────────── */
   async getPayments(params = {}) {

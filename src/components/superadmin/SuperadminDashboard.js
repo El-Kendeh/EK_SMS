@@ -367,6 +367,8 @@ function getTitle(page, school) {
    Anything not in this Set falls through to StubPage. Keep in sync with the
    render blocks in <main>. */
 const HANDLED_PAGES = new Set([
+  /* orphan permission keys aliased to their real page in the render below (L1) */
+  'students', 'teachers', 'parents', 'examination',
   'overview', 'applications', 'review', 'app-history', 'rejected',
   'rejection-audit', 'grade-report', 'grade-requests', 'grade-audit', 'security-logs',
   'forensics', 'alert-broadcast', 'change-alerts', 'system-health', 'schools', 'analytics',
@@ -1530,15 +1532,15 @@ export default function Dashboard({ onNavigate }) {
 
           {activePage === 'bursar' && <SABursar />}
 
-          {activePage === 'account-teachers' && <SATeachers />}
+          {(activePage === 'account-teachers' || activePage === 'teachers') && <SATeachers />}
 
-          {activePage === 'account-students' && <SAStudents />}
+          {(activePage === 'account-students' || activePage === 'students') && <SAStudents />}
 
-          {activePage === 'account-parents' && <SAParents />}
+          {(activePage === 'account-parents' || activePage === 'parents') && <SAParents />}
 
           {/* ── School-admin suite (previously-blank admin nav items) ──
              School staff are token-scoped; superadmins pick a school first. */}
-          {activePage === 'exam-schedule'       && scoped(<ExamsPage school={schools[0]} />,        'Pick a school to manage its exam schedule.')}
+          {(activePage === 'exam-schedule' || activePage === 'examination')       && scoped(<ExamsPage school={schools[0]} />,        'Pick a school to manage its exam schedule.')}
           {activePage === 'timetable-mgr'       && scoped(<TimetablePage school={schools[0]} />,    'Pick a school to manage its timetable.')}
           {activePage === 'rooms'               && scoped(<RoomsPage />,               'Pick a school to manage its rooms.')}
           {activePage === 'grading-scheme'      && scoped(<GradingSchemePage />,       'Pick a school to manage its grading scheme.')}

@@ -241,6 +241,20 @@ export default function FeeCategories() {
                     onClick={() => setAssignCategory(c)}>
                     <Ic name="post_add" size="sm" /> Assign to Students
                   </button>
+                  {/* L17: deactivate (retire) a category instead of a hard delete that could
+                      orphan assigned fees. Backend also supports full PUT edits. */}
+                  <button className="ska-btn ska-btn--ghost ska-btn--sm"
+                    title={c.is_active === false ? 'Reactivate this category' : 'Deactivate (hide from new fee assignments)'}
+                    onClick={async () => {
+                      try {
+                        await financeApi.updateFeeCategory(c.id, { is_active: c.is_active === false });
+                        setBanner(c.is_active === false ? 'Category activated.' : 'Category deactivated.');
+                        load();
+                      } catch (e) { setBanner(e?.message || 'Failed to update category.'); }
+                    }}>
+                    <Ic name={c.is_active === false ? 'check_circle' : 'block'} size="sm" />
+                    {c.is_active === false ? 'Activate' : 'Deactivate'}
+                  </button>
                 </div>
               </div>
             );
