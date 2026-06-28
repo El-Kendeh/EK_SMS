@@ -33,7 +33,7 @@ export default class ErrorBoundary extends Component {
             borderRadius: 14,
             background: 'rgba(255, 80, 80, 0.08)',
             border: '1px solid rgba(255, 80, 80, 0.3)',
-            color: 'var(--student-text, #fff)',
+            color: 'inherit',
             fontFamily: 'inherit',
           }}
         >

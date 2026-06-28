@@ -156,17 +156,6 @@ export default function TeacherProfile({ navigateTo }) {
             </div>
           </div>
 
-          {!profile.twoFactorEnabled && (
-            <div className="tp-2fa-prompt">
-              <span className="material-symbols-outlined">shield</span>
-              <div>
-                <p className="tp-2fa-prompt__title">Enable Two-Factor Authentication</p>
-                <p className="tp-2fa-prompt__text">
-                  Add an extra layer of security to protect your grades and account.
-                </p>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* ── Academic credentials (degrees, certifications, experience) ── */}

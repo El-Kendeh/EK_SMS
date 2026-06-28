@@ -42,7 +42,10 @@ export default function PrintClassRoster() {
             <h1>El-Kendeh Smart School</h1>
             <p>{selectedClass.name} · class roster · issued {issued}</p>
           </div>
-          <QRCode value={`${window.location.origin}/verify/roster-${encodeURIComponent(selectedClass.id)}`} size={70} />
+          {/* Plain roster-identification QR — a class roster isn't a signed record, so
+              this no longer points at /verify (which would falsely read "not in
+              registry"). Audit #90. */}
+          <QRCode value={`EK-SMS roster · ${selectedClass.name} · class ${selectedClass.id} · issued ${issued}`} size={70} />
         </header>
 
         <table>

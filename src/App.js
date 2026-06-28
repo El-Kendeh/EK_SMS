@@ -7,6 +7,7 @@ import Landing from './components/Landing';
 import Register from './components/Register';
 import SuperadminDashboard from './components/superadmin/SuperadminDashboard';
 import ForceChangePassword from './components/ForceChangePassword';
+import VerifyPage from './components/student/VerifyPage';
 import ApiClient from './api/client';
 
 const PAGE_TO_PATH = {
@@ -76,7 +77,21 @@ function ImpersonationBanner() {
 }
 
 
+/* Thin shell. The public /verify/<hash> page must render WITHOUT the dashboard's
+   hooks/effects running, so its early return lives here — in a component that has
+   no Hooks of its own (a conditional return before Hooks would violate the Rules
+   of Hooks). Everything stateful lives in <MainApp>, where Hook order stays
+   unconditional. */
 function App() {
+  // Public verification page — reachable at /verify/<hash> from a scanned receipt QR.
+  if (window.location.pathname.startsWith('/verify/')) {
+    const hash = decodeURIComponent(window.location.pathname.slice('/verify/'.length).replace(/\/+$/, ''));
+    return <VerifyPage hash={hash} />;
+  }
+  return <MainApp />;
+}
+
+function MainApp() {
   const [currentPage, setCurrentPage] = useState(() => PATH_TO_PAGE[window.location.pathname] || 'home');
   const [isLoading, setIsLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);

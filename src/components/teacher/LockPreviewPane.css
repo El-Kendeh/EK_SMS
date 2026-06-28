@@ -90,3 +90,56 @@
 .lpp-btn--primary:disabled { opacity: 0.55; cursor: not-allowed; }
 .lpp-btn--ghost { background: rgba(255, 255, 255, 0.06); color: inherit; }
 .lpp-btn .material-symbols-outlined { font-size: 16px; }
+
+/* ── Mobile responsiveness (additive) ─────────────────────────── */
+@media (max-width: 600px) {
+  /* Full-width pane that slides from the bottom edge of the screen */
+  .lpp {
+    width: 100%;
+    right: 0; left: 0;
+    top: auto;
+    bottom: 0;
+    max-height: 92vh;
+    border-left: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px 16px 0 0;
+  }
+  .lpp header { padding: 12px 14px; }
+  .lpp header button { width: 44px; height: 44px; }
+
+  .lpp__body { padding: 14px; gap: 14px; }
+
+  /* Stack the 3-up summary so each metric stays readable */
+  .lpp__summary { grid-template-columns: 1fr; gap: 8px; }
+  .lpp__num { flex-direction: row; align-items: center; justify-content: space-between; text-align: left; padding: 12px; }
+  .lpp__num strong { font-size: 16px; }
+  .lpp__num span { font-size: 11px; }
+
+  .lpp__ready li, .lpp__incomplete li { padding: 10px; font-size: 12px; }
+  .lpp__warn { font-size: 11px; padding: 10px; }
+
+  /* Stack the footer actions full-width with touch-friendly height */
+  .lpp footer { flex-direction: column-reverse; padding: 12px 14px; gap: 8px; }
+  .lpp-btn { width: 100%; min-height: 44px; padding: 12px 16px; }
+}
+
+@media (max-width: 400px) {
+  .lpp header { padding: 10px 12px; }
+  .lpp header h3 { font-size: 13px; }
+  .lpp__body { padding: 12px; gap: 12px; }
+  .lpp__num { padding: 10px; }
+  .lpp__num strong { font-size: 15px; }
+  .lpp h4 { font-size: 10px; }
+  .lpp__ready li, .lpp__incomplete li { font-size: 11.5px; padding: 9px; }
+  .lpp__warn { font-size: 10.5px; }
+}
+
+@media (max-width: 360px) {
+  .lpp { max-height: 94vh; }
+  .lpp header h3 { font-size: 12px; gap: 6px; }
+  .lpp__body { padding: 10px; gap: 10px; }
+  .lpp__num strong { font-size: 14px; }
+  .lpp__num span { font-size: 10px; }
+  .lpp__ready li, .lpp__incomplete li { font-size: 11px; padding: 8px; }
+  .lpp-btn { font-size: 12.5px; }
+}

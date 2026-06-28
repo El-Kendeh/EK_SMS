@@ -75,7 +75,7 @@ export default function TeacherSettings({ onLogout }) {
       return;
     }
     try {
-      const res = await fetch('/api/change-password/', {
+      const res = await fetch('/api/teacher/change-password/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

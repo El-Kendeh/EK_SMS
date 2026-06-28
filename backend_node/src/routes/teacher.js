@@ -71,6 +71,7 @@ const {
   getPeerReviews,
   submitPeerReview,
   getColleagues,
+  changeTeacherPassword,
   getSpotlightStudent,
   setSpotlightStudent,
   getCohortCompare,
@@ -245,6 +246,7 @@ router.get('/performance/', getTeacherPerformance);
 router.get('/peer-reviews/', getPeerReviews);
 router.post('/peer-reviews/', submitPeerReview);
 router.get('/colleagues/', getColleagues);
+router.post('/change-password/', changeTeacherPassword);
 router.get('/spotlight/', getSpotlightStudent);
 router.post('/spotlight/', setSpotlightStudent);
 router.get('/cohort-compare/', getCohortCompare);

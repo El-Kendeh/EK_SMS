@@ -20,6 +20,7 @@ const financeRouter = require('./routes/finance');
 const parentRouter = require('./routes/parent');
 const whistleblowerRouter = require('./routes/whistleblower');
 const liveClassesRouter = require('./routes/live-classes');
+const verifyRouter = require('./routes/verify');
 const { logFrontendEvent } = require('./controllers/loggingController');
 const { testEmail } = require('./controllers/testController');
 const { sendContact, contactLimiter } = require('./controllers/contactController');
@@ -144,6 +145,7 @@ app.use('/api/finance', financeRouter);
 app.use('/api/parent', parentRouter);
 app.use('/api/whistleblower', whistleblowerRouter);
 app.use('/api/live-classes', liveClassesRouter);
+app.use('/api/verify', verifyRouter); // public, no auth — before the /api catch-alls
 app.use('/api', schoolRouter);
 app.use('/api', superadminRouter);
 

@@ -68,3 +68,46 @@
   font-size: 13px;
 }
 .qrs__recent .material-symbols-outlined { color: #22c55e; font-size: 16px; }
+
+/* ── Mobile responsiveness (additive) ─────────────────────────────── */
+@media (max-width: 600px) {
+  .qrs-overlay { padding: 0; place-items: stretch; }
+  /* Full-screen sheet on phones */
+  .qrs {
+    width: 100%;
+    max-height: 100vh;
+    height: 100%;
+    border: none;
+    border-radius: 0;
+  }
+  .qrs header { padding: 14px 16px; }
+  .qrs header button { width: 44px; height: 44px; }
+
+  .qrs__body { padding: 16px; gap: 12px; }
+
+  /* Give the camera viewport a taller, portrait-friendly frame */
+  .qrs__viewport { aspect-ratio: 3 / 4; }
+
+  /* Full-width touch-friendly actions */
+  .qrs__btn { width: 100%; align-self: stretch; justify-content: center; min-height: 44px; padding: 12px 18px; }
+
+  /* Stack the manual-entry form */
+  .qrs__manual { flex-direction: column; }
+  .qrs__manual input { width: 100%; min-height: 44px; }
+}
+
+@media (max-width: 400px) {
+  .qrs header { padding: 12px 14px; }
+  .qrs header h3 { font-size: 13px; }
+  .qrs__body { padding: 14px; }
+  .qrs__btn { font-size: 14px; }
+  .qrs__manual input { font-size: 14px; }
+  .qrs__recent li { font-size: 12px; }
+}
+
+@media (max-width: 360px) {
+  .qrs header { padding: 10px 12px; }
+  .qrs__body { padding: 12px; gap: 10px; }
+  .qrs__btn { padding: 12px 14px; }
+  .qrs__viewport { aspect-ratio: 1 / 1; }
+}

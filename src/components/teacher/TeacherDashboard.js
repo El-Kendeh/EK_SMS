@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TeacherProvider, useTeacher } from '../../context/TeacherContext';
 import { TeacherNotificationProvider, useTeacherNotifyCtx } from '../../context/TeacherNotificationContext';
-import { useTheme } from '../../context/ThemeContext';
 import { I18nProvider } from '../../context/I18nContext';
 import { useTeacherClasses } from '../../hooks/useTeacherClasses';
 import { useTeacherProfile } from '../../hooks/useTeacherProfile';
@@ -145,7 +144,7 @@ const NAV_GROUPS = [
   {
     label: 'Community',
     items: [
-      { key: 'feedback',          icon: 'forum',            label: 'Old feedback' },
+      { key: 'feedback',          icon: 'forum',            label: 'Quick feedback' },
       { key: 'student-threads',   icon: 'chat',             label: 'Student threads' },
       { key: 'parent-messages',   icon: 'family_restroom',  label: 'Parent messages' },
       { key: 'office-hours',      icon: 'co_present',       label: 'Office hours' },
@@ -175,8 +174,8 @@ const MOBILE_NAV_KEYS = ['home', 'classes', 'grade-entry', 'workload', 'notifica
 function TeacherDashboardInner({ onNavigate }) {
   const [activeSection, setActiveSection] = useState(getInitialSection);
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 768);
+  const [vw, setVw] = useState(window.innerWidth); // reactive viewport width (audit #105)
   const [collapsedGroups, setCollapsedGroups] = useState({});
-  const { theme, toggleTheme } = useTheme();
   const { schoolName, badgeUrl } = useSchoolBranding();
   const { unreadCount } = useTeacherNotifyCtx();
   const { pendingCounts, selectedClass, currentTerm } = useTeacher();
@@ -187,11 +186,20 @@ function TeacherDashboardInner({ onNavigate }) {
 
   useEffect(() => {
     const handleResize = () => {
+      setVw(window.innerWidth);
       if (window.innerWidth < 768) setSidebarOpen(false);
       else setSidebarOpen(true);
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Keep the rendered section in sync with the browser Back/Forward buttons — navigateTo
+  // only pushed state, so Back changed the URL but not the screen (audit #98).
+  useEffect(() => {
+    const onPop = () => setActiveSection(getInitialSection());
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
   }, []);
 
   const navigateTo = (section) => {
@@ -216,7 +224,7 @@ function TeacherDashboardInner({ onNavigate }) {
     (profile?.fullName ? profile.fullName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : 'T');
 
   const gradeBadgeCount = pendingCounts.totalPending + pendingCounts.totalDraft;
-  const showOverlay = sidebarOpen && window.innerWidth < 768;
+  const showOverlay = sidebarOpen && vw < 768;
 
   const renderSection = () => {
     const props = { navigateTo };
@@ -368,11 +376,6 @@ function TeacherDashboardInner({ onNavigate }) {
 
           <div className="tch-header__right">
             <AutoSaveIndicator />
-            <button className="tch-header__theme-btn" onClick={toggleTheme} title="Toggle theme">
-              <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
-                {theme === 'dark' ? 'light_mode' : 'dark_mode'}
-              </span>
-            </button>
             <button className="tch-header__notif-btn" onClick={() => navigateTo('notifications')}>
               <span className="material-symbols-outlined">notifications</span>
               {unreadCount > 0 && <span className="tch-header__notif-dot" />}

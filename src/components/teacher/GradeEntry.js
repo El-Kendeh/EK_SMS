@@ -7,6 +7,7 @@ import GradeEntryRow from './GradeEntryRow';
 import SubmitConfirmModal from './SubmitConfirmModal';
 import GradeAuditPanel from './GradeAuditPanel';
 import ModificationRequest from './ModificationRequest';
+import GradeReceiptModal from './GradeReceiptModal';
 import './GradeEntry.css';
 
 function AutoSaveIndicator({ status }) {
@@ -72,6 +73,7 @@ export default function GradeEntry({ navigateTo }) {
   const [auditGrade, setAuditGrade] = useState(null);
   const [modGrade, setModGrade] = useState(null);
   const [submitResult, setSubmitResult] = useState(null);
+  const [receipt, setReceipt] = useState(null);
   const [search, setSearch] = useState('');
 
   const filteredStudents = useMemo(() => {
@@ -119,6 +121,7 @@ export default function GradeEntry({ navigateTo }) {
       const termId = currentTerm?.id;
       const result = await submitGrades(selectedForSubmit, subjectId, termId);
       setSubmitResult({ success: true, count: result.locked });
+      if (result.receipt) setReceipt(result.receipt);
       setActionFeedback({
         action: 'locked',
         className: selectedClass?.name,
@@ -399,6 +402,11 @@ export default function GradeEntry({ navigateTo }) {
             </motion.div>
           </div>
         )}
+      </AnimatePresence>
+
+      {/* Cryptographic receipt shown after a successful lock */}
+      <AnimatePresence>
+        {receipt && <GradeReceiptModal receipt={receipt} onClose={() => setReceipt(null)} />}
       </AnimatePresence>
     </div>
   );

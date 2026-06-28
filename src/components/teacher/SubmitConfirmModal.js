@@ -40,17 +40,17 @@ export default function SubmitConfirmModal({ students, onConfirm, onCancel }) {
           <div className="scm-warning">
             <span className="material-symbols-outlined scm-warning__icon">warning</span>
             <div>
-              <p className="scm-warning__title">This action is PERMANENT and IRREVERSIBLE</p>
+              <p className="scm-warning__title">Locking is final — edits then need approval</p>
               <p className="scm-warning__text">
-                Once grades are locked, they cannot be edited. Any future changes require a formal
-                modification request to be reviewed and approved by the school administrator.
+                Once you lock these grades you can no longer edit them directly. Any later change
+                requires a modification request reviewed and approved by the school administrator.
               </p>
             </div>
           </div>
 
           <h3 className="scm-title">Confirm Grade Submission</h3>
           <p className="scm-sub">
-            You are about to permanently lock {students.length} grade{students.length !== 1 ? 's' : ''}:
+            You are about to lock {students.length} grade{students.length !== 1 ? 's' : ''}:
           </p>
 
           {/* Student list */}
@@ -78,8 +78,8 @@ export default function SubmitConfirmModal({ students, onConfirm, onCancel }) {
               disabled={submitting}
             />
             <span className="scm-confirm-text">
-              I understand this action is permanent and irreversible. These grades will be
-              locked and cannot be changed without administrator approval.
+              I understand these grades will be locked, and any change afterward needs a
+              modification request approved by an administrator.
             </span>
           </label>
         </div>

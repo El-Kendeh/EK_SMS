@@ -7,4 +7,35 @@
 }
 @media (max-width: 600px) {
   .mys-controls { flex-direction: column; align-items: stretch; }
+  .mys-controls .tch-search-wrap,
+  .mys-controls .tch-select { flex: 1 1 100% !important; width: 100%; }
+
+  /* Student table: keep wide columns inside the viewport via horizontal scroll */
+  .tch-table-wrap { overflow-x: auto; }
+  .tch-table-wrap .tch-table { min-width: 560px; }
+  .tch-table-wrap .tch-table th,
+  .tch-table-wrap .tch-table td { padding: 9px 10px; }
+  /* Profile action comfortable to tap */
+  .tch-table-wrap .tch-btn--sm {
+    min-height: 44px;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 400px) {
+  .tch-table-wrap .tch-table { min-width: 520px; }
+  .tch-table-wrap .tch-table th,
+  .tch-table-wrap .tch-table td {
+    padding: 7px 8px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 360px) {
+  .tch-table-wrap .tch-table { min-width: 480px; }
+  .tch-table-wrap .tch-table th,
+  .tch-table-wrap .tch-table td {
+    padding: 6px 7px;
+    font-size: 11px;
+  }
 }

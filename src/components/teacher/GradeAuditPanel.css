@@ -24,3 +24,15 @@
   color: var(--tch-text-secondary);
   margin: 0 0 16px;
 }
+
+/* ── Responsive (600/400/360) ── */
+@media (max-width: 600px) {
+  .gap-grade-summary { padding: 12px; margin-bottom: 16px; }
+}
+@media (max-width: 400px) {
+  .gap-grade-summary__row { font-size: 12px; flex-wrap: wrap; gap: 4px; }
+  .gap-section-label { margin-bottom: 12px; }
+}
+@media (max-width: 360px) {
+  .gap-grade-summary { padding: 10px; }
+}

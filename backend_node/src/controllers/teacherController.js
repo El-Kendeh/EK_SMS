@@ -29,6 +29,8 @@ const SecurityAuditLog = require('../models/SecurityAuditLog');
 const Attendance = require('../models/Attendance');
 const ModificationRequest = require('../models/ModificationRequest');
 const ExamResult = require('../models/ExamResult');
+const GradeReceipt = require('../models/GradeReceipt');
+const crypto = require('crypto');
 const { Op } = require('sequelize');
 const sequelize = require('../config/db');
 const { appendGradeEvent, appendGradeEventSafe } = require('../utils/gradeEvent');
@@ -414,6 +416,7 @@ async function submitGradesForLocking(req, res) {
     const boundaries = gradingScheme ? JSON.parse(gradingScheme.boundaries || '{}') : {};
 
     let count = 0;
+    const lockedItems = [];
     for (const sid of student_ids) {
       const gradeData = (grades || []).find(g => g.studentId === sid) || {};
       const score = parseFloat(gradeData.score || gradeData.total);
@@ -481,6 +484,7 @@ async function submitGradesForLocking(req, res) {
         old_value: oldTotal, new_value: score, approval_status_after: 'pending',
       }, { transaction });
 
+      lockedItems.push({ student_id: sid, total: score });
       count++;
     }
 
@@ -492,8 +496,28 @@ async function submitGradesForLocking(req, res) {
       is_read: false,
     }, { transaction });
 
+    // Hash-chained receipt for this locked batch — real defensible paperwork (audit #17).
+    let receipt = null;
+    if (count > 0) {
+      const canonical = lockedItems.map(i => `${i.student_id}:${i.total}`).sort().join('|') + `|subj=${subject_id}|term=${term_id}`;
+      const content_hash = crypto.createHash('sha256').update(canonical).digest('hex');
+      const prev = await GradeReceipt.findOne({ where: { school_id: teacher.school_id }, order: [['chain_position', 'DESC']], transaction });
+      const chain_position = (prev?.chain_position || 0) + 1;
+      const submitted_at = new Date();
+      const verification_hash = crypto.createHash('sha256')
+        .update(`${content_hash}|${prev?.verification_hash || 'GENESIS'}|${chain_position}|${submitted_at.toISOString()}`)
+        .digest('hex');
+      const average = Math.round((lockedItems.reduce((a, i) => a + i.total, 0) / lockedItems.length) * 10) / 10;
+      const rec = await GradeReceipt.create({
+        school_id: teacher.school_id, teacher_id: teacher.id, subject_id, term_id,
+        classroom_id: class_id || null, count, average, content_hash,
+        verification_hash, prev_hash: prev?.verification_hash || null, chain_position, submitted_at,
+      }, { transaction });
+      receipt = { id: rec.id, count, submittedAt: submitted_at.toISOString(), chainPosition: chain_position, verificationHash: verification_hash };
+    }
+
     await transaction.commit();
-    return res.json(successResponse({ count, locked: count }, `${count} grade(s) submitted successfully`));
+    return res.json(successResponse({ count, locked: count, receipt }, `${count} grade(s) submitted successfully`));
   } catch (err) {
     await transaction.rollback();
     console.error('submitGradesForLocking Error:', err);
@@ -1712,14 +1736,21 @@ async function upsertLessonPlan(req, res) {
 
 async function getFeedbackTemplates(req, res) {
   try {
-    return res.json(successResponse({
-      templates: [
-        { id: 1, label: 'Excellent', text: 'Excellent work. Keep this up.' },
-        { id: 2, label: 'See me', text: 'Please come and see me before the next class.' },
-        { id: 3, label: 'Show working', text: 'Show all working — partial credit is awarded for method.' },
-        { id: 4, label: 'Practice more', text: 'You are close - more practice on the homework set will help.' },
-      ],
-    }));
+    const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
+    if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
+    const FeedbackTemplate = require('../models/FeedbackTemplate');
+    const rows = await FeedbackTemplate.findAll({
+      where: { teacher_id: teacher.id, school_id: teacher.school_id }, order: [['created_at', 'DESC']],
+    });
+    // 4 system defaults + the teacher's own persisted templates (audit #65).
+    const SYSTEM = [
+      { id: 'sys-excellent', label: 'Excellent', text: 'Excellent work. Keep this up.' },
+      { id: 'sys-seeme', label: 'See me', text: 'Please come and see me before the next class.' },
+      { id: 'sys-working', label: 'Show working', text: 'Show all working — partial credit is awarded for method.' },
+      { id: 'sys-practice', label: 'Practice more', text: 'You are close - more practice on the homework set will help.' },
+    ];
+    const templates = [...SYSTEM, ...rows.map(t => ({ id: t.id, label: t.label, text: t.text }))];
+    return res.json(successResponse({ templates }));
   } catch (err) {
     console.error('getFeedbackTemplates Error:', err);
     return res.json(successResponse({ templates: [] }));
@@ -1728,10 +1759,19 @@ async function getFeedbackTemplates(req, res) {
 
 async function addFeedbackTemplate(req, res) {
   try {
-    return res.json(successResponse({ id: Date.now() }));
+    const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
+    if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
+    const { label, text } = req.body;
+    if (!text) return res.status(400).json(errorResponse('text is required'));
+    const FeedbackTemplate = require('../models/FeedbackTemplate');
+    const t = await FeedbackTemplate.create({
+      school_id: teacher.school_id, teacher_id: teacher.id,
+      label: label || String(text).slice(0, 30), text,
+    });
+    return res.json(successResponse({ id: t.id, label: t.label, text: t.text }, 'Template saved'));
   } catch (err) {
     console.error('addFeedbackTemplate Error:', err);
-    return res.status(500).json(errorResponse('Failed to add template'));
+    return res.status(500).json(errorResponse('Failed to save template'));
   }
 }
 
@@ -1794,6 +1834,26 @@ async function referToCounsellor(req, res) {
   } catch (err) {
     console.error('referToCounsellor Error:', err);
     return res.status(500).json(errorResponse('Failed to refer'));
+  }
+}
+
+async function changeTeacherPassword(req, res) {
+  try {
+    const bcrypt = require('bcryptjs');
+    const { current_password, new_password } = req.body;
+    if (!current_password || !new_password) return res.status(400).json(errorResponse('Current and new password are required'));
+    if (String(new_password).length < 8) return res.status(400).json(errorResponse('New password must be at least 8 characters'));
+    if (String(new_password) === String(current_password)) return res.status(400).json(errorResponse('New password must differ from the current password'));
+    const user = await User.findByPk(req.user.id);
+    if (!user) return res.status(404).json(errorResponse('User not found'));
+    const ok = await bcrypt.compare(current_password, user.password);
+    if (!ok) return res.status(400).json(errorResponse('Current password is incorrect'));
+    user.password = await bcrypt.hash(String(new_password), 10);
+    await user.save();
+    return res.json(successResponse({}, 'Password updated'));
+  } catch (err) {
+    console.error('changeTeacherPassword Error:', err);
+    return res.status(500).json(errorResponse('Failed to change password'));
   }
 }
 
@@ -3138,6 +3198,7 @@ module.exports = {
   getPeerReviews,
   submitPeerReview,
   getColleagues,
+  changeTeacherPassword,
   getSpotlightStudent,
   setSpotlightStudent,
   getCohortCompare,

@@ -79,4 +79,28 @@
 
 @media (max-width: 600px) {
   .myclasses-grid { grid-template-columns: 1fr; }
+  /* audit #11: bump ghost icon buttons to >=44px touch targets */
+  .myclasses-card__actions .tch-btn--ghost {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 400px) {
+  .myclasses-card { padding: 16px; }
+  /* stack the card actions so the primary button is full-width above the icons */
+  .myclasses-card__actions {
+    flex-wrap: wrap;
+  }
+  .myclasses-card__actions .tch-btn--primary {
+    flex: 1 1 100%;
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 360px) {
+  .myclasses-card { padding: 14px; }
+  .myclasses-card__name { font-size: 16px; }
 }
