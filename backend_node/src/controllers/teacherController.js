@@ -632,22 +632,26 @@ async function getTeacherExamDuties(req, res) {
 
     let duties = [];
     if (ExamDuty) {
+      // ExamDuty.belongsTo(Exam, { as: 'exam' }) — the include needs that alias and the
+      // result is d.exam (not d.Exam); without the alias the query 500'd (surfaced in the UI).
       duties = await ExamDuty.findAll({
         where: { teacher_id: teacher.id },
-        include: [{ model: Exam, attributes: ['id', 'name', 'date', 'start_time', 'end_time', 'venue'] }],
-        order: [['date', 'ASC']],
+        // pruh_core_exam only has id/name/date — requesting start_time/end_time/venue (model
+        // declares them, table lacks them) 500'd. Those render as TBC in the UI.
+        include: [{ model: Exam, as: 'exam', attributes: ['id', 'name', 'date'] }],
+        order: [[{ model: Exam, as: 'exam' }, 'date', 'ASC']],
       });
     }
 
     const formatted = duties.map(d => ({
       id: d.id,
-      exam_name: d.Exam?.name || 'Exam',
-      date: d.Exam?.date || d.date,
-      start_time: d.Exam?.start_time || d.start_time,
-      end_time: d.Exam?.end_time || d.end_time,
-      venue: d.Exam?.venue || d.venue,
+      exam_name: d.exam?.name || 'Exam',
+      date: d.exam?.date || d.date,
+      start_time: d.exam?.start_time || d.start_time,
+      end_time: d.exam?.end_time || d.end_time,
+      venue: d.exam?.venue || d.venue,
       role: d.role || 'invigilator',
-      status: new Date(d.Exam?.date) < new Date() ? 'completed' : 'upcoming',
+      status: d.exam?.date && new Date(d.exam.date) < new Date() ? 'completed' : 'upcoming',
     }));
 
     return res.json(successResponse({ duties: formatted }));
@@ -876,13 +880,12 @@ async function getTeacherModificationSummary(req, res) {
     const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
     if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
 
-    let mods = [];
-    if (ModificationRequest) {
-      mods = await ModificationRequest.findAll({
-        where: { teacher_id: teacher.id },
-        attributes: ['status'],
-      });
-    }
+    // requested_by is the teacher row id (the table has no teacher_id column — querying it
+    // 500'd; surfaced when driving the real UI).
+    const mods = await ModificationRequest.findAll({
+      where: { requested_by: teacher.id, school_id: teacher.school_id },
+      attributes: ['status'],
+    });
 
     const pending = mods.filter(m => m.status === 'pending').length;
     const approved = mods.filter(m => m.status === 'approved').length;
@@ -3285,11 +3288,13 @@ async function getAcademicCalendar(req, res) {
     const ays = ayIds.length ? await AcademicYear.findAll({ where: { id: ayIds }, attributes: ['id', 'name'], raw: true }) : [];
     const ayName = Object.fromEntries(ays.map(a => [a.id, a.name]));
 
+    // Emit name + date (what TeacherHome reads) alongside title/start/end — the strip
+    // filtered on `date` and rendered `name`, so a title/start-only shape showed nothing.
     const events = [];
     terms.forEach(t => {
       const yr = ayName[t.academic_year_id] || '';
-      if (t.start_date) events.push({ id: `term-start-${t.id}`, title: `${t.name} begins`, start: t.start_date, end: t.start_date, type: 'term', academic_year: yr });
-      if (t.end_date) events.push({ id: `term-end-${t.id}`, title: `${t.name} ends`, start: t.end_date, end: t.end_date, type: 'term', academic_year: yr });
+      if (t.start_date) events.push({ id: `term-start-${t.id}`, name: `${t.name} begins`, title: `${t.name} begins`, date: t.start_date, start: t.start_date, end: t.start_date, type: 'term', academic_year: yr });
+      if (t.end_date) events.push({ id: `term-end-${t.id}`, name: `${t.name} ends`, title: `${t.name} ends`, date: t.end_date, start: t.end_date, end: t.end_date, type: 'term', academic_year: yr });
     });
 
     return res.json(successResponse({ events }));
