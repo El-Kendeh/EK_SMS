@@ -3,6 +3,14 @@
 
 .atr-page .ga-select { min-width: 150px; }
 
+.atr-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.atr-head-actions .ga-btn { min-height: 44px; }
+
 .atr-num--error { color: var(--ska-error); }
 .atr-num--warn  { color: #f59e0b; }
 
@@ -102,6 +110,9 @@
   }
 
   .atr-page .ga-select { width: 100%; }
+
+  .atr-head-actions { flex-direction: column; align-items: stretch; }
+  .atr-head-actions .ga-btn { justify-content: center; }
 
   .atr-row { padding: 14px; }
 

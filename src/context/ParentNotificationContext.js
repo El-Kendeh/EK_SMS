@@ -12,9 +12,13 @@ export function ParentNotificationProvider({ children }) {
 
   const refetch = useCallback(async () => {
     try {
-      const { notifications: list = [] } = await fetchParentNotifications(20);
+      const { notifications: list = [], unread: unreadTotal } = await fetchParentNotifications(20);
       setNotifications(list);
-      const unread = list.filter((n) => !n.read && !n.is_read).length;
+      // Server sends camelCase isRead; the server-side `unread` total covers
+      // rows beyond the 20 fetched here.
+      const unread = typeof unreadTotal === 'number'
+        ? unreadTotal
+        : list.filter((n) => !n.isRead).length;
       setUnreadCount(unread);
       const top = list[0] || null;
       if (top && lastTopId.current && top.id !== lastTopId.current) {
@@ -38,13 +42,13 @@ export function ParentNotificationProvider({ children }) {
   }, [refetch]);
 
   const markRead = useCallback(async (id) => {
-    setNotifications((cur) => cur.map((n) => n.id === id ? { ...n, read: true, is_read: true } : n));
+    setNotifications((cur) => cur.map((n) => n.id === id ? { ...n, isRead: true, is_read: true } : n));
     setUnreadCount((c) => Math.max(0, c - 1));
     try { await markParentNotificationRead(id); } catch {}
   }, []);
 
   const markAllRead = useCallback(async () => {
-    setNotifications((cur) => cur.map((n) => ({ ...n, read: true, is_read: true })));
+    setNotifications((cur) => cur.map((n) => ({ ...n, isRead: true, is_read: true })));
     setUnreadCount(0);
     try { await markAllParentNotificationsRead(); } catch {}
   }, []);

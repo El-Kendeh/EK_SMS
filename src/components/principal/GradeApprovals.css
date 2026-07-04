@@ -283,7 +283,8 @@
   .ga-page { gap: 12px; }
 
   .ga-tabs { width: 100%; }
-  .ga-tab { flex: 1 1 0; justify-content: center; padding: 10px 8px; }
+  .ga-tab { flex: 1 1 0; justify-content: center; padding: 10px 8px; min-height: 44px; }
+  .ga-icon-btn { width: 44px; height: 44px; }
 
   .ga-bulkbar { flex-direction: column; align-items: stretch; }
   .ga-bulkbar__actions { width: 100%; }
@@ -333,4 +334,22 @@
 
 @media (max-width: 400px) {
   .ga-modal { padding: 16px; }
+}
+
+/* ── Pager ──────────────────────────────────────────────────── */
+.ga-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 4px 0 8px;
+}
+.ga-pager .ga-btn { min-height: 44px; }
+.ga-pager__info {
+  font-size: 0.8125rem;
+  color: var(--ska-text-3);
+  white-space: nowrap;
+}
+@media (max-width: 400px) {
+  .ga-pager { flex-wrap: wrap; }
 }

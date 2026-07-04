@@ -107,6 +107,28 @@ export const principalApi = {
   async updatePrincipalUser(id, payload) {
     return apiClient.put(`/api/principal/principal-users/${id}/`, payload);
   },
+
+  // ── Batch-3 leadership features ──
+  async getGradeAudit(params = {}) {
+    const qs = new URLSearchParams(params).toString();
+    return apiClient.get(`/api/principal/grade-audit/${qs ? `?${qs}` : ''}`);
+  },
+  async getAcademicsAnalytics(params = {}) {
+    const qs = new URLSearchParams(params).toString();
+    return apiClient.get(`/api/principal/academics-analytics/${qs ? `?${qs}` : ''}`);
+  },
+  async listAnnouncements() {
+    return apiClient.get('/api/principal/announcements/');
+  },
+  async postAnnouncement({ title, message }) {
+    return apiClient.post('/api/principal/announcements/', { title, message });
+  },
+  async getAtRisk() {
+    return apiClient.get('/api/principal/at-risk/');
+  },
+  async getStudentProfile(studentId) {
+    return apiClient.get(`/api/principal/students/${studentId}/`);
+  },
 };
 
 export default adminApi;

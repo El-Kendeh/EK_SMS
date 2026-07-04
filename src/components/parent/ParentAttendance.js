@@ -9,11 +9,17 @@ const STATUS_META = {
   present: { label: 'Verified',     color: 'success', icon: 'verified' },
   late:    { label: 'Late Entry',   color: 'warning', icon: 'warning' },
   absent:  { label: 'Absence',      color: 'danger',  icon: 'cancel' },
+  excused: { label: 'Excused',      color: 'warning', icon: 'event_busy' },
 };
+
+function firstOfMonth(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+}
 
 export default function ParentAttendance() {
   const { children } = useParentChildren();
   const [selectedChildId, setSelectedChildId] = useState(null);
+  const [monthStart, setMonthStart] = useState(() => firstOfMonth(new Date()));
   const [attendanceData, setAttendanceData] = useState({ stats: { total: 0, present: 0, absent: 0, late: 0, rate: 0 }, calendar: [], logs: [] });
 
   const activeChild = children.find((c) => c.id === selectedChildId) || children[0];
@@ -21,11 +27,16 @@ export default function ParentAttendance() {
   useEffect(() => {
     if (!activeChild?.id) return;
     let cancelled = false;
-    fetchChildAttendance(activeChild.id)
+    fetchChildAttendance(activeChild.id, monthStart)
       .then(res => { if (!cancelled) setAttendanceData(res); })
       .catch(() => { if (!cancelled) setAttendanceData({ stats: { total: 0, present: 0, absent: 0, late: 0, rate: 0 }, calendar: [], logs: [] }); });
     return () => { cancelled = true; };
-  }, [activeChild?.id]);
+  }, [activeChild?.id, monthStart]);
+
+  const shiftMonth = (delta) => {
+    const [y, m] = monthStart.split('-').map(Number);
+    setMonthStart(firstOfMonth(new Date(y, m - 1 + delta, 1)));
+  };
 
   const data = {
     rate: attendanceData.stats?.rate || 0,
@@ -35,7 +46,7 @@ export default function ParentAttendance() {
     late: attendanceData.stats?.late || 0,
     absent: attendanceData.stats?.absent || 0,
     total: attendanceData.stats?.total || 0,
-    month: 'Attendance',
+    month: attendanceData.month || 'Attendance',
   };
 
   const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -73,7 +84,7 @@ export default function ParentAttendance() {
                 className={`par-child-tab ${isActive ? 'par-child-tab--active' : ''}`}
                 onClick={() => setSelectedChildId(child.id)}>
                 <span className="par-child-tab__dot" style={{ background: colors.bg }} />
-                {child.fullName.split(' ')[0]}
+                {(child.fullName || `Child ${child.id}`).split(' ')[0]}
               </button>
             );
           })}
@@ -101,10 +112,10 @@ export default function ParentAttendance() {
         <div className="par-attend__left">
           <div className="par-card par-card--pad par-attend__calendar">
             <div className="par-attend__cal-header">
-              <h3 className="par-attend__cal-title">Monthly Ledger</h3>
+              <h3 className="par-attend__cal-title">{data.month}</h3>
               <div className="par-attend__cal-nav">
-                <button><span className="material-symbols-outlined">chevron_left</span></button>
-                <button><span className="material-symbols-outlined">chevron_right</span></button>
+                <button aria-label="Previous month" onClick={() => shiftMonth(-1)}><span className="material-symbols-outlined">chevron_left</span></button>
+                <button aria-label="Next month" onClick={() => shiftMonth(1)}><span className="material-symbols-outlined">chevron_right</span></button>
               </div>
             </div>
 
@@ -141,10 +152,9 @@ export default function ParentAttendance() {
               <span className="par-attend__integrity-chip">System Verification</span>
               <h4 className="par-attend__integrity-title">Ledger Integrity Confirmed</h4>
               <p className="par-attend__integrity-text">
-                This attendance record is cryptographically tied to the main student ledger.
-                No unauthorized modifications have been detected for the current academic period.
+                Attendance entries are recorded by the school and cannot be edited from this portal.
+                Contact the school office if a day looks wrong.
               </p>
-              <button className="par-attend__integrity-btn">View Blockchain Hash</button>
             </div>
           </div>
         </div>
@@ -156,10 +166,15 @@ export default function ParentAttendance() {
             <span className="material-symbols-outlined" style={{ color: 'var(--par-text-secondary)', fontSize: 20 }}>filter_list</span>
           </div>
           <div className="par-attend__logs-list">
+            {data.logs.length === 0 && (
+              <p style={{ color: 'var(--par-text-secondary)', fontSize: 13, padding: '8px 0' }}>
+                No attendance records for this month.
+              </p>
+            )}
             {data.logs.map((log, idx) => {
-              const meta = STATUS_META[log.status] || STATUS_META.present;
+              const meta = STATUS_META[log.status] || { label: log.status || 'Record', color: 'muted', icon: 'event' };
               return (
-                <motion.div key={idx}
+                <motion.div key={log.id ?? idx}
                   className={`par-attend__log par-attend__log--${meta.color}`}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -172,11 +187,13 @@ export default function ParentAttendance() {
                     </span>
                   </div>
                   <h4 className="par-attend__log-title">{log.title}</h4>
-                  <p className="par-attend__log-detail">{log.detail}</p>
-                  <div className="par-attend__log-method">
-                    <span className="material-symbols-outlined" style={{ fontSize: 13 }}>sensors</span>
-                    {log.method}
-                  </div>
+                  {log.detail && <p className="par-attend__log-detail">{log.detail}</p>}
+                  {log.method && (
+                    <div className="par-attend__log-method">
+                      <span className="material-symbols-outlined" style={{ fontSize: 13 }}>sensors</span>
+                      {log.method}
+                    </div>
+                  )}
                 </motion.div>
               );
             })}

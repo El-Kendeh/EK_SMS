@@ -85,6 +85,10 @@ const PrincipalUsers     = lazy(() => import('../principal/PrincipalUsers'));
 const SyllabusProgress   = lazy(() => import('../principal/SyllabusProgress'));
 const AttendanceReport   = lazy(() => import('../principal/AttendanceReport'));
 const PublishedReportCards = lazy(() => import('../principal/PublishedReportCards'));
+const PrincipalGradeAudit    = lazy(() => import('../principal/GradeAudit'));
+const PrincipalAnalytics     = lazy(() => import('../principal/AcademicsAnalytics'));
+const PrincipalAnnouncements = lazy(() => import('../principal/Announcements'));
+const PrincipalAtRisk        = lazy(() => import('../principal/AtRisk'));
 
 /* Self-contained role portals — own providers, nav, router and design system.
    Teachers, parents and students render their full dedicated dashboard instead
@@ -391,6 +395,9 @@ const HANDLED_PAGES = new Set([
   'vm-parents', 'vm-staffs', 'vm-students',
   /* Student pages */
   'assignment', 'live-class',
+  /* Principal Batch-3 pages */
+  'principal-grade-audit', 'principal-analytics',
+  'principal-announcements', 'principal-at-risk',
 ]);
 
 /* StudentHome emits its own short nav keys; map them to this shell's
@@ -841,6 +848,12 @@ export default function Dashboard({ onNavigate }) {
     { key: 'report-cards-published', label: 'Published Report Cards', icon: <IcGen />,  badge: 0, section: 'Approvals' },
     { key: 'syllabus-progress',      label: 'Syllabus Progress',      icon: <IcGen />,  badge: 0, section: 'Academics' },
     { key: 'attendance-report',      label: 'Attendance Report',      icon: <IcGen />,  badge: 0, section: 'Academics' },
+    { key: 'principal-analytics',    label: 'Academics Analytics',    icon: <IcGen />,  badge: 0, section: 'Academics' },
+    { key: 'principal-at-risk',      label: 'At-Risk Students',       icon: <IcGen />,  badge: 0, section: 'Academics' },
+    { key: 'principal-grade-audit',  label: 'Grade Audit Trail',      icon: <IcGen />,  badge: 0, section: 'Oversight' },
+    { key: 'principal-announcements',label: 'Announcements',          icon: <IcGen />,  badge: 0, section: 'Oversight' },
+    { key: 'finance-reports',        label: 'Finance Reports',        icon: <IcGen />,  badge: 0, section: 'Finance' },
+    { key: 'expenses',               label: 'Expense Approvals',      icon: <IcGen />,  badge: 0, section: 'Finance' },
     { key: 'principal-users',        label: 'Leadership Team',        icon: <IcGen />,  badge: 0, section: 'Team' },
     { key: 'notifications',          label: 'Notifications',          icon: <IcBell />, badge: 0, section: null },
   ];
@@ -1527,6 +1540,12 @@ export default function Dashboard({ onNavigate }) {
           {activePage === 'principal-users'        && scoped(<PrincipalUsers      schoolId={schoolId} />)}
           {activePage === 'syllabus-progress'      && scoped(<SyllabusProgress    schoolId={schoolId} />)}
           {activePage === 'attendance-report'      && scoped(<AttendanceReport    schoolId={schoolId} />, 'Pick a school to view its attendance report.')}
+
+          {/* Principal Batch-3 pages */}
+          {activePage === 'principal-grade-audit'   && scoped(<PrincipalGradeAudit />,    'Pick a school to view its grade audit trail.')}
+          {activePage === 'principal-analytics'     && scoped(<PrincipalAnalytics />,     'Pick a school to view its academics analytics.')}
+          {activePage === 'principal-announcements' && scoped(<PrincipalAnnouncements />, 'Pick a school to manage its announcements.')}
+          {activePage === 'principal-at-risk'       && scoped(<PrincipalAtRisk />,        'Pick a school to view its at-risk students.')}
 
           {activePage === 'principal' && <SAPrincipal />}
 

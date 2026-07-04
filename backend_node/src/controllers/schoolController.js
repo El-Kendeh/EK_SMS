@@ -2161,7 +2161,7 @@ async function createParent(req, res) {
           student_id: sid,
           guardian_user_id: user.id,
           relationship: relationship || 'guardian',
-          is_active: true,
+          status: 'active',
         }, { transaction });
       }
     }

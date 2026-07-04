@@ -393,3 +393,14 @@
   .pfee__txs li { grid-template-columns: 38px 1fr auto; gap: 10px; }
   .pfee__tx-action { grid-column: 1 / -1; justify-content: flex-end; }
 }
+
+/* Payment initiated but not yet confirmed by the school (2026-07-03). */
+.pfee__pill--wait {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700;
+  background: rgba(245,158,11,0.12); color: #B45309; border: 1px solid rgba(245,158,11,0.3);
+}
+.pfee__pill--wait .material-symbols-outlined { font-size: 14px; }
+@media (max-width: 600px) {
+  .pfee__pill--wait { font-size: 11px; padding: 4px 8px; }
+}

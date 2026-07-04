@@ -553,54 +553,9 @@ async function getTimetable(req, res) {
     const student = await getStudentFromUser(req);
     if (!student) return res.status(404).json(errorResponse('Student not found'));
 
-    const TimetableSlot = require('../models/TimetableSlot');
-    const SubjectM = require('../models/Subject');
-    const TeacherM = require('../models/Teacher');
-    const UserM = require('../models/User');
-
-    const empty = { Monday: [], Tuesday: [], Wednesday: [], Thursday: [], Friday: [] };
-    if (!student.classroom_id) return res.json(successResponse({ timetable: empty }));
-
-    const slots = await TimetableSlot.findAll({
-      where: { class_id: student.classroom_id },
-      order: [['day', 'ASC'], ['period', 'ASC']],
-    });
-
-    const subjectIds = [...new Set(slots.map(s => s.subject_id).filter(Boolean))];
-    const teacherIds = [...new Set(slots.map(s => s.teacher_id).filter(Boolean))];
-    const subjects = subjectIds.length ? await SubjectM.findAll({ where: { id: subjectIds }, attributes: ['id', 'name'] }) : [];
-    const subjectName = Object.fromEntries(subjects.map(s => [String(s.id), s.name]));
-    const teachers = teacherIds.length ? await TeacherM.findAll({ where: { id: teacherIds }, include: [{ model: UserM, as: 'user', attributes: ['first_name', 'last_name'] }] }) : [];
-    const teacherName = Object.fromEntries(teachers.map(t => [String(t.id), `${t.user?.first_name || ''} ${t.user?.last_name || ''}`.trim()]));
-
-    const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-    const PALETTE = ['#6366F1', '#0EA5E9', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4'];
-    const colorBySubject = {};
-    let ci = 0;
-    const timetable = { Monday: [], Tuesday: [], Wednesday: [], Thursday: [], Friday: [] };
-
-    slots.forEach(s => {
-      const dayName = DAY_NAMES[s.day];
-      if (!dayName) return;
-      let color = '#94A3B8';
-      if (!s.is_break && s.subject_id != null) {
-        const key = String(s.subject_id);
-        if (!(key in colorBySubject)) { colorBySubject[key] = PALETTE[ci % PALETTE.length]; ci++; }
-        color = colorBySubject[key];
-      }
-      timetable[dayName].push({
-        id: s.id,
-        time: s.start_time || '',
-        endTime: s.end_time || '',
-        subject: s.is_break ? 'Break' : (subjectName[String(s.subject_id)] || 'Free Period'),
-        teacher: s.is_break ? '' : (teacherName[String(s.teacher_id)] || ''),
-        room: s.room || '',
-        color,
-        icon: s.is_break ? 'coffee' : 'menu_book',
-        isBreak: !!s.is_break,
-        link: null,
-      });
-    });
+    // Shared builder — the parent portal's child view renders the SAME data.
+    const { buildClassTimetable } = require('../services/timetableView');
+    const timetable = await buildClassTimetable(student.classroom_id);
 
     return res.json(successResponse({ timetable }));
   } catch (err) {

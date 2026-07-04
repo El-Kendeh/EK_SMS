@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { principalApi } from '../../api/adminApi';
+import { downloadCsv } from '../../utils/csv';
 import '../schooladmin/SchoolAdmin.css';
 import '../schooladmin/Principal/Principal.css';
 import './GradeApprovals.css';
@@ -44,6 +45,14 @@ export default function AttendanceReport({ schoolId }) {
 
   useEffect(() => { load(); }, [load]);
 
+  const exportCsv = () => {
+    const stamp = new Date().toISOString().slice(0, 10);
+    downloadCsv(`attendance-report-${stamp}.csv`, [
+      ['Class', 'Records', 'Present', 'Absent', 'Late', 'Excused', 'Rate (%)'],
+      ...classes.map(c => [c.class_name, c.total, c.present, c.absent, c.late, c.excused, c.rate]),
+    ]);
+  };
+
   return (
     <div className="pu-page atr-page">
       <div className="pu-page__head">
@@ -51,9 +60,15 @@ export default function AttendanceReport({ schoolId }) {
           <h1 className="ska-page-title">Attendance Report</h1>
           <p className="ska-page-sub">School-wide attendance by class</p>
         </div>
-        <select className="ga-select" value={days} onChange={e => setDays(Number(e.target.value))}>
-          {RANGE_OPTIONS.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
-        </select>
+        <div className="atr-head-actions">
+          <select className="ga-select" value={days} onChange={e => setDays(Number(e.target.value))}>
+            {RANGE_OPTIONS.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
+          </select>
+          <button type="button" className="ga-btn ga-btn--ghost" disabled={loading || classes.length === 0}
+            onClick={exportCsv} title="Export the class table">
+            <Ic name="download" size="sm" /> Export CSV
+          </button>
+        </div>
       </div>
 
       {error && (

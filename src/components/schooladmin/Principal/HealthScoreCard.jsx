@@ -13,12 +13,10 @@ const Ic = ({ name, size, style }) => (
 export default function HealthScoreCard({ summary, loading }) {
   const score = loading ? 0 : summary.healthScore;
   const color = puHealthColor(score);
-  const fs    = PU_FINANCE_STYLE[summary.finance] || PU_FINANCE_STYLE.Stable;
-
-  /* Map finance status → numeric for breakdown bar (0-100) */
-  const finPct = summary.finance === 'Stable'           ? 95
-              :  summary.finance === 'Needs Attention' ? 60
-              :  30;
+  // financeRate is the real collection percentage; null until fee data exists.
+  const hasFinance = summary.financeRate != null;
+  const fs = (hasFinance && PU_FINANCE_STYLE[summary.finance]) ||
+    { color: 'var(--ska-on-surface-variant)', bg: 'var(--ska-surface-high)' };
 
   const verdict = score >= 80 ? { label: 'Healthy', sub: 'School performing strongly' }
                 : score >= 65 ? { label: 'Watch',   sub: 'Some areas need attention' }
@@ -27,7 +25,10 @@ export default function HealthScoreCard({ summary, loading }) {
   const breakdowns = [
     { key: 'academic',   label: 'Academic',   value: summary.avgAcademic,   suffix: '%', color: puHealthColor(summary.avgAcademic) },
     { key: 'attendance', label: 'Attendance', value: summary.avgAttendance, suffix: '%', color: puHealthColor(summary.avgAttendance) },
-    { key: 'finance',    label: 'Finance',    value: finPct,                suffix: '',  color: fs.color, displayValue: summary.finance },
+    { key: 'finance',    label: 'Finance',
+      value: hasFinance ? summary.financeRate : 0,
+      suffix: '%', color: fs.color,
+      displayValue: hasFinance ? `${summary.financeRate}%` : 'No data' },
   ];
 
   /* SVG circular ring math — radius 60 */
@@ -63,7 +64,11 @@ export default function HealthScoreCard({ summary, loading }) {
             {verdict.label}
           </span>
         </div>
-        <p className="pu-health__sub">{verdict.sub}. Score combines academics (45%), attendance (40%), and finance (15%).</p>
+        <p className="pu-health__sub">
+          {verdict.sub}. {hasFinance
+            ? 'Score combines academics (45%), attendance (40%), and finance (15%).'
+            : 'Score combines academics (55%) and attendance (45%) — finance joins once fee data exists.'}
+        </p>
 
         <div className="pu-health__bars">
           {breakdowns.map(b => (

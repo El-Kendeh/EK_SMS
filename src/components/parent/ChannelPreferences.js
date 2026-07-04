@@ -3,21 +3,14 @@ import { fetchChannelPreferences, updateChannelPreferences } from '../../api/par
 import { Skeleton } from '../common/Skeleton';
 import './ChannelPreferences.css';
 
-const CATEGORIES = [
-  { key: 'gradePosted',         label: 'Grade posted',         icon: 'auto_stories' },
-  { key: 'modificationAttempt', label: 'Modification attempt', icon: 'shield' },
-  { key: 'feeDue',              label: 'Fee reminders',        icon: 'payments' },
-  { key: 'event',               label: 'Events & calendar',    icon: 'event_note' },
-  { key: 'message',             label: 'Messages from staff',  icon: 'chat' },
-  { key: 'pickup',              label: 'Pickup gate scans',    icon: 'directions_walk' },
-  { key: 'permissionSlip',      label: 'Permission slips',     icon: 'task' },
-];
-
+// The backend stores ONE on/off flag per channel (no per-alert-type matrix),
+// so the UI shows exactly that — a flat channel list, not a fake grid.
 const CHANNELS = [
-  { key: 'inApp', label: 'In-app',  icon: 'circle_notifications' },
-  { key: 'push',  label: 'Push',    icon: 'notifications_active' },
-  { key: 'email', label: 'Email',   icon: 'mail' },
-  { key: 'sms',   label: 'SMS',     icon: 'sms', cost: true },
+  { key: 'inApp',    label: 'In-app',   icon: 'circle_notifications', desc: 'Alerts inside this portal' },
+  { key: 'push',     label: 'Push',     icon: 'notifications_active', desc: 'Phone push notifications' },
+  { key: 'email',    label: 'Email',    icon: 'mail',                 desc: 'Sent to your registered email' },
+  { key: 'sms',      label: 'SMS',      icon: 'sms',                  desc: 'Time-critical alerts (cost applies)', cost: true },
+  { key: 'whatsapp', label: 'WhatsApp', icon: 'chat',                 desc: 'Via the school WhatsApp line' },
 ];
 
 export default function ChannelPreferences() {
@@ -30,18 +23,19 @@ export default function ChannelPreferences() {
     fetchChannelPreferences().then(setPrefs).catch(() => setError('Could not load preferences.'));
   }, []);
 
-  const toggle = (channel, category) => {
-    setPrefs((cur) => ({
-      ...cur,
-      [channel]: { ...cur[channel], [category]: !cur[channel][category] },
-    }));
+  const toggle = (key) => {
+    setPrefs((cur) => ({ ...cur, [key]: !cur[key] }));
+    setSavedAt(null);
   };
 
   const save = async () => {
     setSaving(true);
     setError(null);
-    try { await updateChannelPreferences(prefs); setSavedAt(new Date()); }
-    catch { setError('Could not save.'); }
+    try {
+      const res = await updateChannelPreferences(prefs);
+      if (res?.preferences) setPrefs(res.preferences);
+      setSavedAt(new Date());
+    } catch { setError('Could not save.'); }
     finally { setSaving(false); }
   };
 
@@ -49,7 +43,7 @@ export default function ChannelPreferences() {
     return (
       <div className="pcp">
         <Skeleton height={26} width="40%" />
-        <Skeleton height={300} radius={14} style={{ marginTop: 16 }} />
+        <Skeleton height={220} radius={14} style={{ marginTop: 16 }} />
       </div>
     );
   }
@@ -58,36 +52,29 @@ export default function ChannelPreferences() {
   return (
     <div className="pcp">
       <header>
-        <h2><span className="material-symbols-outlined">tune</span> Notification preferences</h2>
-        <p>Choose channels per alert type. SMS is reserved for time-critical alerts (cost applies).</p>
+        <h2><span className="material-symbols-outlined">tune</span> Notification channels</h2>
+        <p>Turn each delivery channel on or off. Right now alerts are delivered in-app; email, SMS and WhatsApp delivery are being connected — your choices are saved and will apply as soon as each channel goes live.</p>
       </header>
       <div className="pcp__grid">
-        <div className="pcp__row pcp__row--head">
-          <div></div>
-          {CHANNELS.map((c) => (
-            <div key={c.key} className="pcp__head-cell">
-              <span className="material-symbols-outlined">{c.icon}</span>
-              <span>{c.label}</span>
-              {c.cost && <small>cost</small>}
-            </div>
-          ))}
-        </div>
-        {CATEGORIES.map((cat) => (
-          <div key={cat.key} className="pcp__row">
+        {CHANNELS.map((ch) => (
+          <div key={ch.key} className="pcp__row pcp__row--flat">
             <div className="pcp__cat-cell">
-              <span className="material-symbols-outlined">{cat.icon}</span>
-              <span>{cat.label}</span>
+              <span className="material-symbols-outlined">{ch.icon}</span>
+              <span>
+                {ch.label}
+                {ch.cost && <small style={{ color: '#fbbf24', marginLeft: 6 }}>cost</small>}
+                <em className="pcp__desc">{ch.desc}</em>
+              </span>
             </div>
-            {CHANNELS.map((ch) => (
-              <label key={ch.key} className="pcp__cell">
-                <input
-                  type="checkbox"
-                  checked={!!prefs[ch.key]?.[cat.key]}
-                  onChange={() => toggle(ch.key, cat.key)}
-                />
-                <span className="pcp__switch" aria-hidden="true" />
-              </label>
-            ))}
+            <label className="pcp__cell pcp__cell--flat">
+              <input
+                type="checkbox"
+                checked={!!prefs[ch.key]}
+                onChange={() => toggle(ch.key)}
+                aria-label={`Toggle ${ch.label}`}
+              />
+              <span className="pcp__switch" aria-hidden="true" />
+            </label>
           </div>
         ))}
       </div>

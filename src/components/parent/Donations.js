@@ -40,13 +40,21 @@ export default function Donations() {
       </header>
 
       <ul className="don__list">
+        {d.campaigns.length === 0 && (
+          <li className="don__empty" style={{ color: 'var(--par-text-secondary, #666)', padding: '12px 0' }}>
+            No active campaigns right now.
+          </li>
+        )}
         {d.campaigns.map((c) => {
-          const pct = Math.min(100, Math.round((c.raisedSll / c.goalSll) * 100));
+          const pct = c.goalSll ? Math.min(100, Math.round(((c.raisedSll || 0) / c.goalSll) * 100)) : 0;
           return (
             <motion.li key={c.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
               <div>
                 <strong>{c.name}</strong>
-                <span>{fmtSll(c.raisedSll)} of {fmtSll(c.goalSll)} raised · {c.beneficiaries} beneficiaries</span>
+                <span>
+                  {fmtSll(c.raisedSll || 0)} of {fmtSll(c.goalSll || 0)} raised
+                  {c.beneficiaries != null ? ` · ${c.beneficiaries} beneficiaries` : ''}
+                </span>
                 <div className="don__bar">
                   <div className="don__bar-fill" style={{ width: `${pct}%` }} />
                 </div>
@@ -76,8 +84,11 @@ export default function Donations() {
       {confirmation && (
         <div className="don-modal-overlay" onClick={() => setConfirmation(null)}>
           <motion.div className="don-modal" initial={{ scale: 0.92 }} animate={{ scale: 1 }}>
-            <h3>Thank you</h3>
-            <p>Your contribution is anonymous to recipients. Keep this receipt for your records:</p>
+            <h3>Pledge recorded</h3>
+            <p>
+              Your pledge is anonymous to recipients. The campaign total moves once the school
+              confirms the money arrived. Keep this reference:
+            </p>
             <code>{confirmation.receiptHash}</code>
             <button className="don__btn" onClick={() => setConfirmation(null)} style={{ marginTop: 16 }}>Close</button>
           </motion.div>

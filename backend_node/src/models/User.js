@@ -19,6 +19,7 @@ const User = sequelize.define(
     email: { type: DataTypes.STRING(191), allowNull: true, unique: true },
     first_name: { type: DataTypes.STRING(191), allowNull: true },
     last_name: { type: DataTypes.STRING(191), allowNull: true },
+    phone: { type: DataTypes.STRING(20), allowNull: true },
     is_active: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
     role_id: {
       type: DataTypes.INTEGER,

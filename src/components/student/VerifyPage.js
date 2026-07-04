@@ -69,12 +69,21 @@ export default function VerifyPage({ hash }) {
               <>
                 <dl className="vfy-meta">
                   <div><dt>Issued by</dt><dd>{result.signedBy}</dd></div>
-                  <div><dt>Issued to</dt><dd>{result.student} ({result.studentNumber})</dd></div>
-                  <div><dt>Term</dt><dd>{result.term} · {result.academicYear}</dd></div>
-                  <div><dt>Term Average</dt><dd>{result.average?.toFixed?.(1) ?? '—'}%</dd></div>
-                  <div><dt>Signed at</dt><dd>{new Date(result.signedAt).toLocaleString()}</dd></div>
-                  <div><dt>Chain position</dt><dd>#{result.chainPosition} · tip {result.chainTip}</dd></div>
+                  <div><dt>Issued to</dt><dd>{result.student}{result.studentNumber && result.studentNumber !== '—' ? ` (${result.studentNumber})` : ''}</dd></div>
+                  {result.term && result.term !== '—' && (
+                    <div><dt>Term</dt><dd>{result.term}{result.academicYear ? ` · ${result.academicYear}` : ''}</dd></div>
+                  )}
+                  {result.average != null && (
+                    <div><dt>Term Average</dt><dd>{result.average?.toFixed?.(1) ?? '—'}%</dd></div>
+                  )}
+                  {result.signedAt && (
+                    <div><dt>Issued at</dt><dd>{new Date(result.signedAt).toLocaleString()}</dd></div>
+                  )}
+                  {result.chainPosition != null && (
+                    <div><dt>Chain position</dt><dd>#{result.chainPosition} · tip {result.chainTip}</dd></div>
+                  )}
                 </dl>
+                {result.note && <p className="vfy-note">{result.note}</p>}
                 <div className="vfy-qr">
                   <QRCode value={`${window.location.origin}/verify/${encodeURIComponent(hash)}`} size={140} />
                   <span>Permalink to this record</span>

@@ -30,11 +30,13 @@ export default function CoGuardians() {
   const submit = async (e) => {
     e.preventDefault();
     if (!form.name || !form.email) return;
+    if (!form.children.length) { setError('Select at least one child to link.'); return; }
+    setError(null);
     try {
       await inviteCoGuardian(form);
       setAdding(false); setForm({ name: '', email: '', relationship: 'Father', children: [] });
       refresh();
-    } catch { setError('Could not send invite.'); }
+    } catch (err) { setError(err?.message || 'Could not send invite.'); }
   };
 
   const remove = async (id) => {
@@ -65,13 +67,16 @@ export default function CoGuardians() {
             <motion.li key={g.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
               <div className="cog__avatar">{(g.name || '').split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase()}</div>
               <div className="cog__body">
-                <strong>{g.name} {g.primary && <em>· primary</em>}</strong>
-                <span>{g.relationship} · {g.email}</span>
+                <strong>
+                  {g.name} {g.primary && <em>· you</em>}
+                  {g.status === 'pending' && <em> · invited (awaiting activation)</em>}
+                </strong>
+                <span>{[g.relationship, g.email].filter(Boolean).join(' · ')}</span>
                 <small>Last login: {fmtTime(g.lastLogin)}</small>
                 <div className="cog__chips">
-                  {g.children.map((cid) => {
-                    const c = children.find((x) => x.id === cid);
-                    return c ? <span key={cid} className="cog__chip">{c.fullName.split(' ')[0]}</span> : null;
+                  {(g.children || []).map((cid) => {
+                    const c = children.find((x) => String(x.id) === String(cid));
+                    return c ? <span key={cid} className="cog__chip">{(c.fullName || '').split(' ')[0]}</span> : null;
                   })}
                 </div>
               </div>
@@ -104,7 +109,7 @@ export default function CoGuardians() {
             {children.map((c) => (
               <label key={c.id} className="cog__check">
                 <input type="checkbox" checked={form.children.includes(c.id)} onChange={() => toggleChild(c.id)} />
-                {c.fullName}
+                {c.fullName || `Child ${c.id}`}
               </label>
             ))}
           </fieldset>

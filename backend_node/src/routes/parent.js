@@ -1,9 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const authenticateToken = require('../middleware/auth');
+const requireRole = require('../middleware/requireRole');
+const requireActiveAccount = require('../middleware/requireActiveAccount');
 const parent = require('../controllers/parentController');
 
 router.use(authenticateToken);
+// Re-check is_active on every request (tokens outlive suspensions).
+router.use(requireActiveAccount);
+// Every handler scopes data by the parent's own id — no other role has any
+// business on this router.
+router.use(requireRole(['parent']));
 
 router.get('/children/', parent.getChildren);
 
@@ -21,9 +28,13 @@ router.post('/notifications/', parent.markParentNotificationRead);
 router.get('/profile/', parent.getParentProfile);
 router.patch('/profile/', parent.updateParentProfile);
 
+// 2FA is not implemented yet — both endpoints honestly report available:false
+// (the old handler crashed on req.user.update and the "disable" action was
+// unrouted, so disabling actually enabled).
 router.get('/2fa/setup/', parent.get2FASetup);
-router.post('/2fa/setup/', parent.enable2FA);
+router.post('/2fa/setup/', parent.set2FA);
 
+router.get('/children/:childId/timetable/', parent.getChildTimetable);
 router.get('/children/:childId/attendance/', parent.getChildAttendance);
 router.get('/children/:childId/behavior/', parent.getChildBehavior);
 router.get('/children/:childId/fees/', parent.getChildFees);
@@ -52,7 +63,9 @@ router.get('/counsellor/', parent.getCounsellor);
 router.post('/counsellor/', parent.sendCounsellorMessage);
 
 router.get('/children/:childId/teacher-threads/', parent.getTeacherThreads);
-router.post('/children/:childId/teacher-threads/:subjectId/', parent.sendTeacherMessage);
+// Threads are keyed by TEACHER (user id), not subject — the controller also
+// accepts body.teacher_id.
+router.post('/children/:childId/teacher-threads/:teacherId/', parent.sendTeacherMessage);
 
 router.get('/co-guardians/', parent.getCoGuardians);
 router.post('/co-guardians/', parent.inviteCoGuardian);

@@ -12,6 +12,13 @@ export default function CompareChildren() {
   const [rightId, setRightId] = useState(children[1]?.id || null);
   const [data, setData] = useState({});
 
+  // Children load async — seed the pickers once the list arrives.
+  useEffect(() => {
+    if (!leftId && children[0]) setLeftId(children[0].id);
+    if (!rightId && children[1]) setRightId(children[1].id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [children]);
+
   useEffect(() => {
     [leftId, rightId].filter(Boolean).forEach(async (id) => {
       if (data[id]) return;
@@ -25,8 +32,9 @@ export default function CompareChildren() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leftId, rightId]);
 
-  const left = useMemo(() => children.find((c) => c.id === leftId), [children, leftId]);
-  const right = useMemo(() => children.find((c) => c.id === rightId), [children, rightId]);
+  // Select values arrive as strings — compare loosely.
+  const left = useMemo(() => children.find((c) => String(c.id) === String(leftId)), [children, leftId]);
+  const right = useMemo(() => children.find((c) => String(c.id) === String(rightId)), [children, rightId]);
 
   if (children.length < 2) {
     return (

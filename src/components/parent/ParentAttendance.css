@@ -310,3 +310,17 @@
   .par-attend__top { flex-direction: column; }
   .par-attend__rate-chip { width: 100%; }
 }
+
+/* Neutral cells: school day with no record yet / future days (added with the
+   real month-navigation wiring, 2026-07-03). */
+.par-attend__cal-cell--none   { background: transparent; border: 1px dashed var(--par-border); color: var(--par-text-secondary); }
+.par-attend__cal-cell--none .par-attend__cal-dot,
+.par-attend__cal-cell--future .par-attend__cal-dot,
+.par-attend__cal-cell--excused .par-attend__cal-dot { display: none; }
+.par-attend__cal-cell--future { background: transparent; color: var(--par-text-secondary); opacity: 0.45; cursor: default; }
+.par-attend__cal-cell--excused { background: var(--par-warning-bg); color: #78350F; }
+.par-attend__log--muted { border-left: 3px solid var(--par-border); }
+.par-attend__log-badge--muted { color: var(--par-text-secondary); }
+@media (max-width: 600px) {
+  .par-attend__cal-nav button { min-width: 44px; min-height: 44px; }
+}

@@ -67,9 +67,9 @@ export default function PickupList() {
                   <span>{p.relationship} · {p.phone}</span>
                   {p.expiry && <small>Expires {new Date(p.expiry).toLocaleDateString()}</small>}
                   <div className="pkl__chips">
-                    {p.children.map((cid) => {
-                      const c = children.find((x) => x.id === cid);
-                      return c ? <span key={cid} className="pkl__chip">{c.fullName.split(' ')[0]}</span> : null;
+                    {(p.children || []).map((cid) => {
+                      const c = children.find((x) => String(x.id) === String(cid));
+                      return c ? <span key={cid} className="pkl__chip">{(c.fullName || '').split(' ')[0]}</span> : null;
                     })}
                   </div>
                 </div>
@@ -108,7 +108,7 @@ export default function PickupList() {
             {children.map((c) => (
               <label key={c.id} className="pkl__check">
                 <input type="checkbox" checked={form.children.includes(c.id)} onChange={() => toggleChild(c.id)} />
-                {c.fullName}
+                {c.fullName || `Child ${c.id}`}
               </label>
             ))}
           </fieldset>

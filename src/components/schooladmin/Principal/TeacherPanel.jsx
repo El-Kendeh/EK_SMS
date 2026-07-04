@@ -9,14 +9,16 @@ const Ic = ({ name, size, style }) => (
  * underperforming teachers.
  */
 export default function TeacherPanel({ data, onManage }) {
+  // null values mean the underlying data (timetable/grades) doesn't exist yet —
+  // render an honest dash, not an authoritative 0.
   const tiles = [
     {
       key: 'overloaded',
       icon: 'engineering',
       label: 'Overloaded',
-      value: data.overloaded,
+      value: data.overloaded == null ? '—' : data.overloaded,
       tone: 'amber',
-      hint: 'Teachers with > 28 periods/week',
+      hint: data.overloaded == null ? 'No timetable data yet' : `Teachers with > ${data.max_periods || 28} periods/week`,
     },
     {
       key: 'pending',
@@ -30,9 +32,9 @@ export default function TeacherPanel({ data, onManage }) {
       key: 'under',
       icon: 'trending_down',
       label: 'Underperforming',
-      value: data.underperforming,
+      value: data.underperforming == null ? '—' : data.underperforming,
       tone: 'error',
-      hint: 'Class avg below threshold',
+      hint: data.underperforming == null ? 'No grade data yet' : 'Class avg below threshold',
     },
   ];
 

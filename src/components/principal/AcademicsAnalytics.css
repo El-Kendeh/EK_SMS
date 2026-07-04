@@ -1,0 +1,123 @@
+/* ============================================================
+   Academics Analytics (principal) — paa-* namespace
+   Charts are hand-rolled CSS bars + inline SVG (no chart libs).
+   ============================================================ */
+
+.paa-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.paa-none {
+  margin: 4px 0 0;
+  font-size: 0.8125rem;
+  color: var(--ska-text-3);
+}
+
+/* ── Horizontal bars ── */
+.paa-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.paa-bar-row {
+  display: grid;
+  grid-template-columns: 44px 1fr 48px;
+  align-items: center;
+  gap: 10px;
+}
+.paa-bar-row__label {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--ska-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.paa-bar-row__label--wide { font-weight: 600; }
+.paa-bar-row--wide { grid-template-columns: minmax(80px, 130px) 1fr 48px; }
+.paa-bar-row__value {
+  font-size: 0.8125rem;
+  font-weight: 800;
+  text-align: right;
+  color: var(--ska-text);
+}
+
+/* ── Trend SVG ── */
+.paa-trend-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 4px;
+}
+.paa-trend__val {
+  font-size: 11px;
+  font-weight: 700;
+  fill: var(--ska-text);
+}
+.paa-trend__label {
+  font-size: 10px;
+  fill: var(--ska-text-3);
+}
+
+/* ── Heatmap ── */
+.paa-heat-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--ska-border);
+  border-radius: var(--ska-radius-xs);
+}
+.paa-heat {
+  display: grid;
+  min-width: max-content;
+  font-size: 0.75rem;
+}
+.paa-heat__corner,
+.paa-heat__col,
+.paa-heat__row,
+.paa-heat__cell {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--ska-border);
+  border-right: 1px solid var(--ska-border);
+}
+.paa-heat__col {
+  font-weight: 700;
+  color: var(--ska-text-2);
+  background: var(--ska-surface-high);
+  text-align: center;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.paa-heat__row {
+  font-weight: 700;
+  color: var(--ska-text);
+  background: var(--ska-surface-high);
+  white-space: nowrap;
+  position: sticky;
+  left: 0;
+}
+.paa-heat__corner { background: var(--ska-surface-high); position: sticky; left: 0; }
+.paa-heat__cell {
+  text-align: center;
+  font-weight: 700;
+  color: var(--ska-text);
+  min-width: 64px;
+}
+
+/* ── Mobile: keep the matrix scrollable, stack the top grid ── */
+@media (max-width: 900px) {
+  .paa-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 600px) {
+  .paa-page { gap: 12px; }
+  .paa-bar-row { grid-template-columns: 36px 1fr 42px; }
+  .paa-bar-row--wide { grid-template-columns: minmax(70px, 100px) 1fr 42px; }
+  .paa-heat__corner, .paa-heat__col, .paa-heat__row, .paa-heat__cell { padding: 7px 8px; }
+}
+
+@media (max-width: 360px) {
+  .paa-bar-row__label, .paa-bar-row__value { font-size: 0.75rem; }
+}

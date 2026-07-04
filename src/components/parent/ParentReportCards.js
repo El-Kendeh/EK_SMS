@@ -116,13 +116,25 @@ export default function ParentReportCards() {
 
   const { reportCards = [], loading } = useChildReportCards(activeChild?.id || null);
 
+  const [downloadError, setDownloadError] = useState(null);
+
   const handleDownload = async (card) => {
     if (!activeChild) return;
     setDownloadingId(card.id);
+    setDownloadError(null);
     try {
-      const html = await downloadChildReportCard(activeChild.id, card.id);
-      const win = window.open('', '_blank');
-      if (win && html) { win.document.write(html); win.document.close(); }
+      const blob = await downloadChildReportCard(activeChild.id, card.id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const slug = (s) => String(s || '').replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '').toLowerCase();
+      a.download = `report-card-${slug(activeChild.fullName)}-${slug(card.term)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setDownloadError(err?.message || 'Download failed — please try again.');
     } finally {
       setDownloadingId(null);
     }
@@ -143,6 +155,13 @@ export default function ParentReportCards() {
           </p>
         </div>
       </div>
+
+      {downloadError && (
+        <div className="par-empty" role="alert" style={{ padding: '12px 16px' }}>
+          <span className="material-symbols-outlined">error</span>
+          <p>{downloadError}</p>
+        </div>
+      )}
 
       {loading && (
         <div>
@@ -177,13 +196,27 @@ export default function ParentReportCards() {
                 </span>
               </div>
               <div className="par-report-card__info">
-                <h3 className="par-report-card__term">{card.term} · {card.academicYear}</h3>
+                <h3 className="par-report-card__term">{[card.term, card.academicYear].filter(Boolean).join(' · ')}</h3>
                 <div className="par-report-card__meta-row">
                   <span>{activeChild?.classroom || 'Grade'}</span>
-                  <span className="par-report-card__sep">·</span>
-                  <span>Position {card.position} of {card.totalStudents}</span>
-                  <span className="par-report-card__sep">·</span>
-                  <span>Average: {card.average}%</span>
+                  {card.position != null && (
+                    <>
+                      <span className="par-report-card__sep">·</span>
+                      <span>Position {card.position}{card.totalStudents != null ? ` of ${card.totalStudents}` : ''}</span>
+                    </>
+                  )}
+                  {card.average != null && (
+                    <>
+                      <span className="par-report-card__sep">·</span>
+                      <span>Average: {card.average}%</span>
+                    </>
+                  )}
+                  {card.subjects?.length > 0 && (
+                    <>
+                      <span className="par-report-card__sep">·</span>
+                      <span>{card.subjects.length} subject{card.subjects.length === 1 ? '' : 's'}</span>
+                    </>
+                  )}
                 </div>
                 <div className="par-report-card__badges">
                   {card.isVerified && (
@@ -192,9 +225,11 @@ export default function ParentReportCards() {
                       Verified
                     </span>
                   )}
-                  <span className="par-report-card__grade-badge" style={{ color: letterColor }}>
-                    Grade {card.grade}
-                  </span>
+                  {card.grade && (
+                    <span className="par-report-card__grade-badge" style={{ color: letterColor }}>
+                      Grade {card.grade}
+                    </span>
+                  )}
                   {acked && (
                     <span className="par-report-card__acked-badge">
                       <span className="material-symbols-outlined" style={{ fontSize: 12 }}>check_circle</span>
@@ -206,10 +241,12 @@ export default function ParentReportCards() {
             </div>
 
             <div className="par-report-card__actions">
-              <button className="par-report-card__btn par-report-card__btn--qr" onClick={() => setVerifyCard(card)}>
-                <span className="material-symbols-outlined">qr_code_2</span>
-                Verify
-              </button>
+              {card.verificationHash && (
+                <button className="par-report-card__btn par-report-card__btn--qr" onClick={() => setVerifyCard(card)}>
+                  <span className="material-symbols-outlined">qr_code_2</span>
+                  Verify
+                </button>
+              )}
               <button
                 className="par-report-card__btn par-report-card__btn--download"
                 onClick={() => handleDownload(card)}

@@ -1,0 +1,75 @@
+/* ============================================================
+   At-Risk Students (principal) — par-* namespace
+   ============================================================ */
+
+.par-export-btn { min-height: 44px; }
+
+/* ── Severity summary chips ── */
+.par-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.par-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  min-height: 40px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border: 1px solid var(--ska-border);
+  background: var(--ska-surface-card);
+  color: var(--ska-text-2);
+}
+.par-chip--high   { background: var(--ska-error-dim);  color: var(--ska-error);  border-color: var(--ska-error); }
+.par-chip--medium { background: rgba(245,158,11,0.12); color: #b25d00;           border-color: #f59e0b; }
+.par-chip--total  { background: var(--ska-primary-dim); color: var(--ska-primary); border-color: var(--ska-primary); }
+
+/* ── Table ── */
+.par-table-wrap { overflow-x: auto; }
+
+.par-student-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 4px 8px;
+  border: none;
+  border-radius: var(--ska-radius-xs);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.par-student-btn:hover,
+.par-student-btn:focus-visible {
+  background: var(--ska-primary-dim);
+  outline: 2px solid var(--ska-primary);
+  outline-offset: -2px;
+}
+.par-student-btn .ska-icon { color: var(--ska-text-3); }
+
+.par-reasons {
+  display: inline-flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* ── Mobile ── */
+@media (max-width: 600px) {
+  .par-page { gap: 12px; }
+  .par-export-btn { width: 100%; justify-content: center; }
+  .par-chip { min-height: 44px; }
+  /* GradeApprovals.css already stacks .ga-table rows into cards at <=600px */
+  .par-student-btn { justify-content: flex-end; }
+  .par-student-btn .ga-student { align-items: flex-start; }
+}
+
+@media (max-width: 400px) {
+  .par-chip { flex: 1 1 auto; justify-content: center; }
+}

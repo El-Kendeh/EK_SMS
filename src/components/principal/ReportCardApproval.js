@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { principalApi } from '../../api/adminApi';
+import Modal from './Modal';
 import '../schooladmin/SchoolAdmin.css';
+import '../schooladmin/Principal/Principal.css'; // defines the .pu-* classes this page renders
 import './GradeApprovals.css';
 import './ReportCardApproval.css';
 
@@ -28,6 +30,8 @@ export default function ReportCardApproval({ schoolId }) {
 
   const [commentTarget, setCommentTarget] = useState(null); // { studentName, subject }
   const [commentText, setCommentText] = useState('');
+  const [confirmPublish, setConfirmPublish] = useState(null); // { studentIds } — [] = all approved
+  const [truncated, setTruncated] = useState(false);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -40,6 +44,7 @@ export default function ReportCardApproval({ schoolId }) {
         setTermId(res.term_id || null);
         setApprovedCount(res.approved_count || 0);
         setTotalCount(res.total_count || 0);
+        setTruncated(!!res.truncated);
         setSelected(new Set());
       })
       .catch(err => setError(err.message))
@@ -70,8 +75,11 @@ export default function ReportCardApproval({ schoolId }) {
     });
   };
 
+  // Only unpublished students are selectable — published cards can't be re-published.
+  const selectable = reportCards.filter(rc => !rc.published);
+
   const toggleSelectAll = () => {
-    setSelected(prev => (prev.size === reportCards.length ? new Set() : new Set(reportCards.map(rc => rc.student_id))));
+    setSelected(prev => (prev.size === selectable.length ? new Set() : new Set(selectable.map(rc => rc.student_id))));
   };
 
   const publish = async (studentIds) => {
@@ -117,7 +125,7 @@ export default function ReportCardApproval({ schoolId }) {
     }
   };
 
-  const allSelected = reportCards.length > 0 && selected.size === reportCards.length;
+  const allSelected = selectable.length > 0 && selected.size === selectable.length;
 
   return (
     <div className="pu-page rca-page">
@@ -127,7 +135,7 @@ export default function ReportCardApproval({ schoolId }) {
           <p className="ska-page-sub">{term ? `Term: ${term}` : 'Review and publish student report cards'}</p>
         </div>
         <button type="button" className="ga-btn ga-btn--primary" disabled={publishLoading || approvedCount === 0}
-          onClick={() => publish([])}>
+          onClick={() => setConfirmPublish({ studentIds: [] })}>
           <Ic name="publish" size="sm" /> Publish All Approved
         </button>
       </div>
@@ -159,7 +167,7 @@ export default function ReportCardApproval({ schoolId }) {
           <span className="ga-bulkbar__count">{selected.size} student(s) selected</span>
           <div className="ga-bulkbar__actions">
             <button type="button" className="ga-btn ga-btn--primary" disabled={publishLoading}
-              onClick={() => publish(Array.from(selected))}>
+              onClick={() => setConfirmPublish({ studentIds: Array.from(selected) })}>
               <Ic name="publish" size="sm" /> Publish Selected
             </button>
           </div>
@@ -167,9 +175,7 @@ export default function ReportCardApproval({ schoolId }) {
       )}
 
       {commentTarget && (
-        <div className="ga-modal-overlay" onClick={() => setCommentTarget(null)}>
-          <div className="ga-modal" onClick={e => e.stopPropagation()}>
-            <h3>Comment — {commentTarget.studentName}</h3>
+        <Modal title={`Comment — ${commentTarget.studentName}`} onClose={() => setCommentTarget(null)}>
             <p className="ga-modal__sub">{commentTarget.subject.subject_name}</p>
             {commentTarget.subject.remarks && (
               <pre className="ga-modal__remarks">{commentTarget.subject.remarks}</pre>
@@ -188,7 +194,32 @@ export default function ReportCardApproval({ schoolId }) {
                 Save Comment
               </button>
             </div>
+        </Modal>
+      )}
+
+      {confirmPublish && (
+        <Modal title="Publish report cards?" onClose={() => setConfirmPublish(null)}>
+          <p className="ga-modal__sub">
+            This releases {confirmPublish.studentIds.length === 0
+              ? 'every approved report card'
+              : `${confirmPublish.studentIds.length} report card(s)`}
+            {term ? ` for ${term}` : ''} to parents and students. Published cards
+            cannot be silently retracted.
+          </p>
+          <div className="ga-modal__actions">
+            <button type="button" className="ga-btn ga-btn--ghost" onClick={() => setConfirmPublish(null)}>Cancel</button>
+            <button type="button" className="ga-btn ga-btn--primary" disabled={publishLoading}
+              onClick={() => { const ids = confirmPublish.studentIds; setConfirmPublish(null); publish(ids); }}>
+              <Ic name="publish" size="sm" /> Publish
+            </button>
           </div>
+        </Modal>
+      )}
+
+      {truncated && (
+        <div className="ga-banner ga-banner--error">
+          <Ic name="warning" size="sm" />
+          Showing the most recent 500 grade rows — the counts above are exact, but this list may be incomplete.
         </div>
       )}
 
@@ -231,13 +262,13 @@ export default function ReportCardApproval({ schoolId }) {
                 <div key={rc.student_id} className="rca-card">
                   <div className="rca-card__head">
                     <input type="checkbox" checked={selected.has(rc.student_id)} onChange={() => toggleSelect(rc.student_id)}
-                      aria-label={`Select ${rc.student_name}`} />
+                      disabled={rc.published} aria-label={`Select ${rc.student_name}`} />
                     <div className="rca-card__info">
                       <strong>{rc.student_name}</strong>
                       <span className="rca-card__sub">{rc.admission_number}</span>
                     </div>
-                    <span className={`ga-badge ${rc.approved ? 'ga-badge--approved' : 'ga-badge--pending'}`}>
-                      {rc.approved ? 'Ready to publish' : 'Pending approvals'}
+                    <span className={`ga-badge ${rc.published ? 'ga-badge--approved' : rc.approved ? 'ga-badge--approved' : 'ga-badge--pending'}`}>
+                      {rc.published ? 'Published' : rc.approved ? 'Ready to publish' : 'Pending approvals'}
                     </span>
                     <button type="button" className="ga-icon-btn" onClick={() => toggleExpand(rc.student_id)}
                       title={isOpen ? 'Collapse' : 'Expand'}>

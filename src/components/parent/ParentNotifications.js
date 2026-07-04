@@ -4,24 +4,31 @@ import { useParentNotifications } from '../../hooks/useParentNotifications';
 import { getNotifMeta, formatParentRelativeTime } from '../../utils/parentUtils';
 import './ParentNotifications.css';
 
-const FILTERS = [
-  { key: 'all',      label: 'All' },
-  { key: 'aminata',  label: 'Aminata' },
-  { key: 'mohamed',  label: 'Mohamed' },
-  { key: 'system',   label: 'System' },
-];
-
-export default function ParentNotifications() {
+export default function ParentNotifications({ children = [] }) {
   const [activeFilter, setActiveFilter] = useState('all');
   const { notifications, loading, markRead, markAllRead, hasUnread } = useParentNotifications();
+
+  // Filters are built from the REAL linked children (the old list hardcoded
+  // mock names). Child filters only appear once notifications carry a child
+  // attribution; "System" covers unattributed notices.
+  const filters = useMemo(() => {
+    const childFilters = notifications.some((n) => n.childName)
+      ? children.map((c) => ({
+          key: `child-${c.id}`,
+          label: (c.fullName || '').split(' ')[0] || `Child ${c.id}`,
+          childId: c.id,
+        }))
+      : [];
+    return [{ key: 'all', label: 'All' }, ...childFilters, { key: 'system', label: 'System' }];
+  }, [children, notifications]);
 
   const filtered = useMemo(() => {
     if (activeFilter === 'all') return notifications;
     if (activeFilter === 'system') return notifications.filter((n) => !n.childId);
-    return notifications.filter((n) =>
-      n.childName?.toLowerCase().includes(activeFilter)
-    );
-  }, [notifications, activeFilter]);
+    const f = filters.find((x) => x.key === activeFilter);
+    if (!f?.childId) return notifications;
+    return notifications.filter((n) => String(n.childId) === String(f.childId));
+  }, [notifications, activeFilter, filters]);
 
   const itemVariants = {
     hidden:  { opacity: 0, x: -12 },
@@ -63,7 +70,7 @@ export default function ParentNotifications() {
 
       {/* Child filter tabs */}
       <div className="par-notifs__filters">
-        {FILTERS.map((f) => (
+        {filters.map((f) => (
           <button
             key={f.key}
             className={`par-notifs__filter-btn ${activeFilter === f.key ? 'par-notifs__filter-btn--active' : ''}`}

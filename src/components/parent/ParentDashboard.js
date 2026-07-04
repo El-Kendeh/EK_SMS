@@ -5,6 +5,7 @@ import { I18nProvider } from '../../context/I18nContext';
 import { ChildProvider, useActiveChild } from '../../context/ChildContext';
 import { ParentNotificationProvider, useParentNotifyCtx } from '../../context/ParentNotificationContext';
 import SchoolContextBanner from '../common/SchoolContextBanner';
+import { SchoolContextProvider } from '../../hooks/useSchoolContext';
 import { useSchoolBranding } from '../../context/SchoolBrandingContext';
 
 import ParentHome from './ParentHome';
@@ -18,6 +19,8 @@ import ParentBehavior from './ParentBehavior';
 import ParentFees from './ParentFees';
 
 import ParentMessages from './ParentMessages';
+import ParentVerification from './ParentVerification';
+import ParentTimetable from './ParentTimetable';
 import ParentTeacherConferences from './ParentTeacherConferences';
 import ParentWellbeing from './ParentWellbeing';
 import ParentWhistleblower from './ParentWhistleblower';
@@ -35,7 +38,6 @@ import LiveParentToast from './LiveParentToast';
 import KeyboardShortcuts from '../common/KeyboardShortcuts';
 import AccessibilityControls from '../common/AccessibilityControls';
 import ErrorBoundary from '../common/ErrorBoundary';
-import VerifyPage from '../student/VerifyPage';
 
 import './ParentDashboard.css';
 
@@ -47,6 +49,7 @@ const SECTION_PATHS = {
   notifications:  '/parent/notifications',
   profile:        '/parent/profile',
   attendance:     '/parent/attendance',
+  timetable:      '/parent/timetable',
   behavior:       '/parent/behavior',
   fees:           '/parent/fees',
   verification:   '/parent/verification',
@@ -85,6 +88,7 @@ const NAV_GROUPS = [
       { key: 'grades',       icon: 'grade',              label: 'Grades' },
       { key: 'report-cards', icon: 'description',        label: 'Report Cards' },
       { key: 'attendance',   icon: 'fact_check',         label: 'Attendance' },
+      { key: 'timetable',    icon: 'calendar_month',     label: 'Timetable' },
       { key: 'behavior',     icon: 'gavel',              label: 'Behaviour' },
       { key: 'compare',      icon: 'compare',            label: 'Compare' },
       { key: 'digest',       icon: 'auto_awesome',       label: 'Weekly digest' },
@@ -161,9 +165,10 @@ function ParentInner({ onNavigate }) {
       case 'notifications':     return <ParentNotifications navigateTo={navigateTo} children={children} />;
       case 'profile':           return <ParentProfile />;
       case 'attendance':        return <ParentAttendance navigateTo={navigateTo} children={children} />;
+      case 'timetable':         return <ParentTimetable />;
       case 'behavior':          return <ParentBehavior navigateTo={navigateTo} children={children} />;
       case 'fees':              return <ParentFees />;
-      case 'verification':      return <VerifyPage hash={null} />;
+      case 'verification':      return <ParentVerification />;
       case 'messages':          return <ParentMessages />;
       case 'conferences':       return <ParentTeacherConferences />;
       case 'wellbeing':         return <ParentWellbeing />;
@@ -283,14 +288,16 @@ export default function ParentDashboard({ onNavigate }) {
   // Outer wrapper loads children once and feeds the ChildProvider
   const { children = [], parent } = useParentChildren();
   return (
-    <I18nProvider>
-      <ChildProvider initialChildren={children}>
-        <ParentNotificationProvider>
-          <ParentInner onNavigate={onNavigate} />
-          {/* Hidden: makes sure parent name is reachable for header — kept for compat */}
-          <div style={{ display: 'none' }}>{parent?.fullName}</div>
-        </ParentNotificationProvider>
-      </ChildProvider>
-    </I18nProvider>
+    <SchoolContextProvider>
+      <I18nProvider>
+        <ChildProvider initialChildren={children}>
+          <ParentNotificationProvider>
+            <ParentInner onNavigate={onNavigate} />
+            {/* Hidden: makes sure parent name is reachable for header — kept for compat */}
+            <div style={{ display: 'none' }}>{parent?.fullName}</div>
+          </ParentNotificationProvider>
+        </ChildProvider>
+      </I18nProvider>
+    </SchoolContextProvider>
   );
 }

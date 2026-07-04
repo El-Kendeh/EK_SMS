@@ -1,0 +1,182 @@
+/* ============================================================
+   Principal student profile drawer — psd-* namespace
+   (layout copied from the teacher drawer, CSS-only animation)
+   ============================================================ */
+
+.psd-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 1200;
+  animation: psd-fade 0.18s ease;
+}
+
+.psd-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 420px;
+  max-width: 100vw;
+  background: var(--ska-surface-card, #fff);
+  border-left: 1px solid var(--ska-border);
+  box-shadow: -12px 0 32px rgba(0, 0, 0, 0.18);
+  z-index: 1201;
+  display: flex;
+  flex-direction: column;
+  animation: psd-slide 0.22s ease;
+}
+
+@keyframes psd-fade  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes psd-slide { from { transform: translateX(100%); } to { transform: translateX(0); } }
+
+.psd-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--ska-border);
+}
+.psd-head__title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 800;
+  color: var(--ska-text);
+}
+.psd-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--ska-radius-xs);
+  border: 1px solid var(--ska-border);
+  background: transparent;
+  color: var(--ska-text-2);
+  cursor: pointer;
+}
+.psd-close:hover { color: var(--ska-primary); border-color: var(--ska-primary); }
+
+.psd-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--ska-text-3);
+  padding: 24px;
+  text-align: center;
+}
+.psd-state p { margin: 0; font-size: 0.8125rem; }
+
+.psd-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ── Hero ── */
+.psd-hero {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.psd-avatar {
+  flex: 0 0 auto;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ska-primary-dim);
+  color: var(--ska-primary);
+  font-weight: 800;
+  font-size: 1rem;
+}
+.psd-hero__info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.psd-hero__name { font-size: 0.9375rem; color: var(--ska-text); }
+.psd-hero__num { font-size: 0.75rem; color: var(--ska-text-3); }
+.psd-hero__badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+
+.psd-section-label {
+  margin: 8px 0 0;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ska-text-3);
+}
+.psd-none {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--ska-text-3);
+}
+
+/* ── Attendance ── */
+.psd-att {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid var(--ska-border);
+  border-radius: var(--ska-radius-xs);
+  padding: 10px 12px;
+  flex-wrap: wrap;
+}
+.psd-att__rate { font-size: 1.5rem; font-weight: 800; }
+.psd-att__pills { display: flex; gap: 6px; flex-wrap: wrap; }
+.psd-pill {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--ska-surface-high);
+  color: var(--ska-text-2);
+  border: 1px solid var(--ska-border);
+}
+.psd-pill--green { background: var(--ska-green-dim); color: var(--ska-green); border-color: transparent; }
+.psd-pill--red   { background: var(--ska-error-dim); color: var(--ska-error); border-color: transparent; }
+.psd-pill--amber { background: rgba(245,158,11,0.14); color: #b25d00; border-color: transparent; }
+
+/* ── Grades ── */
+.psd-grades {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--ska-border);
+  border-radius: var(--ska-radius-xs);
+  overflow: hidden;
+}
+.psd-grade-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--ska-border);
+}
+.psd-grade-row:last-child { border-bottom: none; }
+.psd-grade-row__subject {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ska-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.psd-grade-row__total { font-size: 0.8125rem; text-align: right; }
+.psd-grade-row__parts {
+  grid-column: 1;
+  font-size: 0.6875rem;
+  color: var(--ska-text-3);
+}
+.psd-grade-row .ga-badge { grid-column: 2; justify-self: end; }
+
+/* ── Mobile ── */
+@media (max-width: 600px) {
+  .psd-drawer { width: 100vw; border-left: none; }
+  .psd-body { padding: 12px; }
+}

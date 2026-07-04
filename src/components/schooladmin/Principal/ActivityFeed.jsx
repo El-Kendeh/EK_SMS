@@ -1,4 +1,5 @@
 import React from 'react';
+import { timeAgo } from './principal.utils';
 
 const Ic = ({ name, size, style }) => (
   <span className={`ska-icon${size ? ` ska-icon--${size}` : ''}`} aria-hidden="true" style={style}>{name}</span>
@@ -39,7 +40,7 @@ export default function ActivityFeed({ items }) {
               </div>
               <div className="pu-feed__body">
                 <p>{it.text}</p>
-                <span>{it.at}</span>
+                <span title={it.at}>{timeAgo(it.at)}</span>
               </div>
             </li>
           );

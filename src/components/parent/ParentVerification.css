@@ -294,3 +294,78 @@
   .par-verify__hero-title { font-size: 24px; }
   .par-verify__nodes-grid { grid-template-columns: repeat(4, 1fr); }
 }
+
+/* ── Real verification tool (honest rework) ─────────────────── */
+.par-verify__form {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.par-verify__input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--par-border);
+  background: var(--par-surface, transparent);
+  color: var(--par-text-primary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+}
+.par-verify__input:focus { outline: none; border-color: var(--par-primary); }
+
+.par-verify__submit {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  border: none;
+  background: var(--par-primary);
+  color: var(--par-on-primary, #fff);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+.par-verify__submit:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.par-verify__result {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.par-verify__result--ok {
+  background: color-mix(in srgb, var(--par-primary) 10%, transparent);
+  border: 1px solid var(--par-primary);
+  color: var(--par-text-primary);
+}
+.par-verify__result--ok > .material-symbols-outlined { color: var(--par-primary); font-size: 26px; }
+.par-verify__result--error {
+  background: color-mix(in srgb, #b91c1c 8%, transparent);
+  border: 1px solid var(--par-error, #b91c1c);
+  color: var(--par-text-primary);
+}
+.par-verify__result--error > .material-symbols-outlined { color: var(--par-error, #b91c1c); font-size: 26px; }
+.par-verify__result-title { margin: 0 0 2px; font-weight: 700; font-size: 14px; }
+.par-verify__result-note { margin: 10px 0 0; font-size: 12px; color: var(--par-text-secondary); }
+
+.par-verify__idle-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--par-text-secondary);
+}
+
+@media (max-width: 600px) {
+  .par-verify__form { flex-direction: column; align-items: stretch; }
+  .par-verify__submit { width: 100%; justify-content: center; }
+}

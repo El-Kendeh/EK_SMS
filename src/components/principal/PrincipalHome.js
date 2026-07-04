@@ -1,5 +1,4 @@
 import React from 'react';
-import { PrincipalProvider } from '../../context/PrincipalContext';
 import { usePrincipalDashboard } from '../../hooks/usePrincipalDashboard';
 
 import StatsCards      from '../schooladmin/Principal/StatsCards';
@@ -24,6 +23,8 @@ const PRC_QUICK_ACTIONS = [
   { key: 'report-card-approval', label: 'Report Cards',     icon: 'description',         tone: 'secondary', target: 'report-card-approval' },
   { key: 'syllabus-progress',    label: 'Syllabus Progress',icon: 'menu_book',           tone: 'tertiary',  target: 'syllabus-progress' },
   { key: 'principal-users',      label: 'Leadership Team',  icon: 'admin_panel_settings',tone: 'green',     target: 'principal-users' },
+  { key: 'expenses',             label: 'Expense Approvals',icon: 'receipt_long',        tone: 'tertiary',  target: 'expenses' },
+  { key: 'principal-announcements', label: 'Announcements', icon: 'campaign',            tone: 'primary',   target: 'principal-announcements' },
 ];
 
 function PrincipalHomeInner({ navigateTo }) {
@@ -32,14 +33,15 @@ function PrincipalHomeInner({ navigateTo }) {
     classPerf, teacherData, financeData, activityItems, syllabus,
   } = usePrincipalDashboard();
 
+  // Pre-load defaults are honest "no data" states, not fake zeros/greens.
   const summary = dashboard || {
     totalStudents: 0, totalTeachers: 0, totalClasses: 0,
-    avgAcademic: 0, avgAttendance: 0, finance: 'Stable', healthScore: 0,
+    avgAcademic: 0, avgAttendance: 0, finance: null, financeRate: null, healthScore: 0,
     totalGradeMods: 0, totalAtRisk: 0, totalFinAnom: 0, totalLowAttend: 0,
   };
   const cp = classPerf || { top: [], low: [] };
-  const td = teacherData || { overloaded: 0, underperforming: 0, pendingGrades: 0, totalTeachers: 0 };
-  const fd = financeData || { revenue: 0, outstanding: 0, paymentsToday: 0, transactions: [] };
+  const td = teacherData || { overloaded: null, underperforming: null, pendingGrades: 0, totalTeachers: 0 };
+  const fd = financeData || { has_data: false, transactions: [] };
   const subjects = syllabus?.subjects || [];
 
   const pendingGradeMods = Math.max(summary.totalGradeMods || 0, overview?.metrics?.pending_grade_changes || 0);
@@ -56,7 +58,8 @@ function PrincipalHomeInner({ navigateTo }) {
     alerts.push({
       key: 'atrisk', tone: 'warning', icon: 'trending_down',
       title: `${summary.totalAtRisk} students at academic risk`,
-      detail: 'Convene a support meeting and assign mentors.',
+      detail: 'Open the At-Risk panel to see who and why.',
+      onClick: () => navigateTo('principal-at-risk'),
     });
   }
   if ((summary.totalFinAnom || 0) > 0) {
@@ -78,7 +81,7 @@ function PrincipalHomeInner({ navigateTo }) {
   if (summary.avgAcademic < 75) insights.push('Consider a curriculum review for underperforming classes.');
   if (summary.avgAttendance < 88) insights.push('Attendance dropping — schedule home visits.');
   if ((summary.totalAtRisk || 0) > 8) insights.push(`${summary.totalAtRisk} students at risk — convene a support meeting.`);
-  if (summary.finance !== 'Stable') insights.push('Finance status is unstable — review collections this week.');
+  if (summary.finance && summary.finance !== 'Stable') insights.push('Finance status is unstable — review collections this week.');
   if (insights.length === 0) insights.push('All key metrics within target. Keep monitoring trend lines.');
 
   if (error) {
@@ -107,7 +110,7 @@ function PrincipalHomeInner({ navigateTo }) {
 
       <div className="pu-two-col">
         <div className="pu-two-col__left">
-          <ClassPerformance data={cp} />
+          <ClassPerformance data={cp} onSelect={() => navigateTo('principal-at-risk')} />
           <TeacherPanel data={td} />
         </div>
         <div className="pu-two-col__right">
@@ -190,9 +193,5 @@ function PrincipalHomeInner({ navigateTo }) {
 }
 
 export default function PrincipalHome(props) {
-  return (
-    <PrincipalProvider>
-      <PrincipalHomeInner {...props} />
-    </PrincipalProvider>
-  );
+  return <PrincipalHomeInner {...props} />;
 }

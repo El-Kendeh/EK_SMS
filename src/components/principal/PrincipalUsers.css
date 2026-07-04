@@ -175,3 +175,58 @@ select.pru-input {
 @media (max-width: 360px) {
   .pru-card__head { flex-direction: column; align-items: flex-start; gap: 4px; }
 }
+
+/* ── Credentials + confirmation modals ─────────────────────── */
+.pru-creds__intro,
+.pru-confirm__body {
+  margin: 0 0 12px;
+  font-size: 0.875rem;
+  color: var(--ska-text-2);
+  line-height: 1.5;
+}
+
+.pru-creds__box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--ska-border);
+  border-radius: var(--ska-radius);
+  background: var(--ska-surface-high);
+}
+
+.pru-creds__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pru-creds__row span {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ska-text-3);
+}
+
+.pru-creds__row code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--ska-text);
+  word-break: break-all;
+  text-align: right;
+  user-select: all;
+}
+
+.pru-creds__note {
+  margin: 10px 0 0;
+  font-size: 0.8125rem;
+  color: var(--ska-tertiary);
+}
+
+@media (max-width: 400px) {
+  .pru-creds__row { flex-direction: column; align-items: flex-start; gap: 2px; }
+  .pru-creds__row code { text-align: left; }
+}

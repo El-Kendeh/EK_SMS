@@ -1,27 +1,19 @@
 import { useState, useEffect } from 'react';
 import { principalApi } from '../api/adminApi';
-import { usePrincipal } from '../context/PrincipalContext';
 
 export function usePrincipalDashboard() {
-  const {
-    dashboard, setDashboard,
-    classPerf, setClassPerf,
-    teacherData, setTeacherData,
-    financeData, setFinanceData,
-    activityItems, setActivityItems,
-    syllabus, setSyllabus,
-    loaded, setLoaded,
-  } = usePrincipal();
+  const [dashboard, setDashboard] = useState(null);
+  const [classPerf, setClassPerf] = useState(null);
+  const [teacherData, setTeacherData] = useState(null);
+  const [financeData, setFinanceData] = useState(null);
+  const [activityItems, setActivityItems] = useState([]);
+  const [syllabus, setSyllabus] = useState(null);
 
   const [overview, setOverview] = useState(null);
-  const [loading, setLoading] = useState(!loaded);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (loaded) {
-      setLoading(false);
-      return;
-    }
     let cancelled = false;
 
     Promise.allSettled([
@@ -49,7 +41,6 @@ export function usePrincipalDashboard() {
       if (allFailed) {
         setError('Failed to load dashboard data');
       }
-      setLoaded(true);
     }).catch((err) => {
       if (!cancelled) setError(err.message);
     }).finally(() => {
@@ -57,7 +48,7 @@ export function usePrincipalDashboard() {
     });
 
     return () => { cancelled = true; };
-  }, [loaded, setDashboard, setClassPerf, setTeacherData, setFinanceData, setActivityItems, setSyllabus, setLoaded]);
+  }, []);
 
   return { loading, error, overview, dashboard, classPerf, teacherData, financeData, activityItems, syllabus };
 }

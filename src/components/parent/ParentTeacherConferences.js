@@ -60,7 +60,7 @@ export default function ParentTeacherConferences() {
           <li key={s.id} className={s.booked ? 'is-booked' : ''}>
             <div className="ptc__slot">
               <strong>{fmt(s.start, s.durationMin)}</strong>
-              <span>{s.teacher} · {s.subject} · {s.room}</span>
+              <span>{[s.teacher, s.subject, s.room].filter(Boolean).join(' · ') || 'Teacher to be confirmed'}</span>
               {s.booked && s.bookedBy === 'self' && s.topic && <em>Topic: {s.topic}</em>}
             </div>
             {s.booked && s.bookedBy === 'self' ? (

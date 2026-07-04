@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import financeApi from '../../api/financeApi';
 import { fmtMoney, fmtMoneyCompact, methodLabel, catLabel } from './bursar.utils';
+import { downloadCsv } from '../../utils/csv';
 
 import '../schooladmin/SchoolAdmin.css';
 import '../schooladmin/Principal/Principal.css';
@@ -96,23 +97,8 @@ const pctDelta = (cur, prev) => {
 };
 
 /* ── CSV export ───────────────────────────────────────────── */
-const csvCell = (v) => {
-  const s = String(v ?? '');
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-};
-
-function downloadCsv(filename, rows) {
-  const csv = rows.map((r) => r.map(csvCell).join(',')).join('\r\n');
-  const blob = new Blob(['﻿', csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
+/* csvCell + downloadCsv moved verbatim to src/utils/csv.js (shared with the
+   principal export buttons) — behavior identical, BOM included. */
 
 const EXPORT_OPTIONS = [
   { value: 'summary',  label: 'Summary report',  desc: 'KPIs, monthly performance, methods and spending breakdowns' },

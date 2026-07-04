@@ -5,7 +5,6 @@ import {
   fetchChildFees, fetchPaymentChannels, startPayment,
   fetchReceipts, downloadReceiptPdf,
 } from '../../api/parentApi';
-import QRCode from '../common/QRCode';
 import { Skeleton } from '../common/Skeleton';
 import './ParentFees.css';
 
@@ -25,8 +24,12 @@ function PayModal({ tx, childId, channels, onDone, onClose }) {
   const pay = async () => {
     setBusy(true); setError(null);
     try {
+      // Record what the button actually promises: the instalment due now, not
+      // the full balance. The remaining balance is settled in later instalments.
       const r = await startPayment({
-        childId, transactionId: tx.id, amount: tx.amount, channelId: channel, instalments,
+        childId, transactionId: tx.id,
+        amount: instalments > 1 ? perInstalment : tx.amount,
+        channelId: channel, instalments,
       });
       onDone(r.receipt);
     } catch (e) {
@@ -79,7 +82,7 @@ function PayModal({ tx, childId, channels, onDone, onClose }) {
 
           <p className="pfee-modal__note">
             <span className="material-symbols-outlined">verified_user</span>
-            A cryptographic receipt is generated on success — verifiable from any device.
+            You'll get a receipt reference right away. The balance updates once the school confirms the money arrived.
           </p>
         </div>
       </motion.div>
@@ -88,21 +91,31 @@ function PayModal({ tx, childId, channels, onDone, onClose }) {
 }
 
 function ReceiptModal({ receipt, onClose }) {
-  const verifyUrl = `${window.location.origin}/verify/${encodeURIComponent(receipt.verificationHash)}`;
+  // Payments are NOT publicly verifiable — the /verify registry only resolves
+  // grade & report-card receipts. Show the reference hash as plain text rather
+  // than a QR/link that would resolve to "not in our registry".
+  const reference = receipt.verificationHash || null;
   const [downloading, setDownloading] = useState(false);
+  const isPending = receipt.status === 'pending' || !receipt.paidAt;
+
+  const [dlError, setDlError] = useState(null);
 
   const dl = async () => {
     setDownloading(true);
+    setDlError(null);
     try {
-      const html = await downloadReceiptPdf(receipt.id);
-      const win = window.open('', '_blank');
-      if (win && html) { win.document.write(html); win.document.close(); }
+      const blob = await downloadReceiptPdf(receipt.id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `receipt-${receipt.receiptNumber || receipt.id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setDlError(err?.message || 'Download failed — please try again.');
     } finally { setDownloading(false); }
-  };
-
-  const shareWhatsApp = () => {
-    const text = encodeURIComponent(`EK-SMS receipt ${receipt.id}\n${fmtSll(receipt.amount)} via ${receipt.method}\nVerify: ${verifyUrl}`);
-    window.open(`https://wa.me/?text=${text}`, '_blank', 'noopener');
   };
 
   return (
@@ -113,22 +126,31 @@ function ReceiptModal({ receipt, onClose }) {
           <button onClick={onClose} aria-label="Close"><span className="material-symbols-outlined">close</span></button>
         </header>
         <div className="pfee-modal__body pfee-modal__body--receipt">
+          {dlError && (
+            <p className="pfee-modal__note" style={{ color: 'var(--par-danger, #b91c1c)' }}>
+              <span className="material-symbols-outlined">error</span>
+              {dlError}
+            </p>
+          )}
+          {isPending && (
+            <p className="pfee-modal__note" style={{ color: 'var(--par-warning, #b45309)' }}>
+              <span className="material-symbols-outlined">hourglass_top</span>
+              Pending confirmation — the balance moves once the school confirms this payment.
+            </p>
+          )}
           <dl>
-            <div><dt>Receipt</dt><dd>{receipt.id}</dd></div>
+            <div><dt>Receipt</dt><dd>{receipt.receiptNumber || receipt.id}</dd></div>
             <div><dt>Amount</dt><dd>{fmtSll(receipt.amount)}</dd></div>
             <div><dt>Method</dt><dd>{receipt.method}</dd></div>
-            <div><dt>Paid at</dt><dd>{new Date(receipt.paidAt).toLocaleString()}</dd></div>
+            <div><dt>Status</dt><dd>{isPending ? 'Pending confirmation' : (receipt.status || 'completed')}</dd></div>
+            <div><dt>Paid at</dt><dd>{receipt.paidAt ? new Date(receipt.paidAt).toLocaleString() : '—'}</dd></div>
+            {reference && (
+              <div><dt>Reference</dt><dd style={{ fontFamily: 'monospace', fontSize: '0.72rem', wordBreak: 'break-all' }}>{reference}</dd></div>
+            )}
           </dl>
-          <div className="pfee-modal__qr">
-            <QRCode value={verifyUrl} size={140} ariaLabel="Receipt verification QR" />
-            <small>Scan to verify</small>
-          </div>
           <div className="pfee-modal__actions">
-            <button className="pfee-btn pfee-btn--ghost" onClick={shareWhatsApp}>
-              <span className="material-symbols-outlined">share</span> Share
-            </button>
             <button className="pfee-btn pfee-btn--primary" onClick={dl} disabled={downloading}>
-              {downloading ? '…' : <><span className="material-symbols-outlined">download</span> PDF</>}
+              {downloading ? '…' : <><span className="material-symbols-outlined">download</span> Download</>}
             </button>
           </div>
         </div>
@@ -137,12 +159,18 @@ function ReceiptModal({ receipt, onClose }) {
   );
 }
 
-function FullAuditDrawer({ tx, onClose }) {
+function FullAuditDrawer({ tx, payments = [], onClose }) {
+  // Real trail only: the invoice row + actual payment rows linked to this fee.
   const events = [
-    { type: 'INVOICE_CREATED',   at: tx.date, by: 'School registrar', hash: 'a31df9c7' },
-    { type: 'PAYMENT_INITIATED', at: tx.date, by: 'You',              hash: 'b71fa9e0' },
-    { type: 'PAYMENT_CONFIRMED', at: tx.date, by: 'Payment provider', hash: 'c1b248b7' },
-    { type: 'RECEIPT_SIGNED',    at: tx.date, by: 'School',           hash: 'd9e0c1b2' },
+    { type: 'INVOICE_CREATED', at: tx.date, by: 'School', hash: null },
+    ...payments
+      .filter((p) => String(p.transactionId) === String(tx.id))
+      .map((p) => ({
+        type: p.status === 'pending' ? 'PAYMENT_INITIATED (awaiting confirmation)' : `PAYMENT_${(p.status || 'recorded').toUpperCase()}`,
+        at: p.paidAt || p.date || tx.date,
+        by: p.paidBy || 'You',
+        hash: p.verificationHash ? p.verificationHash.slice(0, 12) : null,
+      })),
   ];
   return (
     <div className="pfee-drawer-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
@@ -159,8 +187,8 @@ function FullAuditDrawer({ tx, onClose }) {
             <li key={i}>
               <strong>{e.type.replace(/_/g, ' ')}</strong>
               <span>{e.by}</span>
-              <span>{new Date(e.at).toLocaleString()}</span>
-              <code>{e.hash}</code>
+              <span>{e.at ? new Date(e.at).toLocaleString() : '—'}</span>
+              {e.hash && <code>{e.hash}</code>}
             </li>
           ))}
         </ul>
@@ -200,7 +228,7 @@ export default function ParentFees() {
     <div className="pfee">
       <header className="pfee__head">
         <h2><span className="material-symbols-outlined">payments</span> Fees · {activeChild.fullName}</h2>
-        <p>Academic year {data.academicYear || ''}</p>
+        {data.academicYear && <p>Academic year {data.academicYear}</p>}
       </header>
 
       <div className="pfee__summary">
@@ -224,13 +252,14 @@ export default function ParentFees() {
       <ul className="pfee__txs">
         {txs.map((tx) => {
           const isPaid = tx.status === 'verified' || tx.status === 'paid';
-          const linkedReceipt = allReceipts.find((r) => r.transactionId === tx.id) || (tx.receiptId && allReceipts.find((r) => r.id === tx.receiptId));
+          const awaitingConfirmation = !isPaid && (tx.pendingAmount || 0) > 0;
+          const linkedReceipt = allReceipts.find((r) => String(r.transactionId) === String(tx.id)) || (tx.receiptId && allReceipts.find((r) => r.id === tx.receiptId));
           return (
             <li key={tx.id} className={isPaid ? 'is-paid' : 'is-pending'}>
               <div className="pfee__tx-icon"><span className="material-symbols-outlined">{tx.icon || 'receipt'}</span></div>
               <div className="pfee__tx-body">
                 <strong>{tx.description}</strong>
-                <span>{tx.id} · {tx.date ? new Date(tx.date).toLocaleDateString() : '—'}</span>
+                <span>#{tx.id} · {tx.date ? new Date(tx.date).toLocaleDateString() : '—'}</span>
               </div>
               <div className="pfee__tx-amount">{fmtSll(tx.amount)}</div>
               <div className="pfee__tx-action">
@@ -238,6 +267,16 @@ export default function ParentFees() {
                   <>
                     <span className="pfee__pill pfee__pill--ok">
                       <span className="material-symbols-outlined">check_circle</span> Paid
+                    </span>
+                    {linkedReceipt && (
+                      <button className="pfee-btn pfee-btn--ghost" onClick={() => setReceipt(linkedReceipt)}>Receipt</button>
+                    )}
+                  </>
+                ) : awaitingConfirmation ? (
+                  <>
+                    {/* Money initiated but NOT settled — the balance is untouched until the school confirms. */}
+                    <span className="pfee__pill pfee__pill--wait" title={`${fmtSll(tx.pendingAmount)} awaiting school confirmation`}>
+                      <span className="material-symbols-outlined">hourglass_top</span> Pending confirmation
                     </span>
                     {linkedReceipt && (
                       <button className="pfee-btn pfee-btn--ghost" onClick={() => setReceipt(linkedReceipt)}>Receipt</button>
@@ -259,7 +298,7 @@ export default function ParentFees() {
       <AnimatePresence>
         {payTx && <PayModal tx={payTx} childId={activeChild.id} channels={channels} onClose={() => setPayTx(null)} onDone={onPaid} />}
         {receipt && <ReceiptModal receipt={receipt} onClose={() => setReceipt(null)} />}
-        {auditTx && <FullAuditDrawer tx={auditTx} onClose={() => setAuditTx(null)} />}
+        {auditTx && <FullAuditDrawer tx={auditTx} payments={data.payments || []} onClose={() => setAuditTx(null)} />}
       </AnimatePresence>
     </div>
   );

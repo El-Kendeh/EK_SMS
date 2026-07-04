@@ -270,6 +270,18 @@
 .pu-alert--critical { background: var(--ska-error-dim);     color: var(--ska-error);  border-color: var(--ska-error); }
 .pu-alert--warning  { background: rgba(245,158,11,0.12);    color: #b25d00;            border-color: #f59e0b; }
 
+/* Alerts that navigate render as <button> — reset button chrome, keep the
+   alert look, and give a visible focus state + 44px touch target. */
+.pu-alert--clickable {
+  width: 100%;
+  min-height: 44px;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.pu-alert--clickable:hover { filter: brightness(0.97); }
+.pu-alert--clickable:focus-visible { outline: 2px solid var(--ska-primary); outline-offset: 2px; }
+
 /* ── 4. InsightsPanel ─────────────────────────────────────── */
 .pu-insights__pulse {
   background: linear-gradient(135deg, var(--ska-primary), var(--ska-secondary));
@@ -311,6 +323,20 @@
   padding: 6px 0;
 }
 .pu-class-row + .pu-class-row { border-top: 1px dashed var(--ska-border); }
+/* Rows rendered as drill-down buttons — keyboard accessible, ≥44px target. */
+.pu-class-row--btn {
+  width: 100%;
+  min-height: 44px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 8px;
+}
+.pu-class-row--btn:hover { background: var(--ska-surface-high); }
+.pu-class-row--btn:focus-visible { outline: 2px solid var(--ska-primary); outline-offset: -2px; }
 .pu-class-row__name { font-size: 0.8125rem; color: var(--ska-text); font-weight: 600; }
 .pu-class-row__bar {
   height: 6px; border-radius: 99px;
@@ -1012,4 +1038,12 @@
   .pu-stat__value      { font-size: 1.2rem; }
   .pu-grid             { grid-template-columns: 1fr; }
   .pu-quick__grid      { grid-template-columns: 1fr; }
+}
+
+/* Finance panel — honest empty list under "Recent Payments" */
+.pu-finance__empty-list {
+  margin: 4px 0 0;
+  font-size: 0.8125rem;
+  color: var(--ska-text-3);
+  font-style: italic;
 }

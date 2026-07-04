@@ -12,6 +12,9 @@ const {
   getFinanceSnapshot, getActivityFeed, getSyllabusProgress,
   getPrincipalUsers, createPrincipalUser, updatePrincipalUser,
   getAttendanceReport,
+  getGradeAudit, getAcademicsAnalytics,
+  postAnnouncement, listAnnouncements,
+  getAtRisk, getStudentProfile,
 } = require('../controllers/principalController');
 
 // Baseline: principal-console reads are visible to school leadership. The
@@ -19,6 +22,9 @@ const {
 // cards), so school_admin is included. Students/parents/teachers use their own
 // routers and never reach /api/principal/*.
 const PRINCIPAL_ACCESS = ['superadmin', 'school_admin', 'principal'];
+// Governance reads (grade approvals, leadership roster) match permissions.js:
+// school_admin has no grade-governance or leadership pages, so it gets no API.
+const PRINCIPAL_ONLY_READ = ['superadmin', 'principal'];
 // Grade governance, report-card release, and minting principal logins are
 // principal/superadmin actions (matches permissions.js grade-approvals/principal-users).
 const PRINCIPAL_WRITE = ['superadmin', 'principal'];
@@ -33,7 +39,7 @@ router.use(requireActiveAccount);
 router.use(requireRole(PRINCIPAL_ACCESS));
 
 router.get('/overview/', getOverview);
-router.get('/grade-approvals/', listGradeApprovals);
+router.get('/grade-approvals/', requireRole(PRINCIPAL_ONLY_READ), listGradeApprovals);
 router.post('/grade-approvals/', requireRole(PRINCIPAL_WRITE), reviewGradeChange);
 router.get('/report-cards/', listReportCards);
 router.post('/report-cards/', requireRole(PRINCIPAL_WRITE), publishReportCard);
@@ -46,8 +52,19 @@ router.get('/finance-snapshot/', getFinanceSnapshot);
 router.get('/activity-feed/', getActivityFeed);
 router.get('/syllabus-progress/', getSyllabusProgress);
 router.get('/attendance-report/', getAttendanceReport);
-router.get('/principal-users/', getPrincipalUsers);
+router.get('/principal-users/', requireRole(PRINCIPAL_ONLY_READ), getPrincipalUsers);
 router.post('/principal-users/', requireRole(PRINCIPAL_WRITE), createPrincipalUser);
 router.put('/principal-users/:id/', requireRole(PRINCIPAL_WRITE), updatePrincipalUser);
+
+// ── Batch-3 leadership features ──
+// These are leadership-only surfaces (permissions.js grants them to
+// principal/superadmin, NOT school_admin), so they must NOT inherit the
+// router-wide PRINCIPAL_ACCESS gate that includes school_admin.
+router.get('/grade-audit/', requireRole(PRINCIPAL_ONLY_READ), getGradeAudit);
+router.get('/academics-analytics/', requireRole(PRINCIPAL_ONLY_READ), getAcademicsAnalytics);
+router.get('/announcements/', requireRole(PRINCIPAL_ONLY_READ), listAnnouncements);
+router.post('/announcements/', requireRole(PRINCIPAL_WRITE), postAnnouncement);
+router.get('/at-risk/', requireRole(PRINCIPAL_ONLY_READ), getAtRisk);
+router.get('/students/:id/', requireRole(PRINCIPAL_ONLY_READ), getStudentProfile);
 
 module.exports = router;

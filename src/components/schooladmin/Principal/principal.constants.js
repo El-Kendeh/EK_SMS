@@ -50,14 +50,6 @@ export const PU_FINANCE_STYLE = {
   Critical:          { color: 'var(--ska-error)',    bg: 'var(--ska-error-dim)' },
 };
 
-/* ── Quick action buttons (executive shortcuts) ────────────── */
-export const PU_QUICK_ACTIONS = [
-  { key: 'analytics',    label: 'View Analytics',    icon: 'analytics',     tone: 'primary',   target: 'analytics' },
-  { key: 'teachers',     label: 'Manage Teachers',   icon: 'group',         tone: 'secondary', target: 'teachers' },
-  { key: 'reports',      label: 'View Reports',      icon: 'description',   tone: 'tertiary',  target: 'examinations' },
-  { key: 'announcement', label: 'Send Announcement', icon: 'campaign',      tone: 'green',     target: 'notifications' },
-];
-
 /* ── Filter chip values ────────────────────────────────────── */
 export const PU_STATUS_OPTIONS = [
   { key: 'all',       label: 'All' },

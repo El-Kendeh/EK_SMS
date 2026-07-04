@@ -11,7 +11,10 @@ const Ic = ({ name, size, style }) => (
  * Avg Academic % · Attendance Rate % · Financial Status
  */
 export default function StatsCards({ summary, loading }) {
-  const fs = PU_FINANCE_STYLE[summary.finance] || PU_FINANCE_STYLE.Stable;
+  // finance is null until the school has real fee data — never default to green.
+  const hasFinance = summary.finance != null;
+  const fs = (hasFinance && PU_FINANCE_STYLE[summary.finance]) ||
+    { color: 'var(--ska-on-surface-variant)', bg: 'var(--ska-surface-high)' };
 
   const cards = [
     {
@@ -51,8 +54,9 @@ export default function StatsCards({ summary, loading }) {
     {
       key: 'finance', icon: 'account_balance', tone: 'finance',
       label: 'Financial Status',
-      value: summary.finance,
-      sub: summary.finance === 'Stable' ? 'Collections on track'
+      value: hasFinance ? summary.finance : 'No data',
+      sub: !hasFinance ? 'Assign fees to see status'
+         : summary.finance === 'Stable' ? 'Collections on track'
          : summary.finance === 'Needs Attention' ? 'Outstanding fees rising'
          : 'Action required',
       financeColor: fs.color, financeBg: fs.bg,

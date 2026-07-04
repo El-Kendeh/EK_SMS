@@ -92,7 +92,7 @@ function GradeRow({ grade, idx, onViewHistory }) {
   const [expanded, setExpanded] = useState(false);
   const statusMeta = getStatusMeta(grade.status);
   const letterColor = getGradeLetterColor(grade.gradeLetter);
-  const isFailed = grade.score < 50;
+  const isFailed = grade.score != null && grade.score < 50;
 
   return (
     <>
@@ -161,7 +161,7 @@ function GradeRow({ grade, idx, onViewHistory }) {
                   <strong>{grade.score}/100</strong>
                 </div>
               </div>
-              <p className="par-grade-breakdown__teacher">Teacher: {grade.teacher}</p>
+              <p className="par-grade-breakdown__teacher">Teacher: {grade.teacher || '—'}</p>
               <button
                 className="par-grade-breakdown__history-btn"
                 onClick={(e) => { e.stopPropagation(); onViewHistory(grade); }}
@@ -217,7 +217,7 @@ export default function ParentGrades({ children }) {
                   onClick={() => setSelectedChildId(child.id)}
                 >
                   <span className="par-child-tab__dot" style={{ background: colors.bg }} />
-                  {child.fullName.split(' ')[0]}
+                  {(child.fullName || `Child ${child.id}`).split(' ')[0]}
                 </button>
               );
             })}
@@ -229,17 +229,19 @@ export default function ParentGrades({ children }) {
       {!loading && grades.length > 0 && (
         <div className="par-stat-grid par-grades__stats">
           <div className="par-stat-card par-stat-card--primary">
-            <p className="par-stat-card__label">Class Average</p>
+            <p className="par-stat-card__label">Term Average</p>
             <p className="par-stat-card__value">{overallAverage}%</p>
-            <p className="par-stat-card__sub">
-              <span className="material-symbols-outlined" style={{ fontSize: 14, verticalAlign: 'middle' }}>trending_up</span>
-              {activeChild?.trend > 0 ? `+${activeChild.trend}%` : `${activeChild?.trend || 0}%`} from Mid-term
-            </p>
+            {activeChild?.trend != null && (
+              <p className="par-stat-card__sub">
+                <span className="material-symbols-outlined" style={{ fontSize: 14, verticalAlign: 'middle' }}>trending_up</span>
+                {activeChild.trend > 0 ? `+${activeChild.trend}%` : `${activeChild.trend}%`} from Mid-term
+              </p>
+            )}
           </div>
           <div className="par-stat-card">
             <p className="par-stat-card__label">Class Rank</p>
-            <p className="par-stat-card__value">{String(activeChild?.classPosition || '—').padStart(2, '0')}</p>
-            <p className="par-stat-card__sub">of {activeChild?.totalStudents || '—'} students</p>
+            <p className="par-stat-card__value">{activeChild?.classPosition != null ? String(activeChild.classPosition).padStart(2, '0') : '—'}</p>
+            <p className="par-stat-card__sub">{activeChild?.totalStudents != null ? `of ${activeChild.totalStudents} students` : 'no ranking data yet'}</p>
           </div>
           <div className="par-stat-card">
             <p className="par-stat-card__label">Subjects Passed</p>

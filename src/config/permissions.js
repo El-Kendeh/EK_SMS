@@ -71,6 +71,13 @@ export const PAGE_PERMISSIONS = {
   'grade-entry':       [ROLES.TEACHER],
   'grade-approvals':   [ROLES.PRINCIPAL, ROLES.SUPERADMIN],
   'principal-users':   [ROLES.PRINCIPAL, ROLES.SUPERADMIN],
+  /* Principal Batch-3 pages. 'principal-grade-audit' is the tenant-scoped
+     forensic timeline — deliberately NOT the superadmin-only 'grade-audit'
+     key below (that one is the platform-wide SAGradeAuditDetail). */
+  'principal-grade-audit':   [ROLES.PRINCIPAL, ROLES.SUPERADMIN],
+  'principal-analytics':     [ROLES.PRINCIPAL, ROLES.SUPERADMIN],
+  'principal-announcements': [ROLES.PRINCIPAL, ROLES.SUPERADMIN],
+  'principal-at-risk':       [ROLES.PRINCIPAL, ROLES.SUPERADMIN],
   'grade-integrity':   [ROLES.SUPERADMIN],
   'grades-accumulation':[ROLES.SUPERADMIN],
   'my-grades':         [ROLES.STUDENT],
@@ -112,13 +119,17 @@ export const PAGE_PERMISSIONS = {
   'fee-categories':     [ROLES.BURSAR, ROLES.SCHOOL_ADMIN],
   'student-fees':       [ROLES.BURSAR],
   'finance-team':       [ROLES.BURSAR],
-  'finance-reports':    [ROLES.BURSAR],
+  /* Principal gets read-only finance oversight (routes/finance.js already
+     authorizes principal for these reads). */
+  'finance-reports':    [ROLES.BURSAR, ROLES.PRINCIPAL],
   /* Stub-only pages — removed from BURSAR (real pages cover these flows);
      kept for SCHOOL_ADMIN until its own finance pages are built. */
   'fees-structure':     [ROLES.SCHOOL_ADMIN],
   'fees-payment':       [],
   payments:             [ROLES.BURSAR],
-  expenses:             [ROLES.BURSAR],
+  /* Principal approves/rejects expenses (financeController CAN_APPROVE_EXPENSE
+     already includes principal; self-approval is blocked per-individual). */
+  expenses:             [ROLES.BURSAR, ROLES.PRINCIPAL],
   'receipt-generator':  [],
   'school-financial-report': [ROLES.SCHOOL_ADMIN, ROLES.SUPERADMIN],
   'my-fees':            [ROLES.STUDENT, ROLES.PARENT],

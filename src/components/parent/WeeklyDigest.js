@@ -35,7 +35,7 @@ export default function WeeklyDigest() {
     <div className="wdig">
       <header>
         <h2><span className="material-symbols-outlined">auto_awesome</span> Weekly digest</h2>
-        <p>Week of {new Date(data.weekOf).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}. AI-summarised so you can scan in 30 seconds.</p>
+        <p>Week of {data.weekOf ? new Date(data.weekOf).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '—'}. Summarised so you can scan it in 30 seconds.</p>
       </header>
 
       <div className="wdig__voice">
@@ -55,16 +55,19 @@ export default function WeeklyDigest() {
 
       <div className="wdig__grid">
         {Object.entries(data.perChild || {}).map(([cid, info], i) => {
-          const c = children.find((x) => x.id === cid);
+          const c = children.find((x) => String(x.id) === String(cid));
           return (
             <motion.div key={cid} className="wdig__card" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}>
               <header>
-                <strong>{c?.fullName || cid}</strong>
-                <span>{info.attendancePct}% attendance · {info.assignmentsGraded} graded</span>
+                <strong>{c?.fullName || `Child ${cid}`}</strong>
+                <span>
+                  {info.attendancePct != null ? `${info.attendancePct}% attendance` : 'no attendance this week'}
+                  {' · '}{info.assignmentsGraded} graded
+                </span>
               </header>
               <dl>
-                <div><dt>Avg score</dt><dd>{info.avgScore}%</dd></div>
-                <div><dt>Missed homework</dt><dd>{info.missedHomework}</dd></div>
+                <div><dt>Avg score</dt><dd>{info.avgScore != null ? `${info.avgScore}%` : '—'}</dd></div>
+                <div><dt>Missed homework</dt><dd>{info.missedHomework != null ? info.missedHomework : '—'}</dd></div>
               </dl>
               {info.flagged?.length > 0 && (
                 <ul className="wdig__flags">
@@ -73,7 +76,7 @@ export default function WeeklyDigest() {
                   ))}
                 </ul>
               )}
-              <p className="wdig__highlight">{info.highlight}</p>
+              {info.highlight && <p className="wdig__highlight">{info.highlight}</p>}
             </motion.div>
           );
         })}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { principalApi } from '../../api/adminApi';
 import { PU_ROLE_KEYS, PU_ACCESS_LEVELS, PU_STATUS_OPTIONS } from '../schooladmin/Principal/principal.constants';
+import Modal from './Modal';
 import '../schooladmin/SchoolAdmin.css';
 import '../schooladmin/Principal/Principal.css';
 import './GradeApprovals.css';
@@ -33,6 +34,9 @@ export default function PrincipalUsers({ schoolId }) {
   const [submitLoading, setSubmitLoading] = useState(false);
 
   const [toggleId, setToggleId] = useState(null);
+  const [confirmToggle, setConfirmToggle] = useState(null); // user object awaiting suspend/activate confirmation
+  const [createdCreds, setCreatedCreds] = useState(null);   // { username, temp_password } — persistent until dismissed
+  const [copied, setCopied] = useState(false);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -122,6 +126,12 @@ export default function PrincipalUsers({ schoolId }) {
         setFeedback({ type: 'success', msg: res.message || `Leadership member ${editUser ? 'updated' : 'added'}` });
         setShowForm(false);
         setEditUser(null);
+        // A generated temp password is shown once, in a persistent modal — a
+        // 4-second toast would swallow the only copy of the credentials.
+        if (!editUser && res?.temp_password) {
+          setCopied(false);
+          setCreatedCreds({ username: res.username, temp_password: res.temp_password });
+        }
         load();
       }
     } catch (err) {
@@ -134,17 +144,29 @@ export default function PrincipalUsers({ schoolId }) {
   const toggleActive = async (user) => {
     setToggleId(user.id);
     try {
-      const res = await principalApi.updatePrincipalUser(user.id, {});
+      // Explicit body; render the state the server persisted, not an optimistic flip.
+      const res = await principalApi.updatePrincipalUser(user.id, { is_active: !user.is_active });
       if (res?.success === false) {
         setFeedback({ type: 'error', msg: res.message || 'Failed to update status' });
       } else {
-        setUsers(prev => prev.map(u => (u.id === user.id ? { ...u, is_active: !u.is_active } : u)));
+        setUsers(prev => prev.map(u => (u.id === user.id ? { ...u, is_active: res.is_active } : u)));
         setFeedback({ type: 'success', msg: res.message || 'Status updated' });
       }
     } catch (err) {
       setFeedback({ type: 'error', msg: err.message || 'Failed to update status' });
     } finally {
       setToggleId(null);
+    }
+  };
+
+  const copyCreds = async () => {
+    try {
+      await navigator.clipboard.writeText(
+        `Username: ${createdCreds.username}\nTemporary password: ${createdCreds.temp_password}`
+      );
+      setCopied(true);
+    } catch (e) {
+      setCopied(false);
     }
   };
 
@@ -184,9 +206,11 @@ export default function PrincipalUsers({ schoolId }) {
       </div>
 
       {showForm && (
-        <div className="ga-modal-overlay" onClick={() => setShowForm(false)}>
-          <div className="ga-modal pru-modal" onClick={e => e.stopPropagation()}>
-            <h3>{editUser ? `Edit — ${editUser.full_name}` : 'Add Leadership Member'}</h3>
+        <Modal
+          className="pru-modal"
+          title={editUser ? `Edit — ${editUser.full_name}` : 'Add Leadership Member'}
+          onClose={() => setShowForm(false)}
+        >
             <form className="pru-form" onSubmit={submitForm}>
               {formError && <div className="ga-banner ga-banner--error"><Ic name="error" size="sm" />{formError}</div>}
 
@@ -231,7 +255,7 @@ export default function PrincipalUsers({ schoolId }) {
               {!editUser && (
                 <label className="pru-field">
                   <span>Temporary Password</span>
-                  <input className="pru-input" type="text" value={form.password} onChange={e => updateForm('password', e.target.value)} placeholder="defaults to Principal@123" />
+                  <input className="pru-input" type="text" value={form.password} onChange={e => updateForm('password', e.target.value)} placeholder="leave blank to auto-generate" />
                 </label>
               )}
 
@@ -244,8 +268,63 @@ export default function PrincipalUsers({ schoolId }) {
                 </button>
               </div>
             </form>
+        </Modal>
+      )}
+
+      {createdCreds && (
+        <Modal
+          className="pru-modal pru-modal--creds"
+          title="Account created"
+          onClose={() => setCreatedCreds(null)}
+        >
+          <p className="pru-creds__intro">
+            Share these credentials with the new member now — the temporary
+            password is shown only once.
+          </p>
+          <div className="pru-creds__box">
+            <div className="pru-creds__row">
+              <span>Username</span>
+              <code>{createdCreds.username}</code>
+            </div>
+            <div className="pru-creds__row">
+              <span>Temporary password</span>
+              <code>{createdCreds.temp_password}</code>
+            </div>
           </div>
-        </div>
+          <p className="pru-creds__note">They must change this password at first login.</p>
+          <div className="ga-modal__actions">
+            <button type="button" className="ga-btn ga-btn--ghost" onClick={copyCreds}>
+              <Ic name={copied ? 'check' : 'content_copy'} size="sm" /> {copied ? 'Copied' : 'Copy'}
+            </button>
+            <button type="button" className="ga-btn ga-btn--primary" onClick={() => setCreatedCreds(null)}>
+              Done
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {confirmToggle && (
+        <Modal
+          className="pru-modal"
+          title={confirmToggle.is_active ? `Suspend ${confirmToggle.full_name}?` : `Activate ${confirmToggle.full_name}?`}
+          onClose={() => setConfirmToggle(null)}
+        >
+          <p className="pru-confirm__body">
+            {confirmToggle.is_active
+              ? 'They will immediately lose access to EK-SMS, including any active session.'
+              : 'They will regain access to EK-SMS and be able to log in again.'}
+          </p>
+          <div className="ga-modal__actions">
+            <button type="button" className="ga-btn ga-btn--ghost" onClick={() => setConfirmToggle(null)}>Cancel</button>
+            <button
+              type="button"
+              className={`ga-btn ${confirmToggle.is_active ? 'ga-btn--reject' : 'ga-btn--approve'}`}
+              onClick={() => { const u = confirmToggle; setConfirmToggle(null); toggleActive(u); }}
+            >
+              {confirmToggle.is_active ? 'Suspend' : 'Activate'}
+            </button>
+          </div>
+        </Modal>
       )}
 
       {error && (
@@ -296,7 +375,7 @@ export default function PrincipalUsers({ schoolId }) {
                   Edit
                 </button>
                 <button type="button" className={`ga-btn ${u.is_active ? 'ga-btn--reject' : 'ga-btn--approve'}`}
-                  disabled={toggleId === u.id} onClick={() => toggleActive(u)}>
+                  disabled={toggleId === u.id} onClick={() => setConfirmToggle(u)}>
                   <Ic name={u.is_active ? 'block' : 'check_circle'} size="sm" />
                   {u.is_active ? 'Suspend' : 'Activate'}
                 </button>

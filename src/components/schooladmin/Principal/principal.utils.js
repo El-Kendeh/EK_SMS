@@ -21,3 +21,16 @@ export const fmtUsdCompact = (n) => {
 
 export const fmtMins = (m) =>
   m == null ? '—' : m < 60 ? `${m} min ago` : `${Math.round(m / 60)} hr ago`;
+
+/* Leone formatting — the platform's schools bill in LRD/SLL, not USD. */
+export const fmtLrd = (n) =>
+  'L$' + Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
+
+export const timeAgo = (d) => {
+  if (!d) return '—';
+  const mins = Math.max(0, Math.round((Date.now() - new Date(d).getTime()) / 60000));
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins} min ago`;
+  if (mins < 1440) return `${Math.round(mins / 60)} hr ago`;
+  return new Date(d).toLocaleDateString();
+};

@@ -3,6 +3,8 @@
 
 .prp-card { border-left: 3px solid var(--ska-green); }
 
+.prp-export-btn { min-height: 44px; flex-shrink: 0; }
+
 .prp-card__check {
   display: inline-flex;
   align-items: center;
@@ -53,4 +55,7 @@
 /* ── Mobile ── */
 @media (max-width: 600px) {
   .prp-search { max-width: none; }
+
+  .prp-page .pu-page__head { flex-direction: column; align-items: stretch; gap: 10px; }
+  .prp-export-btn { width: 100%; justify-content: center; }
 }

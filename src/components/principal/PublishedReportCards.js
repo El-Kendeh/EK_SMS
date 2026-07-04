@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { principalApi } from '../../api/adminApi';
+import { downloadCsv } from '../../utils/csv';
 import '../schooladmin/SchoolAdmin.css';
+import '../schooladmin/Principal/Principal.css'; // defines the .pu-* classes this page renders
 import './GradeApprovals.css';
 import './ReportCardApproval.css';
 import './PublishedReportCards.css';
@@ -20,6 +22,7 @@ export default function PublishedReportCards({ schoolId }) {
 
   const [search, setSearch] = useState('');
   const [expanded, setExpanded] = useState(new Set());
+  const [truncated, setTruncated] = useState(false);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -27,8 +30,11 @@ export default function PublishedReportCards({ schoolId }) {
     principalApi.listReportCards()
       .then(res => {
         if (res?.success === false) { setError(res.message || 'Failed to load report cards'); return; }
-        setReportCards((res.report_cards || []).filter(rc => rc.approved));
+        // "Published" means every grade is actually released to families —
+        // not merely approved (approved-but-unpublished lives on the Approval page).
+        setReportCards((res.report_cards || []).filter(rc => rc.published));
         setTerm(res.term || null);
+        setTruncated(!!res.truncated);
       })
       .catch(err => setError(err.message))
       .finally(() => setLoading(false));
@@ -58,14 +64,39 @@ export default function PublishedReportCards({ schoolId }) {
     [reportCards]
   );
 
+  const exportCsv = () => {
+    const stamp = new Date().toISOString().slice(0, 10);
+    // One row per subject — flat and spreadsheet-friendly.
+    downloadCsv(`published-report-cards-${stamp}.csv`, [
+      ['Student', 'Admission #', 'Term', 'Subject', 'CA', 'Midterm', 'Final', 'Total', 'Grade'],
+      ...reportCards.flatMap(rc => (rc.subjects || []).map(s => [
+        rc.student_name, rc.admission_number, term || '',
+        s.subject_name, s.ca ?? '', s.midterm ?? '', s.final ?? '', s.total ?? '', s.grade_letter ?? '',
+      ])),
+    ]);
+  };
+
   return (
     <div className="pu-page prp-page">
       <div className="pu-page__head">
         <div>
           <h1 className="ska-page-title">Published Report Cards</h1>
-          <p className="ska-page-sub">{term ? `Term: ${term} — ` : ''}Report cards with all grades approved</p>
+          <p className="ska-page-sub">{term ? `Term: ${term} — ` : ''}Report cards released to parents and students</p>
         </div>
+        {reportCards.length > 0 && (
+          <button type="button" className="ga-btn ga-btn--ghost prp-export-btn" onClick={exportCsv}
+            title="Export all published grades (one row per subject)">
+            <Ic name="download" size="sm" /> Export CSV
+          </button>
+        )}
       </div>
+
+      {truncated && !error && (
+        <div className="ga-banner ga-banner--error">
+          <Ic name="warning" size="sm" />
+          Showing the most recent 500 grade rows — this list may be incomplete.
+        </div>
+      )}
 
       {error && (
         <div className="pu-empty">

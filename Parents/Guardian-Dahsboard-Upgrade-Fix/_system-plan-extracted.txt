@@ -1,0 +1,1088 @@
+ťţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţ
+EK-SMS Complete System Plan
+Ť                         EK-SMS COMPLETE SYSTEM                               Ť
+ũţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţ
+Ť                                                                              ŤDocument Purpose
+Ť  ťţţţţţţţţţţţţţţţţţţŦ  ťţţţţţţţţţţţţţţţţţţŦ  ťţţţţţţţţţţţţţţţţţţŦ           Ť
+This document provides a comprehensive breakdown of the EL-KENDEH Smart School Management System,
+Ť  Ť   MODULE 1       Ť  Ť   MODULE 2       Ť  Ť   MODULE 3       Ť           Ť
+mapping every feature to implementation phases, and extracting a focused MVP.
+Ť  Ť   SECURITY &     Ť  Ť   ACADEMIC       Ť  Ť   COMMUNICATION  Ť           Ť
+Ť  Ť   ANTI-CORRUPTIONŤ  Ť   MANAGEMENT     Ť  Ť   & ENGAGEMENT   Ť           Ť
+Ť  Ť   (10 features)  Ť  Ť   (8 features)   Ť  Ť   (5 features)   Ť           Ť
+Ť  ŧţţţţţţţţţţţţţţţţţţŨ  ŧţţţţţţţţţţţţţţţţţţŨ  ŧţţţţţţţţţţţţţţţţţţŨ           Ť
+PART 1: COMPLETE SYSTEM ARCHITECTURE
+Ť                                                                              Ť
+Ť  ťţţţţţţţţţţţţţţţţţţŦ  ťţţţţţţţţţţţţţţţţţţŦ  ťţţţţţţţţţţţţţţţţţţŦ           Ť
+Ť  Ť   MODULE 4       Ť  Ť   MODULE 5       Ť  Ť   MODULE 6       Ť           Ť
+System Modules Overview
+Ť  Ť   FINANCE &      Ť  Ť   AI &           Ť  Ť   INTEGRATION &  Ť           Ť
+The complete EK-SMS consists of 7 core modules containing 47 distinct features.
+Ť  Ť   ADMINISTRATION Ť  Ť   ANALYTICS      Ť  Ť   ACCESSIBILITY  Ť           Ť
+Ť  Ť   (6 features)   Ť  Ť   (4 features)   Ť  Ť   (5 features)   Ť           Ť
+Ť  ŧţţţţţţţţţţţţţţţţţţŨ  ŧţţţţţţţţţţţţţţţţţţŨ  ŧţţţţţţţţţţţţţţţţţţŨ           Ť
+Ť                                                                              Ť
+Ť  ťţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţŦ           
+Ť
+Ť  Ť   MODULE 7: LIBERIA-SPECIFIC FEATURES (9 features)           Ť           Ť
+Ť  ŧţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţŨ           
+Ť
+Ť                                                                              Ť
+ŧţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţ
+͇͆
+MODULE 1: SECURITY & ANTI-CORRUPTION
+The foundational layer that makes EK-SMS unique
+1.1 Immutable Grade Recording
+Description: Once grades are submitted and confirmed, they become permanent records that cannot be altered
+without creating a visible trail.
+Technical Approach:
+Event sourcing architecture (store changes as events, not overwrites)
+Grade states: Draft ŗ Submitted ŗ Locked
+Any modification creates a new event with: who, when, what changed, why
+User Stories:
+As a teacher, I can submit grades which become locked after confirmation
+As an admin, I can see the complete history of any grade record
+As a parent, I can trust that my child's grades haven't been tampered with
+1.2 System-Wide Change Alerts
+Description: Real-time notifications sent to relevant stakeholders when significant changes occur.
+Alert Triggers:
+Grade modification attempt on locked record
+Student enrollment status change
+Fee payment recorded
+Attendance anomaly detected
+User permission changes
+Notification Channels:
+In-app notifications (primary)
+Email alerts
+SMS alerts (for critical changes)
+Push notifications (mobile)
+1.3 Audit Trail & Forensic Logs
+Description: Comprehensive, append-only logging of every action in the system.
+What Gets Logged:
+User authentication events (login, logout, failed attempts)
+All CRUD operations on sensitive data
+Permission changes
+Report generation
+Data exports
+System configuration changes
+Log Properties:
+Immutable (append-only, no deletions)
+Timestamped with server time
+User identification (who performed action)
+IP address and device info
+Before/after snapshots for data changes
+1.4 Blockchain-Backed Record Security (Optional)
+Description: Cryptographic verification layer for ultimate tamper-evidence.
+Implementation Options:
+Option A: Full blockchain (Hyperledger Fabric for private chain)
+Option B: Merkle tree hashing (simpler, same tamper-evidence)
+Option C: External anchoring (hash records to public blockchain periodically)
+Recommendation: Start with Option B (Merkle tree hashing) Ï provides cryptographic proof without
+blockchain complexity.
+1.5 Two-Factor Authentication (2FA)
+Description: Additional authentication layer beyond password.
+Methods Supported:
+TOTP (Time-based One-Time Password) via authenticator apps
+SMS OTP (fallback for users without smartphones)
+Email OTP (fallback)
+Enforcement:
+Required for: Administrators, Finance staff
+Optional but encouraged for: Teachers, Parents
+1.6 Role-Based Access Control (RBAC)
+Description: Users can only access features and data permitted by their role.
+Core Roles:
+Super Admin
+ũţţ Full system access
+ũţţ Can create other admins
+ŧţţ Audit log access
+School Admin
+ũţţ School-level configuration
+ũţţ User management (within school)
+ũţţ Report generation
+ŧţţ Cannot modify locked grades
+Teacher
+ũţţ Own classes only
+ũţţ Grade entry (own subjects)
+ũţţ Attendance marking
+ŧţţ View own schedule
+Student
+ũţţ View own grades
+ũţţ View own attendance
+ũţţ View own fee status
+ŧţţ Submit feedback
+Parent/Guardian
+ũţţ View linked student(s) data
+ũţţ Receive notifications
+ũţţ Pay fees
+ŧţţ Submit feedback
+Finance Officer
+ũţţ Fee management
+ũţţ Payment processing
+ũţţ Financial reports
+ŧţţ No academic data modification
+Examination Officer
+ũţţ Exam scheduling
+ũţţ Grade compilation
+ũţţ Transcript generation
+ŧţţ Report card generation
+1.7 Security Audits & Penetration Testing
+Description: Regular security assessments to identify vulnerabilities.
+Implementation:
+Automated security scanning (OWASP ZAP, Snyk)
+Dependency vulnerability monitoring
+Annual third-party penetration testing
+Security headers and CSP configuration
+1.8 Real-Time System Health Monitoring
+Description: Continuous monitoring of system security and performance.
+Metrics Tracked:
+Failed login attempts (brute force detection)
+Unusual access patterns
+System resource utilization
+Database connection health
+API response times
+1.9 End-to-End Encryption
+Description: Data protection at rest and in transit.
+Implementation:
+TLS 1.3 for all connections
+Database-level encryption (AES-256)
+Encrypted backups
+Secure key management
+1.10 User Access Revocation & Lockout
+Description: Immediate ability to disable accounts and sessions.
+Features:
+Instant account suspension
+Force logout all sessions
+Temporary lockout after failed attempts
+Scheduled access windows (e.g., teacher access only during school hours)
+MODULE 2: ACADEMIC MANAGEMENT
+2.1 Student Academic Profiles
+Description: Centralized, comprehensive student records.
+Profile Contents:
+Personal information
+Enrollment history
+Academic records by term/year
+Continuous assessment scores
+Behavioral notes
+Medical/special needs flags
+Guardian information
+2.2 Automated Grade Compilation & Calculation
+Description: System computes final grades from components.
+Features:
+Configurable grading schemes (percentage, letter, GPA)
+Weighted components (exams, coursework, practicals)
+Automatic averaging and ranking
+Grade boundary configuration
+Pass/fail determination
+2.3 AI-Powered Timetabling & Scheduling
+Description: Intelligent schedule generation considering all constraints.
+Constraints Handled:
+Teacher availability
+Room capacity and type requirements
+Subject hour requirements
+Double period requirements
+Break and lunch periods
+Teacher workload balancing
+Approach: Agent-based scheduling with validation tools (as discussed previously)
+2.4 Report Cards & Transcript Generation
+Description: Automated generation of academic documents.
+Features:
+Configurable templates
+Digital signatures
+QR code verification
+PDF generation
+Batch generation for entire classes
+Historical transcript compilation
+2.5 Attendance Tracking & Analytics
+Description: Daily attendance recording with pattern analysis.
+Features:
+Multiple attendance states (Present, Absent, Late, Excused)
+Period-by-period or daily tracking
+Absence threshold alerts
+Attendance percentage calculation
+Trend visualization
+2.6 Continuous Assessment Tracking
+Description: Recording and monitoring of ongoing evaluations.
+Features:
+Assignment score recording
+Quiz and test tracking
+Project evaluations
+Practical assessments
+Progress over time visualization
+Early warning for declining performance
+2.7 Course & Subject Management
+Description: Curriculum structure configuration.
+Features:
+Subject creation and categorization
+Credit hour assignment
+Prerequisite mapping
+Teacher-subject assignment
+Class-subject allocation
+Curriculum version control
+2.8 Examination Management
+Description: End-to-end exam lifecycle management.
+Features:
+Exam scheduling
+Room allocation
+Invigilator assignment
+Score entry with verification
+Result compilation
+Grade moderation tools
+MODULE 3: COMMUNICATION & ENGAGEMENT
+3.1 Parent & Guardian Portal
+Description: Dedicated interface for parents to monitor their children.
+Access Includes:
+Real-time grade viewing
+Attendance records
+Fee status and payment history
+Upcoming events
+Teacher comments
+Report card downloads
+3.2 Secure Internal Messaging
+Description: Communication platform within the system.
+Features:
+Teacher ř Parent messaging
+Admin announcements
+Class-wide messages
+Message read receipts
+Attachment support
+Message archiving
+3.3 Push Notifications & SMS/Email Alerts
+Description: Multi-channel notification delivery.
+Notification Types:
+Grade posted
+Attendance alert
+Fee reminder
+Event announcement
+Emergency broadcast
+System alerts
+Delivery Priority:
+1. In-app notification
+2. Push notification (mobile)
+3. Email
+4. SMS (critical only, due to cost)
+3.4 Anonymous Feedback & Whistleblower Channel
+Description: Safe channel for reporting misconduct.
+Features:
+Completely anonymous submission
+No tracking of submission origin
+Encrypted content
+Admin-only viewing
+Category-based routing
+Optional follow-up channel (anonymous)
+3.5 Event & Announcement Broadcasting
+Description: School-wide communication management.
+Features:
+Event calendar
+Targeted announcements (by class, grade, role)
+Scheduled publishing
+Attachment support
+Acknowledgment tracking
+MODULE 4: FINANCE & ADMINISTRATION
+4.1 Cashless Fee Payment System
+Description: Digital payment collection and tracking.
+Payment Methods:
+Mobile money integration (Orange Money, etc.)
+Bank transfer
+Online card payments
+Local wallet integration
+Features:
+Fee structure configuration
+Installment plans
+Late fee calculation
+Scholarship/discount application
+Payment receipts
+4.2 Automated Receipt Generation
+Description: Digital receipts for all transactions.
+Features:
+Unique receipt numbers
+QR code verification
+PDF generation
+Email/SMS delivery
+Receipt lookup portal
+4.3 Finance & Budget Dashboards
+Description: Financial visibility for administrators.
+Metrics:
+Collection rate by term/class
+Outstanding balances
+Revenue vs. budget
+Expense tracking
+Cash flow visualization
+4.4 Inventory & Resource Management
+Description: Tracking of school assets and supplies.
+Items Tracked:
+Textbooks
+Laboratory equipment
+Furniture
+Sports equipment
+Stationery supplies
+Features:
+Stock levels
+Assignment to students/rooms
+Condition tracking
+Reorder alerts
+Loss/damage recording
+4.5 Staff Payroll & HR Management
+Description: Employee management and compensation.
+Features:
+Employee profiles
+Contract management
+Salary configuration
+Deduction handling
+Payslip generation
+Leave management
+Performance records
+4.6 Document & Certificate Management
+Description: Digital archiving of official documents.
+Documents Managed:
+Certificates (birth, transfer, etc.)
+Official letters
+Policy documents
+Meeting minutes
+Student submissions
+Features:
+Secure storage
+Version control
+Access logging
+Expiry tracking
+Search and retrieval
+MODULE 5: AI & ADVANCED ANALYTICS
+5.1 Predictive Analytics for Student Performance
+Description: AI-powered early warning system.
+Predictions:
+At-risk student identification
+Performance trajectory forecasting
+Dropout probability
+Subject-specific struggle detection
+Data Inputs:
+Historical grades
+Attendance patterns
+Assessment trends
+Engagement metrics
+5.2 Teacher Evaluation Analytics
+Description: Data-driven teacher performance insights.
+Metrics:
+Class performance averages
+Grade distribution patterns
+Attendance punctuality
+Grading timeliness
+Parent feedback scores
+Peer review (optional)
+5.3 Customizable Performance Dashboards
+Description: Configurable data visualization for leaders.
+Dashboard Types:
+School overview
+Class performance
+Subject analysis
+Teacher comparison
+Trend analysis
+5.4 Benchmarking Reports
+Description: Comparative analysis across schools.
+Comparisons:
+School vs. district average
+Year-over-year trends
+Subject performance ranking
+Attendance benchmarks
+MODULE 6: INTEGRATION & ACCESSIBILITY
+6.1 Offline Functionality
+Description: System works without internet connectivity.
+Approach:
+Local database on school premises
+Background sync when connection available
+Conflict resolution for concurrent edits
+Priority sync for critical data (grades)
+Technical Options:
+PWA with IndexedDB
+Local server deployment with sync agent
+Hybrid approach
+6.2 Multi-Device Access
+Description: Accessible from any device type.
+Platforms:
+Web application (primary)
+Progressive Web App (installable)
+Mobile responsive design
+Native mobile apps (future phase)
+Desktop application (optional, via Electron)
+6.3 Multi-Language Support
+Description: Interface in multiple languages.
+Languages:
+English (primary)
+Liberian English (localization)
+Local languages (Kpelle, Bassa, etc.)
+Implementation:
+i18n framework from day one
+Externalized strings
+RTL support ready
+6.4 National Database Integration
+Description: Connect with government education systems.
+Potential Integrations:
+Ministry of Education student registry
+National examination boards (WAEC)
+National ID systems
+Education statistics reporting
+6.5 API Integration Support
+Description: Extensibility for third-party connections.
+API Design:
+RESTful API architecture
+GraphQL endpoint (optional)
+Webhook support for events
+OAuth2 for third-party authentication
+Rate limiting and API keys
+MODULE 7: LIBERIA-SPECIFIC FEATURES
+7.1 Anti-Bribery Architecture
+Core design principle woven throughout the system
+Mechanisms:
+Immutable records eliminate "I can change it for you"
+Multi-party visibility removes secrecy
+Alert system makes tampering obvious
+Audit trails create legal evidence
+7.2 Automated Stakeholder Alerting
+Description: Proactive notification to all relevant parties.
+Alert Recipients:
+Student (owns the record)
+Parent/Guardian (oversight)
+School admin (accountability)
+Ministry (optional, for pattern detection)
+7.3 Blockchain-Ready Architecture
+Description: Future-proof design for blockchain integration.
+Current: Cryptographic hashing of critical records Future: Anchor hashes to public/private blockchain
+7.4 Offline-First Design
+Description: Primary consideration for low-connectivity areas.
+Design Principles:
+Local-first data storage
+Graceful degradation
+Clear online/offline indicators
+Sync status visibility
+7.5 National Transparency Focus
+Description: System designed for public accountability.
+Features:
+Aggregate statistics publishable
+School performance rankings (opt-in)
+Compliance reporting
+Anti-corruption metrics
+7.6 Rural Deployment Model
+Description: Deployment approach for schools without reliable infrastructure.
+Options:
+Local server appliance (Raspberry Pi based)
+Mobile hotspot sync
+Periodic data collection visits
+SMS-based critical operations
+7.7 Low-Bandwidth Optimization
+Description: Minimal data usage for slow connections.
+Optimizations:
+Compressed API responses
+Incremental sync (only changes)
+Image optimization
+Lazy loading
+Offline caching
+7.8 Power Outage Resilience
+Description: Handling of unreliable electricity.
+Features:
+Auto-save on all forms
+Transaction recovery
+UPS recommendations for servers
+Battery backup for local installations
+7.9 Local Currency & Context
+Description: Liberian-specific configurations.
+Includes:
+ťţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţ
+Ť                         IMPLEMENTATION PHASES                                Ť
+ũţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţ
+Ť                                                                              Ť
+Ť  PHASE 1: MVP (Core Anti-Corruption)              Timeline: 3-4 months      Ť
+Ť  ţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţ                                       Ť
+Ť  ¤ User authentication & RBAC                                                Ť
+Ť  ¤ Student management                                                        Ť
+Ť  ¤ Immutable grade recording                                                 Ť
+Ť  ¤ Audit trail                                                               Ť
+Ť  ¤ Basic alerts                                                              Ť
+Ť  ¤ Parent portal (read-only)                                                 Ť
+Ť  ¤ Report card generation                                                    Ť
+Ť                                                                              Ť
+Ť  PHASE 2: Academic Expansion                      Timeline: 2-3 months      Ť
+Ť  ţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţ                                           Ť
+Ť  ¤ Attendance tracking                                                       Ť
+Ť  ¤ Continuous assessment                                                     Ť
+Ť  ¤ Course/subject management                                                 Ť
+Ť  ¤ Full messaging system                                                     Ť
+Ť  ¤ Enhanced dashboards                                                       Ť
+Ť  ¤ Whistleblower channel                                                     Ť
+Ť                                                                              Ť
+Ť  PHASE 3: Finance & Administration                Timeline: 2-3 months      Ť
+Ť  ţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţ                                           Ť
+Ť  ¤ Fee tracking & payment integration                                        Ť
+Ť  ¤ Receipt generation                                                        Ť
+Ť  ¤ Finance dashboards                                                        Ť
+Liberian Dollar (LRD) currency
+Local date formats
+Local phone number formats
+Liberian school calendar integration
+Public holiday awareness
+PART 2: PHASED IMPLEMENTATION PLAN
+Phase Overview
+Ť  ¤ Inventory management                                                      Ť
+Ť  ¤ Document management                                                       Ť
+Ť                                                                              Ť
+Ť  PHASE 4: Intelligence Layer                      Timeline: 2-3 months      Ť
+Ť  ţţţţţţţţţţţţţţţţţţţţţţţţţţţ                                                 Ť
+Ť  ¤ AI timetabling agent                                                      Ť
+Ť  ¤ Predictive analytics                                                      Ť
+Ť  ¤ Teacher evaluation                                                        Ť
+Ť  ¤ Advanced dashboards                                                       Ť
+Ť  ¤ Benchmarking reports                                                      Ť
+Ť                                                                              Ť
+Ť  PHASE 5: Offline & Scale                         Timeline: 3-4 months      Ť
+Ť  ţţţţţţţţţţţţţţţţţţţţţţţţ                                                    Ť
+Ť  ¤ Offline-first architecture                                                Ť
+Ť  ¤ Local server deployment                                                   Ť
+Ť  ¤ Sync mechanism                                                            Ť
+Ť  ¤ National database integration                                             Ť
+Ť  ¤ Multi-language support                                                    Ť
+Ť  ¤ Blockchain anchoring                                                      Ť
+Ť                                                                              Ť
+Ť  PHASE 6: HR & Payroll                            Timeline: 2 months        Ť
+Ť  ţţţţţţţţţţţţţţţţţţţţţ                                                       Ť
+Ť  ¤ Staff management                                                          Ť
+Ť  ¤ Payroll processing                                                        Ť
+Ť  ¤ Leave management                                                          Ť
+Ť  ¤ Performance tracking                                                      Ť
+Ť                                                                              Ť
+ŧţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţ
+Total Estimated Timeline: 14-19 months for complete system
+PART 3: MVP SPECIFICATION
+MVP Philosophy
+The MVP focuses on the core value proposition: A transparent, tamper-proof grade management system
+that restores trust in academic records.
+Everything else can be layered on once this foundation proves itself.
+MVP Feature Set
+Authentication & Access Control 
+FeatureIncludedNotes
+User registrationٓAdmin-controlled
+Login/logoutٓ
+Password resetٓEmail-based
+Two-factor authenticationٓTOTP + SMS fallback
+Role-based accessٓ5 core roles
+Session managementٓ
+User Roles in MVP
+ťţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţŦ
+Ť                      MVP ROLES                               Ť
+ũţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţŪ
+Ť                                                              Ť
+Ť  ADMIN                                                       Ť
+Ť  ũţţ User management                                         Ť
+Ť  ũţţ School configuration                                    Ť
+Ť  ũţţ View all data                                           Ť
+Ť  ũţţ Audit log access                                        Ť
+Ť  ŧţţ Report generation                                       Ť
+Ť                                                              Ť
+Ť  TEACHER                                                     Ť
+Ť  ũţţ View assigned classes                                   Ť
+Ť  ũţţ Enter grades (own subjects)                             Ť
+Ť  ũţţ Submit grades for locking                               Ť
+Ť  ŧţţ View student profiles (own classes)                     Ť
+Ť                                                              Ť
+Ť  STUDENT                                                     Ť
+Ť  ũţţ View own grades                                         Ť
+Ť  ũţţ View own profile                                        Ť
+Ť  ŧţţ Download report cards                                   Ť
+Ť                                                              Ť
+Ť  PARENT                                                      Ť
+Ť  ũţţ View linked student(s) grades                           Ť
+Ť  ũţţ Receive notifications                                   Ť
+Ť  ŧţţ Download report cards                                   Ť
+Ť                                                              Ť
+Ť  EXAMINATION OFFICER                                         Ť
+Ť  ũţţ Compile grades                                          Ť
+Ť  ũţţ Generate report cards                                   Ť
+Ť  ŧţţ Generate transcripts                                    Ť
+Ť                                                              Ť
+ŧţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţŨ
+Academic Core 
+FeatureIncludedNotes
+Student profilesٓBasic info + academic history
+Class managementٓClass creation, student assignment
+Subject managementٓSubject creation, teacher assignment
+Term/semester configurationٓAcademic calendar
+Grade entryٓBy teacher, per subject
+Grade lockingٓImmutable after confirmation
+Grade calculationٓWeighted averages
+Class rankingsٓ
+Report card generationٓPDF with QR verification
+Anti-Corruption Core 
+FeatureIncludedNotes
+Immutable grade recordingٓEvent sourcing
+FeatureIncludedNotes
+Change attempt alertsٓEmail + in-app
+Complete audit trailٓAll actions logged
+Cryptographic hashingٓMerkle tree for records
+Grade verificationٓQR code on documents
+Parent Portal 
+FeatureIncludedNotes
+View child's gradesٓReal-time
+View academic historyٓAll terms
+Download report cardsٓPDF
+NotificationsٓGrade posted, alerts
+Notifications 
+FeatureIncludedNotes
+In-app notificationsٓPrimary channel
+Email notificationsٓAll users
+SMS notificationsPartialCritical alerts only
+NOT in MVP (Deferred)
+FeaturePhaseReason
+Attendance tracking2Not core to anti-corruption mission
+FeaturePhaseReason
+Continuous assessment2Enhancement, not essential
+Messaging system2Adds complexity
+Fee management3Requires payment integration
+Inventory3Administrative, not core
+AI timetabling4Complex, needs stable base
+Predictive analytics4Needs historical data
+Offline functionality5Major architectural effort
+Payroll6Separate domain
+Blockchain5Merkle trees sufficient initially
+MVP User Flows
+Flow 1: Admin Sets Up School
+1. Admin logs in with 2FA
+2. Admin creates academic year and terms
+3. Admin creates classes (Grade 10A, Grade 10B, etc.)
+4. Admin creates subjects
+5. Admin creates teacher accounts
+6. Admin assigns teachers to subjects and classes
+7. Admin imports or creates student records
+8. Admin creates parent accounts and links to students
+Flow 2: Teacher Enters Grades
+1. Teacher logs in with 2FA
+2. Teacher sees assigned classes
+3. Teacher selects class and subject
+4. Teacher sees list of students
+5. Teacher enters grades for each student
+6. System auto-saves as draft
+7. Teacher reviews and clicks "Submit for Locking"
+8. System confirms: "These grades will be permanently recorded"
+9. Teacher confirms
+10. Grades become immutable
+11. Notifications sent to students and parents
+12. Audit log records the submission
+Flow 3: Parent Checks Grades
+1. Parent logs in
+2. Parent sees linked student(s)
+3. Parent views current term grades
+4. Parent sees subject-by-subject breakdown
+5. Parent downloads report card PDF
+6. Parent scans QR code to verify authenticity
+Flow 4: Grade Modification Attempt
+1. Teacher or admin attempts to modify locked grade
+2. System blocks direct modification
+3. System requires: reason, supporting evidence
+4. Modification request created (not applied)
+5. Alert sent to: student, parent, admin, audit log
+6. Admin reviews modification request
+7. If approved: new grade event added (old grade preserved)
+8. If rejected: request denied, logged
+9. Full history visible in audit trail
+Flow 5: Report Card Generation
+1. Exam officer logs in
+2. Selects term and class
+3. System compiles all grades
+4. System calculates averages, rankings
+5. Officer reviews compilation
+6. Officer generates report cards (batch)
+7. Each report card includes:
+   - Cryptographic hash
+   - QR code linking to verification
+   - Digital signature
+ťţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţ
+Ť                          MVP DATA MODEL                                      Ť
+ũţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţ
+Ť                                                                              Ť
+Ť  CORE ENTITIES                                                               Ť
+Ť  ţţţţţţţţţţţţţ                                                               Ť
+Ť                                                                              Ť
+Ť  School                                                                      Ť
+Ť  ũţţ id, name, code                                                          Ť
+Ť  ũţţ address, contact                                                        Ť
+Ť  ŧţţ settings (grading scheme, term structure)                               Ť
+Ť                                                                              Ť
+Ť  User                                                                        Ť
+Ť  ũţţ id, email, phone                                                        Ť
+Ť  ũţţ password_hash                                                           Ť
+Ť  ũţţ role (admin, teacher, student, parent, exam_officer)                    Ť
+Ť  ũţţ two_factor_secret                                                       Ť
+Ť  ŧţţ school_id                                                               Ť
+Ť                                                                              Ť
+Ť  Student                                                                     Ť
+Ť  ũţţ id, user_id                                                             Ť
+Ť  ũţţ student_number                                                          Ť
+Ť  ũţţ first_name, last_name, date_of_birth                                    Ť
+Ť  ũţţ gender                                                                  Ť
+Ť  ũţţ enrollment_date                                                         Ť
+Ť  ũţţ current_class_id                                                        Ť
+Ť  ŧţţ status (active, graduated, transferred)                                 Ť
+Ť                                                                              Ť
+Ť  Parent                                                                      Ť
+Ť  ũţţ id, user_id                                                             Ť
+Ť  ũţţ first_name, last_name                                                   Ť
+Ť  ŧţţ relationship (father, mother, guardian)                                 Ť
+Ť                                                                              Ť
+Ť  StudentParent (junction)                                                    Ť
+Ť  ũţţ student_id                                                              Ť
+Ť  ŧţţ parent_id                                                               Ť
+8. Report cards available for download
+9. Notification sent to parents
+MVP Data Model
+Ť                                                                              Ť
+Ť  Teacher                                                                     Ť
+Ť  ũţţ id, user_id                                                             Ť
+Ť  ũţţ employee_number                                                         Ť
+Ť  ũţţ first_name, last_name                                                   Ť
+Ť  ŧţţ specializations                                                         Ť
+Ť                                                                              Ť
+Ť  AcademicYear                                                                Ť
+Ť  ũţţ id, school_id                                                           Ť
+Ť  ũţţ name (e.g., "2024-2025")                                                Ť
+Ť  ũţţ start_date, end_date                                                    Ť
+Ť  ŧţţ is_current                                                              Ť
+Ť                                                                              Ť
+Ť  Term                                                                        Ť
+Ť  ũţţ id, academic_year_id                                                    Ť
+Ť  ũţţ name (e.g., "First Term")                                               Ť
+Ť  ũţţ start_date, end_date                                                    Ť
+Ť  ŧţţ is_current                                                              Ť
+Ť                                                                              Ť
+Ť  Class                                                                       Ť
+Ť  ũţţ id, school_id                                                           Ť
+Ť  ũţţ name (e.g., "Grade 10A")                                                Ť
+Ť  ũţţ grade_level                                                             Ť
+Ť  ŧţţ academic_year_id                                                        Ť
+Ť                                                                              Ť
+Ť  Subject                                                                     Ť
+Ť  ũţţ id, school_id                                                           Ť
+Ť  ũţţ name, code                                                              Ť
+Ť  ũţţ category (core, elective)                                               Ť
+Ť  ŧţţ credit_hours                                                            Ť
+Ť                                                                              Ť
+Ť  ClassSubject (what subjects a class takes)                                  Ť
+Ť  ũţţ id, class_id, subject_id                                                Ť
+Ť  ũţţ teacher_id                                                              Ť
+Ť  ŧţţ term_id                                                                 Ť
+Ť                                                                              Ť
+Ť  StudentClass (enrollment)                                                   Ť
+Ť  ũţţ student_id, class_id                                                    Ť
+Ť  ŧţţ enrolled_at                                                             Ť
+Ť                                                                              Ť
+Ť  GRADE MANAGEMENT (Event-Sourced)                                            Ť
+Ť  ţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţ                                           Ť
+Ť                                                                              Ť
+Ť  GradeEvent (immutable, append-only)                                         Ť
+Ť  ũţţ id (UUID)                                                               Ť
+Ť  ũţţ student_id                                                              Ť
+Ť  ũţţ class_subject_id                                                        Ť
+Ť  ũţţ term_id                                                                 Ť
+Ť  ũţţ event_type (DRAFT, SUBMIT, LOCK, MODIFY_REQUEST, MODIFY_APPROVED)       Ť
+Ť  ũţţ score                                                                   Ť
+Ť  ũţţ grade_letter                                                            Ť
+Ť  ũţţ remarks                                                                 Ť
+Ť  ũţţ recorded_by (user_id)                                                   Ť
+Ť  ũţţ recorded_at (timestamp)                                                 Ť
+Ť  ũţţ modification_reason (nullable)                                          Ť
+Ť  ũţţ previous_event_id (for chain)                                           Ť
+Ť  ŧţţ hash (cryptographic, includes previous_hash)                            Ť
+Ť                                                                              Ť
+Ť  CurrentGrade (materialized view for easy querying)                          Ť
+Ť  ũţţ student_id                                                              Ť
+Ť  ũţţ class_subject_id                                                        Ť
+Ť  ũţţ term_id                                                                 Ť
+Ť  ũţţ current_score                                                           Ť
+Ť  ũţţ current_grade_letter                                                    Ť
+Ť  ũţţ status (draft, locked)                                                  Ť
+Ť  ŧţţ last_event_id                                                           Ť
+Ť                                                                              Ť
+Ť  AUDIT & SECURITY                                                            Ť
+Ť  ţţţţţţţţţţţţţţţţ                                                            Ť
+Ť                                                                              Ť
+Ť  AuditLog (append-only)                                                      Ť
+Ť  ũţţ id                                                                      Ť
+Ť  ũţţ user_id                                                                 Ť
+Ť  ũţţ action (LOGIN, LOGOUT, VIEW, CREATE, UPDATE, DELETE, SUBMIT, LOCK)      Ť
+Ť  ũţţ entity_type (Student, Grade, Class, etc.)                               Ť
+Ť  ũţţ entity_id                                                               Ť
+Ť  ũţţ before_state (JSON)                                                     Ť
+Ť  ũţţ after_state (JSON)                                                      Ť
+Ť  ũţţ ip_address                                                              Ť
+Ť  ũţţ user_agent                                                              Ť
+Ť  ũţţ timestamp                                                               Ť
+Ť  ŧţţ hash (includes previous log hash)                                       Ť
+Ť                                                                              Ť
+Ť  Notification                                                                Ť
+Ť  ũţţ id                                                                      Ť
+Ť  ũţţ user_id                                                                 Ť
+Ť  ũţţ type (GRADE_POSTED, GRADE_LOCKED, MODIFICATION_ATTEMPT, etc.)           Ť
+ťţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţ
+Ť  ũţţ title                                                                   Ť
+Ť                          MVP TECH STACK                                      Ť
+Ť  ũţţ message                                                                 Ť
+Ť  ũţţ related_entity_type                                                     Ť
+Ť  ũţţ related_entity_id                                                       Ť
+Ť  ũţţ is_read                                                                 Ť
+Ť  ũţţ sent_email                                                              Ť
+Ť  ũţţ sent_sms                                                                Ť
+Ť  ŧţţ created_at                                                              Ť
+Ť                                                                              Ť
+Ť  Session                                                                     Ť
+Ť  ũţţ id                                                                      Ť
+Ť  ũţţ user_id                                                                 Ť
+Ť  ũţţ token_hash                                                              Ť
+Ť  ũţţ ip_address                                                              Ť
+Ť  ũţţ user_agent                                                              Ť
+Ť  ũţţ created_at                                                              Ť
+Ť  ũţţ expires_at                                                              Ť
+Ť  ŧţţ is_revoked                                                              Ť
+Ť                                                                              Ť
+Ť  DOCUMENTS                                                                   Ť
+Ť  ţţţţţţţţţ                                                                   Ť
+Ť                                                                              Ť
+Ť  ReportCard                                                                  Ť
+Ť  ũţţ id                                                                      Ť
+Ť  ũţţ student_id                                                              Ť
+Ť  ũţţ term_id                                                                 Ť
+Ť  ũţţ generated_at                                                            Ť
+Ť  ũţţ generated_by (user_id)                                                  Ť
+Ť  ũţţ file_path                                                               Ť
+Ť  ũţţ verification_hash                                                       Ť
+Ť  ŧţţ qr_code                                                                 Ť
+Ť                                                                              Ť
+ŧţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţ
+MVP Technology Stack (Recommendation)
+ũţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţ
+Ť                                                                              Ť
+Ť  FRONTEND                                                                    Ť
+Ť  ţţţţţţţţ                                                                    Ť
+Ť  ¤ Next.js 14+ (App Router)                                                  Ť
+Ť  ¤ TypeScript                                                                Ť
+Ť  ¤ Tailwind CSS                                                              Ť
+Ť  ¤ shadcn/ui components                                                      Ť
+Ť  ¤ React Query for data fetching                                             Ť
+Ť  ¤ Zustand for client state                                                  Ť
+Ť                                                                              Ť
+Ť  BACKEND                                                                     Ť
+Ť  ţţţţţţţ                                                                     Ť
+Ť  ¤ Python / FastAPI                                                          Ť
+Ť  ¤ SQLAlchemy 2.0 (async)                                                    Ť
+Ť  ¤ Pydantic for validation                                                   Ť
+Ť  ¤ Alembic for migrations                                                    Ť
+Ť                                                                              Ť
+Ť  DATABASE                                                                    Ť
+Ť  ţţţţţţţţ                                                                    Ť
+Ť  ¤ PostgreSQL (primary)                                                      Ť
+Ť  ¤ Redis (sessions, caching)                                                 Ť
+Ť                                                                              Ť
+Ť  INFRASTRUCTURE                                                              Ť
+Ť  ţţţţţţţţţţţţţţ                                                              Ť
+Ť  ¤ Docker / Docker Compose                                                   Ť
+Ť  ¤ Nginx (reverse proxy)                                                     Ť
+Ť  ¤ Let's Encrypt (SSL)                                                       Ť
+Ť                                                                              Ť
+Ť  SERVICES                                                                    Ť
+Ť  ţţţţţţţţ                                                                    Ť
+Ť  ¤ Email: Resend or SendGrid                                                 Ť
+Ť  ¤ SMS: Twilio or local provider                                             Ť
+Ť  ¤ PDF Generation: WeasyPrint or ReportLab                                   Ť
+Ť  ¤ QR Codes: python-qrcode                                                   Ť
+Ť                                                                              Ť
+Ť  SECURITY                                                                    Ť
+Ť  ţţţţţţţţ                                                                    Ť
+Ť  ¤ Argon2 for password hashing                                               Ť
+Ť  ¤ PyOTP for TOTP                                                            Ť
+Ť  ¤ PyJWT for tokens                                                          Ť
+Ť  ¤ Cryptography library for hashing                                          Ť
+Ť                                                                              Ť
+ŧţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţţ
+MVP API Structure
+/api/v1
+ũţţ /auth
+Ť   ũţţ POST   /register          (admin creates users)
+Ť   ũţţ POST   /login
+Ť   ũţţ POST   /logout
+Ť   ũţţ POST   /refresh
+Ť   ũţţ POST   /2fa/setup
+Ť   ũţţ POST   /2fa/verify
+Ť   ŧţţ POST   /password/reset
+Ť
+ũţţ /users
+Ť   ũţţ GET    /me
+Ť   ũţţ PATCH  /me
+Ť   ŧţţ GET    /:id               (admin only)
+Ť
+ũţţ /schools
+Ť   ũţţ GET    /current
+Ť   ŧţţ PATCH  /current           (admin only)
+Ť
+ũţţ /academic-years
+Ť   ũţţ GET    /
+Ť   ũţţ POST   /                  (admin only)
+Ť   ŧţţ GET    /:id
+Ť
+ũţţ /terms
+Ť   ũţţ GET    /
+Ť   ũţţ POST   /                  (admin only)
+Ť   ŧţţ GET    /:id
+Ť
+ũţţ /classes
+Ť   ũţţ GET    /
+Ť   ũţţ POST   /                  (admin only)
+Ť   ũţţ GET    /:id
+Ť   ũţţ GET    /:id/students
+Ť   ŧţţ GET    /:id/subjects
+Ť
+ũţţ /subjects
+Ť   ũţţ GET    /
+Ť   ũţţ POST   /                  (admin only)
+Ť   ŧţţ GET    /:id
+Ť
+ũţţ /students
+Ť   ũţţ GET    /
+Ť   ũţţ POST   /                  (admin only)
+Ť   ũţţ GET    /:id
+Ť   ũţţ GET    /:id/grades
+Ť   ŧţţ GET    /:id/report-cards
+Ť
+ũţţ /teachers
+Ť   ũţţ GET    /
+Ť   ũţţ GET    /:id
+Ť   ŧţţ GET    /:id/assignments
+Ť
+ũţţ /grades
+Ť   ũţţ GET    /class/:classId/subject/:subjectId/term/:termId
+Ť   ũţţ POST   /                  (teacher: save draft)
+Ť   ũţţ POST   /submit            (teacher: submit for locking)
+Ť   ũţţ POST   /lock              (confirm lock)
+Ť   ũţţ GET    /:id/history       (audit trail)
+Ť   ŧţţ POST   /:id/modify-request (request modification)
+Ť
+ũţţ /report-cards
+Ť   ũţţ POST   /generate          (exam officer)
+Ť   ũţţ GET    /:id
+Ť   ũţţ GET    /:id/download
+Ť   ŧţţ GET    /verify/:hash      (public verification)
+Ť
+ũţţ /notifications
+Ť   ũţţ GET    /
+Ť   ũţţ PATCH  /:id/read
+Ť   ŧţţ POST   /read-all
+Ť
+ŧţţ /audit-logs
+    ũţţ GET    /                  (admin only)
+    ŧţţ GET    /entity/:type/:id  (admin only)
+MVP Screens
+Admin Screens
+1. Dashboard (overview stats)
+2. User Management (CRUD for all user types)
+3. Academic Year & Term Management
+4. Class Management
+5. Subject Management
+6. Teacher Assignments
+7. Student Enrollment
+8. Audit Log Viewer
+9. School Settings
+Teacher Screens
+1. Dashboard (assigned classes)
+2. Class View (students in class)
+3. Grade Entry (per subject, per term)
+4. Grade Submission Confirmation
+5. Grade History View (own submissions)
+Student Screens
+1. Dashboard (current grades summary)
+2. Grades by Term
+3. Report Card Download
+4. Notification Center
+Parent Screens
+1. Dashboard (children overview)
+2. Child Grades View
+3. Report Card Download
+4. Notification Center
+Exam Officer Screens
+1. Dashboard
+2. Grade Compilation View
+3. Report Card Generation
+4. Verification History
+MVP Timeline Estimate
+Week 1-2:   Project setup, database schema, auth system
+Week 3-4:   Core models (School, User, Student, Teacher, Class, Subject)
+Week 5-6:   Grade event system with immutability
+Week 7-8:   Teacher grade entry flow + locking mechanism
+Week 9-10:  Audit logging + notification system
+Week 11-12: Parent portal + report card generation
+Week 13-14: Testing, security hardening, documentation
+Week 15-16: Deployment, pilot testing, bug fixes
+Total: ~4 months for solo developer working full-time
+MVP Success Criteria
+Technical
+ 2FA enforced for all admin/teacher accounts
+ No grade modification possible without audit trail
+ All actions logged immutably
+ Report cards include verifiable QR codes
+ Parent portal shows real-time grades
+Functional
+ Admin can set up complete school structure
+ Teachers can enter and lock grades
+ Students and parents can view grades
+ Report cards can be generated and verified
+ Modification attempts trigger alerts
+Security
+ Penetration test passed
+ OWASP Top 10 vulnerabilities addressed
+ Data encrypted at rest and in transit
+ Session management secure
+Performance
+ Page load < 3 seconds on 3G
+ API response < 500ms average
+ Supports 100 concurrent users
+Post-MVP Roadmap Summary
+PhaseFocusKey FeaturesTimeline
+2Academic DepthAttendance, continuous assessment, messaging2-3 months
+3FinanceFee management, payments, receipts2-3 months
+4IntelligenceAI timetabling, analytics, predictions2-3 months
+5Scale & OfflineOffline-first, sync, multi-language3-4 months
+6HRPayroll, staff management2 months
+Appendix: Feature-to-Phase Mapping
+FeatureModulePhase
+Immutable grade recordingSecurityMVP
+System-wide change alertsSecurityMVP
+FeatureModulePhase
+Audit trail & forensic logsSecurityMVP
+Blockchain-backed securitySecurity5
+Two-factor authenticationSecurityMVP
+Role-based access controlSecurityMVP
+Penetration testingSecurityMVP+
+System health monitoringSecurity2
+End-to-end encryptionSecurityMVP
+Access revocation & lockoutSecurityMVP
+Student academic profilesAcademicMVP
+Grade compilation & calculationAcademicMVP
+AI-powered timetablingAcademic4
+Report cards & transcriptsAcademicMVP
+Attendance trackingAcademic2
+Continuous assessmentAcademic2
+Course & subject managementAcademicMVP
+Examination managementAcademic2
+Parent & guardian portalCommunicationMVP
+Secure internal messagingCommunication2
+Push/SMS/Email alertsCommunicationMVP
+Anonymous whistleblowerCommunication2
+Event broadcastingCommunication2
+Cashless fee paymentFinance3
+Receipt generationFinance3
+FeatureModulePhase
+Finance dashboardsFinance3
+Inventory managementFinance3
+Staff payroll & HRFinance6
+Document managementFinance3
+Predictive analyticsAI4
+Teacher evaluation analyticsAI4
+Performance dashboardsAI4
+Benchmarking reportsAI4
+Offline functionalityIntegration5
+Multi-device accessIntegrationMVP
+Multi-language supportIntegration5
+National database integrationIntegration5
+API integration supportIntegrationMVP
+Document Version: 1.0 Created: For Alpha - EK-SMS Project Planning

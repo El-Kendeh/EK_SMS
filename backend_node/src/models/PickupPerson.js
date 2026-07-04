@@ -8,6 +8,9 @@ const PickupPerson = sequelize.define('PickupPerson', {
   name: { type: DataTypes.STRING(255) },
   phone: { type: DataTypes.STRING(50) },
   relationship: { type: DataTypes.STRING(100) },
+  // Optional gate-pass expiry + UI tag colour (migration 2026-07-03-pickup-expiry-color.sql).
+  expiry: { type: DataTypes.DATEONLY, allowNull: true },
+  photo_color: { type: DataTypes.STRING(16), allowNull: true },
   is_authorized: { type: DataTypes.BOOLEAN, defaultValue: true },
   created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
 }, {

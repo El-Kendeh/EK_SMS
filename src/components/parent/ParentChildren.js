@@ -40,7 +40,7 @@ export default function ParentChildren({ navigateTo }) {
                 <div className="par-children__card-initials">{child.initials}</div>
                 <div className="par-children__card-identity">
                   <h2 className="par-children__card-name">{child.fullName}</h2>
-                  <p className="par-children__card-class">{child.relationship} · {child.classroom} · {child.program}</p>
+                  <p className="par-children__card-class">{[child.relationship, child.classroom, child.program].filter(Boolean).join(' · ')}</p>
                 </div>
                 <div className="par-children__card-status">
                   <span className="par-children__status-badge">Active</span>
@@ -67,20 +67,20 @@ export default function ParentChildren({ navigateTo }) {
                 </div>
                 <div className="par-children__detail">
                   <span className="par-children__detail-label">Class</span>
-                  <span className="par-children__detail-val">{child.classroom}</span>
+                  <span className="par-children__detail-val">{child.classroom || '—'}</span>
                 </div>
                 <div className="par-children__detail">
                   <span className="par-children__detail-label">Programme</span>
-                  <span className="par-children__detail-val">{child.program}</span>
+                  <span className="par-children__detail-val">{child.program || '—'}</span>
                 </div>
                 <div className="par-children__detail">
                   <span className="par-children__detail-label">Attendance</span>
-                  <span className="par-children__detail-val">{child.attendance}%</span>
+                  <span className="par-children__detail-val">{child.attendance != null ? `${child.attendance}%` : '—'}</span>
                 </div>
                 <div className="par-children__detail">
                   <span className="par-children__detail-label">Current Average</span>
                   <span className="par-children__detail-val" style={{ color: 'var(--par-primary)', fontWeight: 800 }}>
-                    {child.currentAverage}%
+                    {child.currentAverage != null ? `${child.currentAverage}%` : '—'}
                   </span>
                 </div>
               </div>

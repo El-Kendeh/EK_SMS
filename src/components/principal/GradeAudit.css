@@ -1,0 +1,142 @@
+/* ============================================================
+   Grade Audit Trail (principal) — gau-* namespace
+   ============================================================ */
+
+.gau-verify-btn { min-height: 44px; }
+
+.gau-banner--neutral {
+  background: var(--ska-surface-high);
+  color: var(--ska-text-2);
+  border: 1px solid var(--ska-border);
+}
+
+/* ── Filters ── */
+.gau-filters {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.gau-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.gau-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--ska-border);
+  border-radius: var(--ska-radius-xs);
+  background: var(--ska-surface-card);
+  padding: 0 10px;
+  min-height: 44px;
+  flex: 0 1 280px;
+}
+.gau-search .ska-icon { color: var(--ska-text-3); }
+.gau-search input {
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--ska-text);
+  font-size: 0.8125rem;
+  width: 100%;
+  min-height: 42px;
+}
+
+/* ── Timeline ── */
+.gau-timeline {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--ska-border);
+  border-radius: var(--ska-radius);
+  background: var(--ska-surface-card);
+  overflow: hidden;
+}
+.gau-event {
+  display: flex;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--ska-border);
+}
+.gau-event:last-child { border-bottom: none; }
+.gau-event--broken { background: var(--ska-error-dim); }
+
+.gau-event__icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--ska-surface-high);
+}
+.gau-event__body { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 4px; }
+
+.gau-event__line {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.8125rem;
+  color: var(--ska-text);
+}
+.gau-event__subject { color: var(--ska-text-2); }
+
+.gau-badge--approve { background: var(--ska-green-dim);    color: var(--ska-green); }
+.gau-badge--reject  { background: var(--ska-error-dim);    color: var(--ska-error); }
+.gau-badge--publish { background: var(--ska-primary-dim);  color: var(--ska-primary); }
+.gau-badge--submit,
+.gau-badge--update,
+.gau-badge--create  { background: rgba(245,158,11,0.14);   color: #b25d00; }
+
+.gau-event__change {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 0.75rem;
+  color: var(--ska-text-2);
+}
+.gau-event__field { font-weight: 700; color: var(--ska-text-3); }
+.gau-event__old { text-decoration: line-through; opacity: 0.75; }
+.gau-event__new { font-weight: 700; color: var(--ska-text); }
+.gau-event__change .ska-icon { font-size: 14px; color: var(--ska-text-3); }
+
+.gau-event__meta {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 0.6875rem;
+  color: var(--ska-text-3);
+}
+.gau-event__hash {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: var(--ska-surface-high);
+  border: 1px solid var(--ska-border);
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+.gau-event__id { margin-left: auto; }
+
+/* ── Mobile ── */
+@media (max-width: 600px) {
+  .gau-page { gap: 12px; }
+  .gau-filters { flex-direction: column; align-items: stretch; }
+  .gau-search { flex: 1 1 auto; }
+  .gau-chips .pu-pill { min-height: 44px; }
+  .gau-verify-btn { width: 100%; justify-content: center; }
+  .gau-event { padding: 10px; }
+  .gau-event__icon { width: 32px; height: 32px; }
+}
+
+@media (max-width: 400px) {
+  .gau-event__line { font-size: 0.75rem; }
+  .gau-event__id { margin-left: 0; }
+}

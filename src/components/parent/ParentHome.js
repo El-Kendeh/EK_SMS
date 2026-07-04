@@ -1,14 +1,27 @@
+import { useEffect, useState } from 'react';
 import UpcomingMeetings from '../shared/UpcomingMeetings';
 import { motion } from 'framer-motion';
 import { useParentChildren } from '../../hooks/useParentChildren';
-import { getChildColors } from '../../utils/parentUtils';
+import { useParentNotifyCtx } from '../../context/ParentNotificationContext';
+import { getChildColors, formatParentRelativeTime } from '../../utils/parentUtils';
+import { fetchFamilyActivity } from '../../api/parentApi';
 import './ParentHome.css';
 
 export default function ParentHome({ navigateTo, parent }) {
   const { children, loading } = useParentChildren();
+  const { unreadCount } = useParentNotifyCtx();
+  const [activity, setActivity] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchFamilyActivity(6)
+      .then((list) => { if (!cancelled) setActivity(list); })
+      .catch(() => { if (!cancelled) setActivity([]); });
+    return () => { cancelled = true; };
+  }, []);
 
   const totalAlerts = children.filter((c) => c.hasAlert).length;
-  const unreadNotifs = 3;
+  const unreadNotifs = unreadCount;
 
   if (loading) {
     return (
@@ -58,21 +71,36 @@ export default function ParentHome({ navigateTo, parent }) {
                 <span className="par-home__stat-val --blue">{String(totalAlerts).padStart(2, '0')}</span>
               </div>
               <div className="par-home__stat-row">
-                <span>Report Cards</span>
-                <span className="par-home__stat-val --green">{String(children.length).padStart(2, '0')}</span>
-              </div>
-              <div className="par-home__stat-row">
                 <span>Notifications</span>
-                <span className="par-home__notif-badge">{unreadNotifs} NEW</span>
+                {unreadNotifs > 0 ? (
+                  <span className="par-home__notif-badge">{unreadNotifs} NEW</span>
+                ) : (
+                  <span className="par-home__stat-val --green">00</span>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Recent activity */}
+          {/* Recent activity — the parent's own trail from the last 7 days */}
           <div className="par-card par-card--pad par-home__activity">
             <p className="par-home__section-label">Recent Activity</p>
             <div className="par-home__activity-list">
-              <p style={{ color: 'var(--par-text-secondary)', fontSize: 13, padding: '8px 0' }}>No recent activity to display.</p>
+              {activity === null && (
+                <div className="par-skeleton" style={{ height: 60 }} />
+              )}
+              {activity && activity.length === 0 && (
+                <p style={{ color: 'var(--par-text-secondary)', fontSize: 13, padding: '8px 0' }}>No recent activity to display.</p>
+              )}
+              {activity && activity.slice(0, 6).map((a) => (
+                <div key={a.id} style={{ padding: '8px 0', borderBottom: '1px solid var(--par-border)' }}>
+                  <p style={{ fontSize: 13, color: 'var(--par-text-primary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {a.title || a.action || a.message || 'Activity'}
+                  </p>
+                  <p style={{ fontSize: 11, color: 'var(--par-text-secondary)', margin: '2px 0 0' }}>
+                    {formatParentRelativeTime(a.timestamp)}
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -81,7 +109,8 @@ export default function ParentHome({ navigateTo, parent }) {
         <div className="par-home__right">
           {children.map((child, idx) => {
             const colors = getChildColors(child.colorIndex ?? idx);
-            const trendStr = child.trend > 0 ? `↑ ${child.trend}%` : child.trend < 0 ? `↓ ${Math.abs(child.trend)}%` : '→ 0.0%';
+            // trend is null until a historical baseline exists — show nothing rather than a made-up arrow
+            const trendStr = child.trend == null ? null : child.trend > 0 ? `↑ ${child.trend}%` : child.trend < 0 ? `↓ ${Math.abs(child.trend)}%` : '→ 0.0%';
             const trendColor = child.trend > 0 ? 'var(--par-primary)' : child.trend < 0 ? 'var(--par-error)' : 'var(--par-text-secondary)';
 
             return (
@@ -98,7 +127,7 @@ export default function ParentHome({ navigateTo, parent }) {
                     <div className="par-child-card__initials">{child.initials}</div>
                     <div>
                       <h3 className="par-child-card__name">{child.fullName}</h3>
-                      <p className="par-child-card__meta">{child.relationship} · {child.classroom}</p>
+                      <p className="par-child-card__meta">{[child.relationship, child.classroom].filter(Boolean).join(' · ')}</p>
                     </div>
                   </div>
                   <span className="material-symbols-outlined par-child-card__lock"
@@ -118,22 +147,36 @@ export default function ParentHome({ navigateTo, parent }) {
                   <div className="par-child-card__stat">
                     <p className="par-child-card__stat-label">Current Average</p>
                     <div className="par-child-card__stat-val-row">
-                      <span className="par-child-card__big-val">{child.currentAverage}%</span>
-                      <span className="par-child-card__trend" style={{ color: trendColor }}>{trendStr}</span>
+                      <span className="par-child-card__big-val">
+                        {child.currentAverage != null ? `${child.currentAverage}%` : '—'}
+                      </span>
+                      {trendStr && (
+                        <span className="par-child-card__trend" style={{ color: trendColor }}>{trendStr}</span>
+                      )}
                     </div>
                   </div>
                   <div className="par-child-card__stat">
                     <p className="par-child-card__stat-label">Class Position</p>
                     <p className="par-child-card__mid-val">
-                      {child.classPosition}<sup>th</sup>{' '}
-                      <span className="par-child-card__of">of {child.totalStudents}</span>
+                      {child.classPosition != null ? (
+                        <>
+                          {child.classPosition}
+                          {child.totalStudents != null && (
+                            <span className="par-child-card__of"> of {child.totalStudents}</span>
+                          )}
+                        </>
+                      ) : '—'}
                     </p>
                   </div>
                   <div className="par-child-card__stat">
                     <p className="par-child-card__stat-label">Subjects Passed</p>
                     <p className="par-child-card__mid-val">
-                      {child.subjectsPassed}/{child.totalSubjects}{' '}
-                      <span className="par-child-card__of">Passed</span>
+                      {child.subjectsPassed != null ? (
+                        <>
+                          {child.subjectsPassed}/{child.totalSubjects}{' '}
+                          <span className="par-child-card__of">Passed</span>
+                        </>
+                      ) : '—'}
                     </p>
                   </div>
                 </div>

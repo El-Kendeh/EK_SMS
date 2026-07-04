@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const GradeReceipt = require('../models/GradeReceipt');
+const ReportCardReceipt = require('../models/ReportCardReceipt');
+const Student = require('../models/Student');
 const Teacher = require('../models/Teacher');
 const User = require('../models/User');
 const School = require('../models/School');
@@ -15,7 +17,59 @@ router.get('/:hash', async (req, res) => {
   try {
     const { hash } = req.params;
     const rec = await GradeReceipt.findOne({ where: { verification_hash: hash } });
-    if (!rec) return res.json({ valid: false, reason: 'No matching record was found in the ledger.' });
+    if (!rec) {
+      // Fallback: parent-facing report-card receipts share the same public
+      // verify surface (hash printed + QR-encoded on the report-card PDF).
+      const rc = await ReportCardReceipt.findOne({ where: { verification_hash: hash } });
+      if (!rc) return res.json({ valid: false, reason: 'No matching record was found in the ledger.' });
+
+      // Tamper evidence: recompute the fingerprint of the CURRENTLY published
+      // grade set. If it no longer matches the receipt, the printed document
+      // no longer reflects the school's records — report it invalid.
+      const Grade = require('../models/Grade');
+      const { reportCardContentHash } = require('../utils/reportCardHash');
+      const currentGrades = await Grade.findAll({
+        where: { student_id: rc.student_id, term_id: rc.term_id, is_published: true },
+        attributes: ['id', 'subject_id', 'ca', 'midterm', 'final', 'total', 'grade_letter'],
+        raw: true,
+      });
+      const currentHash = reportCardContentHash(rc.student_id, rc.term_id, currentGrades);
+      if (currentHash !== rc.content_hash) {
+        return res.json({
+          valid: false,
+          type: 'report_card',
+          reason: 'The published grades no longer match this document — it may be outdated or altered. Ask the school for a freshly issued report card.',
+        });
+      }
+
+      const [rcSchool, rcStudent, rcTerm] = await Promise.all([
+        School.findByPk(rc.school_id).catch(() => null),
+        Student.findByPk(rc.student_id, {
+          include: [{ model: User, as: 'user', attributes: ['first_name', 'last_name'] }],
+        }).catch(() => null),
+        Term.findByPk(rc.term_id).catch(() => null),
+      ]);
+      const studentName = rcStudent?.user
+        ? `${rcStudent.user.first_name || ''} ${rcStudent.user.last_name || ''}`.trim()
+        : `Student #${rc.student_id}`;
+
+      return res.json({
+        valid: true,
+        type: 'report_card',
+        signedBy: rcSchool?.name || 'EK-SMS school',
+        student: studentName,
+        // Admission number is a record identifier used elsewhere and is not
+        // needed to confirm authenticity — omit it from the public payload.
+        studentNumber: '—',
+        term: rcTerm?.name || '—',
+        academicYear: '',
+        average: null,
+        signedAt: rc.generated_at,
+        chainPosition: null,
+        chainTip: null,
+        note: 'Report card verified: the published grades still match this document exactly. If grades were altered after printing, this code would no longer verify.',
+      });
+    }
 
     const [school, teacher, subject, term, tip] = await Promise.all([
       School.findByPk(rec.school_id).catch(() => null),

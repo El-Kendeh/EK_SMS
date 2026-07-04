@@ -220,6 +220,16 @@ class ApiClient {
     return response.json();
   }
 
+  // Binary downloads (PDFs etc.) — request() already threw an ApiError on
+  // any non-2xx, so a resolved response here is safe to read as a blob.
+  async getBlob(endpoint, options = {}) {
+    const response = await this.request(endpoint, {
+      ...options,
+      method: 'GET',
+    });
+    return response.blob();
+  }
+
   async refreshCSRFToken() {
     try {
       await this.get(SECURITY_CONFIG.CORS.routes.csrf);

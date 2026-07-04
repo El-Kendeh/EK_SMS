@@ -28,18 +28,27 @@ export default function AlertsPanel({ alerts }) {
         </div>
       ) : (
         <div className="pu-alerts__list">
-          {alerts.map(a => (
-            <div key={a.key} className={`pu-alert pu-alert--${a.tone}`}>
-              <Ic name={a.icon} />
-              <div className="pu-alert__body">
-                <strong>{a.title}</strong>
-                <p>{a.detail}</p>
-              </div>
-              <span className="pu-alert__badge">
-                {a.tone === 'critical' ? 'CRITICAL' : 'WARNING'}
-              </span>
-            </div>
-          ))}
+          {alerts.map(a => {
+            /* Alerts with an onClick navigate somewhere — render them as real
+               buttons so they are keyboard/screen-reader operable. */
+            const Tag = a.onClick ? 'button' : 'div';
+            return (
+              <Tag
+                key={a.key}
+                {...(a.onClick ? { type: 'button', onClick: a.onClick } : {})}
+                className={`pu-alert pu-alert--${a.tone}${a.onClick ? ' pu-alert--clickable' : ''}`}
+              >
+                <Ic name={a.icon} />
+                <div className="pu-alert__body">
+                  <strong>{a.title}</strong>
+                  <p>{a.detail}</p>
+                </div>
+                <span className="pu-alert__badge">
+                  {a.tone === 'critical' ? 'CRITICAL' : 'WARNING'}
+                </span>
+              </Tag>
+            );
+          })}
         </div>
       )}
     </div>

@@ -38,9 +38,10 @@ export default function ParentMessages() {
     setError(null);
     const text = draft.trim();
     try {
-      const msg = await sendTeacherMessage(activeChild.id, active.subjectId, text);
+      // Threads are keyed by TEACHER (user id) — the send route + body carry teacher_id.
+      const msg = await sendTeacherMessage(activeChild.id, active.teacherId, text);
       setThreads((cur) => cur.map((t) => t.key === activeKey
-        ? { ...t, messages: [...t.messages, msg] }
+        ? { ...t, messages: [...t.messages, msg || { id: `tmp-${Date.now()}`, sender: 'parent', text, sentAt: new Date().toISOString() }] }
         : t
       ));
       setDraft(''); draftMeta.clear();
@@ -75,7 +76,7 @@ export default function ParentMessages() {
       )}
 
       {threads && threads.length === 0 && (
-        <div className="pmsg__empty"><p>No active threads. A new thread starts when you message a teacher from the Grades page.</p></div>
+        <div className="pmsg__empty"><p>No teachers are assigned to {activeChild.fullName}'s class yet, so there is no one to message.</p></div>
       )}
 
       {threads && threads.length > 0 && (

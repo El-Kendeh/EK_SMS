@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import apiClient from '../../api/client';
 import { principalApi } from '../../api/adminApi';
+import Modal from './Modal';
+import { downloadCsv } from '../../utils/csv';
 import '../schooladmin/SchoolAdmin.css';
+import '../schooladmin/Principal/Principal.css'; // defines the .pu-* classes this page renders
 import './GradeApprovals.css';
 
 const Ic = ({ name, size }) => (
@@ -38,6 +41,10 @@ export default function GradeApprovals({ schoolId }) {
   const [commentRow, setCommentRow]   = useState(null); // request object
   const [commentText, setCommentText] = useState('');
 
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const PAGE_SIZE = 50;
+
   useEffect(() => {
     apiClient.get('/api/school/classes/').then(d => setClasses(d.classes || [])).catch(() => {});
     apiClient.get('/api/school/terms/').then(d => setTerms(d.terms || [])).catch(() => {});
@@ -46,7 +53,7 @@ export default function GradeApprovals({ schoolId }) {
   const load = useCallback(() => {
     setLoading(true);
     setError(null);
-    const params = { status };
+    const params = { status, page, page_size: PAGE_SIZE };
     if (classId) params.class_id = classId;
     if (termId) params.term_id = termId;
 
@@ -55,13 +62,17 @@ export default function GradeApprovals({ schoolId }) {
         if (res?.success === false) { setError(res.message || 'Failed to load grade approvals'); return; }
         setRequests(res.requests || []);
         setCounts(res.counts || { pending: 0, approved: 0, rejected: 0 });
+        setTotal(res.total ?? (res.requests || []).length);
         setSelected(new Set());
       })
       .catch(err => setError(err.message))
       .finally(() => setLoading(false));
-  }, [status, classId, termId]);
+  }, [status, classId, termId, page]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Filter changes reset to the first page.
+  useEffect(() => { setPage(1); }, [status, classId, termId]);
 
   useEffect(() => {
     if (!feedback) return;
@@ -123,6 +134,18 @@ export default function GradeApprovals({ schoolId }) {
 
   const allSelected = requests.length > 0 && selected.size === requests.length;
 
+  const exportCsv = () => {
+    const stamp = new Date().toISOString().slice(0, 10);
+    downloadCsv(`grade-approvals-${stamp}.csv`, [
+      ['Student', 'Admission #', 'Subject', 'Class', 'Term', 'CA', 'Midterm', 'Final', 'Total', 'Grade', 'Status'],
+      ...requests.map(r => [
+        r.student_name, r.admission_number, r.subject_name, r.class_name, r.term_name,
+        r.ca ?? '', r.midterm ?? '', r.final ?? '', r.total ?? '',
+        r.grade_letter ?? '', r.approval_status,
+      ]),
+    ]);
+  };
+
   return (
     <div className="pu-page ga-page">
       <div className="pu-page__head">
@@ -162,6 +185,10 @@ export default function GradeApprovals({ schoolId }) {
           <option value="">All Terms</option>
           {terms.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
         </select>
+        <button type="button" className="ga-btn ga-btn--ghost" disabled={requests.length === 0}
+          onClick={exportCsv} title="Export the rows currently shown">
+          <Ic name="download" size="sm" /> Export CSV
+        </button>
       </div>
 
       {selected.size > 0 && (
@@ -181,9 +208,7 @@ export default function GradeApprovals({ schoolId }) {
       )}
 
       {bulkPrompt && (
-        <div className="ga-modal-overlay" onClick={() => setBulkPrompt(null)}>
-          <div className="ga-modal" onClick={e => e.stopPropagation()}>
-            <h3>{bulkPrompt === 'approve' ? 'Approve' : 'Reject'} {selected.size} grade(s)</h3>
+        <Modal title={`${bulkPrompt === 'approve' ? 'Approve' : 'Reject'} ${selected.size} grade(s)`} onClose={() => setBulkPrompt(null)}>
             <textarea
               className="ga-textarea"
               rows={3}
@@ -202,14 +227,11 @@ export default function GradeApprovals({ schoolId }) {
                 Confirm {bulkPrompt === 'approve' ? 'Approve' : 'Reject'}
               </button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {commentRow && (
-        <div className="ga-modal-overlay" onClick={() => setCommentRow(null)}>
-          <div className="ga-modal" onClick={e => e.stopPropagation()}>
-            <h3>Comment — {commentRow.student_name}</h3>
+        <Modal title={`Comment — ${commentRow.student_name}`} onClose={() => setCommentRow(null)}>
             <p className="ga-modal__sub">{commentRow.subject_name} · {commentRow.term_name}</p>
             {commentRow.remarks && (
               <pre className="ga-modal__remarks">{commentRow.remarks}</pre>
@@ -228,8 +250,7 @@ export default function GradeApprovals({ schoolId }) {
                 Save Comment
               </button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {error && (
@@ -314,6 +335,22 @@ export default function GradeApprovals({ schoolId }) {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {!error && !loading && total > PAGE_SIZE && (
+        <div className="ga-pager">
+          <button type="button" className="ga-btn ga-btn--ghost" disabled={page <= 1}
+            onClick={() => setPage(p => Math.max(1, p - 1))}>
+            <Ic name="chevron_left" size="sm" /> Prev
+          </button>
+          <span className="ga-pager__info">
+            Page {page} of {Math.max(1, Math.ceil(total / PAGE_SIZE))} · {total} total
+          </span>
+          <button type="button" className="ga-btn ga-btn--ghost" disabled={page >= Math.ceil(total / PAGE_SIZE)}
+            onClick={() => setPage(p => p + 1)}>
+            Next <Ic name="chevron_right" size="sm" />
+          </button>
         </div>
       )}
     </div>

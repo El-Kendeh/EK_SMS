@@ -9,6 +9,8 @@ const TYPE_META = {
   commendation:    { label: 'Commendation',    color: 'success',  dot: 'var(--par-primary)', icon: 'emoji_events' },
   policy_violation:{ label: 'Policy Violation', color: 'warning',  dot: '#F59E0B',            icon: 'policy' },
   disciplinary:    { label: 'Disciplinary Note',color: 'danger',   dot: 'var(--par-error)',   icon: 'gavel' },
+  // Neutral fallback — never mislabel an unknown incident type as a commendation.
+  note:            { label: 'Behaviour Note',   color: 'warning',  dot: 'var(--par-text-secondary)', icon: 'sticky_note_2' },
 };
 
 export default function ParentBehavior() {
@@ -64,7 +66,7 @@ export default function ParentBehavior() {
                   className={`par-child-tab ${isActive ? 'par-child-tab--active' : ''}`}
                   onClick={() => setSelectedChildId(child.id)}>
                   <span className="par-child-tab__dot" style={{ background: colors.bg }} />
-                  {child.fullName.split(' ')[0]}
+                  {(child.fullName || `Child ${child.id}`).split(' ')[0]}
                 </button>
               );
             })}
@@ -88,7 +90,7 @@ export default function ParentBehavior() {
           </div>
         ) : (
           entries.map((entry, idx) => {
-            const meta = TYPE_META[entry.type] || TYPE_META.commendation;
+            const meta = TYPE_META[entry.type] || TYPE_META.note;
             return (
               <motion.div key={entry.id}
                 className="par-behavior__entry"
@@ -120,10 +122,10 @@ export default function ParentBehavior() {
                   <p className="par-behavior__card-desc">{entry.description}</p>
                   <div className="par-behavior__card-footer">
                     <div className="par-behavior__teacher-avatar">
-                      {entry.teacher.split(' ').pop()[0]}
+                      {((entry.teacher || '?').trim().split(' ').pop() || '?')[0]}
                     </div>
-                    <span className="par-behavior__teacher-name">{entry.teacher}</span>
-                    <span className="par-behavior__teacher-role">· {entry.teacherRole}</span>
+                    <span className="par-behavior__teacher-name">{entry.teacher || 'School staff'}</span>
+                    {entry.teacherRole && <span className="par-behavior__teacher-role">· {entry.teacherRole}</span>}
                     <span className="par-behavior__ref">ID: {entry.refId}</span>
                   </div>
                   <span className="material-symbols-outlined par-behavior__lock-icon">lock</span>

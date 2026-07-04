@@ -7,19 +7,33 @@ const Ic = ({ name, size, style }) => (
 /**
  * Class Performance Snapshot — top + low performing classes.
  * Pure presentation; data comes from classPerformance(summary, school).
+ * When `onSelect` is passed, rows become real buttons (keyboard accessible)
+ * that drill into the student-level view — the backend rows carry class
+ * aggregates only (no student ids), so the drill-down target is the At-Risk
+ * panel, not a per-student drawer.
  */
-export default function ClassPerformance({ data }) {
+export default function ClassPerformance({ data, onSelect }) {
   const Row = ({ name, score, tone }) => {
     const color = tone === 'good' ? 'var(--ska-green)' : 'var(--ska-error)';
-    return (
-      <div className="pu-class-row">
+    const inner = (
+      <>
         <span className="pu-class-row__name">{name}</span>
         <div className="pu-class-row__bar">
           <div style={{ width: `${score}%`, background: color }} />
         </div>
         <strong style={{ color }}>{score}%</strong>
-      </div>
+      </>
     );
+    if (onSelect) {
+      return (
+        <button type="button" className="pu-class-row pu-class-row--btn"
+          onClick={() => onSelect({ name, score })}
+          aria-label={`${name} — ${score}% average. Open student-level view.`}>
+          {inner}
+        </button>
+      );
+    }
+    return <div className="pu-class-row">{inner}</div>;
   };
 
   return (
