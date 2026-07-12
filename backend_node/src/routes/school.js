@@ -170,7 +170,9 @@ router.get('/school/info/', applyAuth, getSchoolInfo);
 router.post('/school/info/', applyAuth, upload.single('badge'), updateSchoolInfo);
 
 // ==================== STUDENTS ====================
-router.get('/school/students/', applyAuth, LEADERSHIP_READ, getStudents);
+// FINANCE_READ (not LEADERSHIP_READ): the bursar's Record Payment / Assign Fees
+// pickers read this list — leadership-only gating 403'd every finance flow.
+router.get('/school/students/', applyAuth, FINANCE_READ, getStudents);
 router.post('/school/students/', applyAuth, studentUpload, createStudent);
 router.put('/school/students/:id/', applyAuth, studentUpload, updateStudent);
 router.get('/school/students/next-admission-number/', applyAuth, getNextAdmissionNumber);

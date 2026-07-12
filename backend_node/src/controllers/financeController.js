@@ -764,6 +764,9 @@ async function createFinanceUser(req, res) {
       first_name: full_name?.split(' ')[0] || '',
       last_name: full_name?.split(' ').slice(1).join(' ') || '',
       role_id: bursarRoleId,
+      // User.is_active defaults FALSE (registration gate) — without this every
+      // new finance user was locked out of login (bursar audit crit #1).
+      is_active: true,
     });
 
     const admin = await SchoolAdmin.create({

@@ -10,7 +10,8 @@ require('./models');
 
 const authRouter = require('./routes/auth');
 const registrationRouter = require('./routes/registration');
-const approvalRouter = require('./routes/approval');
+// routes/approval removed — queried a nonexistent School.approval_status column
+// (500 on every call) and duplicated the live path POST /api/schools/approve/.
 const schoolRouter = require('./routes/school');
 const teacherRouter = require('./routes/teacher');
 const studentRouter = require('./routes/student');
@@ -137,7 +138,6 @@ app.post('/api/contact/', contactLimiter, sendContact);
 // Mount routers - SPECIFIC paths BEFORE catch-all /api routers
 app.use('/api', authRouter);
 app.use(['/api/registration', '/registration'], registrationRouter);
-app.use('/api/approval', approvalRouter);
 app.use('/api/teacher', teacherRouter);
 app.use('/api/student', studentRouter);
 app.use('/api/principal', principalRouter);

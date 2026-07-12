@@ -4,8 +4,8 @@
  * Product rule: a school admin (and their school's users) may access tenant data
  * only AFTER the Super Admin approves the school. That approval is encoded in
  * User.is_active — registration creates the admin with is_active=false, approval
- * sets it true, rejection/suspension sets it false (see approvalController +
- * registrationController). check-status gates the UI on `school.is_approved &&
+ * sets it true, rejection/suspension sets it false (see superadminController's
+ * handleSchoolAction + registrationController). check-status gates the UI on `school.is_approved &&
  * user.is_active`.
  *
  * Login already blocks inactive non-superusers, but a token minted WHILE approved
