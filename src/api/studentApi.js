@@ -1,5 +1,26 @@
 import apiClient from './client';
 
+/* Every backend handler replies with the envelope { success, message, ...payload }.
+   The student screens consume bare payloads (arrays/objects), so each method here
+   unwraps its endpoint's payload key. Storing the envelope in state was the root
+   cause of the portal-wide blank/crashed screens (audit S1). */
+const pick = (body, key) => (body && body[key] !== undefined ? body[key] : body);
+
+// Stable per-subject presentation (assignment cards read these directly).
+const SUBJECT_COLORS = ['#3B82F6', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444', '#06B6D4', '#EC4899'];
+const subjectColor = (name = '') => {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) | 0;
+  return SUBJECT_COLORS[Math.abs(h) % SUBJECT_COLORS.length];
+};
+
+const mapTerm = (t) =>
+  t ? { id: t.id, name: t.name, startDate: t.start_date || t.startDate, endDate: t.end_date || t.endDate, isCurrent: t.is_current ?? t.isCurrent } : null;
+
+// The anonymous whistleblower submit carries NO auth header server-side, so the
+// school id captured from the (authenticated) categories call rides along here.
+let wbSchoolId = null;
+
 export const studentApi = {
   async getProfile() {
     return apiClient.get('/api/student/me/');
@@ -14,11 +35,13 @@ export const studentApi = {
   },
 
   async getCurrentTerm() {
-    return apiClient.get('/api/student/terms/current/');
+    const b = await apiClient.get('/api/student/terms/current/');
+    return mapTerm(pick(b, 'term'));
   },
 
   async getAllTerms() {
-    return apiClient.get('/api/student/terms/');
+    const b = await apiClient.get('/api/student/terms/');
+    return (pick(b, 'terms') || []).map(mapTerm);
   },
 
   async getGradesSummary(termId) {
@@ -26,19 +49,24 @@ export const studentApi = {
   },
 
   async getGrades(termId) {
-    return apiClient.get(`/api/student/grades/?term_id=${termId}`);
+    const b = await apiClient.get(`/api/student/grades/?term_id=${termId}`);
+    // `score` alias: the Home screen reads g.score, the grades screen reads g.total.
+    return (pick(b, 'grades') || []).map((g) => ({ ...g, score: g.total }));
   },
 
   async getGradeHistory(gradeId) {
-    return apiClient.get(`/api/student/grades/${gradeId}/history/`);
+    const b = await apiClient.get(`/api/student/grades/${gradeId}/history/`);
+    return pick(b, 'history') || [];
   },
 
   async getPeerReview(gradeId) {
-    return apiClient.get(`/api/student/grades/${gradeId}/peer-review/`);
+    const b = await apiClient.get(`/api/student/grades/${gradeId}/peer-review/`);
+    return pick(b, 'peerReviews') || [];
   },
 
   async getFeedbackThread(gradeId) {
-    return apiClient.get(`/api/student/grades/${gradeId}/feedback/`);
+    const b = await apiClient.get(`/api/student/grades/${gradeId}/feedback/`);
+    return pick(b, 'thread');
   },
 
   async sendFeedbackMessage(gradeId, message) {
@@ -46,7 +74,8 @@ export const studentApi = {
   },
 
   async getRemedialPlan(gradeId) {
-    return apiClient.get(`/api/student/grades/${gradeId}/remedial-plan/`);
+    const b = await apiClient.get(`/api/student/grades/${gradeId}/remedial-plan/`);
+    return pick(b, 'plan');
   },
 
   async confirmRemedialSession(gradeId, sessionIndex) {
@@ -58,26 +87,39 @@ export const studentApi = {
   },
 
   async getTranscript() {
-    return apiClient.get('/api/student/transcript/');
+    const b = await apiClient.get('/api/student/transcript/');
+    return pick(b, 'transcript') || [];
   },
 
   async downloadTranscript() {
-    const response = await apiClient.request('/api/student/transcript/download/', { method: 'GET' });
-    return response.text();
+    const b = await apiClient.get('/api/student/transcript/download/');
+    return pick(b, 'transcript');
   },
 
   async getReportCards() {
-    return apiClient.get('/api/student/report-cards/');
+    const b = await apiClient.get('/api/student/report-cards/');
+    // Backend emits the parent-portal card shape; the student cards read
+    // termName/generatedAt/status names.
+    return (pick(b, 'reportCards') || []).map((rc) => ({
+      ...rc,
+      termName: rc.termName || rc.term,
+      academicYear: rc.academicYear,
+      status: rc.status || 'published',
+      generatedAt: rc.generatedAt || rc.verifiedAt,
+      classRank: rc.classRank ?? rc.position,
+      totalStudentsInClass: rc.totalStudentsInClass ?? rc.totalStudents,
+    }));
   },
 
+  // A report card is one term's published set; `id` is the term id. PDF download.
   async downloadReportCard(id) {
-    const response = await apiClient.request(`/api/report-cards/${id}/download/`, { method: 'GET' });
-    return response.text();
+    return apiClient.getBlob(`/api/student/report-cards/${id}/download/`);
   },
 
   async getNotifications(limit) {
     const query = limit ? `?limit=${limit}` : '';
-    return apiClient.get(`/api/student/notifications/${query}`);
+    const b = await apiClient.get(`/api/student/notifications/${query}`);
+    return pick(b, 'notifications') || [];
   },
 
   async markNotificationRead(id) {
@@ -97,7 +139,16 @@ export const studentApi = {
   },
 
   async getParentalAccessLog() {
-    return apiClient.get('/api/student/parental-access-log/');
+    const b = await apiClient.get('/api/student/parental-access-log/');
+    const entries = pick(b, 'entries') || [];
+    // The profile card reads a small header summary above the raw entries.
+    return {
+      entries,
+      guardianName: entries[0]?.actor || 'Your guardian',
+      lastAccess: entries[0]?.timestamp
+        ? new Date(entries[0].timestamp).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+        : 'no recorded access yet',
+    };
   },
 
   async get2FASetup() {
@@ -117,47 +168,63 @@ export const studentApi = {
   },
 
   async downloadReceipt(receiptId) {
-    const res = await apiClient.request(`/api/student/receipts/${receiptId}/download/`, { method: 'GET' });
-    return res.blob();
+    return apiClient.getBlob(`/api/student/receipts/${receiptId}/download/`);
   },
 
   async getTimetable() {
-    // Backend returns { success, timetable: { Monday:[...], ... } };
-    // the screen consumes the day-keyed map directly.
-    const res = await apiClient.get('/api/student/timetable/');
-    return res?.timetable || {};
+    const b = await apiClient.get('/api/student/timetable/');
+    return pick(b, 'timetable') || {};
   },
 
   async getAssignments() {
-    return apiClient.get('/api/student/assignments/');
+    const b = await apiClient.get('/api/student/assignments/');
+    return (pick(b, 'assignments') || []).map((a) => ({
+      ...a,
+      subjectColor: subjectColor(a.subject || ''),
+      subjectIcon: 'menu_book',
+    }));
   },
 
-  async submitAssignment(assignmentId) {
-    return apiClient.post(`/api/student/assignments/${assignmentId}/submit/`);
+  async submitAssignment(assignmentId, { content } = {}) {
+    return apiClient.post(`/api/student/assignments/${assignmentId}/submit/`, { content: content || '' });
   },
 
   async getConversations() {
-    return apiClient.get('/api/student/messages/');
+    const b = await apiClient.get('/api/student/messages/');
+    return pick(b, 'conversations') || [];
   },
 
   async sendMessage(conversationId, text) {
-    return apiClient.post(`/api/student/messages/${conversationId}/`, { text });
+    const b = await apiClient.post(`/api/student/messages/${encodeURIComponent(conversationId)}/`, { text });
+    return { sender: 'student', text: b.text ?? b.body ?? text, sentAt: b.sentAt ?? b.createdAt ?? new Date().toISOString() };
   },
 
   async getResources() {
-    return apiClient.get('/api/student/resources/');
+    const b = await apiClient.get('/api/student/resources/');
+    return pick(b, 'resources') || [];
   },
 
   async getAttendance() {
-    return apiClient.get('/api/student/attendance/');
+    const b = await apiClient.get('/api/student/attendance/');
+    const s = b.summary || {};
+    return {
+      rate: s.rate ?? 0,
+      totalDays: s.total ?? 0,
+      presentDays: s.present ?? 0,
+      absentDays: s.absent ?? 0,
+      tardyDays: s.late ?? 0,
+      recentLog: b.attendance || [],
+    };
   },
 
   async getGradeInsights() {
-    return apiClient.get('/api/student/grade-insights/');
+    const b = await apiClient.get('/api/student/grade-insights/');
+    return pick(b, 'insights') || [];
   },
 
   async getEvents() {
-    return apiClient.get('/api/student/events/');
+    const b = await apiClient.get('/api/student/events/');
+    return pick(b, 'events') || [];
   },
 
   async verifyHash(hash) {
@@ -169,7 +236,8 @@ export const studentApi = {
   },
 
   async getWhoSawMyData() {
-    return apiClient.get('/api/student/access-log/');
+    const b = await apiClient.get('/api/student/access-log/');
+    return pick(b, 'entries') || [];
   },
 
   async submitModificationObjection(gradeId, { message, copyParent }) {
@@ -185,11 +253,21 @@ export const studentApi = {
   },
 
   async getWhistleblowerCategories() {
-    return apiClient.get('/api/whistleblower/categories/');
+    const b = await apiClient.get('/api/whistleblower/categories/');
+    wbSchoolId = b.school_id || wbSchoolId;
+    return (pick(b, 'categories') || []).map((c) => ({ id: c.id, label: c.label || c.name, description: c.description }));
   },
 
-  async submitWhistleblowerReport({ category, message, evidenceFiles }) {
-    return apiClient.post('/api/whistleblower/submit/', { category, message, evidence: evidenceFiles?.length || 0 });
+  async submitWhistleblowerReport({ category, message }) {
+    const b = await apiClient.post('/api/whistleblower/submit/', {
+      school_id: wbSchoolId,
+      category_id: category || null,
+      title: (message || '').slice(0, 80) || 'Anonymous report',
+      description: message,
+      severity: 'medium',
+      reporter_type: 'anonymous',
+    });
+    return { followUpKey: b.follow_up_key, note: b.message };
   },
 
   async checkWhistleblowerStatus(followUpKey) {
@@ -197,7 +275,8 @@ export const studentApi = {
   },
 
   async getGoals(termId) {
-    return apiClient.get(`/api/student/goals/?term_id=${termId}`);
+    const b = await apiClient.get(`/api/student/goals/?term_id=${termId}`);
+    return pick(b, 'goals') || [];
   },
 
   async setGoal({ subjectId, target, term }) {
@@ -205,7 +284,8 @@ export const studentApi = {
   },
 
   async getOfficeHourSlots() {
-    return apiClient.get('/api/student/office-hours/');
+    const b = await apiClient.get('/api/student/office-hours/');
+    return pick(b, 'slots') || [];
   },
 
   async claimOfficeHourSlot(slotId, { topic }) {
@@ -225,7 +305,8 @@ export const studentApi = {
   },
 
   async getStudyGroups() {
-    return apiClient.get('/api/student/study-groups/');
+    const b = await apiClient.get('/api/student/study-groups/');
+    return pick(b, 'groups') || [];
   },
 
   async joinStudyGroup(groupId) {
@@ -261,15 +342,17 @@ export const studentApi = {
   },
 
   async getStudyPlan() {
-    return apiClient.get('/api/student/study-plan/');
+    const b = await apiClient.get('/api/student/study-plan/');
+    return pick(b, 'blocks') || [];
   },
 
   async saveStudyPlan(blocks) {
-    return apiClient.put('/api/student/study-plan/', blocks);
+    return apiClient.put('/api/student/study-plan/', { blocks });
   },
 
   async getResourceLastVisit() {
-    return apiClient.get('/api/student/resources/last-visit/');
+    const b = await apiClient.get('/api/student/resources/last-visit/');
+    return pick(b, 'visits') || {};
   },
 
   async markResourceVisited(resourceId) {

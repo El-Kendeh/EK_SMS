@@ -58,11 +58,12 @@ export default function StudentGrades({ navigateTo }) {
         // load all terms; fall back to [current] if unavailable
         try {
           const all = await studentApi.getAllTerms();
-          setTerms(Array.isArray(all) ? all : [current]);
+          setTerms(Array.isArray(all) && all.length ? all : (current ? [current] : []));
         } catch {
-          setTerms([current]);
+          setTerms(current ? [current] : []);
         }
-        if (!new URLSearchParams(window.location.search).get('term')) {
+        // No current term configured → leave the selector empty, don't crash.
+        if (current?.id && !new URLSearchParams(window.location.search).get('term')) {
           setSelectedTermId(current.id);
           const u = new URL(window.location.href);
           u.searchParams.set('term', current.id);

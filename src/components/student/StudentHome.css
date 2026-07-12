@@ -860,6 +860,14 @@
   }
 }
 
+@media (max-width: 400px) {
+  .stu-home { padding: 16px 10px 32px; }
+  .stu-home__welcome h2 { font-size: 19px; }
+  .stu-subject-card { width: 140px; }
+  .stu-shortcuts-grid { grid-template-columns: 1fr; }
+  .stu-btn { min-height: 44px; }
+}
+
 /* ============================================================
    LOW-DATA LITE LAYOUT
    ============================================================ */

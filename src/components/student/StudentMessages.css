@@ -362,3 +362,9 @@
   .smsg__title { font-size: 22px; }
   .smsg-bubble-wrap { max-width: 86%; }
 }
+
+@media (max-width: 400px) {
+  .smsg { padding: 16px 10px 0; }
+  .smsg__title { font-size: 19px; }
+  .smsg-bubble-wrap { max-width: 94%; }
+}

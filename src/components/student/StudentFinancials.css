@@ -409,3 +409,9 @@
   .sfin__trust { flex-direction: column; align-items: flex-start; gap: 8px; }
   .sfin__trust-badge { display: none; }
 }
+
+@media (max-width: 400px) {
+  .sfin { padding: 16px 10px 48px; }
+  .sfin__title { font-size: 19px; }
+  .sfin-stat__value { font-size: 18px; }
+}

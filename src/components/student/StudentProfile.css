@@ -826,6 +826,13 @@
   .sprof-info-tile__value--large { font-size: 18px; }
 }
 
+@media (max-width: 400px) {
+  .sprof { padding: 16px 10px 64px; }
+  .sprof-avatar { width: 60px; height: 60px; font-size: 20px; }
+  .sprof-name { font-size: 18px; }
+  .sprof-info-tile__value--large { font-size: 16px; }
+}
+
 .sprof-sms-card {
   background: rgba(91, 140, 255, 0.06);
   border: 1px solid rgba(91, 140, 255, 0.18);

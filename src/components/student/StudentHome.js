@@ -223,12 +223,14 @@ export default function StudentHome({ navigateTo }) {
         assignments.filter((a) => a.status === 'pending').slice(0, 3)
       );
 
-      const [g, s] = await Promise.all([
-        studentApi.getGrades(term.id),
-        studentApi.getGradesSummary(term.id),
-      ]);
-      setGrades(g);
-      setSummary(s);
+      if (term?.id) {
+        const [g, s] = await Promise.all([
+          studentApi.getGrades(term.id),
+          studentApi.getGradesSummary(term.id),
+        ]);
+        setGrades(g);
+        setSummary(s);
+      }
     } catch (e) {
       // fail silently — show empty state
     } finally {

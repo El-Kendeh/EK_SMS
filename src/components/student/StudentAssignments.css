@@ -399,3 +399,9 @@
   .sasgn__title { font-size: 22px; }
   .sasgn-detail { padding: 20px; }
 }
+
+@media (max-width: 400px) {
+  .sasgn { padding: 16px 10px 28px; }
+  .sasgn__title { font-size: 19px; }
+  .sasgn-detail { padding: 16px; }
+}

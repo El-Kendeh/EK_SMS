@@ -236,3 +236,9 @@
   .snotif__title { font-size: 22px; }
   .snotif-item__inner { padding: 14px; }
 }
+
+@media (max-width: 400px) {
+  .snotif { padding: 16px 10px 64px; }
+  .snotif__title { font-size: 19px; }
+  .snotif-item__inner { padding: 12px; }
+}

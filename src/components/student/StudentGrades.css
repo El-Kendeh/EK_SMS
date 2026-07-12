@@ -462,6 +462,14 @@
   .stu-footer-btn { flex: 1; justify-content: center; }
 }
 
+@media (max-width: 400px) {
+  .stu-grades { padding: 16px 10px 32px; }
+  .stu-grades__title { font-size: 24px; }
+  .stu-glass-card { padding: 16px; }
+  .stu-glass-card__value { font-size: 32px; }
+  .stu-footer-btn { min-height: 44px; }
+}
+
 /* ── Goal Tracker ── */
 .stu-goal-tracker {
   margin-top: 28px;

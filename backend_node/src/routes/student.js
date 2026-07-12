@@ -1,6 +1,20 @@
 const express = require('express');
 const router = express.Router();
 const authenticateToken = require('../middleware/auth');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+// Student document-vault uploads (same disk pattern as registration badges).
+const docsDir = path.join(__dirname, '../../uploads/student-docs');
+if (!fs.existsSync(docsDir)) fs.mkdirSync(docsDir, { recursive: true });
+const docUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, docsDir),
+    filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname.replace(/[^a-z0-9.\-_]/gi, '_')}`),
+  }),
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
 
 const {
   getProfile, changePassword, changeUsername,
@@ -131,7 +145,7 @@ router.get('/streaks/', getStreaks);
 router.get('/digital-id/', getDigitalId);
 
 router.get('/documents/', getDocuments);
-router.post('/documents/', uploadDocument);
+router.post('/documents/', docUpload.single('file'), uploadDocument);
 
 router.get('/study-plan/', getStudyPlan);
 router.put('/study-plan/', saveStudyPlan);

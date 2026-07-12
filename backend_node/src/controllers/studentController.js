@@ -37,6 +37,9 @@ const WhistleblowerReport = require('../models/WhistleblowerReport');
 const WhistleblowerCategory = require('../models/WhistleblowerCategory');
 const LiveClass = require('../models/LiveClass');
 const PeerReview = require('../models/PeerReview');
+const CoGuardian = require('../models/CoGuardian');
+const School = require('../models/School');
+const crypto = require('crypto');
 
 const successResponse = (data = {}, message = 'Success') => ({ success: true, message, ...data });
 const errorResponse = (message) => ({ success: false, message });
@@ -69,11 +72,47 @@ async function getStudentFromUser(req) {
   return student;
 }
 
+/* Linked guardians: active CoGuardian accounts (the same junction the parent
+   portal resolves children through), falling back to the legacy father/mother
+   contact fields stored on the student row. */
+async function resolveGuardians(student) {
+  const rows = await CoGuardian.findAll({
+    where: { student_id: student.id, status: 'active' },
+    order: [['created_at', 'ASC']],
+  });
+  const userIds = rows.map(r => r.guardian_user_id).filter(Boolean);
+  const users = userIds.length
+    ? await User.findAll({ where: { id: { [Op.in]: userIds } }, attributes: ['id', 'first_name', 'last_name', 'username', 'email'], raw: true })
+    : [];
+  const byId = {};
+  users.forEach(u => { byId[Number(u.id)] = u; });
+
+  const linked = rows.map(r => {
+    const u = byId[Number(r.guardian_user_id)] || {};
+    return {
+      name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.username || 'Guardian',
+      relationship: r.relationship || 'Parent/Guardian',
+      phone: null, // guardian phone lives on their own profile, not the link
+      email: u.email || null,
+      linkedAccount: true,
+    };
+  });
+
+  if (student.father_name) {
+    linked.push({ name: student.father_name, relationship: 'Father', phone: student.father_phone || null, email: null, linkedAccount: false });
+  }
+  if (student.mother_name) {
+    linked.push({ name: student.mother_name, relationship: 'Mother', phone: student.mother_phone || null, email: null, linkedAccount: false });
+  }
+  return linked;
+}
+
 async function getProfile(req, res) {
   try {
     const student = await getStudentFromUser(req);
     if (!student) return res.status(404).json(errorResponse('Student profile not found'));
 
+    const guardians = await resolveGuardians(student);
     const u = student.user || {};
     const c = student.classroom;
 
@@ -98,6 +137,10 @@ async function getProfile(req, res) {
       fatherPhone: student.father_phone,
       motherName: student.mother_name,
       motherPhone: student.mother_phone,
+      // Linked guardian(s): active CoGuardian accounts first (the real
+      // parent-portal link), then the legacy father/mother contact fields.
+      guardian: guardians[0] || null,
+      guardians,
       homeAddress: student.home_address,
       city: student.city,
       bloodType: student.blood_type,
@@ -196,14 +239,15 @@ async function getGrades(req, res) {
     if (term_id) where.term_id = term_id;
 
     const grades = await Grade.findAll({
-      where: { student_id: student.id, approval_status: 'approved' },
+      // `where` carries the optional term filter built above — the old query
+      // rebuilt an unfiltered clause, so the term selector never filtered (S2).
+      where,
       include: [
         { model: Subject, as: 'subject', attributes: ['id', 'name', 'code'] },
         { model: Term, as: 'term', attributes: ['id', 'name'] },
       ],
       order: [['term_id', 'ASC']],
     });
-
 
     const formatted = grades.map(g => ({
       id: g.id,
@@ -242,11 +286,47 @@ async function getGradesSummary(req, res) {
     const average = grades.length ? Math.round(total / grades.length * 10) / 10 : 0;
     const passed = grades.filter(g => (g.total || 0) >= 50).length;
 
+    // Class rank: average of each classmate's approved grades for the same
+    // term set, ranked descending. The Home screen renders "rank / class size".
+    let classRank = null;
+    let totalStudentsInClass = null;
+    if (student.classroom_id && grades.length) {
+      const classmates = await Student.findAll({
+        where: { classroom_id: student.classroom_id, status: 'active' },
+        attributes: ['id'],
+        raw: true,
+      });
+      const ids = classmates.map(s => Number(s.id));
+      totalStudentsInClass = ids.length;
+      const classWhere = { student_id: { [Op.in]: ids }, approval_status: 'approved' };
+      if (term_id) classWhere.term_id = term_id;
+      const rows = await Grade.findAll({
+        where: classWhere,
+        attributes: ['student_id', 'total'],
+        raw: true,
+      });
+      const sums = {};
+      rows.forEach(r => {
+        const sid = Number(r.student_id);
+        (sums[sid] ||= { t: 0, n: 0 });
+        sums[sid].t += r.total || 0;
+        sums[sid].n += 1;
+      });
+      const averages = Object.entries(sums)
+        .map(([sid, { t, n }]) => ({ sid: Number(sid), avg: n ? t / n : 0 }))
+        .sort((a, b) => b.avg - a.avg);
+      const idx = averages.findIndex(a => a.sid === Number(student.id));
+      if (idx !== -1) classRank = idx + 1;
+    }
+
     return res.json(successResponse({
       overallAverage: average,
       totalSubjects: grades.length,
       passed,
       failed: grades.length - passed,
+      subjectsPassed: passed,
+      classRank,
+      totalStudentsInClass,
     }));
   } catch (err) {
     console.error('getGradesSummary Error:', err);
@@ -371,32 +451,98 @@ async function sendFeedbackMessage(req, res) {
   }
 }
 
+/* Per-grade remedial plan, backed entirely by REAL rows: the subject's
+   assigned teacher, the teacher's published office hours (bookable sessions),
+   the class's learning resources, and the grade's own component breakdown. */
+async function loadRemedialContext(req, student, gradeId) {
+  const grade = await Grade.findByPk(gradeId, {
+    include: [{ model: Subject, as: 'subject', attributes: ['id', 'name', 'code'] }],
+  });
+  if (!grade || String(grade.student_id) !== String(student.id)) return null;
+
+  const cs = await ClassSubject.findOne({
+    where: { class_id: student.classroom_id, subject_id: grade.subject_id },
+  });
+  let teacher = null;
+  if (cs?.teacher_id) {
+    teacher = await Teacher.findByPk(cs.teacher_id, {
+      include: [{ model: User, as: 'user', attributes: ['first_name', 'last_name', 'username'] }],
+    });
+  }
+
+  const sessions = teacher
+    ? await OfficeHour.findAll({
+        where: {
+          school_id: (req.schoolId || req.user.school_id),
+          teacher_id: teacher.id,
+          is_active: true,
+          audience: 'student',
+          date: { [Op.gte]: new Date() },
+        },
+        order: [['date', 'ASC']],
+        limit: 4,
+      })
+    : [];
+
+  return { grade, teacher, sessions };
+}
+
 async function getRemedialPlan(req, res) {
   try {
     const student = await getStudentFromUser(req);
     if (!student) return res.status(404).json(errorResponse('Student not found'));
 
-    const grades = await Grade.findAll({
-      where: { student_id: student.id, approval_status: 'approved' },
-      include: [{ model: Subject, as: 'subject', attributes: ['id', 'name', 'code'] }],
+    const ctx = await loadRemedialContext(req, student, req.params.gradeId);
+    if (!ctx) return res.status(404).json(errorResponse('Grade not found'));
+    const { grade, teacher, sessions } = ctx;
+
+    const resources = await LearningResource.findAll({
+      where: {
+        school_id: (req.schoolId || req.user.school_id),
+        class_id: student.classroom_id,
+        subject_id: grade.subject_id,
+        is_active: true,
+      },
+      order: [['created_at', 'DESC']],
+      limit: 6,
     });
 
-    const remedialSubjects = grades
-      .filter(g => (g.total || 0) < 50)
-      .map(g => ({
-        subjectId: g.subject_id,
-        subjectName: g.subject?.name || '',
-        currentScore: g.total,
-        gradeLetter: g.grade_letter,
-        recommendation: g.total < 30 ? 'Intensive remedial required' : 'Targeted practice recommended',
-        focusAreas: g.ca < (g.total * 0.2) ? 'Continuous assessment' : g.midterm < (g.total * 0.3) ? 'Midterm concepts' : 'Final exam preparation',
-      }));
+    const tu = teacher?.user;
+    const teacherName = tu ? (`${tu.first_name || ''} ${tu.last_name || ''}`.trim() || tu.username) : 'your teacher';
+    const pct = (v, max) => (v == null ? 0 : Math.min(100, Math.round((v / max) * 100)));
 
     return res.json(successResponse({
       plan: {
-        studentId: student.id,
-        subjects: remedialSubjects,
-        generatedAt: new Date().toISOString(),
+        gradeId: grade.id,
+        score: grade.total ?? 0,
+        gradeLetter: grade.grade_letter || '—',
+        subjectName: grade.subject?.name || '',
+        teacherName,
+        teacherNote: grade.remarks
+          || ((grade.total || 0) < 30 ? 'Intensive remedial support recommended — book a session below.'
+                                      : 'Targeted practice recommended — the resources below cover the weak areas.'),
+        sessions: sessions.map(oh => {
+          const d = oh.date ? new Date(oh.date) : null;
+          return {
+            id: oh.id,
+            month: d ? d.toLocaleDateString('en-GB', { month: 'short' }).toUpperCase() : '—',
+            day: d ? String(d.getDate()) : '—',
+            title: `${oh.subject || grade.subject?.name || 'Support'} session with ${teacherName}`,
+            time: [oh.start_time, oh.end_time].filter(Boolean).join(' – ') || 'TBA',
+            location: oh.room || 'TBA',
+          };
+        }),
+        resources: resources.map(r => ({
+          title: r.title,
+          type: r.resource_type || 'document',
+          locked: false,
+        })),
+        // Real component breakdown (CA/20, Midterm/30, Final/50).
+        proficiencyModules: [
+          { label: 'CA', progress: pct(grade.ca, 20) },
+          { label: 'Midterm', progress: pct(grade.midterm, 30) },
+          { label: 'Final', progress: pct(grade.final, 50) },
+        ],
       },
     }));
   } catch (err) {
@@ -410,18 +556,30 @@ async function confirmRemedialSession(req, res) {
     const student = await getStudentFromUser(req);
     if (!student) return res.status(404).json(errorResponse('Student not found'));
 
-    const { subject_id, session_time } = req.body;
-    const grade = await Grade.findOne({
-      where: { student_id: student.id, subject_id },
-      include: [{ model: Subject, as: 'subject', attributes: ['id', 'name'] }],
-    });
+    // Route: POST /grades/:gradeId/remedial-plan/confirm/ with { sessionIndex }.
+    // Confirming = actually booking the teacher's office-hour slot.
+    const ctx = await loadRemedialContext(req, student, req.params.gradeId);
+    if (!ctx) return res.status(404).json(errorResponse('Grade not found'));
 
-    if (!grade) return res.status(404).json(errorResponse('Grade not found for this subject'));
+    const idx = Number(req.body.sessionIndex ?? -1);
+    const slot = ctx.sessions[idx];
+    if (!slot) return res.status(404).json(errorResponse('Session not found'));
+
+    const existing = await OfficeHourBooking.findOne({
+      where: { office_hour_id: slot.id, student_id: student.id, status: 'booked' },
+    });
+    if (!existing) {
+      await OfficeHourBooking.create({
+        office_hour_id: slot.id,
+        student_id: student.id,
+        status: 'booked',
+        notes: `Remedial: ${ctx.grade.subject?.name || 'subject'} support`,
+      });
+    }
 
     return res.json(successResponse({
-      subject: grade.subject?.name,
-      currentScore: grade.total,
-      sessionTime: session_time,
+      subject: ctx.grade.subject?.name,
+      currentScore: ctx.grade.total,
       confirmed: true,
     }, 'Session confirmed'));
   } catch (err) {
@@ -455,8 +613,21 @@ async function getSecurityReport(req, res) {
       createdAt: e.created_at,
     }));
 
+    // The modal reads the grade's subject plus header facts of the LATEST event.
+    const grade = await Grade.findByPk(req.params.gradeId, {
+      include: [{ model: Subject, as: 'subject', attributes: ['id', 'name'] }],
+    });
+    const subjectName = grade && String(grade.student_id) === String(student.id)
+      ? (grade.subject?.name || '') : '';
+    const latest = events[0] || null;
+
     return res.json(successResponse({
+      subjectName,
       incident: {
+        detectedAt: latest?.created_at || null,
+        ipAddress: latest?.ip || '—',
+        location: '—', // no geo enrichment on forensic events yet
+        deviceType: latest?.event_type || '—',
         studentId: student.id,
         totalEvents: events.length,
         unresolved: events.filter(e => !e.resolved).length,
@@ -509,7 +680,13 @@ async function getNotifications(req, res) {
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
     const { limit } = req.query;
-    const query = { where: { school_id: school.id }, order: [['created_at', 'DESC']] };
+    // Own rows + school-wide broadcasts (user_id null) — NOT every user's
+    // notifications in the school (cross-user leak, parent-portal pattern).
+    const scope = {
+      school_id: school.id,
+      [Op.or]: [{ user_id: req.user.id }, { user_id: null }],
+    };
+    const query = { where: scope, order: [['created_at', 'DESC']] };
     if (limit) query.limit = parseInt(limit);
 
     const notifications = await Notification.findAll(query);
@@ -523,7 +700,7 @@ async function getNotifications(req, res) {
       createdAt: n.created_at,
     }));
 
-    const unread = await Notification.count({ where: { school_id: school.id, is_read: false } });
+    const unread = await Notification.count({ where: { ...scope, is_read: false } });
 
     return res.json(successResponse({ notifications: formatted, unread }));
   } catch (err) {
@@ -535,11 +712,12 @@ async function getNotifications(req, res) {
 async function markNotificationRead(req, res) {
   try {
     const { notification_id, mark_all } = req.body;
+    // Only the student's own rows — never school-wide or another user's (the
+    // old clauses flipped is_read for the entire school / any id passed in).
     if (mark_all) {
-      const school = await getSchoolFromUser(req);
-      await Notification.update({ is_read: true }, { where: { school_id: school?.id } });
+      await Notification.update({ is_read: true }, { where: { user_id: req.user.id } });
     } else if (notification_id) {
-      await Notification.update({ is_read: true }, { where: { id: notification_id } });
+      await Notification.update({ is_read: true }, { where: { id: notification_id, user_id: req.user.id } });
     }
     return res.json(successResponse({}, 'Notification marked as read'));
   } catch (err) {
@@ -587,16 +765,24 @@ async function getAssignments(req, res) {
     const submissionMap = {};
     submissions.forEach(s => { submissionMap[s.assignment_id] = s; });
 
-    const formatted = assignments.map(a => ({
-      id: a.id,
-      title: a.title,
-      description: a.description,
-      dueDate: a.due_date,
-      maxScore: a.max_score,
-      subject: a.Subject,
-      submission: submissionMap[a.id] || null,
-      isSubmitted: !!submissionMap[a.id],
-    }));
+    const formatted = assignments.map(a => {
+      const sub = submissionMap[a.id] || null;
+      return {
+        id: a.id,
+        title: a.title,
+        description: a.description,
+        dueDate: a.due_date,
+        maxScore: a.max_score,
+        // The cards read a flat subject NAME and a pending/submitted/graded status.
+        subject: a.subject?.name || '',
+        status: sub ? (sub.score != null ? 'graded' : 'submitted') : 'pending',
+        score: sub?.score ?? undefined,
+        feedback: sub?.feedback || null,
+        submittedAt: sub?.submitted_at || null,
+        submission: sub,
+        isSubmitted: !!sub,
+      };
+    });
 
     return res.json(successResponse({ assignments: formatted }));
   } catch (err) {
@@ -610,9 +796,16 @@ async function submitAssignment(req, res) {
     const student = await getStudentFromUser(req);
     if (!student) return res.status(404).json(errorResponse('Student not found'));
 
-    const { assignment_id, content, attachment_path } = req.body;
+    // The route is POST /assignments/:id/submit/ — the id arrives as a param
+    // (reading req.body.assignment_id made every submit 404).
+    const assignment_id = req.params.id || req.body.assignment_id;
+    const { content, attachment_path } = req.body;
     const assignment = await Assignment.findByPk(assignment_id);
     if (!assignment) return res.status(404).json(errorResponse('Assignment not found'));
+    // Ownership: only assignments for the student's own class.
+    if (Number(assignment.class_id) !== Number(student.classroom_id)) {
+      return res.status(403).json(errorResponse('Not your assignment'));
+    }
 
     const existing = await AssignmentSubmission.findOne({
       where: { assignment_id, student_id: student.id },
@@ -666,22 +859,46 @@ async function getConversations(req, res) {
       limit: 100,
     });
 
+    // Resolve the counterpart's name once per thread for the conversation header.
+    const otherIds = [...new Set(messages
+      .map(m => (m.sender_type === 'Student' ? m.recipient_id : m.sender_id))
+      .filter(Boolean).map(Number))];
+    const otherUsers = otherIds.length
+      ? await User.findAll({ where: { id: { [Op.in]: otherIds } }, attributes: ['id', 'first_name', 'last_name', 'username'], raw: true })
+      : [];
+    const nameById = {};
+    otherUsers.forEach(u => {
+      nameById[Number(u.id)] = `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.username || 'Teacher';
+    });
+
+    const COLORS = ['#3B82F6', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444', '#06B6D4', '#EC4899'];
     const threadMap = {};
     messages.forEach(m => {
       const tid = m.thread_id || 'general';
+      const otherId = Number(m.sender_type === 'Student' ? m.recipient_id : m.sender_id) || 0;
       if (!threadMap[tid]) {
-        threadMap[tid] = { threadId: tid, messages: [], lastMessage: null };
+        const name = nameById[otherId] || 'Teacher';
+        const initials = name.split(' ').filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase() || 'T';
+        threadMap[tid] = {
+          id: tid,
+          threadId: tid,
+          teacher: { id: otherId || null, name, initials, color: COLORS[otherId % COLORS.length], subject: m.subject || '' },
+          messages: [],
+          unread: 0,
+          lastMessage: null,
+        };
       }
-      threadMap[tid].messages.push({
+      // Chronological within the thread (query is DESC for the recency window).
+      threadMap[tid].messages.unshift({
         id: m.id,
-        senderId: m.sender_id,
-        senderType: m.sender_type,
-        body: m.body,
-        subject: m.subject,
-        isRead: m.is_read,
-        createdAt: m.created_at,
+        sender: m.sender_type === 'Student' ? 'student' : 'teacher',
+        text: m.body,
+        sentAt: m.created_at,
       });
-      threadMap[tid].lastMessage = m.created_at;
+      if (!m.is_read && m.recipient_type === 'Student') threadMap[tid].unread += 1;
+      if (!threadMap[tid].lastMessage || new Date(m.created_at) > new Date(threadMap[tid].lastMessage)) {
+        threadMap[tid].lastMessage = m.created_at;
+      }
     });
 
     const conversations = Object.values(threadMap).sort((a, b) =>
@@ -700,16 +917,40 @@ async function sendMessage(req, res) {
     const student = await getStudentFromUser(req);
     if (!student) return res.status(404).json(errorResponse('Student not found'));
 
-    const { text, recipient_id, recipient_type, subject, thread_id } = req.body;
+    const { text, recipient_id, recipient_type, subject } = req.body;
+    // The route is POST /messages/:conversationId/ — replies must land in THAT
+    // thread (the old code minted a fresh thread per send, so replies vanished).
+    const threadId = req.params.conversationId || req.body.thread_id || `conv-${student.id}-${Date.now()}`;
+
+    // Derive the counterpart from thread history when the client doesn't send one.
+    let toId = recipient_id || null;
+    let toType = recipient_type || 'Teacher';
+    if (!toId) {
+      const prev = await Message.findOne({
+        where: {
+          thread_id: threadId,
+          [Op.or]: [
+            { sender_id: student.user_id, sender_type: 'Student' },
+            { recipient_id: student.user_id, recipient_type: 'Student' },
+          ],
+        },
+        order: [['created_at', 'DESC']],
+      });
+      if (prev) {
+        toId = prev.sender_type === 'Student' ? prev.recipient_id : prev.sender_id;
+        toType = prev.sender_type === 'Student' ? prev.recipient_type : prev.sender_type;
+      }
+    }
+
     const message = await Message.create({
       school_id: (req.schoolId || req.user.school_id),
       sender_id: student.user_id,
       sender_type: 'Student',
-      recipient_id,
-      recipient_type: recipient_type || 'Teacher',
+      recipient_id: toId,
+      recipient_type: toType,
       subject: subject || '',
       body: text,
-      thread_id: thread_id || `conv-${student.id}-${Date.now()}`,
+      thread_id: threadId,
     });
 
     return res.json(successResponse({
@@ -815,7 +1056,12 @@ async function getEvents(req, res) {
     if (!school) return res.status(401).json(errorResponse('Not authenticated'));
 
     const notifications = await Notification.findAll({
-      where: { school_id: school.id },
+      // School-wide broadcasts + own rows only — other users' personal
+      // notifications must not surface in the events feed.
+      where: {
+        school_id: school.id,
+        [Op.or]: [{ user_id: null }, { user_id: req.user.id }],
+      },
       order: [['created_at', 'DESC']],
       limit: 50,
     });
@@ -843,15 +1089,28 @@ async function getGradeInsights(req, res) {
     const grades = await Grade.findAll({
       where: { student_id: student.id, approval_status: 'approved' },
       include: [{ model: Subject, as: 'subject', attributes: ['id', 'name', 'code'] }],
+      order: [['term_id', 'ASC']],
     });
 
-    const insights = grades.map(g => ({
-      subjectId: g.subject_id,
-      subjectName: g.subject?.name || '',
-      currentTotal: g.total,
-      trend: 'stable',
-      points: [],
-    }));
+    // Real trend: latest term's total vs the previous term's, per subject.
+    const bySubject = {};
+    grades.forEach(g => { (bySubject[g.subject_id] ||= []).push(g); });
+
+    const insights = Object.values(bySubject).map(list => {
+      const latest = list[list.length - 1];
+      const prev = list.length > 1 ? list[list.length - 2] : null;
+      const delta = prev && prev.total != null && latest.total != null
+        ? Math.round((latest.total - prev.total) * 10) / 10
+        : 0;
+      return {
+        subjectId: latest.subject_id,
+        subjectName: latest.subject?.name || '',
+        currentTotal: latest.total,
+        trend: delta,
+        direction: delta >= 0 ? 'up' : 'down',
+        points: list.map(g => ({ termId: g.term_id, total: g.total })),
+      };
+    });
 
     return res.json(successResponse({ insights }));
   } catch (err) {
@@ -973,46 +1232,16 @@ async function disable2FA(req, res) {
   }
 }
 
+/* Report cards ride the SAME receipt/hash/PDF machinery as the parent portal
+   (services/reportCards) — the student sees exactly what the parent sees:
+   published grades only, with a tamper-evident verification hash + QR PDF. */
 async function getReportCards(req, res) {
   try {
     const student = await getStudentFromUser(req);
     if (!student) return res.status(404).json(errorResponse('Student not found'));
 
-    const grades = await Grade.findAll({
-      // Report cards become visible only once the principal PUBLISHES them
-      // (publication implies prior approval; an edit un-publishes the grade).
-      where: { student_id: student.id, is_published: true },
-      include: [
-        { model: Subject, as: 'subject', attributes: ['id', 'name', 'code'] },
-        { model: Term, as: 'term', attributes: ['id', 'name'] },
-      ],
-      order: [['term_id', 'ASC']],
-    });
-
-    const termMap = {};
-    grades.forEach(g => {
-      const tid = g.term_id;
-      if (!termMap[tid]) {
-        termMap[tid] = { termId: tid, termName: g.term?.name || '', subjects: [], total: 0, count: 0 };
-      }
-      termMap[tid].subjects.push({
-        subjectName: g.subject?.name || '',
-        subjectCode: g.subject?.code || '',
-        ca: g.ca,
-        midterm: g.midterm,
-        final: g.final,
-        total: g.total,
-        gradeLetter: g.grade_letter,
-        remarks: g.remarks,
-      });
-      termMap[tid].total += g.total || 0;
-      termMap[tid].count += 1;
-    });
-
-    const reportCards = Object.values(termMap).map(tc => ({
-      ...tc,
-      average: tc.count ? Math.round(tc.total / tc.count * 10) / 10 : 0,
-    }));
+    const { listReportCards } = require('../services/reportCards');
+    const reportCards = await listReportCards(student.id);
 
     return res.json(successResponse({ reportCards }));
   } catch (err) {
@@ -1026,43 +1255,21 @@ async function downloadReportCard(req, res) {
     const student = await getStudentFromUser(req);
     if (!student) return res.status(404).json(errorResponse('Student not found'));
 
-    const { term_id } = req.params;
-    const where = { student_id: student.id, is_published: true };
-    if (term_id) where.term_id = term_id;
+    // Route: GET /report-cards/:id/download/ — :id is the TERM id (a report
+    // card is one term's published set; see listReportCards).
+    const termId = req.params.id || req.params.term_id || req.query.term_id;
+    if (!termId) return res.status(400).json(errorResponse('term id is required'));
 
-    const grades = await Grade.findAll({
-      where,
-      include: [
-        { model: Subject, as: 'subject', attributes: ['id', 'name', 'code'] },
-        { model: Term, as: 'term', attributes: ['id', 'name'] },
-      ],
-    });
-
+    const { loadReportCardGrades, streamReportCardPdf } = require('../services/reportCards');
+    const grades = await loadReportCardGrades(student.id, termId);
     if (!grades.length) return res.status(404).json(errorResponse('Report card not found'));
 
-    const u = student.user || {};
-    const reportCard = {
-      studentName: `${u.first_name || ''} ${u.last_name || ''}`.trim(),
-      studentNumber: student.admission_number,
-      className: student.classroom?.name || '',
-      term: grades[0].term?.name || '',
-      subjects: grades.map(g => ({
-        name: g.subject?.name || '',
-        code: g.subject?.code || '',
-        ca: g.ca,
-        midterm: g.midterm,
-        final: g.final,
-        total: g.total,
-        gradeLetter: g.grade_letter,
-        remarks: g.remarks,
-      })),
-      average: Math.round(grades.reduce((s, g) => s + (g.total || 0), 0) / grades.length * 10) / 10,
-    };
-
-    return res.json(successResponse({ reportCard }, 'Report card generated'));
+    const school = await School.findByPk(student.school_id).catch(() => null);
+    await streamReportCardPdf(res, { student, school, grades, termId });
   } catch (err) {
     console.error('downloadReportCard Error:', err);
-    return res.status(500).json(errorResponse(`Failed to download`));
+    if (!res.headersSent) return res.status(500).json(errorResponse(`Failed to download`));
+    try { res.end(); } catch (e) { /* stream already broken */ }
   }
 }
 
@@ -1177,17 +1384,22 @@ async function getTamperCount(req, res) {
     const student = await getStudentFromUser(req);
     if (!student) return res.status(404).json(errorResponse('Student not found'));
 
-    const count = await ForensicEvent.count({
-      where: {
-        [Op.or]: [
-          { actor: String(student.user_id) },
-          { metadata_json: { [Op.like]: `%${student.user_id}%` } },
-        ],
-        resolved: false,
-      },
-    });
+    const scope = {
+      [Op.or]: [
+        { actor: String(student.user_id) },
+        { metadata_json: { [Op.like]: `%${student.user_id}%` } },
+      ],
+    };
+    const total = await ForensicEvent.count({ where: scope });
 
-    return res.json(successResponse({ count }));
+    // The counter card reads {total, blocked, successful}. Locked grades cannot
+    // be silently altered, so every recorded attempt is a blocked one.
+    return res.json(successResponse({
+      count: total,
+      total,
+      blocked: total,
+      successful: 0,
+    }));
   } catch (err) {
     console.error('getTamperCount Error:', err);
     return res.status(500).json(errorResponse(`Failed to fetch tamper count`));
@@ -1378,7 +1590,9 @@ async function submitWhistleblowerReport(req, res) {
     if (!student) return res.status(404).json(errorResponse('Student not found'));
 
     const { category_id, title, description, severity } = req.body;
-    const followUpKey = `WB-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
+    // The follow-up key is the ONLY credential to an anonymous report — it
+    // must not be guessable (Math.random was).
+    const followUpKey = `WB-${crypto.randomBytes(6).toString('hex').toUpperCase()}`;
 
     const report = await WhistleblowerReport.create({
       school_id: (req.schoolId || req.user.school_id),
@@ -1454,7 +1668,16 @@ async function setGoal(req, res) {
     const student = await getStudentFromUser(req);
     if (!student) return res.status(404).json(errorResponse('Student not found'));
 
-    const { id, title, description, target_date, progress_pct } = req.body;
+    let { id, title, description, target_date, progress_pct } = req.body;
+
+    // The grades screen saves per-subject score targets as
+    // { subject_id, target, term } — map that onto the Goal shape.
+    if (!title && req.body.subject_id !== undefined && req.body.target !== undefined) {
+      const subj = await Subject.findByPk(req.body.subject_id, { attributes: ['name'] }).catch(() => null);
+      title = `Target ${req.body.target}% in ${subj?.name || `subject ${req.body.subject_id}`}`;
+      description = req.body.term ? `Term ${req.body.term}` : null;
+    }
+
     let goal;
 
     if (id) {
@@ -1496,29 +1719,45 @@ async function getOfficeHourSlots(req, res) {
       where: {
         school_id: (req.schoolId || req.user.school_id),
         is_active: true,
+        audience: 'student',
         date: { [Op.gte]: new Date() },
       },
       include: [
-        { model: Teacher, as: 'teacher', attributes: ['id'] },
+        { model: Teacher, as: 'teacher', attributes: ['id'], include: [{ model: User, as: 'user', attributes: ['first_name', 'last_name', 'username'] }] },
       ],
       order: [['date', 'ASC']],
     });
 
-    const bookings = await OfficeHourBooking.findAll({
-      where: { student_id: student.id },
+    // My bookings tell "booked by me"; total counts tell "taken by someone".
+    const allBookings = await OfficeHourBooking.findAll({
+      where: { office_hour_id: { [Op.in]: officeHours.map(o => o.id) }, status: 'booked' },
+      raw: true,
     });
-    const bookedIds = new Set(bookings.map(b => b.office_hour_id));
+    const countBySlot = {};
+    const mineBySlot = {};
+    allBookings.forEach(b => {
+      countBySlot[b.office_hour_id] = (countBySlot[b.office_hour_id] || 0) + 1;
+      if (Number(b.student_id) === Number(student.id)) mineBySlot[b.office_hour_id] = b;
+    });
 
-    const slots = officeHours.map(oh => ({
-      id: oh.id,
-      teacherId: oh.teacher_id,
-      date: oh.date,
-      startTime: oh.start_time,
-      endTime: oh.end_time,
-      slotDuration: oh.slot_duration_minutes,
-      maxBookings: oh.max_bookings,
-      isBooked: bookedIds.has(oh.id),
-    }));
+    const slots = officeHours.map(oh => {
+      const tu = oh.teacher?.user;
+      const mine = mineBySlot[oh.id];
+      const taken = (countBySlot[oh.id] || 0) >= (oh.max_bookings || 1);
+      // `start` is the ISO date + start_time the card formats directly.
+      const day = oh.date ? new Date(oh.date).toISOString().slice(0, 10) : null;
+      return {
+        id: oh.id,
+        subject: oh.subject || 'General',
+        start: day && oh.start_time ? `${day}T${oh.start_time.length === 5 ? `${oh.start_time}:00` : oh.start_time}` : oh.date,
+        durationMin: oh.slot_duration_minutes,
+        teacher: tu ? (`${tu.first_name || ''} ${tu.last_name || ''}`.trim() || tu.username) : 'Teacher',
+        room: oh.room || '—',
+        booked: !!mine || taken,
+        bookedBy: mine ? 'self' : (taken ? 'other' : null),
+        topic: mine?.notes || null,
+      };
+    });
 
     return res.json(successResponse({ slots }));
   } catch (err) {
@@ -1532,14 +1771,21 @@ async function claimOfficeHourSlot(req, res) {
     const student = await getStudentFromUser(req);
     if (!student) return res.status(404).json(errorResponse('Student not found'));
 
-    const { office_hour_id, notes } = req.body;
+    // Route: POST /office-hours/:slotId/claim/ with { topic } in the body.
+    const office_hour_id = req.params.slotId || req.body.office_hour_id;
+    const notes = req.body.topic || req.body.notes || null;
     const officeHour = await OfficeHour.findByPk(office_hour_id);
     if (!officeHour) return res.status(404).json(errorResponse('Office hour not found'));
 
     const existing = await OfficeHourBooking.findOne({
-      where: { office_hour_id, student_id: student.id },
+      where: { office_hour_id, student_id: student.id, status: 'booked' },
     });
     if (existing) return res.status(400).json(errorResponse('Already booked this slot'));
+
+    const taken = await OfficeHourBooking.count({ where: { office_hour_id, status: 'booked' } });
+    if (taken >= (officeHour.max_bookings || 1)) {
+      return res.status(400).json(errorResponse('This slot is already taken'));
+    }
 
     const booking = await OfficeHourBooking.create({
       office_hour_id,
@@ -1563,9 +1809,11 @@ async function cancelOfficeHourSlot(req, res) {
     const student = await getStudentFromUser(req);
     if (!student) return res.status(404).json(errorResponse('Student not found'));
 
-    const { booking_id } = req.params;
+    // Route: DELETE /office-hours/:slotId/claim/ — the client addresses the
+    // SLOT; resolve the student's own active booking on it.
+    const { slotId } = req.params;
     const booking = await OfficeHourBooking.findOne({
-      where: { id: booking_id, student_id: student.id },
+      where: { office_hour_id: slotId, student_id: student.id, status: 'booked' },
     });
 
     if (!booking) return res.status(404).json(errorResponse('Booking not found'));
@@ -1688,7 +1936,8 @@ async function joinStudyGroup(req, res) {
     const student = await getStudentFromUser(req);
     if (!student) return res.status(404).json(errorResponse('Student not found'));
 
-    const { group_id } = req.body;
+    // Route: POST /study-groups/:id/join/ (no body).
+    const group_id = req.params.id || req.body.group_id;
     const group = await StudyGroup.findByPk(group_id);
     if (!group) return res.status(404).json(errorResponse('Group not found'));
 
@@ -1715,7 +1964,8 @@ async function leaveStudyGroup(req, res) {
     const student = await getStudentFromUser(req);
     if (!student) return res.status(404).json(errorResponse('Student not found'));
 
-    const { group_id } = req.params;
+    // Route: POST /study-groups/:id/leave/ — the param is named `id`.
+    const group_id = req.params.id || req.params.group_id;
     const membership = await StudyGroupMember.findOne({
       where: { study_group_id: group_id, student_id: student.id },
     });
@@ -1781,7 +2031,43 @@ async function getStreaks(req, res) {
       }
     }
 
+    // On-time submissions: real count of submissions at/before the due date.
+    const submissions = await AssignmentSubmission.findAll({
+      where: { student_id: student.id },
+      raw: true,
+    });
+    let onTimeAssignments = 0;
+    if (submissions.length) {
+      const assignmentIds = [...new Set(submissions.map(s => s.assignment_id))];
+      const dueById = {};
+      (await Assignment.findAll({ where: { id: { [Op.in]: assignmentIds } }, attributes: ['id', 'due_date'], raw: true }))
+        .forEach(a => { dueById[a.id] = a.due_date; });
+      onTimeAssignments = submissions.filter(s =>
+        s.submitted_at && dueById[s.assignment_id] && new Date(s.submitted_at) <= new Date(dueById[s.assignment_id])
+      ).length;
+    }
+
+    // No 'late' mark in the current calendar month.
+    const monthStart = new Date();
+    monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
+    const noLateThisMonth = !attendance.some(a =>
+      a.status === 'late' && new Date(a.date) >= monthStart
+    );
+
+    // Strongest subject: top approved grade.
+    const topGrade = await Grade.findOne({
+      where: { student_id: student.id, approval_status: 'approved' },
+      include: [{ model: Subject, as: 'subject', attributes: ['name'] }],
+      order: [['total', 'DESC']],
+    });
+
+    // Flat keys the StreaksCard reads, plus the original nested block.
     return res.json(successResponse({
+      attendanceStreak: currentStreak,
+      longestStreak: longestStreak,
+      onTimeAssignments,
+      noLateThisMonth,
+      bestSubject: topGrade?.subject?.name || null,
       streaks: {
         current: currentStreak,
         longest: longestStreak,
@@ -1800,7 +2086,9 @@ async function getDigitalId(req, res) {
     const student = await getStudentFromUser(req);
     if (!student) return res.status(404).json(errorResponse('Student not found'));
 
-    const u = student.User || {};
+    // Include alias is lowercase `user` — `student.User` was always undefined,
+    // so the ID card rendered a blank name.
+    const u = student.user || {};
     const c = student.classroom;
 
     return res.json(successResponse({
@@ -1860,13 +2148,14 @@ async function uploadDocument(req, res) {
     const student = await getStudentFromUser(req);
     if (!student) return res.status(404).json(errorResponse('Student not found'));
 
-    const { title, file_path, file_type } = req.body;
+    // Multipart upload (multer) — the file lands on disk; metadata in body.
+    const { title, type } = req.body;
     const document = await Document.create({
       school_id: (req.schoolId || req.user.school_id),
       student_id: student.id,
-      title,
-      file_path,
-      file_type,
+      title: title || req.file?.originalname || 'Document',
+      file_path: req.file ? `/uploads/student-docs/${req.file.filename}` : (req.body.file_path || null),
+      file_type: type || req.body.file_type || 'other',
       uploaded_by: req.user.id,
       is_verified: false,
     });
@@ -2003,7 +2292,8 @@ async function markResourceVisited(req, res) {
     const student = await getStudentFromUser(req);
     if (!student) return res.status(404).json(errorResponse('Student not found'));
 
-    const { resource_id } = req.body;
+    // Route: POST /resources/:id/visit/ (no body).
+    const resource_id = req.params.id || req.body.resource_id;
     const visit = await ResourceVisit.create({
       resource_id,
       student_id: student.id,
@@ -2168,17 +2458,30 @@ async function listLiveClasses(req, res) {
       order: [['scheduled_at', 'ASC']],
     });
 
-    const formatted = liveClasses.map(lc => ({
-      id: lc.id,
-      title: lc.title,
-      description: lc.description,
-      meetingUrl: lc.meeting_url,
-      scheduledAt: lc.scheduled_at,
-      durationMinutes: lc.duration_minutes,
-      subject: lc.subject,
-    }));
+    // Same shape as the staff branch — the student screen reads
+    // `live_classes` with scheduled_start/duration_minutes/status.
+    const nowTs = Date.now();
+    const live_classes = liveClasses.map(lc => {
+      let status = lc.status || 'scheduled';
+      if (status === 'scheduled' && lc.scheduled_at) {
+        const start = new Date(lc.scheduled_at).getTime();
+        const end = start + (lc.duration_minutes || 60) * 60 * 1000;
+        if (nowTs >= start && nowTs <= end) status = 'live';
+        else if (nowTs > end) status = 'ended';
+      }
+      return {
+        id: lc.id,
+        title: lc.title,
+        description: lc.description,
+        meeting_url: lc.meeting_url,
+        scheduled_start: lc.scheduled_at,
+        duration_minutes: lc.duration_minutes,
+        status,
+        subject: lc.subject ? { id: lc.subject.id, name: lc.subject.name } : null,
+      };
+    });
 
-    return res.json(successResponse({ liveClasses: formatted }));
+    return res.json(successResponse({ live_classes }));
   } catch (err) {
     console.error('listLiveClasses Error:', err);
     return res.status(500).json(errorResponse(`Failed to fetch live classes`));

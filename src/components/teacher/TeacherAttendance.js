@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTeacher } from '../../context/TeacherContext';
 import { teacherApi } from '../../api/teacherApi';
+import QrAttendanceScanner from './QrAttendanceScanner';
 import './TeacherAttendance.css';
 
 const STATUS_OPTS = ['present', 'absent', 'late'];
@@ -33,6 +34,7 @@ export default function TeacherAttendance() {
   const [showHistory, setShowHistory] = useState(false);
   const [students, setStudents] = useState([]);
   const [loadingStudents, setLoadingStudents] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
 
   const selectedClass = assignedClasses.find(c => String(c.id) === String(selectedClassId));
 
@@ -143,15 +145,34 @@ export default function TeacherAttendance() {
           )}
         </div>
         {selectedClassId && (
-          <button
-            className="tch-btn tch-btn--ghost tch-btn--sm"
-            onClick={() => setShowHistory(p => !p)}
-          >
-            <span className="material-symbols-outlined">history</span>
-            {showHistory ? 'Take Attendance' : 'View History'}
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {!showHistory && (
+              <button
+                className="tch-btn tch-btn--ghost tch-btn--sm"
+                onClick={() => setShowScanner(true)}
+              >
+                <span className="material-symbols-outlined">qr_code_scanner</span>
+                Scan IDs
+              </button>
+            )}
+            <button
+              className="tch-btn tch-btn--ghost tch-btn--sm"
+              onClick={() => setShowHistory(p => !p)}
+            >
+              <span className="material-symbols-outlined">history</span>
+              {showHistory ? 'Take Attendance' : 'View History'}
+            </button>
+          </div>
         )}
       </div>
+
+      {showScanner && (
+        <QrAttendanceScanner
+          students={students}
+          onMarkPresent={(s) => setAttendance(prev => ({ ...prev, [s.id]: 'present' }))}
+          onClose={() => setShowScanner(false)}
+        />
+      )}
 
       {/* Class selector */}
       <div style={{ marginBottom: 20 }}>

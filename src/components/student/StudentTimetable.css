@@ -455,3 +455,11 @@
   .stt-slot__in-progress { top: 8px; right: 12px; font-size: 9px; }
   .stt__tomorrow-subject { font-size: 17px; white-space: normal; }
 }
+
+@media (max-width: 400px) {
+  .stt { padding: 16px 10px 28px; }
+  .stt__title { font-size: 19px; }
+  .stt__tab { min-width: 48px; padding: 8px 6px; min-height: 44px; }
+  .stt__tab-date { font-size: 13px; }
+  .stt-slot { padding: 12px; }
+}

@@ -30,6 +30,7 @@ export default function StudentReportCards() {
   const [copiedId, setCopiedId] = useState(null);
   const [verifyCard, setVerifyCard] = useState(null);
   const [certCard, setCertCard] = useState(null);
+  const [downloadError, setDownloadError] = useState(null);
 
   useEffect(() => {
     setLoading(true);
@@ -41,17 +42,20 @@ export default function StudentReportCards() {
 
   const handleDownload = useCallback(async (card) => {
     setDownloading(card.id);
+    setDownloadError(null);
     try {
-      const html = await studentApi.downloadReportCard(card.id);
-      if (html) {
-        const win = window.open('', '_blank');
-        if (win) {
-          win.document.write(html);
-          win.document.close();
-        }
-      }
+      // Tamper-evident PDF (QR + verification hash) streamed by the backend.
+      const blob = await studentApi.downloadReportCard(card.id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `report-card-${(card.termName || card.id)}.pdf`.replace(/\s+/g, '-').toLowerCase();
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
     } catch {
-      // silently fail
+      setDownloadError('Could not download the report card. Please try again.');
     }
     setDownloading(null);
   }, []);
@@ -85,8 +89,8 @@ export default function StudentReportCards() {
         </>
       )}
 
-      {error && (
-        <div style={{ padding: 20, color: '#BA1A1A', textAlign: 'center', fontSize: 14 }}>{error}</div>
+      {(error || downloadError) && (
+        <div style={{ padding: 20, color: '#BA1A1A', textAlign: 'center', fontSize: 14 }}>{error || downloadError}</div>
       )}
 
       {!loading && reportCards.map((card, idx) => (

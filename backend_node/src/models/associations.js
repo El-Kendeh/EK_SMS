@@ -121,6 +121,7 @@ AcademicYear.hasMany(Student, { foreignKey: 'academic_year_id', as: 'students' }
 
 Class.belongsTo(AcademicYear, { foreignKey: 'academic_year_id', as: 'academicYear' });
 Student.belongsTo(AcademicYear, { foreignKey: 'academic_year_id', as: 'academicYear' });
+Term.belongsTo(AcademicYear, { foreignKey: 'academic_year_id', as: 'academicYear' });
 
 // ============================================
 // Term associations
