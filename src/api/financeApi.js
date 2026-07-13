@@ -49,12 +49,17 @@ export const financeApi = {
     // → { fees[], payments[], summary: { total_due, total_paid, balance } }
     return apiClient.get(`/api/finance/students/${studentId}/fees/`);
   },
-  async assignFees({ feeCategoryId, studentIds, termId, discount }) {
+  async assignFees({ feeCategoryId, studentIds, termId, discount, discountPercent, discountReason, installments }) {
     return apiClient.post('/api/finance/fees/assign/', {
       fee_category_id: feeCategoryId,
       student_ids: studentIds,
       term_id: termId || null,
       discount: discount || 0,
+      // Scholarship as a percentage (0–99.99) wins over the absolute discount.
+      discount_percent: discountPercent ?? null,
+      discount_reason: discountReason || null,
+      // Installment plan: N equal parts of amount_due (1 = pay in full).
+      installments: installments || 1,
     });
   },
 
@@ -62,12 +67,15 @@ export const financeApi = {
   async getFeeCategories() {
     return apiClient.get('/api/finance/fee-categories/');
   },
-  async createFeeCategory({ name, amount, description, frequency, applicableClasses }) {
+  async createFeeCategory({ name, amount, description, frequency, applicableClasses, lateFeeAmount, graceDays }) {
     return apiClient.post('/api/finance/fee-categories/', {
       name,
       amount,
       description: description || '',
       frequency: frequency || 'term',
+      // Late-fee policy (plan 4.1): flat penalty once past due + grace days.
+      late_fee_amount: lateFeeAmount ?? 0,
+      grace_days: graceDays ?? 0,
       applicable_classes: applicableClasses && applicableClasses.length ? applicableClasses : null,
     });
   },
@@ -147,6 +155,33 @@ export const financeApi = {
   },
   async listReportCards() {
     return apiClient.get('/api/finance/report-cards/');
+  },
+
+  /* ── P1 (plan 4.2/4.3): receipts, finance dashboards, budgets ── */
+  async getReceipt(receiptNumber) {
+    // → { receipt: { receipt_number, amount, student_name, qr_data_url, verify_url, ... } }
+    return apiClient.get(`/api/finance/receipts/${encodeURIComponent(receiptNumber)}/`);
+  },
+  async getCollectionAnalytics(by = 'term') {
+    // → { by, rows: [{ key, label, due, paid, outstanding, rate }] }
+    return apiClient.get(`/api/finance/analytics/collection/?by=${by}`);
+  },
+  async getCashFlow() {
+    // → { months: [{ month:'YYYY-MM', inflow, outflow, net }] } (last 12)
+    return apiClient.get('/api/finance/analytics/cashflow/');
+  },
+  async getBudgets() {
+    // → { budgets: [{ id, term_id, term_name, category, amount, actual_revenue, variance, attainment }] }
+    return apiClient.get('/api/finance/budgets/');
+  },
+  async saveBudget({ termId, category, amount, notes }) {
+    // Upserts on (school, term, category).
+    return apiClient.post('/api/finance/budgets/', {
+      term_id: termId || null, category: category || 'general', amount: Number(amount), notes: notes || null,
+    });
+  },
+  async deleteBudget(id) {
+    return apiClient.delete(`/api/finance/budgets/${id}/`);
   },
 
   /* ── School-scoped lookups for pickers (auth + schoolScope) ── */

@@ -120,14 +120,28 @@ export const principalApi = {
   async listAnnouncements() {
     return apiClient.get('/api/principal/announcements/');
   },
-  async postAnnouncement({ title, message }) {
-    return apiClient.post('/api/principal/announcements/', { title, message });
+  async postAnnouncement({ title, message, audience }) {
+    // audience: 'all' | 'teachers' | 'parents' | 'students' (plan 3.5 targeting)
+    return apiClient.post('/api/principal/announcements/', { title, message, audience });
   },
   async getAtRisk() {
     return apiClient.get('/api/principal/at-risk/');
   },
   async getStudentProfile(studentId) {
     return apiClient.get(`/api/principal/students/${studentId}/`);
+  },
+
+  /* ── P1 oversight surfaces ── */
+  async getDiscipline(params = {}) {
+    const qs = new URLSearchParams(params).toString();
+    return apiClient.get(`/api/principal/discipline/${qs ? `?${qs}` : ''}`);
+  },
+  async getTimetable(params = {}) {
+    const qs = new URLSearchParams(params).toString();
+    return apiClient.get(`/api/principal/timetable/${qs ? `?${qs}` : ''}`);
+  },
+  async getTeacherRoster() {
+    return apiClient.get('/api/principal/teacher-roster/');
   },
 };
 

@@ -5,18 +5,20 @@ const Ic = ({ name, size, style }) => (
 );
 
 /**
- * AI Insights panel — gives the school admin actionable recommendations
- * derived from the school summary (mock heuristics in principal.utils).
+ * Insights panel — actionable recommendations derived from the school
+ * summary by simple rule-based heuristics. Honestly labelled: these are
+ * threshold rules, not an AI model (the old "AI Insights"/"SMART" branding
+ * oversold static if-statements).
  */
 export default function InsightsPanel({ insights }) {
   return (
     <div className="pu-card pu-insights">
       <div className="pu-card__head">
         <div className="pu-card__title">
-          <Ic name="auto_awesome" size="sm" />
-          <strong>AI Insights</strong>
+          <Ic name="lightbulb" size="sm" />
+          <strong>Insights</strong>
         </div>
-        <span className="pu-insights__pulse">SMART</span>
+        <span className="pu-insights__pulse">RULES</span>
       </div>
       <ul className="pu-insights__list">
         {insights.map((t, i) => (

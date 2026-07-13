@@ -140,7 +140,7 @@
 }
 .psd-pill--green { background: var(--ska-green-dim); color: var(--ska-green); border-color: transparent; }
 .psd-pill--red   { background: var(--ska-error-dim); color: var(--ska-error); border-color: transparent; }
-.psd-pill--amber { background: rgba(245,158,11,0.14); color: #b25d00; border-color: transparent; }
+.psd-pill--amber { background: var(--ska-tertiary-dim); color: var(--ska-tertiary); border-color: transparent; }
 
 /* ── Grades ── */
 .psd-grades {

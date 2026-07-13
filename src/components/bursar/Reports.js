@@ -251,6 +251,307 @@ const METHOD_ICONS = {
 };
 const METHOD_TONES = ['var(--ska-primary)', 'var(--ska-green)', '#06b6d4', '#f59e0b', '#a855f7', '#f43f5e'];
 
+const rateTone = (r) => (r >= 70 ? 'var(--ska-green)' : r >= 40 ? '#f59e0b' : 'var(--ska-error)');
+
+/* ── Collection rate (plan 4.3) ───────────────────────────── */
+function CollectionSection() {
+  const [by, setBy] = useState('term');
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    setError(null);
+    financeApi.getCollectionAnalytics(by)
+      .then((res) => setRows(res.rows || []))
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
+  }, [by]);
+
+  useEffect(() => { load(); }, [load]);
+
+  return (
+    <div className="pu-card">
+      <div className="pu-card__head">
+        <p className="pu-card__title"><Ic name="percent" /> Collection Rate</p>
+        <div className="bfr-mini-toggle" role="tablist" aria-label="Collection breakdown">
+          {[['term', 'By Term'], ['class', 'By Class']].map(([k, l]) => (
+            <button key={k} type="button" role="tab" aria-selected={by === k}
+              className={`pu-pill${by === k ? ' pu-pill--on' : ''}`}
+              onClick={() => setBy(k)}>
+              {l}
+            </button>
+          ))}
+        </div>
+      </div>
+      {loading ? (
+        <div className="bfr-chart-skel"><div className="bur-skel" /><div className="bur-skel" /><div className="bur-skel" /></div>
+      ) : error ? (
+        <div className="bur-banner bur-banner--error">
+          <Ic name="error" size="sm" /> {error}
+          <button className="ska-btn ska-btn--ghost ska-btn--sm" onClick={load}>Retry</button>
+        </div>
+      ) : rows.length === 0 ? (
+        <div className="bur-picker__empty">No fees assigned by {by} yet — assign fees to see collection rates.</div>
+      ) : (
+        <div className="bfr-share-list">
+          {rows.map((r) => {
+            const rate = Math.max(0, Math.min(100, Math.round(Number(r.rate) || 0)));
+            return (
+              <div className="bfr-share" key={r.key}>
+                <div className="bfr-share__head">
+                  <span className="bfr-share__label">
+                    <Ic name={by === 'term' ? 'calendar_month' : 'school'} size="sm" /> {r.label}
+                  </span>
+                  <span className="bfr-share__figures">
+                    <strong>{rate}%</strong>
+                    <small>{fmtMoney(r.paid)} of {fmtMoney(r.due)}</small>
+                  </span>
+                </div>
+                <div className="bfr-share__track">
+                  <div className="bfr-share__fill" style={{ width: `${Math.max(rate, 2)}%`, background: rateTone(rate) }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Cash flow, last 12 months (plan 4.3) ─────────────────── */
+function CashFlowSection() {
+  const [months, setMonths] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    setError(null);
+    financeApi.getCashFlow()
+      .then((res) => setMonths(res.months || []))
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const max = useMemo(
+    () => Math.max(1, ...months.map((m) => Math.max(Number(m.inflow) || 0, Number(m.outflow) || 0))),
+    [months]
+  );
+
+  return (
+    <div className="pu-card">
+      <div className="pu-card__head">
+        <p className="pu-card__title"><Ic name="swap_vert" /> Cash Flow (12 Months)</p>
+        <div className="bfr-legend">
+          <span><i className="bfr-legend__dot bfr-legend__dot--rev" /> Inflow</span>
+          <span><i className="bfr-legend__dot bfr-legend__dot--exp" /> Outflow</span>
+        </div>
+      </div>
+      {loading ? (
+        <div className="bfr-chart-skel"><div className="bur-skel" /><div className="bur-skel" /><div className="bur-skel" /></div>
+      ) : error ? (
+        <div className="bur-banner bur-banner--error">
+          <Ic name="error" size="sm" /> {error}
+          <button className="ska-btn ska-btn--ghost ska-btn--sm" onClick={load}>Retry</button>
+        </div>
+      ) : months.length === 0 ? (
+        <div className="bur-picker__empty">No cash movement recorded yet.</div>
+      ) : (
+        <div className="bfr-chart-scroll">
+          <div className="bfr-chart bfr-chart--cf" style={{ minWidth: `${months.length * 56}px` }}>
+            {months.map((m) => {
+              const inflow = Number(m.inflow) || 0;
+              const outflow = Number(m.outflow) || 0;
+              const net = Number(m.net) || 0;
+              return (
+                <div className="bfr-chart__col" key={m.month}
+                  title={`${monthLong(m.month)} — Inflow ${fmtMoney(inflow)} · Outflow ${fmtMoney(outflow)} · Net ${fmtMoney(net)}`}>
+                  <div className="bfr-chart__bars">
+                    <div className="bfr-chart__bar bfr-chart__bar--rev" style={{ height: `${Math.round((inflow / max) * 100)}%` }} />
+                    <div className="bfr-chart__bar bfr-chart__bar--exp" style={{ height: `${Math.round((outflow / max) * 100)}%` }} />
+                  </div>
+                  <span className="bfr-chart__label">{monthShort(m.month)}</span>
+                  <span className={`bfr-cf-net ${net >= 0 ? 'bfr-cf-net--up' : 'bfr-cf-net--down'}`}>
+                    {net >= 0 ? '+' : '−'}{fmtMoneyCompact(Math.abs(net))}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Budgets vs actuals (plan 4.3) ────────────────────────── */
+function BudgetsSection() {
+  const [budgets, setBudgets] = useState([]);
+  const [terms, setTerms] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [form, setForm] = useState({ termId: '', category: '', amount: '' });
+  const [formErr, setFormErr] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState(null); // { kind: 'success' | 'error', text }
+  const [deletingId, setDeletingId] = useState(null);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    setError(null);
+    Promise.all([financeApi.getBudgets(), financeApi.getTerms()])
+      .then(([b, t]) => {
+        setBudgets(b.budgets || []);
+        setTerms(t.terms || []);
+      })
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    const category = form.category.trim();
+    const amount = Number(form.amount);
+    if (!category) { setFormErr('Category is required.'); return; }
+    if (!form.amount || Number.isNaN(amount) || amount <= 0) { setFormErr('Enter an amount greater than zero.'); return; }
+    setFormErr(null);
+    setSaving(true);
+    setNotice(null);
+    try {
+      await financeApi.saveBudget({ termId: form.termId || null, category, amount });
+      const res = await financeApi.getBudgets();
+      setBudgets(res.budgets || []);
+      setForm({ termId: '', category: '', amount: '' });
+      setNotice({ kind: 'success', text: 'Budget saved.' });
+    } catch (err) {
+      setNotice({ kind: 'error', text: err.message });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const remove = async (b) => {
+    if (!window.confirm(`Delete the ${b.category} budget${b.term_name ? ` for ${b.term_name}` : ''}?`)) return;
+    setDeletingId(b.id);
+    setNotice(null);
+    try {
+      await financeApi.deleteBudget(b.id);
+      setBudgets((list) => list.filter((x) => x.id !== b.id));
+      setNotice({ kind: 'success', text: 'Budget deleted.' });
+    } catch (err) {
+      setNotice({ kind: 'error', text: err.message });
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  return (
+    <div className="pu-card">
+      <div className="pu-card__head">
+        <p className="pu-card__title"><Ic name="savings" /> Budgets vs Actuals</p>
+      </div>
+
+      {notice && (
+        <div className={`bur-banner bur-banner--${notice.kind}`}>
+          <Ic name={notice.kind === 'success' ? 'task_alt' : 'error'} size="sm" /> {notice.text}
+        </div>
+      )}
+
+      <form className="bfr-budget-form" onSubmit={submit}>
+        <label className="bur-field">
+          <span>Term</span>
+          <select className="bur-input" value={form.termId} disabled={saving || loading}
+            onChange={(e) => setForm((f) => ({ ...f, termId: e.target.value }))}>
+            <option value="">— All terms —</option>
+            {terms.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}{t.academicYear?.name ? ` · ${t.academicYear.name}` : ''}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="bur-field">
+          <span>Category</span>
+          <input className="bur-input" type="text" placeholder="e.g. Tuition" maxLength={60}
+            value={form.category} disabled={saving}
+            onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))} />
+        </label>
+        <label className="bur-field">
+          <span>Target amount</span>
+          <input className="bur-input" type="number" min="0" step="0.01" placeholder="0.00"
+            value={form.amount} disabled={saving}
+            onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} />
+        </label>
+        <button className="ska-btn ska-btn--primary bfr-budget-form__btn" type="submit" disabled={saving}>
+          {saving ? 'Saving…' : 'Set budget'}
+        </button>
+      </form>
+      {formErr && <p className="bur-field-err">{formErr}</p>}
+
+      {loading ? (
+        <div className="bfr-chart-skel"><div className="bur-skel" /><div className="bur-skel" /></div>
+      ) : error ? (
+        <div className="bur-banner bur-banner--error">
+          <Ic name="error" size="sm" /> {error}
+          <button className="ska-btn ska-btn--ghost ska-btn--sm" onClick={load}>Retry</button>
+        </div>
+      ) : budgets.length === 0 ? (
+        <div className="bur-picker__empty">No budgets set yet — use the form above to set your first revenue target.</div>
+      ) : (
+        <div className="bur-table-wrap">
+          <table className="ska-table">
+            <thead>
+              <tr>
+                <th>Term</th><th>Category</th><th>Budget</th><th>Actual</th><th>Variance</th><th>Attainment</th><th aria-label="Actions" />
+              </tr>
+            </thead>
+            <tbody>
+              {budgets.map((b) => {
+                const att = Math.max(0, Math.round(Number(b.attainment) || 0));
+                const variance = Number(b.variance) || 0;
+                return (
+                  <tr key={b.id}>
+                    <td>{b.term_name || 'All terms'}</td>
+                    <td>{b.category}</td>
+                    <td>{fmtMoney(b.amount)}</td>
+                    <td>{fmtMoney(b.actual_revenue)}</td>
+                    <td style={{ color: variance >= 0 ? 'var(--ska-green)' : 'var(--ska-error)', fontWeight: 700 }}>
+                      {variance >= 0 ? '+' : '−'}{fmtMoney(Math.abs(variance))}
+                    </td>
+                    <td>
+                      <div className="bfr-attain" role="progressbar" aria-valuemin={0} aria-valuemax={100}
+                        aria-valuenow={Math.min(att, 100)} aria-label={`${b.category} attainment ${att}%`}>
+                        <span className="bfr-attain__track">
+                          <span className="bfr-attain__fill" style={{ width: `${Math.min(att, 100)}%`, background: rateTone(att) }} />
+                        </span>
+                        <span className="bfr-attain__pct">{att}%</span>
+                      </div>
+                    </td>
+                    <td>
+                      <button className="ska-btn ska-btn--danger ska-btn--sm bfr-budget-del" type="button"
+                        onClick={() => remove(b)} disabled={deletingId === b.id}
+                        aria-label={`Delete ${b.category} budget`}>
+                        {deletingId === b.id ? '…' : <Ic name="delete" size="sm" />}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── Main page ────────────────────────────────────────────── */
 export default function FinanceReports({ navigateTo }) {
   const [period, setPeriod] = useState('m6');
@@ -424,6 +725,13 @@ export default function FinanceReports({ navigateTo }) {
           );
         })}
       </div>
+
+      {/* Plan 4.3 — collection rate, cash flow, budgets (own data windows) */}
+      <div className="bfr-grid">
+        <CollectionSection />
+        <CashFlowSection />
+      </div>
+      <BudgetsSection />
 
       {/* Monthly performance chart */}
       <div className="pu-card">

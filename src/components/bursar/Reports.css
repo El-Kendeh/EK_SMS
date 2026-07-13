@@ -199,6 +199,59 @@
   color: var(--ska-text-1);
 }
 
+/* ── Collection rate toggle (plan 4.3) ────────────────────── */
+.bfr-mini-toggle {
+  display: flex;
+  gap: 6px;
+}
+
+/* ── Cash flow chart (plan 4.3) ───────────────────────────── */
+.bfr-chart--cf { height: 240px; }
+.bfr-cf-net {
+  font-size: 0.625rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.bfr-cf-net--up   { color: var(--ska-green); }
+.bfr-cf-net--down { color: var(--ska-error); }
+
+/* ── Budgets vs actuals (plan 4.3) ────────────────────────── */
+.bfr-budget-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr auto;
+  gap: 10px;
+  align-items: end;
+}
+.bfr-budget-form__btn { min-height: 38px; }
+.bfr-attain {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 140px;
+}
+.bfr-attain__track {
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--ska-surface-2);
+  border: 1px solid var(--ska-border);
+  overflow: hidden;
+}
+.bfr-attain__fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.35s ease;
+}
+.bfr-attain__pct {
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ska-text-1);
+}
+.bfr-budget-del { min-width: 36px; }
+
 /* ── Export modal ─────────────────────────────────────────── */
 .bfr-export-period {
   display: flex;
@@ -305,10 +358,17 @@
   .bfr-fact strong { font-size: 1rem; }
   .bfr-share__figures small { display: block; text-align: right; }
   .bfr-insight-chips .bfr-chip { font-size: 0.6875rem; }
+  .bfr-mini-toggle .pu-pill { min-height: 44px; font-size: 0.75rem; }
+  .bfr-chart--cf { height: 200px; }
+  .bfr-budget-form { grid-template-columns: 1fr; }
+  .bfr-budget-form__btn { min-height: 44px; width: 100%; }
+  .bfr-budget-del { min-height: 44px; min-width: 44px; }
+  .bfr-attain { min-width: 120px; }
 }
 
 @media (max-width: 400px) {
   .bfr-chart { height: 150px; }
+  .bfr-chart--cf { height: 170px; }
   .bfr-facts { grid-template-columns: 1fr; }
   .bfr-share__head {
     flex-direction: column;

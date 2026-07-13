@@ -24,7 +24,7 @@
   color: var(--ska-text-2);
 }
 .par-chip--high   { background: var(--ska-error-dim);  color: var(--ska-error);  border-color: var(--ska-error); }
-.par-chip--medium { background: rgba(245,158,11,0.12); color: #b25d00;           border-color: #f59e0b; }
+.par-chip--medium { background: var(--ska-tertiary-dim); color: var(--ska-tertiary);           border-color: var(--ska-tertiary); }
 .par-chip--total  { background: var(--ska-primary-dim); color: var(--ska-primary); border-color: var(--ska-primary); }
 
 /* ── Table ── */

@@ -19,12 +19,19 @@ function CreateCategoryModal({ classes, onClose, onSuccess }) {
   const [description, setDescription] = useState('');
   const [frequency, setFrequency] = useState('term');
   const [selectedClasses, setSelectedClasses] = useState(new Set());
+  const [lateFee, setLateFee] = useState('');
+  const [graceDays, setGraceDays] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
   const amountNum = Number(amount);
   const amountError = amount !== '' && !(amountNum > 0) ? 'Amount must be greater than zero' : null;
-  const canSubmit = name.trim() && amount !== '' && !amountError && !submitting;
+  // Late-fee policy (plan 4.1): both optional; late fee >= 0, grace an integer 0–365.
+  const lateFeeError = lateFee !== '' && !(Number(lateFee) >= 0) ? 'Late fee cannot be negative' : null;
+  const graceNum = Number(graceDays);
+  const graceError = graceDays !== '' && (!Number.isInteger(graceNum) || graceNum < 0 || graceNum > 365)
+    ? 'Grace days must be a whole number between 0 and 365' : null;
+  const canSubmit = name.trim() && amount !== '' && !amountError && !lateFeeError && !graceError && !submitting;
 
   const toggleClass = (clsName) => {
     setSelectedClasses((prev) => {
@@ -46,6 +53,8 @@ function CreateCategoryModal({ classes, onClose, onSuccess }) {
         description: description.trim(),
         frequency,
         applicableClasses: Array.from(selectedClasses),
+        lateFeeAmount: lateFee === '' ? 0 : Number(lateFee),
+        graceDays: graceDays === '' ? 0 : graceNum,
       });
       if (res?.success === false) throw new Error(res.message || 'Failed to create fee category');
       onSuccess?.(res.category);
@@ -98,6 +107,26 @@ function CreateCategoryModal({ classes, onClose, onSuccess }) {
                   value={description} onChange={(e) => setDescription(e.target.value)} />
               </label>
             </div>
+
+            <div className="bur-field-row">
+              <label className="bur-field">
+                <span>Late fee (amount)</span>
+                <input className="bur-input" type="number" min="0" step="0.01"
+                  placeholder="0.00 — optional"
+                  value={lateFee} onChange={(e) => setLateFee(e.target.value)} />
+                {lateFeeError && <span className="bur-field-err">{lateFeeError}</span>}
+              </label>
+              <label className="bur-field">
+                <span>Grace period (days)</span>
+                <input className="bur-input" type="number" min="0" max="365" step="1"
+                  placeholder="0 — optional"
+                  value={graceDays} onChange={(e) => setGraceDays(e.target.value)} />
+                {graceError && <span className="bur-field-err">{graceError}</span>}
+              </label>
+            </div>
+            <span className="bur-field-hint">
+              Optional: charge a flat penalty on fees still unpaid after the grace period ends.
+            </span>
 
             <div className="bur-field">
               <span>Applicable Classes {selectedClasses.size > 0 && `— ${selectedClasses.size} selected`}</span>
@@ -233,6 +262,16 @@ export default function FeeCategories() {
                     : cls.slice(0, 4).map((n) => <span className="ska-badge ska-badge--cyan" key={n}>{n}</span>)}
                   {cls.length > 4 && <span className="ska-badge ska-badge--inactive">+{cls.length - 4}</span>}
                 </div>
+
+                {Number(c.late_fee_amount) > 0 && (
+                  <div className="burc-card__late">
+                    <Ic name="schedule" size="sm" />
+                    Late fee: {fmtMoney(c.late_fee_amount)}
+                    {Number(c.grace_days) > 0
+                      ? ` after ${Number(c.grace_days)} day${Number(c.grace_days) === 1 ? '' : 's'} grace`
+                      : ' (no grace period)'}
+                  </div>
+                )}
 
                 <div className="burc-card__foot">
                   <span className="burc-card__date">Created {fmtDate(c.created_at)}</span>

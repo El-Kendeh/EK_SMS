@@ -2,11 +2,14 @@ import React, { useState, useEffect, useMemo } from 'react';
 import financeApi from '../../api/financeApi';
 import { fmtMoney, freqLabel } from './bursar.utils';
 import '../schooladmin/SchoolAdmin.css';
+import '../schooladmin/Principal/Principal.css';
 import './Bursar.css';
 
 const Ic = ({ name, size, style }) => (
   <span className={`ska-icon${size ? ` ska-icon--${size}` : ''}`} aria-hidden="true" style={style}>{name}</span>
 );
+
+const INSTALLMENT_OPTIONS = [1, 2, 3, 4, 6, 9, 12];
 
 /**
  * Assign Fees modal — shared by FeeCategories and StudentFees pages.
@@ -29,6 +32,9 @@ export default function AssignFeesModal({ presetCategory = null, onClose, onSucc
   const [termId, setTermId] = useState('');
   const [classId, setClassId] = useState('');
   const [discount, setDiscount] = useState('');
+  const [discountMode, setDiscountMode] = useState('amount'); // 'amount' | 'percent'
+  const [discountReason, setDiscountReason] = useState('');
+  const [installments, setInstallments] = useState('1');
 
   const [students, setStudents] = useState(null);  // null = no class picked yet
   const [studentsLoading, setStudentsLoading] = useState(false);
@@ -82,11 +88,24 @@ export default function AssignFeesModal({ presetCategory = null, onClose, onSucc
   const discountError =
     discount === '' ? null
       : discountNum < 0 ? 'Discount cannot be negative'
-      : category && discountNum >= Number(category.amount)
-        ? `Discount must be less than the fee amount (${fmtMoney(category.amount)})`
-        : null;
+      : discountMode === 'percent'
+        ? (discountNum > 99.99 ? 'Percent must be between 0 and 99.99' : null)
+        : category && discountNum >= Number(category.amount)
+          ? `Discount must be less than the fee amount (${fmtMoney(category.amount)})`
+          : null;
 
-  const netPerStudent = category ? Math.max(0, Number(category.amount) - discountNum) : 0;
+  const netPerStudent = !category ? 0
+    : discountMode === 'percent'
+      ? Math.max(0, Number(category.amount) * (1 - Math.min(discountNum, 100) / 100))
+      : Math.max(0, Number(category.amount) - discountNum);
+
+  const installmentsNum = Number(installments) || 1;
+
+  const switchMode = (mode) => {
+    if (mode === discountMode) return;
+    setDiscountMode(mode);
+    setDiscount('');
+  };
 
   const toggleStudent = (id) => {
     setSelectedIds((prev) => {
@@ -113,7 +132,10 @@ export default function AssignFeesModal({ presetCategory = null, onClose, onSucc
         feeCategoryId: Number(categoryId),
         studentIds: Array.from(selectedIds),
         termId: termId ? Number(termId) : null,
-        discount: discountNum,
+        discount: discountMode === 'amount' ? discountNum : 0,
+        discountPercent: discountMode === 'percent' && discount !== '' ? discountNum : null,
+        discountReason: discountReason.trim() ? discountReason.trim().slice(0, 120) : null,
+        installments: installmentsNum,
       });
       if (res?.success === false) throw new Error(res.message || 'Failed to assign fees');
       setDone({ count: res.count ?? 0, requested: selectedIds.size });
@@ -192,13 +214,50 @@ export default function AssignFeesModal({ presetCategory = null, onClose, onSucc
                     {classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </label>
-                <label className="bur-field">
-                  <span>Discount (amount, optional)</span>
-                  <input className="bur-input" type="number" min="0" step="0.01" placeholder="0.00"
+                <div className="bur-field">
+                  <span>Scholarship / Discount (optional)</span>
+                  <div className="bur-pills bur-mode">
+                    <button type="button"
+                      className={`pu-pill${discountMode === 'amount' ? ' pu-pill--on' : ''}`}
+                      onClick={() => switchMode('amount')}>
+                      Amount
+                    </button>
+                    <button type="button"
+                      className={`pu-pill${discountMode === 'percent' ? ' pu-pill--on' : ''}`}
+                      onClick={() => switchMode('percent')}>
+                      Percent
+                    </button>
+                  </div>
+                  <input className="bur-input" type="number" min="0" step="0.01"
+                    max={discountMode === 'percent' ? '99.99' : undefined}
+                    placeholder={discountMode === 'percent' ? '0 – 99.99 %' : '0.00'}
+                    aria-label={discountMode === 'percent' ? 'Discount percent' : 'Discount amount'}
                     value={discount} onChange={(e) => setDiscount(e.target.value)} />
                   {discountError
                     ? <span className="bur-field-err">{discountError}</span>
                     : category && <span className="bur-field-hint">Each student will owe {fmtMoney(netPerStudent)}.</span>}
+                </div>
+              </div>
+
+              <div className="bur-field-row">
+                <label className="bur-field">
+                  <span>Discount reason (optional)</span>
+                  <input className="bur-input" type="text" maxLength={120}
+                    placeholder="e.g. Merit scholarship"
+                    value={discountReason} onChange={(e) => setDiscountReason(e.target.value)} />
+                </label>
+                <label className="bur-field">
+                  <span>Payment plan</span>
+                  <select className="bur-input" value={installments} onChange={(e) => setInstallments(e.target.value)}>
+                    {INSTALLMENT_OPTIONS.map((n) => (
+                      <option key={n} value={n}>{n === 1 ? 'Pay in full' : `${n} installments`}</option>
+                    ))}
+                  </select>
+                  {installmentsNum > 1 && category && (
+                    <span className="bur-field-hint">
+                      {installmentsNum} × {fmtMoney(netPerStudent / installmentsNum)} per installment
+                    </span>
+                  )}
                 </label>
               </div>
 

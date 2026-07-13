@@ -21,7 +21,33 @@ router.get('/:hash', async (req, res) => {
       // Fallback: parent-facing report-card receipts share the same public
       // verify surface (hash printed + QR-encoded on the report-card PDF).
       const rc = await ReportCardReceipt.findOne({ where: { verification_hash: hash } });
-      if (!rc) return res.json({ valid: false, reason: 'No matching record was found in the ledger.' });
+      if (!rc) {
+        // Second fallback: PAYMENT receipts (plan 4.2) — the receipt QR encodes
+        // /verify/<payment_hash>. Public payload confirms authenticity only:
+        // school + amount + date + receipt number, no student PII.
+        const Payment = require('../models/Payment');
+        const pay = await Payment.findOne({ where: { payment_hash: hash } });
+        if (pay) {
+          const paySchool = await School.findByPk(pay.school_id).catch(() => null);
+          return res.json({
+            valid: true,
+            type: 'payment_receipt',
+            signedBy: paySchool?.name || 'EK-SMS school',
+            student: `Receipt ${pay.receipt_number}`,
+            studentNumber: '—',
+            term: '—',
+            academicYear: '',
+            average: null,
+            amount: Number(pay.amount),
+            method: pay.payment_method,
+            signedAt: pay.paid_at,
+            chainPosition: null,
+            chainTip: null,
+            note: `Payment of ${Number(pay.amount)} recorded ${pay.paid_at ? new Date(pay.paid_at).toDateString() : ''} (${pay.status}). If this receipt was altered after printing, the code would not verify.`,
+          });
+        }
+        return res.json({ valid: false, reason: 'No matching record was found in the ledger.' });
+      }
 
       // Tamper evidence: recompute the fingerprint of the CURRENTLY published
       // grade set. If it no longer matches the receipt, the printed document

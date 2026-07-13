@@ -682,7 +682,30 @@ async function getSchoolCommandDashboard(req, res) {
       ? Math.round(avgAcademic * 0.55 + avgAttendance * 0.45)
       : Math.round(avgAcademic * 0.45 + avgAttendance * 0.40 + financeRate * 0.15);
 
-    const finAnomaly = 0;
+    /* Real (simple) anomaly signal — replaces the old hardcoded 0 that left
+       the dashboard's "Financial anomaly" alert permanently dead: completed
+       payments in the last 24h that are more than 3× the school's 90-day
+       average payment. Cheap, honest, and actually fires. */
+    let finAnomaly = 0;
+    try {
+      const since90 = new Date(Date.now() - 90 * 24 * 3600e3);
+      const avgRow = await Payment.findOne({
+        where: { school_id: school.id, status: 'completed', paid_at: { [Op.gte]: since90 } },
+        attributes: [[sequelize.fn('AVG', sequelize.col('amount')), 'avg']],
+        raw: true,
+      });
+      const avgPay = Number(avgRow?.avg) || 0;
+      if (avgPay > 0) {
+        finAnomaly = await Payment.count({
+          where: {
+            school_id: school.id,
+            status: 'completed',
+            paid_at: { [Op.gte]: new Date(Date.now() - 24 * 3600e3) },
+            amount: { [Op.gt]: avgPay * 3 },
+          },
+        });
+      }
+    } catch { finAnomaly = 0; }
 
     return res.json(successResponse({
       totalStudents: studentsTotal,
@@ -1149,7 +1172,7 @@ async function postAnnouncement(req, res) {
     const school = await getSchoolFromUser(req);
     if (!school) return noSchoolResponse(req, res);
 
-    const { title, message } = req.body || {};
+    const { title, message, audience } = req.body || {};
     if (!title?.trim() || !message?.trim()) {
       return res.status(400).json(errorResponse('title and message are required'));
     }
@@ -1157,15 +1180,58 @@ async function postAnnouncement(req, res) {
       return res.status(400).json(errorResponse('title must be 191 characters or fewer'));
     }
 
-    const notification = await Notification.create({
-      school_id: school.id,
-      title: title.trim(),
-      message: message.trim(),
-      type: 'announcement',
-      is_read: false,
-    });
+    /* Audience targeting (plan 3.5): 'all' | 'teachers' | 'parents' |
+       'students'. A targeted announcement is fanned out to that role's users
+       as individual rows; 'all' stays a single school-wide row (user_id null)
+       so every portal surfaces it. Stored so the list can show the target. */
+    const aud = ['all', 'teachers', 'parents', 'students'].includes(audience) ? audience : 'all';
+    const tag = aud === 'all' ? '' : `[${aud}] `;
 
-    return res.json(successResponse({ id: notification.id }, 'Announcement sent'));
+    if (aud === 'all') {
+      const notification = await Notification.create({
+        school_id: school.id, user_id: null,
+        title: title.trim(), message: message.trim(),
+        type: 'announcement', is_read: false,
+      });
+      return res.json(successResponse({ id: notification.id, audience: aud, delivered: 1 }, 'Announcement sent to the whole school'));
+    }
+
+    const roleCode = aud === 'teachers' ? 'teacher' : aud === 'parents' ? 'parent' : 'student';
+    const roleRow = await Role.findOne({ where: { code: roleCode } });
+    let recipients = [];
+    if (roleRow) {
+      // Resolve the target role's users within this school via their profile tables.
+      if (aud === 'teachers') {
+        const ts = await Teacher.findAll({ where: { school_id: school.id }, attributes: ['user_id'], raw: true });
+        recipients = ts.map(t => t.user_id).filter(Boolean);
+      } else if (aud === 'students') {
+        const ss = await Student.findAll({ where: { school_id: school.id }, attributes: ['user_id'], raw: true });
+        recipients = ss.map(s => s.user_id).filter(Boolean);
+      } else { // parents — via students' guardians
+        const Parent = require('../models/Parent');
+        const ps = await Parent.findAll({ where: { school_id: school.id }, attributes: ['user_id'], raw: true }).catch(() => []);
+        recipients = ps.map(p => p.user_id).filter(Boolean);
+      }
+    }
+    recipients = [...new Set(recipients)];
+
+    if (!recipients.length) {
+      // No one in that audience yet — record it school-wide-tagged rather than silently drop.
+      const notification = await Notification.create({
+        school_id: school.id, user_id: null,
+        title: `${tag}${title.trim()}`, message: message.trim(),
+        type: 'announcement', is_read: false,
+      });
+      return res.json(successResponse({ id: notification.id, audience: aud, delivered: 0 }, `No ${aud} to notify yet — announcement recorded`));
+    }
+
+    await Notification.bulkCreate(recipients.map(uid => ({
+      school_id: school.id, user_id: uid,
+      title: `${tag}${title.trim()}`, message: message.trim(),
+      type: 'announcement', is_read: false,
+    })));
+
+    return res.json(successResponse({ audience: aud, delivered: recipients.length }, `Announcement sent to ${recipients.length} ${aud}`));
   } catch (err) {
     console.error('postAnnouncement Error:', err);
     return res.status(500).json(errorResponse(`Failed to send announcement`));
@@ -1365,6 +1431,165 @@ async function getStudentProfile(req, res) {
   }
 }
 
+/* ══════════ P1: leadership oversight surfaces ══════════ */
+
+/* Discipline oversight (Module 2 / leadership): read-only view over the
+   behaviour-incident feature teachers already write to. School-scoped,
+   filterable by severity/type, with student + reporter names resolved. */
+async function getDisciplineIncidents(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return noSchoolResponse(req, res);
+
+    const BehaviourIncident = require('../models/BehaviourIncident');
+    const where = { school_id: school.id };
+    if (req.query.severity) where.severity = String(req.query.severity);
+    if (req.query.type) where.incident_type = String(req.query.type);
+
+    const rows = await BehaviourIncident.findAll({
+      where, order: [['created_at', 'DESC']], limit: 200, raw: true,
+    });
+
+    const studentIds = [...new Set(rows.map(r => r.student_id).filter(Boolean))];
+    // reported_by references pruh_core_teacher(id), NOT users(id) — resolve the
+    // teacher's linked user for the display name.
+    const reporterIds = [...new Set(rows.map(r => r.reported_by).filter(Boolean))];
+    const [students, reporters] = await Promise.all([
+      studentIds.length ? Student.findAll({
+        where: { id: studentIds, school_id: school.id },
+        include: [{ model: User, as: 'user', attributes: ['first_name', 'last_name'] }],
+      }) : [],
+      reporterIds.length ? Teacher.findAll({
+        where: { id: reporterIds, school_id: school.id },
+        include: [{ model: User, as: 'user', attributes: ['first_name', 'last_name'] }],
+      }) : [],
+    ]);
+    const nameOfStudent = {};
+    students.forEach(s => { nameOfStudent[s.id] = s.user ? `${s.user.first_name || ''} ${s.user.last_name || ''}`.trim() : `Student #${s.id}`; });
+    const nameOfUser = {};
+    reporters.forEach(t => { nameOfUser[t.id] = t.user ? `${t.user.first_name || ''} ${t.user.last_name || ''}`.trim() : `Teacher #${t.id}`; });
+
+    // Small aggregate strip for the page header.
+    const bySeverity = {};
+    rows.forEach(r => { const k = (r.severity || 'unspecified'); bySeverity[k] = (bySeverity[k] || 0) + 1; });
+
+    return res.json(successResponse({
+      summary: { total: rows.length, by_severity: bySeverity, follow_ups: rows.filter(r => r.follow_up_required).length },
+      incidents: rows.map(r => ({
+        id: r.id,
+        student_id: r.student_id,
+        student_name: nameOfStudent[r.student_id] || `Student #${r.student_id}`,
+        reported_by: r.reported_by ? (nameOfUser[r.reported_by] || `User #${r.reported_by}`) : 'System',
+        type: r.incident_type || '—',
+        title: r.title || '—',
+        severity: r.severity || 'unspecified',
+        description: r.description || '',
+        action_taken: r.action_taken || '',
+        follow_up_required: !!r.follow_up_required,
+        follow_up_date: r.follow_up_date,
+        parent_notified: !!r.parent_notified,
+        created_at: r.created_at,
+      })),
+    }));
+  } catch (err) {
+    console.error('getDisciplineIncidents Error:', err);
+    return res.status(500).json(errorResponse(`Failed to fetch discipline incidents`));
+  }
+}
+
+/* Timetable oversight (Module 2): the school's persisted timetable slots,
+   grouped by class, with subject/teacher/room resolved — read-only. */
+async function getTimetableOversight(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return noSchoolResponse(req, res);
+
+    const where = { school_id: school.id };
+    if (req.query.class_id) where.class_id = req.query.class_id;
+    if (req.query.teacher_id) where.teacher_id = req.query.teacher_id;
+
+    const slots = await TimetableSlot.findAll({ where, order: [['class_id', 'ASC'], ['day', 'ASC'], ['period', 'ASC']], raw: true });
+    if (!slots.length) return res.json(successResponse({ classes: [], has_timetable: false }));
+
+    const classIds = [...new Set(slots.map(s => s.class_id).filter(Boolean))];
+    const subjectIds = [...new Set(slots.map(s => s.subject_id).filter(Boolean))];
+    const teacherIds = [...new Set(slots.map(s => s.teacher_id).filter(Boolean))];
+    const [classes, subjects, teachers] = await Promise.all([
+      classIds.length ? Class.findAll({ where: { id: classIds }, attributes: ['id', 'name'], raw: true }) : [],
+      subjectIds.length ? Subject.findAll({ where: { id: subjectIds }, attributes: ['id', 'name'], raw: true }) : [],
+      teacherIds.length ? Teacher.findAll({ where: { id: teacherIds }, include: [{ model: User, as: 'user', attributes: ['first_name', 'last_name'] }] }) : [],
+    ]);
+    const cName = Object.fromEntries(classes.map(c => [c.id, c.name]));
+    const sName = Object.fromEntries(subjects.map(s => [s.id, s.name]));
+    const tName = {};
+    teachers.forEach(t => { tName[t.id] = t.user ? `${t.user.first_name || ''} ${t.user.last_name || ''}`.trim() : `Teacher #${t.id}`; });
+
+    const byClass = {};
+    for (const s of slots) {
+      const cid = s.class_id;
+      byClass[cid] = byClass[cid] || { class_id: cid, class_name: cName[cid] || `Class #${cid}`, slots: [] };
+      byClass[cid].slots.push({
+        day: s.day, period: s.period,
+        subject: s.subject_id ? (sName[s.subject_id] || '—') : (s.is_break ? 'Break' : '—'),
+        teacher: s.teacher_id ? (tName[s.teacher_id] || '—') : '',
+        room: s.room || '', start_time: s.start_time, end_time: s.end_time, is_break: !!s.is_break,
+      });
+    }
+
+    return res.json(successResponse({ has_timetable: true, classes: Object.values(byClass) }));
+  } catch (err) {
+    console.error('getTimetableOversight Error:', err);
+    return res.status(500).json(errorResponse(`Failed to fetch timetable`));
+  }
+}
+
+/* Teacher roster oversight (leadership): the real staff list with per-teacher
+   load (classes taught, subjects, weekly periods) — replaces the 3-number widget. */
+async function getTeacherRoster(req, res) {
+  try {
+    const school = await getSchoolFromUser(req);
+    if (!school) return noSchoolResponse(req, res);
+
+    const teachers = await Teacher.findAll({
+      where: { school_id: school.id },
+      include: [{ model: User, as: 'user', attributes: ['first_name', 'last_name', 'email', 'phone', 'is_active'] }],
+      order: [['id', 'ASC']],
+    });
+    if (!teachers.length) return res.json(successResponse({ teachers: [] }));
+
+    const slots = await TimetableSlot.findAll({
+      where: { school_id: school.id, teacher_id: { [Op.ne]: null } },
+      attributes: ['teacher_id', 'subject_id', 'class_id'], raw: true,
+    });
+    const load = {};
+    slots.forEach(s => {
+      load[s.teacher_id] = load[s.teacher_id] || { periods: 0, classes: new Set(), subjects: new Set() };
+      load[s.teacher_id].periods += 1;
+      if (s.class_id) load[s.teacher_id].classes.add(s.class_id);
+      if (s.subject_id) load[s.teacher_id].subjects.add(s.subject_id);
+    });
+
+    return res.json(successResponse({
+      teachers: teachers.map(t => {
+        const l = load[t.id] || { periods: 0, classes: new Set(), subjects: new Set() };
+        return {
+          id: t.id,
+          name: t.user ? `${t.user.first_name || ''} ${t.user.last_name || ''}`.trim() : `Teacher #${t.id}`,
+          email: t.user?.email || '',
+          phone: t.user?.phone || '',
+          is_active: t.user ? t.user.is_active !== false : true,
+          weekly_periods: l.periods,
+          classes_taught: l.classes.size,
+          subjects_taught: l.subjects.size,
+        };
+      }),
+    }));
+  } catch (err) {
+    console.error('getTeacherRoster Error:', err);
+    return res.status(500).json(errorResponse(`Failed to fetch teacher roster`));
+  }
+}
+
 module.exports = {
   getOverview, listGradeApprovals, reviewGradeChange,
   listReportCards, publishReportCard, commentReportCard,
@@ -1382,4 +1607,6 @@ module.exports = {
   listAnnouncements,
   getAtRisk,
   getStudentProfile,
+  // P1 oversight surfaces
+  getDisciplineIncidents, getTimetableOversight, getTeacherRoster,
 };

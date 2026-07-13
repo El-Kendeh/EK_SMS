@@ -54,10 +54,12 @@ function PrincipalHomeInner({ navigateTo }) {
       detail: 'Open Grade Approvals to review and act.',
     });
   }
-  if ((summary.totalAtRisk || 0) > 5) {
+  /* Threshold matches the At-Risk page (any flagged student appears there) —
+     the old >5 cutoff meant the page could show students the home card denied. */
+  if ((summary.totalAtRisk || 0) > 0) {
     alerts.push({
       key: 'atrisk', tone: 'warning', icon: 'trending_down',
-      title: `${summary.totalAtRisk} students at academic risk`,
+      title: `${summary.totalAtRisk} student${summary.totalAtRisk !== 1 ? 's' : ''} at academic risk`,
       detail: 'Open the At-Risk panel to see who and why.',
       onClick: () => navigateTo('principal-at-risk'),
     });

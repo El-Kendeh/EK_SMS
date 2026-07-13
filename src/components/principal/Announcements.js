@@ -14,6 +14,14 @@ const Ic = ({ name, size, style }) => (
 const TITLE_MAX = 191;
 const MESSAGE_MAX = 2000;
 
+const AUDIENCES = [
+  { value: 'all',      label: 'Whole school', icon: 'groups' },
+  { value: 'teachers', label: 'Teachers',     icon: 'school' },
+  { value: 'parents',  label: 'Parents',      icon: 'family_restroom' },
+  { value: 'students', label: 'Students',     icon: 'backpack' },
+];
+const AUD_LABEL = Object.fromEntries(AUDIENCES.map(a => [a.value, a.label.toLowerCase()]));
+
 export default function Announcements() {
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -21,6 +29,7 @@ export default function Announcements() {
 
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
+  const [audience, setAudience] = useState('all');
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [sending, setSending] = useState(false);
   const [feedback, setFeedback] = useState(null);
@@ -50,13 +59,15 @@ export default function Announcements() {
   const send = async () => {
     setSending(true);
     try {
-      const res = await principalApi.postAnnouncement({ title: title.trim(), message: message.trim() });
+      const res = await principalApi.postAnnouncement({ title: title.trim(), message: message.trim(), audience });
       if (res?.success === false) {
         setFeedback({ type: 'error', msg: res.message || 'Failed to send announcement' });
       } else {
-        setFeedback({ type: 'success', msg: 'Announcement sent to the whole school' });
+        const who = audience === 'all' ? 'the whole school' : `${res.delivered ?? 0} ${AUD_LABEL[audience]}`;
+        setFeedback({ type: 'success', msg: `Announcement sent to ${who}` });
         setTitle('');
         setMessage('');
+        setAudience('all');
         load();
       }
     } catch (err) {
@@ -88,11 +99,29 @@ export default function Announcements() {
         <div className="pu-card__head">
           <div className="pu-card__title"><Ic name="campaign" size="sm" /><strong>New Announcement</strong></div>
         </div>
-        <p className="pan-audience-note">
-          <Ic name="groups" size="sm" />
-          Announcements go to <strong>everyone at this school</strong> — class or role
-          targeting isn't available yet.
-        </p>
+        <div className="pan-field" role="radiogroup" aria-label="Audience">
+          <span className="pan-field__label">Audience</span>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {AUDIENCES.map(a => (
+              <button
+                key={a.value}
+                type="button"
+                role="radio"
+                aria-checked={audience === a.value}
+                className={`ga-btn ${audience === a.value ? 'ga-btn--primary' : 'ga-btn--ghost'}`}
+                style={{ minHeight: 40 }}
+                onClick={() => setAudience(a.value)}
+              >
+                <Ic name={a.icon} size="sm" /> {a.label}
+              </button>
+            ))}
+          </div>
+          <span className="pan-field__count">
+            {audience === 'all'
+              ? 'One school-wide notice, visible in every portal.'
+              : `Delivered individually to each ${AUD_LABEL[audience].replace(/s$/, '')} at this school.`}
+          </span>
+        </div>
         <label className="pan-field">
           <span className="pan-field__label">Title</span>
           <input
@@ -126,10 +155,9 @@ export default function Announcements() {
       </div>
 
       {confirmOpen && (
-        <Modal title="Send to everyone at this school?" onClose={() => setConfirmOpen(false)}>
+        <Modal title={audience === 'all' ? 'Send to everyone at this school?' : `Send to all ${AUD_LABEL[audience]}?`} onClose={() => setConfirmOpen(false)}>
           <p className="ga-modal__sub">
-            "{title.trim()}" will be visible to all staff, students and parents of this
-            school. Announcements cannot be edited after sending.
+            "{title.trim()}" will be visible to {audience === 'all' ? 'all staff, students and parents of this school' : `every ${AUD_LABEL[audience].replace(/s$/, '')} at this school`}. Announcements cannot be edited after sending.
           </p>
           <div className="ga-modal__actions">
             <button type="button" className="ga-btn ga-btn--ghost" onClick={() => setConfirmOpen(false)}>Cancel</button>

@@ -45,3 +45,28 @@
   border-top: 1px solid var(--ska-border);
 }
 .burt-card__actions .ska-btn { flex: 1; justify-content: center; min-height: 44px; }
+
+/* Read-only viewer notice (bursar sees the roster but not the manage controls). */
+.burt-readonly-note {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 12px; padding: 10px 12px;
+  border: 1px solid var(--ska-border); border-radius: 10px;
+  background: var(--ska-card-2, rgba(255,255,255,0.03));
+  color: var(--ska-text-2); font-size: 0.8125rem;
+}
+
+/* ── Responsive (mobile mandate) ── */
+@media (max-width: 600px) {
+  .burt-card__head { grid-template-columns: 40px 1fr 10px; gap: 8px; }
+  .burt-card__avatar { width: 40px; height: 40px; font-size: 1rem; }
+  .burt-card__name { font-size: 0.875rem; }
+  .burt-card__meta { font-size: 0.72rem; }
+  /* Stack the head actions so the Add button is full-width and tappable. */
+  .bur-head-actions { width: 100%; }
+  .bur-head-actions .ska-btn { width: 100%; justify-content: center; min-height: 44px; }
+}
+
+@media (max-width: 400px) {
+  .burt-card__badges { gap: 4px; }
+  .burt-card__badges .ska-badge { font-size: 0.6875rem; }
+}

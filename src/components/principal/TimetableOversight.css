@@ -1,0 +1,85 @@
+/* Principal timetable oversight — class tabs + weekly day×period grid.
+   Reuses the --ska-* school design tokens. Horizontal scroll on small
+   screens keeps the grid readable without breaking the page layout. */
+
+.tt-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 16px;
+}
+
+.tt-tab {
+  min-height: 40px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--ska-border, #2a3344);
+  background: var(--ska-card, #141a24);
+  color: var(--ska-text-2, #9aa5b8);
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: border-color .15s, color .15s, background .15s;
+}
+.tt-tab:hover { border-color: var(--ska-accent, #3b82f6); color: var(--ska-text, #e6ebf2); }
+.tt-tab--active {
+  border-color: var(--ska-accent, #3b82f6);
+  background: var(--ska-accent-dim, rgba(59, 130, 246, 0.12));
+  color: var(--ska-text, #e6ebf2);
+}
+.tt-tab:focus-visible { outline: 2px solid var(--ska-accent, #3b82f6); outline-offset: 2px; }
+
+.tt-grid-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--ska-border, #2a3344);
+  border-radius: 12px;
+  background: var(--ska-card, #141a24);
+}
+
+.tt-grid {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 640px; /* keeps 5 day columns legible; wrapper scrolls below this */
+}
+
+.tt-grid th,
+.tt-grid td {
+  border: 1px solid var(--ska-border, #2a3344);
+  padding: 8px 10px;
+  text-align: center;
+  vertical-align: top;
+}
+
+.tt-grid thead th {
+  background: var(--ska-card-2, #1a212d);
+  color: var(--ska-text, #e6ebf2);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  position: sticky;
+  top: 0;
+}
+
+.tt-period-col {
+  background: var(--ska-card-2, #1a212d);
+  color: var(--ska-text-2, #9aa5b8);
+  font-weight: 700;
+  white-space: nowrap;
+  position: sticky;
+  left: 0;
+  z-index: 1;
+}
+
+.tt-cell { min-width: 96px; }
+.tt-cell--empty { color: var(--ska-text-3, #5b6576); }
+.tt-cell--break { color: var(--ska-tertiary, #f59e0b); font-weight: 600; font-size: 0.8125rem; }
+
+.tt-subject { display: block; font-weight: 700; color: var(--ska-text, #e6ebf2); font-size: 0.8125rem; }
+.tt-teacher { display: block; color: var(--ska-text-2, #9aa5b8); font-size: 0.75rem; margin-top: 2px; }
+.tt-room    { display: inline-block; color: var(--ska-text-2, #9aa5b8); font-size: 0.6875rem; margin-top: 2px; }
+.tt-time    { display: block; color: var(--ska-text-3, #5b6576); font-size: 0.6875rem; margin-top: 2px; }
+
+@media (max-width: 600px) {
+  .tt-tab { flex: 1 1 auto; text-align: center; }
+  .tt-grid th, .tt-grid td { padding: 6px 8px; }
+  .tt-subject { font-size: 0.75rem; }
+}

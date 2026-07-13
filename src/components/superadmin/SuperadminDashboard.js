@@ -89,6 +89,9 @@ const PrincipalGradeAudit    = lazy(() => import('../principal/GradeAudit'));
 const PrincipalAnalytics     = lazy(() => import('../principal/AcademicsAnalytics'));
 const PrincipalAnnouncements = lazy(() => import('../principal/Announcements'));
 const PrincipalAtRisk        = lazy(() => import('../principal/AtRisk'));
+const PrincipalDiscipline    = lazy(() => import('../principal/Discipline'));
+const PrincipalTimetable     = lazy(() => import('../principal/TimetableOversight'));
+const PrincipalTeacherRoster = lazy(() => import('../principal/TeacherRoster'));
 
 /* Self-contained role portals — own providers, nav, router and design system.
    Teachers, parents and students render their full dedicated dashboard instead
@@ -398,6 +401,8 @@ const HANDLED_PAGES = new Set([
   /* Principal Batch-3 pages */
   'principal-grade-audit', 'principal-analytics',
   'principal-announcements', 'principal-at-risk',
+  /* Principal P1 oversight pages (2026-07-13 production pass) */
+  'principal-discipline', 'principal-timetable', 'principal-teachers',
 ]);
 
 /* StudentHome emits its own short nav keys; map them to this shell's
@@ -860,10 +865,14 @@ export default function Dashboard({ onNavigate }) {
     { key: 'attendance-report',      label: 'Attendance Report',      icon: <IcGen />,  badge: 0, section: 'Academics' },
     { key: 'principal-analytics',    label: 'Academics Analytics',    icon: <IcGen />,  badge: 0, section: 'Academics' },
     { key: 'principal-at-risk',      label: 'At-Risk Students',       icon: <IcGen />,  badge: 0, section: 'Academics' },
+    { key: 'principal-timetable',    label: 'Timetable',              icon: <IcGen />,  badge: 0, section: 'Academics' },
+    { key: 'academic-calendar',      label: 'School Calendar',        icon: <IcGen />,  badge: 0, section: 'Academics' },
     { key: 'principal-grade-audit',  label: 'Grade Audit Trail',      icon: <IcGen />,  badge: 0, section: 'Oversight' },
+    { key: 'principal-discipline',   label: 'Discipline',             icon: <IcGen />,  badge: 0, section: 'Oversight' },
     { key: 'principal-announcements',label: 'Announcements',          icon: <IcGen />,  badge: 0, section: 'Oversight' },
     { key: 'finance-reports',        label: 'Finance Reports',        icon: <IcGen />,  badge: 0, section: 'Finance' },
     { key: 'expenses',               label: 'Expense Approvals',      icon: <IcGen />,  badge: 0, section: 'Finance' },
+    { key: 'principal-teachers',     label: 'Teacher Roster',         icon: <IcGen />,  badge: 0, section: 'Team' },
     { key: 'principal-users',        label: 'Leadership Team',        icon: <IcGen />,  badge: 0, section: 'Team' },
     { key: 'notifications',          label: 'Notifications',          icon: <IcBell />, badge: 0, section: null },
   ];
@@ -1563,6 +1572,11 @@ export default function Dashboard({ onNavigate }) {
           {activePage === 'principal-analytics'     && scoped(<PrincipalAnalytics />,     'Pick a school to view its academics analytics.')}
           {activePage === 'principal-announcements' && scoped(<PrincipalAnnouncements />, 'Pick a school to manage its announcements.')}
           {activePage === 'principal-at-risk'       && scoped(<PrincipalAtRisk />,        'Pick a school to view its at-risk students.')}
+
+          {/* Principal P1 oversight pages (2026-07-13 production pass) */}
+          {activePage === 'principal-discipline'    && scoped(<PrincipalDiscipline />,    'Pick a school to view its discipline incidents.')}
+          {activePage === 'principal-timetable'     && scoped(<PrincipalTimetable />,     'Pick a school to view its timetable.')}
+          {activePage === 'principal-teachers'      && scoped(<PrincipalTeacherRoster />, 'Pick a school to view its teacher roster.')}
 
           {activePage === 'principal' && <SAPrincipal />}
 

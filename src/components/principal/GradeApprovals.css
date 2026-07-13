@@ -121,8 +121,8 @@
 .ga-btn:hover { opacity: 0.85; }
 .ga-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.ga-btn--approve { background: var(--ska-green); border-color: var(--ska-green); color: #07330f; }
-.ga-btn--reject  { background: var(--ska-error); border-color: var(--ska-error); color: #4a0a05; }
+.ga-btn--approve { background: var(--ska-green); border-color: var(--ska-green); color: var(--ska-on-green, #07330f); }
+.ga-btn--reject  { background: var(--ska-error); border-color: var(--ska-error); color: var(--ska-on-error, #4a0a05); }
 .ga-btn--primary { background: var(--ska-primary); border-color: var(--ska-primary); color: var(--ska-on-primary); }
 .ga-btn--ghost   { background: transparent; }
 

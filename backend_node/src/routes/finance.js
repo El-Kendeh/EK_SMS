@@ -14,6 +14,8 @@ const {
   getFinanceStats, getFinanceAnalytics, getFinanceFees, recordExpense, getExpenses, reviewExpense,
   getFeeCategories, createFeeCategory, updateFeeCategory, assignFees,
   recordPayment, getPayments, getStudentFees,
+  getReceipt, getCollectionAnalytics, getCashFlow,
+  listBudgets, upsertBudget, deleteBudget,
 } = require('../controllers/financeController');
 
 // Baseline: who may reach the finance suite at all. Finance pages are used only by
@@ -68,6 +70,13 @@ router.post('/fees/assign/', requireRole(FINANCE_WRITE), assignFees);
 router.post('/payments/', requireRole(FINANCE_WRITE), recordPayment);
 router.get('/payments/', getPayments);
 router.get('/students/:student_id/fees/', getStudentFees);
+// P1 (plan 4.2/4.3): receipt lookup, finance dashboards, budgets.
+router.get('/receipts/:receipt_number/', getReceipt);
+router.get('/analytics/collection/', getCollectionAnalytics);
+router.get('/analytics/cashflow/', getCashFlow);
+router.get('/budgets/', listBudgets);
+router.post('/budgets/', requireRole(FINANCE_WRITE), upsertBudget);
+router.delete('/budgets/:id/', requireRole(FINANCE_WRITE), deleteBudget);
 router.post('/expenses/', requireRole(CAN_RECORD_EXPENSE), recordExpense);
 router.get('/expenses/', getExpenses);
 router.post('/expenses/:id/review/', requireRole(CAN_APPROVE_EXPENSE), reviewExpense);

@@ -12,13 +12,18 @@ const Ic = ({ name, size, style }) => (
  */
 export default function HealthScoreCard({ summary, loading }) {
   const score = loading ? 0 : summary.healthScore;
-  const color = puHealthColor(score);
   // financeRate is the real collection percentage; null until fee data exists.
   const hasFinance = summary.financeRate != null;
+  /* Honest empty state: a school with no grades, no attendance and no fee
+     data has NOTHING to score — showing a red "Critical 0%" there was an
+     alarm about missing data, not performance. */
+  const noData = !loading && !summary.avgAcademic && !summary.avgAttendance && !hasFinance;
+  const color = noData ? 'var(--ska-text-3)' : puHealthColor(score);
   const fs = (hasFinance && PU_FINANCE_STYLE[summary.finance]) ||
     { color: 'var(--ska-on-surface-variant)', bg: 'var(--ska-surface-high)' };
 
-  const verdict = score >= 80 ? { label: 'Healthy', sub: 'School performing strongly' }
+  const verdict = noData        ? { label: 'No data yet', sub: 'The score appears once grades or attendance are recorded' }
+                : score >= 80 ? { label: 'Healthy', sub: 'School performing strongly' }
                 : score >= 65 ? { label: 'Watch',   sub: 'Some areas need attention' }
                 :               { label: 'Critical',sub: 'Immediate action required' };
 
@@ -50,7 +55,9 @@ export default function HealthScoreCard({ summary, loading }) {
             style={{ transition: 'stroke-dashoffset 0.6s ease' }} />
         </svg>
         <div className="pu-health__score">
-          <strong>{loading ? '…' : score}<small>%</small></strong>
+          {noData
+            ? <strong style={{ fontSize: '1.25rem' }}>—</strong>
+            : <strong>{loading ? '…' : score}<small>%</small></strong>}
           <span>health</span>
         </div>
       </div>
@@ -65,9 +72,9 @@ export default function HealthScoreCard({ summary, loading }) {
           </span>
         </div>
         <p className="pu-health__sub">
-          {verdict.sub}. {hasFinance
+          {verdict.sub}.{noData ? '' : ` ${hasFinance
             ? 'Score combines academics (45%), attendance (40%), and finance (15%).'
-            : 'Score combines academics (55%) and attendance (45%) — finance joins once fee data exists.'}
+            : 'Score combines academics (55%) and attendance (45%) — finance joins once fee data exists.'}`}
         </p>
 
         <div className="pu-health__bars">

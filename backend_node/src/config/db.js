@@ -41,9 +41,12 @@ const databaseReady = ensureDatabaseExists();
 const sequelizeConfig = {
   dialect: 'mysql',
   logging: false,
+  // Money columns are DECIMAL(12,2); without this mysql2 returns them as
+  // STRINGS and every FE `balance - paid` computation turns into NaN/concat.
+  dialectOptions: { decimalNumbers: true },
 };
 if (dbSocketPath) {
-  sequelizeConfig.dialectOptions = { socketPath: dbSocketPath };
+  sequelizeConfig.dialectOptions.socketPath = dbSocketPath;
 } else {
   sequelizeConfig.host = dbHost;
   sequelizeConfig.port = dbPort;

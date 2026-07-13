@@ -5,7 +5,7 @@ const Donation = sequelize.define('Donation', {
   id: { type: DataTypes.BIGINT, primaryKey: true, autoIncrement: true },
   campaign_id: { type: DataTypes.BIGINT, allowNull: false },
   donor_id: { type: DataTypes.BIGINT },
-  amount: { type: DataTypes.FLOAT },
+  amount: { type: DataTypes.DECIMAL(12, 2) },
   is_anonymous: { type: DataTypes.BOOLEAN, defaultValue: false },
   receipt_hash: { type: DataTypes.STRING(255) },
   paid_at: { type: DataTypes.DATE },

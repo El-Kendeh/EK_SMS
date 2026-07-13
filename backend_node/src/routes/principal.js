@@ -15,6 +15,7 @@ const {
   getGradeAudit, getAcademicsAnalytics,
   postAnnouncement, listAnnouncements,
   getAtRisk, getStudentProfile,
+  getDisciplineIncidents, getTimetableOversight, getTeacherRoster,
 } = require('../controllers/principalController');
 
 // Baseline: principal-console reads are visible to school leadership. The
@@ -65,6 +66,10 @@ router.get('/academics-analytics/', requireRole(PRINCIPAL_ONLY_READ), getAcademi
 router.get('/announcements/', requireRole(PRINCIPAL_ONLY_READ), listAnnouncements);
 router.post('/announcements/', requireRole(PRINCIPAL_WRITE), postAnnouncement);
 router.get('/at-risk/', requireRole(PRINCIPAL_ONLY_READ), getAtRisk);
+// P1 oversight surfaces (leadership reads).
+router.get('/discipline/', requireRole(PRINCIPAL_ONLY_READ), getDisciplineIncidents);
+router.get('/timetable/', requireRole(PRINCIPAL_ONLY_READ), getTimetableOversight);
+router.get('/teacher-roster/', requireRole(PRINCIPAL_ONLY_READ), getTeacherRoster);
 router.get('/students/:id/', requireRole(PRINCIPAL_ONLY_READ), getStudentProfile);
 
 module.exports = router;

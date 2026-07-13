@@ -6,7 +6,7 @@ const Payment = sequelize.define('Payment', {
   school_id: { type: DataTypes.BIGINT, allowNull: false },
   student_id: { type: DataTypes.BIGINT, allowNull: false },
   fee_id: { type: DataTypes.BIGINT },
-  amount: { type: DataTypes.FLOAT, allowNull: false },
+  amount: { type: DataTypes.DECIMAL(12, 2), allowNull: false },
   payment_method: { type: DataTypes.STRING, defaultValue: 'cash' },
   reference: { type: DataTypes.STRING },
   receipt_number: { type: DataTypes.STRING },

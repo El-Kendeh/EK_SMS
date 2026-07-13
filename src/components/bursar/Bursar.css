@@ -61,6 +61,13 @@ textarea.bur-input { resize: vertical; min-height: 64px; }
 /* ── Status pills row ─────────────────────────────────────── */
 .bur-pills { display: flex; flex-wrap: wrap; gap: 6px; }
 
+/* ── Amount/Percent discount mode toggle (Assign Fees) ────── */
+.bur-mode .pu-pill { min-width: 84px; }
+@media (max-width: 600px) {
+  .bur-mode { display: flex; }
+  .bur-mode .pu-pill { flex: 1; min-height: 44px; }
+}
+
 /* ── Summary chips above tables ───────────────────────────── */
 .bur-summary {
   display: grid;

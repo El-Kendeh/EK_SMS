@@ -3,6 +3,67 @@
    Shared rules live in Bursar.css; only page tweaks here.
    ============================================================ */
 
+/* ── Receipt lookup (page toolbar) ────────────────────────── */
+.bur-lookup { display: flex; gap: 8px; align-items: stretch; }
+.bur-lookup .bur-input { width: 210px; min-height: 44px; }
+.bur-lookup .ska-btn { min-height: 44px; }
+
+/* ── Clickable receipt number in ledger rows ──────────────── */
+.bur-receipt-link {
+  background: none; border: none; padding: 0;
+  cursor: pointer;
+  min-height: 44px;
+  display: inline-flex; align-items: center;
+  font-family: inherit;
+}
+.bur-receipt-link .bur-cell-mono {
+  color: var(--ska-primary);
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+.bur-receipt-link:hover .bur-cell-mono,
+.bur-receipt-link:focus-visible .bur-cell-mono { text-decoration: underline solid; }
+
+/* ── Official receipt modal (school + QR verify) ──────────── */
+.bur-receipt__school {
+  margin: 0;
+  font-size: 0.75rem; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--ska-text-3);
+}
+.bur-receipt__verify {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  width: 100%;
+  padding: 14px 12px;
+  background: var(--ska-surface-low);
+  border: 1px solid var(--ska-border);
+  border-radius: 9px;
+  box-sizing: border-box;
+}
+.bur-receipt__qr {
+  width: 150px; height: 150px; max-width: 100%;
+  background: #fff;
+  border-radius: 8px;
+  padding: 6px;
+  box-sizing: border-box;
+}
+.bur-receipt__scan {
+  font-size: 0.6875rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--ska-text-3);
+}
+.bur-receipt__url {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.6875rem; color: var(--ska-text-3);
+  word-break: break-all;
+  text-align: center;
+}
+.bur-receipt-loading { display: flex; flex-direction: column; gap: 10px; padding: 10px 0; }
+
 @media (max-width: 600px) {
   .pu-page .bur-table-wrap .ska-table { min-width: 760px; }
+  .bur-lookup { width: 100%; }
+  .bur-lookup .bur-input { flex: 1; width: auto; }
+  .bur-lookup .ska-btn { flex: 0 0 auto; }
+  .bur-receipt__qr { width: 132px; height: 132px; }
 }

@@ -35,8 +35,15 @@
 }
 .burc-card__date { font-size: 0.6875rem; color: var(--ska-text-3); }
 
+/* Late-fee policy line (plan 4.1) — only rendered when late_fee_amount > 0 */
+.burc-card__late {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.75rem; font-weight: 700; color: #b25d00; /* matches bur-summary amber */
+}
+
 @media (max-width: 600px) {
   .burc-card__foot { flex-direction: column; align-items: stretch; }
   .burc-card__foot .ska-btn { width: 100%; justify-content: center; }
   .burc-card__date { text-align: center; }
+  .burc-card__late { font-size: 0.6875rem; }
 }

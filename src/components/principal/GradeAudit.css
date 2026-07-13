@@ -91,7 +91,7 @@
 .gau-badge--publish { background: var(--ska-primary-dim);  color: var(--ska-primary); }
 .gau-badge--submit,
 .gau-badge--update,
-.gau-badge--create  { background: rgba(245,158,11,0.14);   color: #b25d00; }
+.gau-badge--create  { background: var(--ska-tertiary-dim);   color: var(--ska-tertiary); }
 
 .gau-event__change {
   margin: 0;

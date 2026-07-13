@@ -11,6 +11,15 @@ const Ic = ({ name, size, style }) => (
   <span className={`ska-icon${size ? ` ska-icon--${size}` : ''}`} aria-hidden="true" style={style}>{name}</span>
 );
 
+/* Only these roles may create/suspend finance users — the backend gates
+   POST/PUT /finance-users/ on ACCOUNT_ADMIN (school_admin|superadmin), so a
+   bursar viewing this page gets a read-only roster instead of buttons that
+   would 403 (P0.7). */
+const MANAGE_ROLES = ['school_admin', 'schooladmin', 'superadmin', 'admin'];
+const currentUser = () => {
+  try { return JSON.parse(localStorage.getItem('user') || 'null'); } catch { return null; }
+};
+
 const TEAM_ROLES = ['Bursar', 'Finance Officer', 'Accounts Clerk'];
 const ACCESS_LEVELS = [
   { value: 'Full',     label: 'Full Access' },
@@ -143,6 +152,7 @@ export default function FinanceTeam() {
   const [addOpen, setAddOpen] = useState(false);
   const [togglingId, setTogglingId] = useState(null);
   const [confirmToggle, setConfirmToggle] = useState(null);  // user object
+  const canManage = MANAGE_ROLES.includes(currentUser()?.role);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -184,15 +194,24 @@ export default function FinanceTeam() {
           <h1 className="ska-page-title">Finance Team</h1>
           <p className="ska-page-sub">Finance office accounts with access to this school's money workflows</p>
         </div>
-        <div className="bur-head-actions">
-          <button className="ska-btn ska-btn--primary" onClick={() => setAddOpen(true)}>
-            <Ic name="person_add" size="sm" /> Add Finance User
-          </button>
-        </div>
+        {canManage && (
+          <div className="bur-head-actions">
+            <button className="ska-btn ska-btn--primary" onClick={() => setAddOpen(true)}>
+              <Ic name="person_add" size="sm" /> Add Finance User
+            </button>
+          </div>
+        )}
       </div>
 
       {banner && <div className="bur-banner bur-banner--success"><Ic name="check_circle" size="sm" />{banner}</div>}
       {error && <div className="bur-banner bur-banner--error"><Ic name="error" size="sm" />{error}</div>}
+
+      {!canManage && !loading && users.length > 0 && (
+        <div className="burt-readonly-note">
+          <Ic name="visibility" size="sm" />
+          You can view the finance team. Your school administrator adds or suspends these accounts.
+        </div>
+      )}
 
       {loading ? (
         <div className="pu-grid">
@@ -209,11 +228,15 @@ export default function FinanceTeam() {
           <div className="pu-empty__icon-wrap"><Ic name="group" /></div>
           <p className="pu-empty__title">No finance users yet</p>
           <p className="pu-empty__desc">
-            Add bursars, finance officers, or accounts clerks so your team can record payments and expenses.
+            {canManage
+              ? 'Add bursars, finance officers, or accounts clerks so your team can record payments and expenses.'
+              : 'Your school administrator manages finance-team accounts.'}
           </p>
-          <button className="ska-btn ska-btn--primary" onClick={() => setAddOpen(true)}>
-            <Ic name="person_add" size="sm" /> Add Finance User
-          </button>
+          {canManage && (
+            <button className="ska-btn ska-btn--primary" onClick={() => setAddOpen(true)}>
+              <Ic name="person_add" size="sm" /> Add Finance User
+            </button>
+          )}
         </div>
       ) : (
         <div className="pu-grid">
@@ -247,15 +270,17 @@ export default function FinanceTeam() {
                   <span><Ic name="event" size="sm" /> Added {fmtDate(u.created_at)}</span>
                 </div>
 
-                <div className="burt-card__actions">
-                  <button
-                    className={`ska-btn ska-btn--sm ${active ? 'ska-btn--danger' : 'ska-btn--approve'}`}
-                    disabled={togglingId === u.id}
-                    onClick={() => setConfirmToggle(u)}>
-                    <Ic name={active ? 'block' : 'how_to_reg'} size="sm" />
-                    {togglingId === u.id ? 'Updating…' : active ? 'Suspend' : 'Activate'}
-                  </button>
-                </div>
+                {canManage && (
+                  <div className="burt-card__actions">
+                    <button
+                      className={`ska-btn ska-btn--sm ${active ? 'ska-btn--danger' : 'ska-btn--approve'}`}
+                      disabled={togglingId === u.id}
+                      onClick={() => setConfirmToggle(u)}>
+                      <Ic name={active ? 'block' : 'how_to_reg'} size="sm" />
+                      {togglingId === u.id ? 'Updating…' : active ? 'Suspend' : 'Activate'}
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })}

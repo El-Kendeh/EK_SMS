@@ -55,6 +55,10 @@
   --ska-error-dim:           rgba(255,180,171,0.12);
   --ska-green:               #4ade80;
   --ska-green-dim:           rgba(74,222,128,0.12);
+  /* Label colors ON solid green/error buttons — theme-aware so the label
+     stays readable when the light theme darkens the button backgrounds. */
+  --ska-on-green:            #07330f;
+  --ska-on-error:            #4a0a05;
 
   --ska-text:                #dae2fd;
   --ska-text-2:              #c2c6d6;
@@ -101,6 +105,9 @@
   --ska-error-dim:           rgba(220,38,38,0.10);
   --ska-green:               #15803d;
   --ska-green-dim:           rgba(21,128,61,0.10);
+  /* Light theme darkens the solid button backgrounds — labels go white. */
+  --ska-on-green:            #ffffff;
+  --ska-on-error:            #ffffff;
 
   --ska-text:                #1e2433;
   --ska-text-2:              #475067;

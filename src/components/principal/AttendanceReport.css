@@ -12,7 +12,7 @@
 .atr-head-actions .ga-btn { min-height: 44px; }
 
 .atr-num--error { color: var(--ska-error); }
-.atr-num--warn  { color: #f59e0b; }
+.atr-num--warn  { color: var(--ska-tertiary); }
 
 .atr-alert { margin: 0; }
 
@@ -92,7 +92,7 @@
 
 .atr-pill--green { background: var(--ska-green-dim); color: var(--ska-green); }
 .atr-pill--error { background: var(--ska-error-dim); color: var(--ska-error); }
-.atr-pill--warn  { background: rgba(245,158,11,0.14); color: #f59e0b; }
+.atr-pill--warn  { background: var(--ska-tertiary-dim); color: var(--ska-tertiary); }
 
 .atr-row__total {
   margin-left: auto;

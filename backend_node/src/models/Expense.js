@@ -6,7 +6,7 @@ const Expense = sequelize.define('Expense', {
   school_id: { type: DataTypes.BIGINT, allowNull: false },
   category: { type: DataTypes.STRING, allowNull: false },
   description: { type: DataTypes.TEXT, allowNull: false },
-  amount: { type: DataTypes.FLOAT, allowNull: false },
+  amount: { type: DataTypes.DECIMAL(12, 2), allowNull: false },
   date: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
   receipt_path: { type: DataTypes.STRING },
   // Who recorded the expense (the bursar/admin). Audited.
