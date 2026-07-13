@@ -9,6 +9,7 @@ import SuperadminDashboard from './components/superadmin/SuperadminDashboard';
 import ForceChangePassword from './components/ForceChangePassword';
 import VerifyPage from './components/student/VerifyPage';
 import ApiClient from './api/client';
+import { applyPlatformFavicon } from './utils/platformBranding';
 
 /* Every signed-in role renders the same dashboard shell (page key
    'superadmindashboard'), but the URL reflects the role — so a school admin
@@ -119,6 +120,9 @@ function MainApp() {
      Used as a React key on the dashboard so it REMOUNTS and re-reads the new
      identity — without this the shell keeps rendering the old role after a swap. */
   const [authKey, setAuthKey] = useState(0);
+
+  // SA-78: uploaded platform favicon replaces the bundled one (no-op if none).
+  useEffect(() => { applyPlatformFavicon(); }, []);
 
   useEffect(() => {
     let path = PAGE_TO_PATH[currentPage] || '/';

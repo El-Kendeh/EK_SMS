@@ -499,6 +499,16 @@ export default function Dashboard({ onNavigate }) {
      sidebar brand for school-scoped roles (school admin, principal, bursar). */
   const { schoolName, badgeUrl } = useSchoolBranding();
 
+  /* SA-78: uploaded platform logo replaces the built-in mark for superadmin. */
+  const [platformLogo, setPlatformLogo] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    import('../../utils/platformBranding').then(({ fetchPlatformBranding }) =>
+      fetchPlatformBranding().then((b) => { if (!cancelled && b.logoUrl) setPlatformLogo(b.logoUrl); })
+    ).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
   /* ---- Data ---- */
   const fetchGradeAlerts = useCallback(async () => {
     try {
@@ -1031,6 +1041,13 @@ export default function Dashboard({ onNavigate }) {
                 className="sa-brand-badge"
                 src={badgeUrl}
                 alt={`${schoolName} badge`}
+                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+              />
+            ) : user?.role === 'superadmin' && platformLogo ? (
+              <img
+                className="sa-brand-badge"
+                src={platformLogo}
+                alt="Platform logo"
                 onError={(e) => { e.currentTarget.style.display = 'none'; }}
               />
             ) : (

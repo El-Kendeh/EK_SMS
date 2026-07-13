@@ -14,8 +14,6 @@ const LANGUAGES = ['English', 'French', 'Krio', 'Portuguese', 'Arabic'];
 /* ================================================================
    Constants
    ================================================================ */
-const DEFAULT_RECOVERY_CODES = [];
-const DEFAULT_TOTP_KEY = '';
 const TABS = ['General', 'Security', 'Compliance', 'Backups'];
 
 function calcStrength(pw) {
@@ -311,12 +309,45 @@ function PasswordView({ onBack, onSubmit }) {
 }
 
 /* ================================================================
-   2FA Setup sub-view
+   2FA Setup sub-view — real TOTP enrolment (SA-46).
+   GET /api/sa/2fa/ begins enrolment (QR + key + recovery codes);
+   POST {action:'verify', code} enables; POST {action:'disable'} disables.
+   Nothing is enforced until the first code verifies, so re-opening this
+   view before enabling simply issues a fresh secret.
    ================================================================ */
-function TwoFAView({ onBack, onComplete, totpKey = DEFAULT_TOTP_KEY, recoveryCodes = DEFAULT_RECOVERY_CODES }) {
+function TwoFAView({ onBack, onEnabled, onDisabled }) {
   const otpRefs                         = useRef([]);
   const [otpDigits, setOtpDigits]       = useState(Array(6).fill(''));
   const [copied,    setCopied]          = useState(false);
+  const [loading,   setLoading]         = useState(true);
+  const [enabled,   setEnabled]         = useState(false);
+  const [qrCode,    setQrCode]          = useState('');
+  const [totpKey,   setTotpKey]         = useState('');
+  const [recoveryCodes, setRecoveryCodes] = useState([]);
+  const [error,     setError]           = useState('');
+  const [busy,      setBusy]            = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const d = await ApiClient.get('/api/sa/2fa/');
+        if (cancelled) return;
+        if (d?.enabled) {
+          setEnabled(true);
+        } else {
+          setQrCode(d?.qr_code || '');
+          setTotpKey(d?.manual_key || '');
+          setRecoveryCodes(Array.isArray(d?.recovery_codes) ? d.recovery_codes : []);
+        }
+      } catch {
+        if (!cancelled) setError('Could not load 2FA setup. Please try again.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const handleOtpChange = (idx, val) => {
     const digit = val.replace(/\D/g, '').slice(-1);
@@ -335,6 +366,50 @@ function TwoFAView({ onBack, onComplete, totpKey = DEFAULT_TOTP_KEY, recoveryCod
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const codesText = recoveryCodes.map((c, i) => `${i + 1}. ${c}`).join('\n');
+  const handleCopyCodes = () => navigator.clipboard?.writeText(codesText).catch(() => {});
+  const handleSaveCodes = () => {
+    const blob = new Blob([`EK-SMS 2FA recovery codes\n\n${codesText}\n`], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'ek-sms-recovery-codes.txt';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
+  const code = otpDigits.join('');
+  const handleVerify = async () => {
+    if (code.length !== 6 || busy) return;
+    setBusy(true);
+    setError('');
+    try {
+      const res = await ApiClient.post('/api/sa/2fa/', { action: 'verify', code });
+      if (res?.success === false) throw new Error(res.message || 'Invalid verification code');
+      onEnabled();
+    } catch (e) {
+      setError(e?.message || 'Invalid verification code');
+      setOtpDigits(Array(6).fill(''));
+      otpRefs.current[0]?.focus();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleDisable = async () => {
+    if (busy) return;
+    setBusy(true);
+    setError('');
+    try {
+      const res = await ApiClient.post('/api/sa/2fa/', { action: 'disable' });
+      if (res?.success === false) throw new Error(res.message || 'Could not disable 2FA');
+      onDisabled();
+    } catch (e) {
+      setError(e?.message || 'Could not disable 2FA');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Header */}
@@ -344,118 +419,126 @@ function TwoFAView({ onBack, onComplete, totpKey = DEFAULT_TOTP_KEY, recoveryCod
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '24px 20px' }}>
-        {/* Progress dots */}
-        <div className="sa-progress-dots">
-          <div className="sa-progress-dot sa-progress-dot--done" />
-          <div className="sa-progress-dot sa-progress-dot--active" />
-          <div className="sa-progress-dot" />
-        </div>
-
-        {/* Title */}
-        <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <h1 style={{ fontSize: '1.375rem', fontWeight: 800, color: 'var(--sa-text)', marginBottom: 8 }}>Enable Two-Factor Auth</h1>
-          <p style={{ fontSize: '0.8125rem', color: 'var(--sa-text-2)', lineHeight: 1.5 }}>Scan the QR code with your authenticator app (Google Authenticator, Authy, etc.)</p>
-        </div>
-
-        {/* Honesty banner — 2FA enrollment is a non-functional preview. */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 12px', borderRadius: 10, marginBottom: 20, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)' }}>
-          <span style={{ flexShrink: 0, color: 'var(--sa-amber)' }}>⚠️</span>
-          <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--sa-text-2)', lineHeight: 1.5, textAlign: 'left' }}>
-            <strong>Preview — not functional.</strong> The QR code is illustrative (not a real provisioning key) and the code you enter is not verified. Completing this does not actually enable 2FA.
-          </p>
-        </div>
-
-        {/* QR box */}
-        <div className="sa-qr-box">
-          <div className="sa-qr-placeholder">
-            {/* Static QR-pattern SVG */}
-            <svg viewBox="0 0 80 80" width="120" height="120" fill="currentColor" style={{ color: 'var(--sa-accent)', opacity: 0.8 }}>
-              <rect x="4"  y="4"  width="24" height="24" rx="2" fill="none" stroke="currentColor" strokeWidth="3"/>
-              <rect x="10" y="10" width="12" height="12" rx="1"/>
-              <rect x="52" y="4"  width="24" height="24" rx="2" fill="none" stroke="currentColor" strokeWidth="3"/>
-              <rect x="58" y="10" width="12" height="12" rx="1"/>
-              <rect x="4"  y="52" width="24" height="24" rx="2" fill="none" stroke="currentColor" strokeWidth="3"/>
-              <rect x="10" y="58" width="12" height="12" rx="1"/>
-              {[34,38,42,46,50,54,58,62].map((x,xi) =>
-                [34,38,42,46,50,54,58,62].filter((_,yi) => (xi+yi)%3!==0).map(y => (
-                  <rect key={`${x}-${y}`} x={x} y={y} width="3" height="3" rx="0.5" opacity="0.7"/>
-                ))
-              )}
-            </svg>
-          </div>
-          <div style={{ width: '100%' }}>
-            <p className="sa-manual-key-label">Manual Entry Key</p>
-            <div className="sa-manual-key-wrap">
-              <code className="sa-manual-key">{totpKey}</code>
-              <button style={{ background: 'none', border: 'none', color: copied ? 'var(--sa-green)' : 'var(--sa-text-3)', cursor: 'pointer', padding: 4, transition: 'color 0.2s' }} onClick={handleCopyKey} aria-label="Copy key">
-                {copied ? <IcCheck /> : <IcCopy />}
-              </button>
+        {loading ? (
+          <p style={{ textAlign: 'center', color: 'var(--sa-text-2)', fontSize: '0.875rem', padding: '40px 0' }}>Loading 2FA settings…</p>
+        ) : enabled ? (
+          <>
+            {/* Already enabled → status + disable */}
+            <div style={{ textAlign: 'center', marginBottom: 24 }}>
+              <div style={{ display: 'inline-flex', color: 'var(--sa-green)', marginBottom: 12 }}><IcShieldLock size={44} /></div>
+              <h1 style={{ fontSize: '1.375rem', fontWeight: 800, color: 'var(--sa-text)', marginBottom: 8 }}>Two-Factor Auth is Active</h1>
+              <p style={{ fontSize: '0.8125rem', color: 'var(--sa-text-2)', lineHeight: 1.5 }}>
+                Sign-ins to this account require a code from your authenticator app (or a recovery code).
+              </p>
             </div>
-          </div>
-        </div>
-
-        {/* OTP Input */}
-        <div style={{ marginBottom: 28 }}>
-          <label className="sa-field-label">Enter Verification Code</label>
-          <div className="sa-otp-row">
-            {[0,1,2].map(i => (
-              <input key={i} ref={el => { otpRefs.current[i] = el; }} type="text" inputMode="numeric"
-                maxLength={1} className="sa-otp-box" value={otpDigits[i]} placeholder="-"
-                onChange={e => handleOtpChange(i, e.target.value)}
-                onKeyDown={e => handleOtpKeyDown(i, e)}
-                aria-label={`OTP digit ${i+1}`}
-              />
-            ))}
-            <span className="sa-otp-sep">—</span>
-            {[3,4,5].map(i => (
-              <input key={i} ref={el => { otpRefs.current[i] = el; }} type="text" inputMode="numeric"
-                maxLength={1} className="sa-otp-box" value={otpDigits[i]} placeholder="-"
-                onChange={e => handleOtpChange(i, e.target.value)}
-                onKeyDown={e => handleOtpKeyDown(i, e)}
-                aria-label={`OTP digit ${i+1}`}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* Recovery codes */}
-        <div style={{ marginBottom: 24 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <h3 style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.875rem', fontWeight: 700, color: 'var(--sa-text)' }}>
-              <span style={{ color: 'var(--sa-accent)' }}><IcLock /></span> Recovery Codes
-            </h3>
-            <div style={{ display: 'flex', gap: 12 }}>
-              <button style={{ background: 'none', border: 'none', color: 'var(--sa-accent)', fontSize: '0.6875rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                <IcDownload /> Save
-              </button>
-              <button style={{ background: 'none', border: 'none', color: 'var(--sa-accent)', fontSize: '0.6875rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                <IcCopy /> Copy
-              </button>
+            {error && <p role="alert" style={{ color: 'var(--sa-red, #ef4444)', fontSize: '0.8125rem', textAlign: 'center', marginBottom: 12 }}>{error}</p>}
+            <button
+              style={{ width: '100%', height: 44, background: 'transparent', color: 'var(--sa-red, #ef4444)', border: '1px solid var(--sa-red, #ef4444)', borderRadius: 'var(--sa-radius-sm)', fontSize: '0.9375rem', fontWeight: 700, cursor: busy ? 'wait' : 'pointer' }}
+              onClick={handleDisable}
+              disabled={busy}
+            >
+              {busy ? 'Disabling…' : 'Disable Two-Factor Auth'}
+            </button>
+            <p style={{ fontSize: '0.6875rem', color: 'var(--sa-text-2)', marginTop: 10, lineHeight: 1.55, textAlign: 'center' }}>
+              Disabling removes the authenticator secret and all recovery codes.
+            </p>
+          </>
+        ) : error && !qrCode ? (
+          <p role="alert" style={{ textAlign: 'center', color: 'var(--sa-red, #ef4444)', fontSize: '0.875rem', padding: '40px 0' }}>{error}</p>
+        ) : (
+          <>
+            {/* Title */}
+            <div style={{ textAlign: 'center', marginBottom: 24 }}>
+              <h1 style={{ fontSize: '1.375rem', fontWeight: 800, color: 'var(--sa-text)', marginBottom: 8 }}>Enable Two-Factor Auth</h1>
+              <p style={{ fontSize: '0.8125rem', color: 'var(--sa-text-2)', lineHeight: 1.5 }}>Scan the QR code with your authenticator app (Google Authenticator, Authy, etc.), then enter the 6-digit code it shows.</p>
             </div>
-          </div>
-          <div className="sa-recovery-grid">
-            {recoveryCodes.map((code, i) => (
-              <div key={i} className="sa-recovery-item">
-                <span className="sa-recovery-num">{i+1}.</span>
-                <code className="sa-recovery-code">{code}</code>
+
+            {/* QR box — real provisioning QR from the backend */}
+            <div className="sa-qr-box">
+              <div className="sa-qr-placeholder">
+                {qrCode
+                  ? <img src={qrCode} alt="Scan with your authenticator app" style={{ width: 140, height: 140, borderRadius: 8, background: '#fff', padding: 6 }} />
+                  : <p style={{ fontSize: '0.75rem', color: 'var(--sa-text-2)' }}>QR unavailable — use the manual key below.</p>}
               </div>
-            ))}
-          </div>
-          <p style={{ fontSize: '0.6875rem', color: 'var(--sa-text-2)', marginTop: 8, lineHeight: 1.55 }}>
-            Store these codes safely. Each can be used once to regain access if you lose your device.
-          </p>
-        </div>
+              <div style={{ width: '100%' }}>
+                <p className="sa-manual-key-label">Manual Entry Key</p>
+                <div className="sa-manual-key-wrap">
+                  <code className="sa-manual-key">{totpKey}</code>
+                  <button style={{ background: 'none', border: 'none', color: copied ? 'var(--sa-green)' : 'var(--sa-text-3)', cursor: 'pointer', padding: 4, transition: 'color 0.2s' }} onClick={handleCopyKey} aria-label="Copy key">
+                    {copied ? <IcCheck /> : <IcCopy />}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* OTP Input */}
+            <div style={{ marginBottom: 28 }}>
+              <label className="sa-field-label">Enter Verification Code</label>
+              <div className="sa-otp-row">
+                {[0,1,2].map(i => (
+                  <input key={i} ref={el => { otpRefs.current[i] = el; }} type="text" inputMode="numeric"
+                    maxLength={1} className="sa-otp-box" value={otpDigits[i]} placeholder="-"
+                    onChange={e => handleOtpChange(i, e.target.value)}
+                    onKeyDown={e => handleOtpKeyDown(i, e)}
+                    aria-label={`OTP digit ${i+1}`}
+                  />
+                ))}
+                <span className="sa-otp-sep">—</span>
+                {[3,4,5].map(i => (
+                  <input key={i} ref={el => { otpRefs.current[i] = el; }} type="text" inputMode="numeric"
+                    maxLength={1} className="sa-otp-box" value={otpDigits[i]} placeholder="-"
+                    onChange={e => handleOtpChange(i, e.target.value)}
+                    onKeyDown={e => handleOtpKeyDown(i, e)}
+                    aria-label={`OTP digit ${i+1}`}
+                  />
+                ))}
+              </div>
+              {error && <p role="alert" style={{ color: 'var(--sa-red, #ef4444)', fontSize: '0.75rem', marginTop: 8 }}>{error}</p>}
+            </div>
+
+            {/* Recovery codes */}
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <h3 style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.875rem', fontWeight: 700, color: 'var(--sa-text)' }}>
+                  <span style={{ color: 'var(--sa-accent)' }}><IcLock /></span> Recovery Codes
+                </h3>
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <button onClick={handleSaveCodes} style={{ background: 'none', border: 'none', color: 'var(--sa-accent)', fontSize: '0.6875rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <IcDownload /> Save
+                  </button>
+                  <button onClick={handleCopyCodes} style={{ background: 'none', border: 'none', color: 'var(--sa-accent)', fontSize: '0.6875rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <IcCopy /> Copy
+                  </button>
+                </div>
+              </div>
+              <div className="sa-recovery-grid">
+                {recoveryCodes.map((rc, i) => (
+                  <div key={i} className="sa-recovery-item">
+                    <span className="sa-recovery-num">{i+1}.</span>
+                    <code className="sa-recovery-code">{rc}</code>
+                  </div>
+                ))}
+              </div>
+              <p style={{ fontSize: '0.6875rem', color: 'var(--sa-text-2)', marginTop: 8, lineHeight: 1.55 }}>
+                Store these codes safely NOW — they are only shown during setup. Each can be used once to sign in if you lose your device.
+              </p>
+            </div>
+          </>
+        )}
       </div>
 
-      {/* Footer */}
-      <div style={{ padding: '14px 20px', borderTop: '1px solid var(--sa-border)', background: 'var(--sa-sidebar-bg)' }}>
-        <button
-          style={{ width: '100%', height: 44, background: 'var(--sa-accent)', color: '#fff', border: 'none', borderRadius: 'var(--sa-radius-sm)', fontSize: '0.9375rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 2px 10px rgba(14,165,233,0.3)' }}
-          onClick={onComplete}
-        >
-          Complete Setup &amp; Login <IcCheck size={18} />
-        </button>
-      </div>
+      {/* Footer — only the enrolment flow needs the verify CTA */}
+      {!loading && !enabled && qrCode && (
+        <div style={{ padding: '14px 20px', borderTop: '1px solid var(--sa-border)', background: 'var(--sa-sidebar-bg)' }}>
+          <button
+            style={{ width: '100%', height: 44, background: code.length === 6 && !busy ? 'var(--sa-accent)' : 'var(--sa-card-bg2)', color: code.length === 6 && !busy ? '#fff' : 'var(--sa-text-3)', border: 'none', borderRadius: 'var(--sa-radius-sm)', fontSize: '0.9375rem', fontWeight: 700, cursor: code.length === 6 && !busy ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: code.length === 6 && !busy ? '0 2px 10px rgba(14,165,233,0.3)' : 'none', transition: 'background 0.15s' }}
+            onClick={handleVerify}
+            disabled={code.length !== 6 || busy}
+          >
+            {busy ? 'Verifying…' : <>Verify &amp; Enable 2FA <IcCheck size={18} /></>}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -536,9 +619,6 @@ export default function SASettings() {
   const [exporting,       setExporting]       = useState(false);
   const [exported,        setExported]        = useState(false);
 
-  /* 2FA + recovery */
-  const [recoveryCodes, setRecoveryCodes] = useState(DEFAULT_RECOVERY_CODES);
-  const [totpKey,       setTotpKey]       = useState(DEFAULT_TOTP_KEY);
   const [lastBackupAt,  setLastBackupAt]  = useState(null);
   const [lastBackupMeta, setLastBackupMeta] = useState(null);
 
@@ -602,9 +682,6 @@ export default function SASettings() {
         if (s.autoLock !== undefined)        setAutoLock(s.autoLock);
         if (s.sessionTimeout !== undefined)  setSessionTimeout(s.sessionTimeout);
         if (s.auditRetention !== undefined)  setAuditRetention(s.auditRetention);
-        if (Array.isArray(s.recovery_codes) && s.recovery_codes.length > 0)
-          setRecoveryCodes(s.recovery_codes);
-        if (s.totp_key)       setTotpKey(s.totp_key);
         if (s.last_backup_at) setLastBackupAt(s.last_backup_at);
         if (s.last_backup_meta) setLastBackupMeta(s.last_backup_meta);
         if (s.branding_logo?.url)    setBrandingLogoUrl(s.branding_logo.url);
@@ -689,7 +766,11 @@ export default function SASettings() {
     return <PasswordView onBack={() => setSecView('main')} onSubmit={changePassword} />;
   }
   if (secView === '2fa') {
-    return <TwoFAView onBack={() => setSecView('main')} onComplete={() => { setSecView('main'); showToast('2FA enrollment is a preview — nothing was changed.'); }} totpKey={totpKey} recoveryCodes={recoveryCodes} />;
+    return <TwoFAView
+      onBack={() => setSecView('main')}
+      onEnabled={() => { setSecView('main'); showToast('Two-factor authentication enabled — codes are now required at login.'); }}
+      onDisabled={() => { setSecView('main'); showToast('Two-factor authentication disabled.'); }}
+    />;
   }
 
   /* ---- Main view ---- */
@@ -984,7 +1065,9 @@ export default function SASettings() {
                 ))}
                 <p className="sa-field-label" style={{ marginTop: 16, marginBottom: 10 }}>Export Format</p>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {['CSV', 'JSON', 'PDF'].map(fmt => (
+                  {/* PDF removed — the endpoint has no PDF renderer; offering
+                      it silently returned CSV (SA-16). */}
+                  {['CSV', 'JSON'].map(fmt => (
                     <button key={fmt} onClick={() => setExportFormat(fmt)}
                       style={{ padding: '8px 20px', borderRadius: 'var(--sa-radius-sm)', fontSize: '0.8125rem', fontWeight: 700, cursor: 'pointer',
                         border: `1px solid ${exportFormat === fmt ? 'var(--sa-accent)' : 'var(--sa-border)'}`,
@@ -1088,7 +1171,7 @@ export default function SASettings() {
                 accept=".png,.svg,.jpg,.jpeg,.webp,image/*"
                 icon={<IcImage />}
                 currentUrl={brandingLogoUrl}
-                onUploaded={(url) => { setBrandingLogoUrl(url); showToast('Logo uploaded successfully'); }}
+                onUploaded={(url) => { setBrandingLogoUrl(url); showToast('Logo uploaded — shown in the sidebar on next load'); }}
                 onError={(msg) => showToast(msg, 'error')}
               />
               <BrandingUploadBox
@@ -1098,7 +1181,7 @@ export default function SASettings() {
                 accept=".ico,.png,.svg,.jpg,.jpeg,image/*"
                 icon={<IcGlobe />}
                 currentUrl={brandingFaviconUrl}
-                onUploaded={(url) => { setBrandingFaviconUrl(url); showToast('Favicon uploaded successfully'); }}
+                onUploaded={(url) => { setBrandingFaviconUrl(url); showToast('Favicon uploaded — applied as the tab icon on next load'); }}
                 onError={(msg) => showToast(msg, 'error')}
               />
             </div>
@@ -1209,7 +1292,7 @@ export default function SASettings() {
                 </div>
                 <div className="sa-info-callout" style={{ marginBottom: 16 }}>
                   <IcInfo />
-                  <p>Export is logged in the audit trail. Note: only the Schools dataset is exported today, and redaction is not yet applied (data is not filtered for sensitive fields).</p>
+                  <p>Export is logged in the audit trail. All selected datasets are included. Note: redaction is not yet applied (data is not filtered for sensitive fields).</p>
                 </div>
                 <div style={{ display: 'flex', gap: 10 }}>
                   <button className="sa-gov-cancel-btn" style={{ flex: 1 }} onClick={() => setShowExportModal(false)} disabled={exporting}>Cancel</button>

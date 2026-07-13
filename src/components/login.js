@@ -96,6 +96,10 @@ function Login({ onNavigate }) {
   const [goingHome, setGoingHome] = useState(false);
   const [showUnderReview, setShowUnderReview] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
+  /* 2FA (SA-46): accounts with 2FA enabled get {requires_2fa:true} back and
+     must resubmit with an authenticator/recovery code before a token issues. */
+  const [twoFAStep, setTwoFAStep] = useState(false);
+  const [twoFACode, setTwoFACode] = useState('');
 
   // Auto-redirect if already logged in
   useEffect(() => {
@@ -135,16 +139,25 @@ function Login({ onNavigate }) {
       setError('Please enter your email or username and password.');
       return;
     }
+    if (twoFAStep && !twoFACode.trim()) {
+      setError('Enter the 6-digit code from your authenticator app (or a recovery code).');
+      return;
+    }
 
     setIsLoading(true);
     try {
-      const data = await ApiClient.post('/api/login/', {
-        username: identifier.trim(),
-        password
-      });
+      const payload = { username: identifier.trim(), password };
+      if (twoFAStep) payload.two_factor_code = twoFACode.trim();
+      const data = await ApiClient.post('/api/login/', payload);
 
       if (!data.success) {
         throw new Error(data.message || 'Login failed. Please check your credentials.');
+      }
+
+      /* Password OK but the account needs a 2FA code — show the code field. */
+      if (data.requires_2fa && !data.token) {
+        setTwoFAStep(true);
+        return;
       }
 
       const user = { ...data.user, must_change_password: !!data.must_change_password };
@@ -177,6 +190,9 @@ function Login({ onNavigate }) {
         setShowUnderReview(true);
       } else if (raw.toLowerCase().includes('failed to fetch') || raw.toLowerCase().includes('networkerror') || raw.toLowerCase().includes('load failed')) {
         setError('Unable to reach the server. Please check your connection and try again.');
+      } else if (raw.toLowerCase().includes('two-factor')) {
+        setError('Invalid two-factor code. Try again, or use one of your recovery codes.');
+        setTwoFACode('');
       } else if (raw.toLowerCase().includes('invalid') || raw.toLowerCase().includes('credentials') || raw.toLowerCase().includes('password') || raw.toLowerCase().includes('401')) {
         setError('Incorrect email/username or password. Please check your credentials and try again.');
       } else if (raw) {
@@ -327,6 +343,29 @@ function Login({ onNavigate }) {
             </div>
           </div>
 
+          {/* 2FA code (only after the password is accepted on a 2FA account) */}
+          {twoFAStep && (
+            <div className="form-field">
+              <div className="login-error" role="status" style={{ background: 'rgba(59,130,246,0.12)', borderColor: 'rgba(59,130,246,0.35)', color: 'var(--text-primary)', marginBottom: 8 }}>
+                <AlertIcon />
+                Two-factor authentication is on for this account. Enter the code from your authenticator app.
+              </div>
+              <label htmlFor="login-2fa" className="sr-only">Two-factor code</label>
+              <input
+                id="login-2fa"
+                type="text"
+                className="form-input"
+                placeholder="Authenticator or recovery code"
+                value={twoFACode}
+                onChange={(e) => setTwoFACode(e.target.value)}
+                autoComplete="one-time-code"
+                inputMode="text"
+                autoFocus
+                spellCheck={false}
+              />
+            </div>
+          )}
+
           {/* Remember + Forgot */}
           <div className="login-meta">
             <label className="remember-wrap">
@@ -351,11 +390,11 @@ function Login({ onNavigate }) {
             {isLoading ? (
               <span className="btn-spinner">
                 <span className="spin" />
-                Signing in…
+                {twoFAStep ? 'Verifying…' : 'Signing in…'}
               </span>
             ) : (
               <>
-                <span>Login</span>
+                <span>{twoFAStep ? 'Verify Code' : 'Login'}</span>
                 <ArrowRightIcon />
               </>
             )}

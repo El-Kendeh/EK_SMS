@@ -86,7 +86,7 @@ export default function AcademicsAnalytics() {
 
   useEffect(() => { load(); }, [load]);
 
-  const distribution = data?.distribution || [];
+  const distribution = useMemo(() => data?.distribution || [], [data]);
   const passRates = data?.pass_rates || [];
   const trend = data?.trend || [];
   const heatmap = data?.heatmap || { classes: [], subjects: [], cells: [] };

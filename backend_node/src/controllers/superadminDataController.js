@@ -36,6 +36,8 @@ const ClassModel = require('../models/Class');
 const Subject = require('../models/Subject');
 const ClassSubject = require('../models/ClassSubject');
 const ClassAssistantTeacher = require('../models/ClassAssistantTeacher');
+const Notification = require('../models/Notification');
+const twoFactorService = require('../services/twoFactor');
 const { appendSecurityAuditLog } = require('../utils/auditLog');
 
 // Random, unique temporary password (replaces the shared 'Xxx@123' defaults).
@@ -334,7 +336,7 @@ function mapUserToSaRow(user, schoolName) {
     riskScore: 0,
     failedAttempts: 0,
     successLogins: 0,
-    twoFAEnabled: false,
+    twoFAEnabled: !!user.two_factor_enabled, // real column since SA-46
     alertsTriggered: 0,
     last_login: user.last_login || null,
     recentActivity: [],
@@ -625,7 +627,34 @@ async function getForensicEvents(req, res) {
       resolved: r.resolved,
       metadata: r.metadata_json ? JSON.parse(r.metadata_json) : {},
     }));
-    return res.json(successResponse({ events }));
+
+    // SA-17 interim: nothing writes ForensicEvent yet, so also surface the
+    // REAL medium/high/critical security-audit rows (failed logins, rejects,
+    // deletes, password resets) as forensic entries instead of a permanently
+    // empty page. ponytail: replace with dedicated producers when they exist.
+    const audit = await SecurityAuditLog.findAll({
+      where: { severity: { [Op.in]: ['medium', 'high', 'critical'] } },
+      order: [['ts', 'DESC']],
+      limit: 100,
+    });
+    for (const a of audit) {
+      events.push({
+        id: `audit-${a.id}`,
+        severity: a.severity,
+        event_label: (a.type || 'security_event').replace(/_/g, ' '),
+        event_type: a.type,
+        description: a.action,
+        actor: a.actor,
+        ip: a.ip,
+        created_at: a.ts,
+        resolved_at: null,
+        resolved: false,
+        metadata: (() => { try { return a.metadata_json ? JSON.parse(a.metadata_json) : {}; } catch { return {}; } })(),
+      });
+    }
+    events.sort((x, y) => new Date(y.created_at) - new Date(x.created_at));
+
+    return res.json(successResponse({ events: events.slice(0, 100) }));
   } catch (err) {
     console.error(err);
     return res.status(500).json(errorResponse('Internal server error', 500));
@@ -653,17 +682,61 @@ async function getBroadcastAlerts(req, res) {
   }
 }
 
+/* Resolve the audience string to concrete recipients and deliver as in-app
+   Notification rows (SA-19). A school-wide broadcast is one row with
+   user_id=null — every portal (student/teacher/parent/admin) surfaces those.
+   'Admin Staff' targets each school's admin users individually. */
+async function deliverBroadcast({ title, text, audience }) {
+  const aud = String(audience || 'All Schools');
+  const where = { is_approved: true, is_active: true };
+  const regionMatch = aud.match(/^Region:\s*(.+)$/i);
+  if (regionMatch) where.region = regionMatch[1].trim();
+
+  const schools = await School.findAll({ where, attributes: ['id'], raw: true });
+  if (!schools.length) return { delivered: 0, recipients: 'none' };
+
+  if (/^admin staff$/i.test(aud)) {
+    const links = await SchoolAdmin.findAll({
+      where: { school_id: { [Op.in]: schools.map(s => s.id) } },
+      attributes: ['school_id', 'user_id'],
+      raw: true,
+    });
+    let sent = 0;
+    for (const l of links) {
+      if (!l.user_id) continue;
+      await Notification.create({
+        school_id: l.school_id, user_id: l.user_id,
+        title, message: text, type: 'announcement', is_read: false,
+      });
+      sent++;
+    }
+    return { delivered: sent, recipients: 'school admins' };
+  }
+
+  for (const s of schools) {
+    await Notification.create({
+      school_id: s.id, user_id: null, // school-wide broadcast
+      title, message: text, type: 'announcement', is_read: false,
+    });
+  }
+  return { delivered: schools.length, recipients: 'schools' };
+}
+
 async function postBroadcastAlerts(req, res) {
   try {
     const { title, message, body, severity, audience } = req.body;
     const text = message || body || '';
     if (!title || !text) return res.status(400).json(errorResponse('title and message required'));
+
+    const delivery = await deliverBroadcast({ title: String(title).slice(0, 255), text: String(text), audience });
+
     const row = await BroadcastAlert.create({
       title: String(title).slice(0, 255),
       message: String(text),
       severity: String(severity || 'info').slice(0, 32),
       audience: String(audience || 'all').slice(0, 64),
-      status: 'sent',
+      // 'sent' only when something was actually delivered (SA-19).
+      status: delivery.delivered > 0 ? 'sent' : 'recorded',
       sent_at: new Date(),
       created_by: req.user.username,
     });
@@ -673,9 +746,14 @@ async function postBroadcastAlerts(req, res) {
       actor: req.user.username,
       ip: clientIp(req),
       action: `Broadcast: ${title}`,
-      metadata: { id: row.id },
+      metadata: { id: row.id, delivered: delivery.delivered, recipients: delivery.recipients },
     });
-    return res.json(successResponse({ id: row.id }, 'Broadcast recorded'));
+    return res.json(successResponse(
+      { id: row.id, delivered: delivery.delivered, recipients: delivery.recipients, status: row.status },
+      delivery.delivered > 0
+        ? `Announcement delivered to ${delivery.delivered} ${delivery.recipients} as in-app notifications`
+        : 'Announcement recorded — no matching recipients'
+    ));
   } catch (err) {
     console.error(err);
     return res.status(500).json(errorResponse('Internal server error', 500));
@@ -723,6 +801,79 @@ async function postSystemAlerts(req, res) {
 }
 
 /* ---------- SA ops: branding, lockdown, backup, custom roles ---------- */
+
+/* Real TOTP 2FA for the signed-in superadmin (SA-46). Same contract as the
+   student endpoints: GET (re)begins enrolment until enabled; POST verifies
+   the first code ({action:'verify', code}) or disables ({action:'disable'}). */
+async function getSa2FA(req, res) {
+  try {
+    const user = await User.findByPk(req.user.id);
+    if (!user) return res.status(404).json(errorResponse('User not found', 404));
+
+    if (user.two_factor_enabled) {
+      return res.json(successResponse({ enabled: true, setup_required: false }));
+    }
+
+    const enrol = await twoFactorService.beginEnrolment(user);
+    return res.json(successResponse({
+      enabled: false,
+      setup_required: true,
+      qr_code: enrol.qrDataUrl,
+      setup_uri: enrol.otpauth,
+      manual_key: enrol.secret,
+      recovery_codes: enrol.recoveryCodes,
+    }));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+async function postSa2FA(req, res) {
+  try {
+    const user = await User.findByPk(req.user.id);
+    if (!user) return res.status(404).json(errorResponse('User not found', 404));
+
+    const action = String(req.body.action || 'verify').toLowerCase();
+    if (action === 'disable') {
+      await twoFactorService.disable(user);
+      await appendSecurityAuditLog({
+        type: '2fa_disabled', severity: 'medium', actor: user.username,
+        action: 'Two-factor authentication disabled (superadmin account)',
+      });
+      return res.json(successResponse({ enabled: false }, '2FA disabled'));
+    }
+
+    const result = await twoFactorService.verifyAndEnable(user, req.body.code ?? req.body.otp_code);
+    if (!result.ok) {
+      return res.status(400).json(errorResponse(result.reason || 'Invalid verification code'));
+    }
+    await appendSecurityAuditLog({
+      type: '2fa_enabled', severity: 'info', actor: user.username,
+      action: 'Two-factor authentication enabled (superadmin account)',
+    });
+    return res.json(successResponse({ enabled: true }, '2FA enabled'));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
+/* PUBLIC (SA-78): the stored platform logo/favicon, consumed by the app shell
+   (favicon swap + SA header). Only URLs — nothing sensitive in here. */
+async function getPlatformBranding(req, res) {
+  try {
+    const { parsed } = await loadSettings();
+    return res.json(successResponse({
+      logo_url: parsed.branding_logo?.url || null,
+      favicon_url: parsed.branding_favicon?.url || null,
+    }));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json(errorResponse('Internal server error', 500));
+  }
+}
+
 async function postSaBranding(req, res) {
   try {
     const kind = req.body?.kind || 'logo';
@@ -853,40 +1004,81 @@ async function postSaCustomRoles(req, res) {
   }
 }
 
+/* SA-16: honor ?datasets= (schools|users|audit|grades, comma-separated).
+   Each dataset is a real table query; CSV gets one section per dataset. */
 async function getSaExport(req, res) {
   try {
     const fmt = String(req.query.format || 'csv').toLowerCase();
-    const schools = await School.findAll({
-      attributes: ['id', 'name', 'city', 'country', 'email', 'phone', 'is_approved', 'is_active', 'created_at'],
-      order: [['id', 'ASC']],
-    });
-    const header = ['id', 'name', 'city', 'country', 'email', 'phone', 'is_approved', 'is_active', 'created_at'];
-    const esc = (v) => {
-      const s = v == null ? '' : String(v);
-      return `"${s.replace(/"/g, '""')}"`;
+    const wanted = String(req.query.datasets || 'schools')
+      .split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+
+    const loaders = {
+      schools: async () => ({
+        header: ['id', 'name', 'city', 'country', 'email', 'phone', 'is_approved', 'is_active', 'created_at'],
+        rows: (await School.findAll({
+          attributes: ['id', 'name', 'city', 'country', 'email', 'phone', 'is_approved', 'is_active', 'created_at'],
+          order: [['id', 'ASC']], raw: true,
+        })),
+      }),
+      users: async () => ({
+        header: ['id', 'username', 'email', 'first_name', 'last_name', 'is_active', 'created_at'],
+        rows: (await User.findAll({
+          attributes: ['id', 'username', 'email', 'first_name', 'last_name', 'is_active', 'created_at'],
+          order: [['id', 'ASC']], raw: true,
+        })),
+      }),
+      audit: async () => ({
+        header: ['id', 'type', 'severity', 'actor', 'ip', 'action', 'ts'],
+        rows: (await SecurityAuditLog.findAll({
+          attributes: ['id', 'type', 'severity', 'actor', 'ip', 'action', 'ts'],
+          order: [['ts', 'DESC']], limit: 5000, raw: true,
+        })),
+      }),
+      grades: async () => ({
+        header: ['id', 'school_id', 'student_id', 'subject_id', 'term_id', 'ca', 'midterm', 'final', 'total', 'grade_letter', 'approval_status', 'is_published'],
+        rows: (await require('../models/Grade').findAll({
+          attributes: ['id', 'school_id', 'student_id', 'subject_id', 'term_id', 'ca', 'midterm', 'final', 'total', 'grade_letter', 'approval_status', 'is_published'],
+          order: [['id', 'ASC']], limit: 20000, raw: true,
+        })),
+      }),
     };
-    const lines = [header.join(',')];
-    schools.forEach((s) => {
-      const p = s.get({ plain: true });
-      lines.push(header.map((h) => esc(p[h])).join(','));
-    });
-    const body = lines.join('\n');
+
+    const out = {};
+    for (const name of wanted) {
+      if (loaders[name]) out[name] = await loaders[name]();
+    }
+    if (!Object.keys(out).length) {
+      return res.status(400).json({ success: false, message: `Unknown datasets: ${wanted.join(', ')}. Valid: ${Object.keys(loaders).join(', ')}` });
+    }
+
     await appendSecurityAuditLog({
       type: 'data_export',
       severity: 'low',
       actor: req.user.username,
       ip: clientIp(req),
-      action: `Data export (${fmt})`,
-      metadata: { datasets: req.query.datasets },
+      action: `Data export (${fmt}: ${Object.keys(out).join('+')})`,
+      metadata: { datasets: Object.keys(out) },
     });
+
     if (fmt === 'json') {
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Content-Disposition', 'attachment; filename="eksms_export.json"');
-      return res.send(JSON.stringify({ schools: schools.map((s) => s.get({ plain: true })) }, null, 2));
+      const payload = {};
+      Object.entries(out).forEach(([k, v]) => { payload[k] = v.rows; });
+      return res.send(JSON.stringify(payload, null, 2));
     }
+
+    const esc = (v) => `"${(v == null ? '' : String(v)).replace(/"/g, '""')}"`;
+    const lines = [];
+    Object.entries(out).forEach(([name, { header, rows }]) => {
+      if (Object.keys(out).length > 1) lines.push(`# ${name}`);
+      lines.push(header.join(','));
+      rows.forEach((r) => lines.push(header.map((h) => esc(r[h])).join(',')));
+      lines.push('');
+    });
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="eksms_export.csv"');
-    return res.send(body);
+    return res.send(lines.join('\n'));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ success: false, message: 'Export failed' });
@@ -4351,6 +4543,9 @@ module.exports = {
   getSystemAlerts,
   postSystemAlerts,
   postSaBranding,
+  getPlatformBranding,
+  getSa2FA,
+  postSa2FA,
   getSaLockdown,
   postSaLockdown,
   postSaBackupManual,

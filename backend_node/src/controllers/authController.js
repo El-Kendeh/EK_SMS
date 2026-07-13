@@ -14,6 +14,7 @@ const { Resend } = require('resend');
 const { generateToken } = require('../utils/jwt');
 const { appendSecurityAuditLog } = require('../utils/auditLog');
 const { requireRoleId } = require('../utils/roleIds');
+const { checkLoginCode } = require('../services/twoFactor');
 
 let resend;
 if (process.env.RESEND_API_KEY && process.env.RESEND_API_KEY.trim() !== '') {
@@ -107,6 +108,41 @@ async function login(req, res) {
         }
       } catch { /* fall back to the generic pending message */ }
       return res.status(403).json(errorResponse(gateMessage, 403));
+    }
+
+    /* Real TOTP 2FA (SA-46): a user who enabled 2FA must supply a valid
+       authenticator or recovery code before any token is issued. Sits after
+       the password check so 2FA status is never leaked for bad logins. */
+    if (user.two_factor_enabled) {
+      const suppliedCode = String(req.body.two_factor_code || '').trim();
+      if (!suppliedCode) {
+        return res.json(successResponse({ requires_2fa: true }, 'Two-factor code required'));
+      }
+      const twoFA = await checkLoginCode(user, suppliedCode);
+      if (!twoFA.ok) {
+        await appendSecurityAuditLog({
+          type: 'login_failure',
+          severity: 'medium',
+          actor: user.username,
+          ip: clientIp(req),
+          action: 'Login failed: bad two-factor code',
+        });
+        /* 400, not 401: the ApiClient rewrites every 401 whose message contains
+           "invalid" into a generic "Authentication failed" and clears the
+           session, which would swallow this specific message and drop the user
+           out of the 2FA step. A bad code is input validation — keep it 400 so
+           the real message survives and the code field stays put. */
+        return res.status(400).json(errorResponse('Invalid two-factor code', 400));
+      }
+      if (twoFA.method === 'recovery') {
+        await appendSecurityAuditLog({
+          type: 'recovery_code_used',
+          severity: 'medium',
+          actor: user.username,
+          ip: clientIp(req),
+          action: `2FA recovery code used at login (${twoFA.remaining} remaining)`,
+        });
+      }
     }
 
     let schoolAdminLink = null;

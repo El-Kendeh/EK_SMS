@@ -1,14 +1,10 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import ApiClient from '../../api/client';
-import SECURITY_CONFIG from '../../config/security';
+import { resolveBadgeUrl } from '../../context/SchoolBrandingContext';
 
 /* ---- School badge (image with graceful monogram fallback) ---- */
-const getBadgeUrl = (badgePath) => {
-  if (!badgePath) return '';
-  if (badgePath.startsWith('http') || badgePath.startsWith('data:')) return badgePath;
-  const baseUrl = SECURITY_CONFIG.API_URL.replace(/\/$/, '');
-  return `${baseUrl}${badgePath.startsWith('/') ? '' : '/'}${badgePath}`;
-};
+// Shared resolver (handles legacy absolute-filesystem badge rows too).
+const getBadgeUrl = (badgePath) => resolveBadgeUrl(badgePath);
 
 function SchoolBadge({ badge, name, size = 36 }) {
   const [failed, setFailed] = useState(false);

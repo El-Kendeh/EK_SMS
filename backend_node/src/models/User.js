@@ -21,6 +21,11 @@ const User = sequelize.define(
     last_name: { type: DataTypes.STRING(191), allowNull: true },
     phone: { type: DataTypes.STRING(20), allowNull: true },
     is_active: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
+    // Real TOTP 2FA (SA-46). Secret is base32; recovery codes stored as a JSON
+    // array of sha256 hashes (burned on use). See services/twoFactor.js.
+    two_factor_enabled: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
+    two_factor_secret: { type: DataTypes.STRING(64), allowNull: true },
+    two_factor_recovery: { type: DataTypes.TEXT, allowNull: true },
     role_id: {
       type: DataTypes.INTEGER,
       allowNull: false,

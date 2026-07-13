@@ -396,12 +396,12 @@ function UserProfile({ user, onBack, onNavigate, showToast }) {
 
         {!twoFA && (
           <button
-            onClick={() => showToast && showToast("2FA enrollment isn't available yet.")}
-            title="2FA enrollment is not implemented yet"
+            onClick={() => showToast && showToast('2FA is self-service — each user enrols their own authenticator from their Settings/Profile.')}
+            title="TOTP enrolment needs the user's own device; it can't be done on their behalf"
             style={{ flex: '1 1 140px', padding: '11px 16px', borderRadius: 10, cursor: 'pointer', background: 'var(--sa-card-bg2)', color: 'var(--sa-text-3)', fontWeight: 700, fontSize: '0.875rem', fontFamily: 'var(--sa-font)', border: '1px solid var(--sa-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
           >
             <span style={{ width: 16, height: 16 }}><IcKey /></span>
-            Enable 2FA (soon)
+            2FA: Self-Service
           </button>
         )}
 
@@ -612,15 +612,15 @@ export default function SAUsers({ onNavigate }) {
         </button>
       </div>
 
-      {/* 2FA status banner — enrollment isn't implemented yet, so no account is
-          enrolled; a neutral notice, not a red "all users failed compliance" alarm. */}
+      {/* 2FA status banner — enrolment is live (SA-46) and self-service; the
+          per-user badges below reflect the real two_factor_enabled column. */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 10, marginBottom: 16,
-        background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)',
+        background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.25)',
       }}>
-        <span style={{ color: 'var(--sa-amber)', flexShrink: 0 }}><IcKey /></span>
+        <span style={{ color: 'var(--sa-accent)', flexShrink: 0 }}><IcKey /></span>
         <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--sa-text-2)', flex: 1 }}>
-          Two-factor authentication is <strong>not yet available</strong> — no accounts are enrolled. 2FA enrollment is planned.
+          Two-factor authentication is <strong>self-service</strong> — users enrol an authenticator app from their own Settings/Profile. Badges below show real enrolment status.
         </p>
       </div>
 

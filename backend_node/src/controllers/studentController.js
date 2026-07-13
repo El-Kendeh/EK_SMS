@@ -15,6 +15,7 @@ const ForensicEvent = require('../models/ForensicEvent');
 const GradeEvent = require('../models/GradeEvent');
 const { mapGradeEvents } = require('../utils/gradeHistory');
 const SecurityAuditLog = require('../models/SecurityAuditLog');
+const twoFactorService = require('../services/twoFactor');
 const Fee = require('../models/Fee');
 const Payment = require('../models/Payment');
 const FeeCategory = require('../models/FeeCategory');
@@ -1183,18 +1184,29 @@ async function revokeDevice(req, res) {
   }
 }
 
+/* Real TOTP 2FA (SA-46) via services/twoFactor. GET (re)begins enrolment
+   whenever 2FA isn't enabled yet — a fresh secret/QR/recovery set each open
+   is safe because nothing is enforced until the first code verifies. */
 async function get2FASetup(req, res) {
   try {
     const student = await getStudentFromUser(req);
     if (!student) return res.status(404).json(errorResponse('Student not found'));
 
     const user = await User.findByPk(student.user_id);
+    if (!user) return res.status(404).json(errorResponse('User not found'));
 
+    if (user.two_factor_enabled) {
+      return res.json(successResponse({ enabled: true, setup_required: false }));
+    }
+
+    const enrol = await twoFactorService.beginEnrolment(user);
     return res.json(successResponse({
-      enabled: user?.two_factor_enabled || false,
-      setup_required: !user?.two_factor_enabled,
-      qr_code: '',
-      setup_uri: '',
+      enabled: false,
+      setup_required: true,
+      qr_code: enrol.qrDataUrl,
+      setup_uri: enrol.otpauth,
+      manual_key: enrol.secret,
+      recovery_codes: enrol.recoveryCodes,
     }));
   } catch (err) {
     console.error('get2FASetup Error:', err);
@@ -1202,34 +1214,38 @@ async function get2FASetup(req, res) {
   }
 }
 
+/* POST handles BOTH actions the profile modal sends ({action:'enable',
+   otp_code} / {action:'disable'}) — the old handler ignored `action` and
+   enabled on every call, so "Disable 2FA" silently re-enabled it. */
 async function enable2FA(req, res) {
   try {
     const student = await getStudentFromUser(req);
     if (!student) return res.status(404).json(errorResponse('Student not found'));
 
     const user = await User.findByPk(student.user_id);
-    await user.update({ two_factor_enabled: true });
+    if (!user) return res.status(404).json(errorResponse('User not found'));
 
-    return res.json(successResponse({}, '2FA enabled'));
+    const action = String(req.body.action || 'enable').toLowerCase();
+    if (action === 'disable') {
+      await twoFactorService.disable(user);
+      return res.json(successResponse({ enabled: false }, '2FA disabled'));
+    }
+
+    const result = await twoFactorService.verifyAndEnable(user, req.body.otp_code ?? req.body.code);
+    if (!result.ok) {
+      return res.status(400).json(errorResponse(result.reason || 'Invalid verification code'));
+    }
+    return res.json(successResponse({ enabled: true }, '2FA enabled'));
   } catch (err) {
     console.error('enable2FA Error:', err);
-    return res.status(500).json(errorResponse(`Failed to enable 2FA`));
+    return res.status(500).json(errorResponse(`Failed to update 2FA`));
   }
 }
 
+/* Kept for the route surface; delegates to the action-aware handler. */
 async function disable2FA(req, res) {
-  try {
-    const student = await getStudentFromUser(req);
-    if (!student) return res.status(404).json(errorResponse('Student not found'));
-
-    const user = await User.findByPk(student.user_id);
-    await user.update({ two_factor_enabled: false });
-
-    return res.json(successResponse({}, '2FA disabled'));
-  } catch (err) {
-    console.error('disable2FA Error:', err);
-    return res.status(500).json(errorResponse(`Failed to disable 2FA`));
-  }
+  req.body = { ...req.body, action: 'disable' };
+  return enable2FA(req, res);
 }
 
 /* Report cards ride the SAME receipt/hash/PDF machinery as the parent portal

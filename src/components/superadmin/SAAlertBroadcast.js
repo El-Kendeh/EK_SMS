@@ -146,7 +146,7 @@ function ComposeAlert({ onBack, onSent }) {
   const [target,   setTarget]   = useState('All Schools');
   const [body,     setBody]     = useState('');
   const [sending,  setSending]  = useState(false);
-  const [sent,     setSent]     = useState(false);
+  const [sent,     setSent]     = useState(null); // { delivered, recipients } after success
 
   const canSend = title.trim().length > 0 && body.trim().length > 0;
 
@@ -155,9 +155,9 @@ function ComposeAlert({ onBack, onSent }) {
     try {
       const res = await ApiClient.post('/api/broadcast-alerts/', { title, message: body, severity, audience: target });
       if (!res?.success) throw new Error(res?.message || 'Broadcast failed');
-      setSent(true);
+      setSent({ delivered: res.delivered ?? 0, recipients: res.recipients || '' });
       if (onSent) onSent();
-      setTimeout(onBack, 1200);
+      setTimeout(onBack, 1800);
     } catch (err) {
       console.error('Failed to send alert', err);
       setSending(false);
@@ -167,8 +167,14 @@ function ComposeAlert({ onBack, onSent }) {
   if (sent) return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 280, gap: 16, textAlign: 'center' }}>
       <div className="sa-stat-icon sa-stat-icon--green" style={{ width: 56, height: 56 }}><IcCheck /></div>
-      <p style={{ fontWeight: 700, fontSize: '1.125rem', color: 'var(--sa-text)', margin: 0 }}>Announcement Recorded</p>
-      <p style={{ fontSize: '0.8125rem', color: 'var(--sa-text-2)', margin: 0 }}>Saved to the broadcast log. Returning to Broadcast Center…</p>
+      <p style={{ fontWeight: 700, fontSize: '1.125rem', color: 'var(--sa-text)', margin: 0 }}>
+        {sent.delivered > 0 ? 'Announcement Delivered' : 'Announcement Recorded'}
+      </p>
+      <p style={{ fontSize: '0.8125rem', color: 'var(--sa-text-2)', margin: 0 }}>
+        {sent.delivered > 0
+          ? `Sent as in-app notifications to ${sent.delivered} ${sent.recipients}. Returning to Broadcast Center…`
+          : 'Saved to the broadcast log — no matching recipients. Returning to Broadcast Center…'}
+      </p>
     </div>
   );
 

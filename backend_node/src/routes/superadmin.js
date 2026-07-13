@@ -85,6 +85,7 @@ const teacherStorage = multer.diskStorage({
 const teacherUpload = multer({ storage: teacherStorage, limits: { fileSize: 5 * 1024 * 1024 } });
 
 /* Public reference data endpoints (no auth required — used by registration form & other public pages) */
+router.get('/branding/', data.getPlatformBranding); // SA-78: favicon/logo for the app shell (login page included)
 router.get('/institution-types/', data.getInstitutionTypes);
 router.get('/countries/', data.getCountries);
 router.get('/regions/', data.getRegions);
@@ -134,6 +135,8 @@ sa.post('/sa/branding/', brandingUpload.single('file'), data.postSaBranding);
 sa.get('/sa/lockdown/', data.getSaLockdown);
 sa.post('/sa/lockdown/', data.postSaLockdown);
 sa.post('/sa/backup/manual/', data.postSaBackupManual);
+sa.get('/sa/2fa/', data.getSa2FA);   // SA-46: begin/report enrolment
+sa.post('/sa/2fa/', data.postSa2FA); // SA-46: verify+enable / disable
 sa.get('/sa/custom-roles/', data.getSaCustomRoles);
 sa.post('/sa/custom-roles/', data.postSaCustomRoles);
 sa.get('/sa/export/', data.getSaExport);

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 
 /* ---- Icons ---- */
 const IcBack    = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>;
@@ -71,8 +71,9 @@ function ActorCard({ role, actor, accentColor, isExternal }) {
    Main: Grade Audit Detail
    ================================================================ */
 export default function SAGradeAuditDetail({ request, onBack }) {
-  const [flagged,    setFlagged]    = useState(false);
-  const [validated,  setValidated]  = useState(false);
+  // SA-12: actions are preview-disabled, so these never change.
+  const flagged = false;
+  const validated = false;
 
   if (!request) {
     return (
@@ -309,12 +310,14 @@ export default function SAGradeAuditDetail({ request, onBack }) {
         )}
       </div>
 
-      {/* ── Action Buttons ── */}
+      {/* ── Action Buttons — disabled until a real audit-action endpoint
+             exists (SA-12): a clickable action that persists nothing would
+             mislead the reviewer. The banner above explains the preview. ── */}
       <div style={{ display: 'flex', gap: 12, marginTop: 28, flexWrap: 'wrap' }}>
         <button
           className="sa-btn sa-btn--ghost"
-          disabled={flagged}
-          onClick={() => setFlagged(true)}
+          disabled
+          title="Preview — flagging is not persisted yet"
           style={{
             flex: 1, minWidth: 140, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
             padding: '13px 20px', borderRadius: 12, fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer',
@@ -329,8 +332,8 @@ export default function SAGradeAuditDetail({ request, onBack }) {
         </button>
         <button
           className="sa-btn sa-btn--primary"
-          disabled={validated || isAnomaly}
-          onClick={() => setValidated(true)}
+          disabled
+          title="Preview — validation is not persisted yet"
           style={{
             flex: 1, minWidth: 140, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
             padding: '13px 20px', borderRadius: 12, fontWeight: 700, fontSize: '0.875rem', cursor: isAnomaly ? 'not-allowed' : 'pointer',
@@ -340,7 +343,6 @@ export default function SAGradeAuditDetail({ request, onBack }) {
             transition: 'all 150ms',
           }}
           aria-label={isAnomaly ? 'Cannot validate — anomaly detected' : 'Validate this grade modification'}
-          title={isAnomaly ? 'Cannot validate a record with hash mismatch' : ''}
         >
           <span style={{ width: 18, height: 18, display: 'flex' }}><IcCheck /></span>
           {validated ? 'Validated' : isAnomaly ? 'Cannot Validate' : 'Validate Record'}

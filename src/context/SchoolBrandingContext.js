@@ -27,6 +27,11 @@ const SCHOOL_ROLES = ['school_admin', 'principal', 'bursar', 'teacher', 'student
 export function resolveBadgeUrl(badge) {
   if (!badge) return '';
   if (/^(https?:|data:|blob:)/.test(badge)) return badge;
+  // Legacy rows stored an ABSOLUTE filesystem path (C:\...\uploads\badges\x) —
+  // rendering that verbatim produced a CSP-blocked garbage URL. Serve by basename.
+  if (/[A-Za-z]:[\\/]/.test(badge)) {
+    return `${MEDIA_BASE}/uploads/badges/${badge.split(/[\\/]/).pop()}`;
+  }
   return `${MEDIA_BASE}${badge.startsWith('/') ? '' : '/'}${badge}`;
 }
 

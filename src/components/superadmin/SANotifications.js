@@ -243,13 +243,41 @@ export default function SANotifications({ onNavigate, onUnreadChange, schools = 
   const [notifications, setNotifications] = useState([]);
   const [filter, setFilter]               = useState('all');   // all | unread | application | security | grade | system
 
+  /* SA-38: read/dismiss state survives reloads via a per-user local store
+     (notifications are DERIVED client-side — there is no server row to PATCH,
+     so per-user localStorage is the honest persistence layer, mirroring
+     SAProfile's per-user key). ponytail: move to a receipts table if these
+     ever become server rows. */
+  const storeKey = useMemo(() => {
+    try { return `sa_notif_state_${JSON.parse(localStorage.getItem('user') || '{}').id || 'anon'}`; }
+    catch { return 'sa_notif_state_anon'; }
+  }, []);
+  const readStore = () => {
+    try { return JSON.parse(localStorage.getItem(storeKey) || '{}'); } catch { return {}; }
+  };
+  const writeStore = (patch) => {
+    try {
+      const cur = readStore();
+      localStorage.setItem(storeKey, JSON.stringify({ ...cur, ...patch }));
+    } catch { /* storage unavailable — session-only state */ }
+  };
+
   /* Sync when derived data changes (e.g. schools loaded after mount).
-     Preserve any read-state the user set during this session. */
+     Preserve read state from this session AND the per-user store; drop
+     anything the user dismissed. */
   useEffect(() => {
     setNotifications(prev => {
-      const readSet = new Set(prev.filter(n => n.read).map(n => n.id));
-      return derived.map(n => readSet.has(n.id) ? { ...n, read: true } : n);
+      const stored = readStore();
+      const readSet = new Set([
+        ...prev.filter(n => n.read).map(n => n.id),
+        ...(stored.read || []),
+      ]);
+      const dismissed = new Set(stored.dismissed || []);
+      return derived
+        .filter(n => !dismissed.has(n.id))
+        .map(n => readSet.has(n.id) ? { ...n, read: true } : n);
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [derived]);
 
   /* Report initial unread count once notifications load */
@@ -265,12 +293,16 @@ export default function SANotifications({ onNavigate, onUnreadChange, schools = 
     setNotifications(prev => {
       const next = prev.map(n => n.id === id ? { ...n, read: true } : n);
       onUnreadChange && onUnreadChange(next.filter(n => !n.read).length);
+      writeStore({ read: next.filter(n => n.read).map(n => n.id) });
       return next;
     });
   };
 
   const markAllRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    setNotifications(prev => {
+      writeStore({ read: prev.map(n => n.id) });
+      return prev.map(n => ({ ...n, read: true }));
+    });
     onUnreadChange && onUnreadChange(0);
   };
 
@@ -278,6 +310,7 @@ export default function SANotifications({ onNavigate, onUnreadChange, schools = 
     setNotifications(prev => {
       const next = prev.filter(n => n.id !== id);
       onUnreadChange && onUnreadChange(next.filter(n => !n.read).length);
+      writeStore({ dismissed: [...(readStore().dismissed || []), id] });
       return next;
     });
   };
