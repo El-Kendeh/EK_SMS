@@ -200,6 +200,12 @@ async function getTeacherStudents(req, res) {
     const { class_id } = req.query;
     if (!class_id) return res.status(400).json(errorResponse('class_id is required'));
 
+    // Ownership: a teacher may only read the roster of a class they own (same guard
+    // the attendance handlers use) — school_id scoping alone let any teacher read
+    // any class in their school.
+    const ownsClass = await Class.findOne({ where: { id: class_id, class_teacher_id: teacher.id }, attributes: ['id'] });
+    if (!ownsClass) return res.status(403).json(errorResponse('You are not assigned to this class'));
+
     const students = await Student.findAll({
       where: { classroom_id: class_id, school_id: teacher.school_id, status: 'active' },
       include: [{ model: User, as: 'user', attributes: ['id', 'first_name', 'last_name', 'email'] }],
@@ -233,6 +239,10 @@ async function getTeacherGradebook(req, res) {
     if (!class_id) {
       return res.status(400).json(errorResponse('class_id is required'));
     }
+
+    // Ownership: only the assigned class teacher may read this class's gradebook.
+    const ownsClass = await Class.findOne({ where: { id: class_id, class_teacher_id: teacher.id }, attributes: ['id'] });
+    if (!ownsClass) return res.status(403).json(errorResponse('You are not assigned to this class'));
 
     const students = await Student.findAll({
       where: { classroom_id: class_id, school_id: teacher.school_id, status: 'active' },
@@ -287,6 +297,20 @@ async function saveGradeDraft(req, res) {
     const subjectId = req.body.subject_id || req.body.subjectId || null;
     const termId = req.body.term_id || req.body.termId || null;
     if (!studentId || !field) return res.status(400).json(errorResponse('studentId and field are required'));
+
+    // Ownership: resolve the student's class and confirm this teacher owns it, so a
+    // teacher cannot write grade drafts into a class that isn't theirs (school_id
+    // scoping alone did not prevent this).
+    const targetStudent = await Student.findOne({
+      where: { id: studentId, school_id: teacher.school_id },
+      attributes: ['id', 'classroom_id'],
+    });
+    if (!targetStudent) return res.status(404).json(errorResponse('Student not found'));
+    const ownsGradeClass = await Class.findOne({
+      where: { id: classId || targetStudent.classroom_id, class_teacher_id: teacher.id },
+      attributes: ['id'],
+    });
+    if (!ownsGradeClass) return res.status(403).json(errorResponse('You are not assigned to this class'));
 
     // The grade table has ca/midterm/final/total — there is no `score` column, so the
     // single-score entry field maps to `total` (audit #24).

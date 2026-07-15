@@ -1699,6 +1699,11 @@ async function setGoal(req, res) {
     if (id) {
       goal = await Goal.findByPk(id);
       if (!goal) return res.status(404).json(errorResponse('Goal not found'));
+      // Ownership guard: a goal id from another student (even another school) must
+      // not be updatable through this student's token.
+      if (goal.student_id !== student.id) {
+        return res.status(403).json(errorResponse('Not authorized'));
+      }
       await goal.update({ title, description, target_date, progress_pct });
     } else {
       goal = await Goal.create({
@@ -2590,12 +2595,9 @@ async function downloadReceipt(req, res) {
     const student = await getStudentFromUser(req);
     if (!student) return res.status(404).json(errorResponse('Student not found'));
 
-    const { payment_id } = req.params;
+    const { id: payment_id } = req.params;
     const payment = await Payment.findOne({
       where: { id: payment_id, student_id: student.id },
-      include: [
-        { model: FeeCategory, attributes: ['id', 'name'] },
-      ],
     });
 
     if (!payment) return res.status(404).json(errorResponse('Receipt not found'));

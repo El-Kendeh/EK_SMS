@@ -9,6 +9,7 @@ import Hyperspeed from './Hyperspeed';
 import ClickSpark from './ClickSpark';
 import { LanguageProvider, useLang } from '../i18n/LanguageContext';
 import InstallPrompt from './InstallPrompt';
+import ErrorBoundary from './common/ErrorBoundary';
 
 // ============================================================
 // SVG ICON SYSTEM
@@ -519,14 +520,18 @@ function HeroSection({ onNavigate }) {
           overflow: 'hidden',
           opacity: 0.35,
         }}>
-          <Ballpit
-            count={80}
-            gravity={0.01}
-            friction={0.9975}
-            wallBounce={0.95}
-            followCursor={false}
-            colors={[0x0dccf2, 0x22D3A3, 0xA78BFA, 0x1B3FAF, 0x0dccf2]}
-          />
+          {/* WebGL may be unavailable/blocked (weak GPU, context loss) — degrade to no background
+              instead of letting the thrown effect error unmount the whole app */}
+          <ErrorBoundary fallback={() => null}>
+            <Ballpit
+              count={80}
+              gravity={0.01}
+              friction={0.9975}
+              wallBounce={0.95}
+              followCursor={false}
+              colors={[0x0dccf2, 0x22D3A3, 0xA78BFA, 0x1B3FAF, 0x0dccf2]}
+            />
+          </ErrorBoundary>
         </div>
       )}
 
@@ -2218,7 +2223,9 @@ function CTABanner({ onNavigate }) {
     <section className="lp-cta-banner">
       {/* Hyperspeed road animation background */}
       <div className="lp-cta__hyperspeed">
-      <Hyperspeed effectOptions={CTA_HYPERSPEED_OPTIONS} />
+      <ErrorBoundary fallback={() => null}>
+        <Hyperspeed effectOptions={CTA_HYPERSPEED_OPTIONS} />
+      </ErrorBoundary>
       </div>
       <div className="lp-cta-banner__glow" aria-hidden="true" />
       <div className="lp-container lp-cta-banner__inner">

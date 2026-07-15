@@ -191,7 +191,9 @@ function MainApp() {
         setCurrentPage('home');
       }
     } else {
-      setCurrentPage('home');
+      // Logged out: keep public pages (a direct load of /login or /register must
+      // not bounce to the landing page); only auth-gated pages fall back home.
+      setCurrentPage(prev => (prev === 'login' || prev === 'register') ? prev : 'home');
     }
 
     setIsLoading(false);
