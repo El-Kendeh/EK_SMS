@@ -26,6 +26,16 @@ export default function LessonPlans() {
     setOpenPlan(plan || { classId, subjectId: selectedClass?.subjectId, title: '', weekOf: '', objectives: [], homework: '', resources: [] });
   };
 
+  const remove = async () => {
+    if (!openPlan?.id) return;
+    if (!window.confirm('Delete this lesson plan? This cannot be undone.')) return;
+    try {
+      await teacherApi.deleteLessonPlan(openPlan.id);
+      setOpenPlan(null);
+      teacherApi.getLessonPlans({ classId }).then(setPlans);
+    } catch { setError('Could not delete plan.'); }
+  };
+
   const save = async () => {
     if (!openPlan) return;
     const payload = { ...openPlan };
@@ -94,6 +104,11 @@ export default function LessonPlans() {
               </label>
               <label><span>Homework</span><input value={openPlan.homework} onChange={(e) => setOpenPlan({ ...openPlan, homework: e.target.value })} placeholder="Page 84, exercises 1-10" /></label>
               <div className="lp-modal__actions">
+                {openPlan.id && (
+                  <button className="lp__btn lp__btn--danger" onClick={remove} style={{ marginRight: 'auto' }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>delete</span> Delete
+                  </button>
+                )}
                 <button className="lp__btn lp__btn--ghost" onClick={() => setOpenPlan(null)}>Cancel</button>
                 <button className="lp__btn lp__btn--primary" onClick={save}>Save plan</button>
               </div>

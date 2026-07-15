@@ -311,7 +311,32 @@ const SA_ROLE_LABEL = {
   student: 'Student',
 };
 
-function mapUserToSaRow(user, schoolName) {
+/* Real per-user login/security counts from sa_security_audit_log (actor =
+   username). Returns { [username]: { ok, fail, alerts } }. The SAUsers risk
+   tiles used to render hardcoded low/0 as if measured. */
+async function getLoginStatsByActor() {
+  const sequelizeDb = require('../config/db');
+  const [rows] = await sequelizeDb.query(`
+    SELECT actor,
+           SUM(type = 'login_success') AS ok,
+           SUM(type = 'login_failure') AS fail,
+           SUM(type IN ('threat_blocked', 'suspicious_activity', 'recovery_code_used')) AS alerts
+    FROM sa_security_audit_log
+    WHERE actor != ''
+    GROUP BY actor
+  `);
+  // alerts = threat-shaped events only (same taxonomy as getSecurityCounters,
+  // + recovery-code use). A raw severity filter counted routine operator work
+  // (impersonation, config_change) as "alerts" while ignoring brute-force fails
+  // — fails already have their own tile.
+  const byActor = {};
+  rows.forEach((r) => {
+    byActor[r.actor] = { ok: Number(r.ok) || 0, fail: Number(r.fail) || 0, alerts: Number(r.alerts) || 0 };
+  });
+  return byActor;
+}
+
+function mapUserToSaRow(user, schoolName, stats = null) {
   const name = [user.first_name, user.last_name].filter(Boolean).join(' ').trim() || user.username;
   // Use the user's REAL seeded role (User defaultScope eager-loads `role`) instead
   // of guessing from is_staff/is_superuser — which collapsed teachers/principals/
@@ -324,6 +349,11 @@ function mapUserToSaRow(user, schoolName) {
     else if (user.is_staff) role = 'Staff Admin';
     else role = 'User';
   }
+  // Measured counts (security audit log); coarse risk from real failed logins
+  // only — no invented scoring. null stats (single-user paths) => "not measured".
+  const s = stats ? stats[user.username] : null;
+  const fails = s ? s.fail : null;
+  const riskLevel = fails == null ? null : fails >= 15 ? 'high' : fails >= 5 ? 'medium' : 'low';
   return {
     id: user.id,
     name,
@@ -332,12 +362,12 @@ function mapUserToSaRow(user, schoolName) {
     school: schoolName || '—',
     role,
     status: user.is_active ? 'active' : 'inactive',
-    riskLevel: 'low',
-    riskScore: 0,
-    failedAttempts: 0,
-    successLogins: 0,
+    riskLevel,
+    riskScore: fails == null ? null : Math.min(100, fails * 4), // ponytail: fails-only proxy; real scoring model if ever needed
+    failedAttempts: fails,
+    successLogins: s ? s.ok : null,
     twoFAEnabled: !!user.two_factor_enabled, // real column since SA-46
-    alertsTriggered: 0,
+    alertsTriggered: s ? s.alerts : null,
     last_login: user.last_login || null,
     recentActivity: [],
     sessions: [],
@@ -356,7 +386,8 @@ async function getUsers(req, res) {
       const p = a.get({ plain: true });
       schoolByUserId[p.user_id] = p.school?.name || '';
     });
-    const rows = users.map((u) => mapUserToSaRow(u, schoolByUserId[u.id] || ''));
+    const loginStats = await getLoginStatsByActor().catch(() => ({}));
+    const rows = users.map((u) => mapUserToSaRow(u, schoolByUserId[u.id] || '', loginStats));
     return res.json(successResponse({ users: rows }));
   } catch (err) {
     console.error(err);
@@ -810,18 +841,12 @@ async function getSa2FA(req, res) {
     const user = await User.findByPk(req.user.id);
     if (!user) return res.status(404).json(errorResponse('User not found', 404));
 
-    if (user.two_factor_enabled) {
-      return res.json(successResponse({ enabled: true, setup_required: false }));
-    }
-
-    const enrol = await twoFactorService.beginEnrolment(user);
+    // Status only — GET must be side-effect free. It used to begin an enrolment
+    // (rotating the pending TOTP secret) on every read; enrolment now starts
+    // explicitly via POST {action:'begin'}.
     return res.json(successResponse({
-      enabled: false,
-      setup_required: true,
-      qr_code: enrol.qrDataUrl,
-      setup_uri: enrol.otpauth,
-      manual_key: enrol.secret,
-      recovery_codes: enrol.recoveryCodes,
+      enabled: !!user.two_factor_enabled,
+      setup_required: !user.two_factor_enabled,
     }));
   } catch (err) {
     console.error(err);
@@ -835,6 +860,21 @@ async function postSa2FA(req, res) {
     if (!user) return res.status(404).json(errorResponse('User not found', 404));
 
     const action = String(req.body.action || 'verify').toLowerCase();
+
+    if (action === 'begin') {
+      if (user.two_factor_enabled) {
+        return res.json(successResponse({ enabled: true, setup_required: false }));
+      }
+      const enrol = await twoFactorService.beginEnrolment(user);
+      return res.json(successResponse({
+        enabled: false,
+        setup_required: true,
+        qr_code: enrol.qrDataUrl,
+        setup_uri: enrol.otpauth,
+        manual_key: enrol.secret,
+        recovery_codes: enrol.recoveryCodes,
+      }));
+    }
     if (action === 'disable') {
       await twoFactorService.disable(user);
       await appendSecurityAuditLog({
@@ -3132,9 +3172,19 @@ async function assignClassStudents(req, res) {
       const available = Math.max(0, capacity - currentCount);
       return res.status(400).json(errorResponse(`Class capacity is ${capacity}. ${currentCount} already assigned. Only ${available} more slot(s) available, but ${newCount} provided.`));
     }
-    await Student.update({ classroom_id: classId }, { where: { id: student_ids, school_id: cls.school_id } });
-    await Student.update({ classroom_id: null }, { where: { school_id: cls.school_id, classroom_id: classId, id: { [Op.notIn]: student_ids } } });
-    return res.json(successResponse({ assigned_count: student_ids.length }, 'Students assigned'));
+    // Report the ids that actually belong to this school, not the input length —
+    // a bad/foreign id used to produce a false "N assigned" success toast. Counted
+    // explicitly: mysql2 reports CHANGED rows from update(), so re-assigning an
+    // already-assigned student would read as "not found".
+    const uniqueIds = [...new Set(student_ids.map(Number))];
+    const assigned = await Student.count({ where: { id: uniqueIds, school_id: cls.school_id } });
+    await Student.update({ classroom_id: classId }, { where: { id: uniqueIds, school_id: cls.school_id } });
+    await Student.update({ classroom_id: null }, { where: { school_id: cls.school_id, classroom_id: classId, id: { [Op.notIn]: uniqueIds } } });
+    const skipped = uniqueIds.length - assigned;
+    return res.json(successResponse(
+      { assigned_count: assigned, skipped_count: skipped },
+      skipped > 0 ? `${assigned} student(s) assigned; ${skipped} id(s) not found in this school` : 'Students assigned'
+    ));
   } catch (err) { console.error(err); return res.status(500).json(errorResponse('Server error')); }
 }
 async function getClassAssignedSubjects(req, res) {

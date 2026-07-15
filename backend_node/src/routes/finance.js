@@ -6,7 +6,7 @@ const requireRole = require('../middleware/requireRole');
 const requireActiveAccount = require('../middleware/requireActiveAccount');
 
 const {
-  getOverview, listGradeApprovals, reviewGradeChange,
+  getOverview,
   listReportCards, publishReportCard, commentReportCard,
   getFinanceSnapshot, getSchoolCommandDashboard, getClassPerformance,
   getTeacherInsights, getActivityFeed, getSyllabusProgress,
@@ -17,6 +17,12 @@ const {
   getReceipt, getCollectionAnalytics, getCashFlow,
   listBudgets, upsertBudget, deleteBudget,
 } = require('../controllers/financeController');
+
+// Grade approval MUST go through the audited principal handler (writes the
+// tamper-evident GradeEvent chain in the same transaction). financeController
+// used to carry an unaudited duplicate — that silently broke the grade-integrity
+// guarantee when approvals came through /api/finance/.
+const { listGradeApprovals, reviewGradeChange } = require('../controllers/principalController');
 
 // Baseline: who may reach the finance suite at all. Finance pages are used only by
 // the bursar, school leadership, and superadmin (via impersonation/scope); students,

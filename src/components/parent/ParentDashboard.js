@@ -19,6 +19,7 @@ import ParentBehavior from './ParentBehavior';
 import ParentFees from './ParentFees';
 
 import ParentMessages from './ParentMessages';
+import ParentAnnouncements from './ParentAnnouncements';
 import ParentVerification from './ParentVerification';
 import ParentTimetable from './ParentTimetable';
 import ParentTeacherConferences from './ParentTeacherConferences';
@@ -57,6 +58,7 @@ const SECTION_PATHS = {
   conferences:    '/parent/conferences',
   wellbeing:      '/parent/wellbeing',
   'safe-report':  '/parent/safe-report',
+  announcements:  '/parent/announcements',
   compare:        '/parent/compare',
   'co-guardians': '/parent/co-guardians',
   pickup:         '/parent/pickup',
@@ -97,6 +99,7 @@ const NAV_GROUPS = [
   {
     label: 'Community',
     items: [
+      { key: 'announcements', icon: 'campaign',          label: 'Announcements' },
       { key: 'messages',      icon: 'forum',             label: 'Messages' },
       { key: 'conferences',   icon: 'co_present',        label: 'Conferences' },
       { key: 'wellbeing',     icon: 'favorite',          label: 'Wellbeing' },
@@ -169,6 +172,7 @@ function ParentInner({ onNavigate }) {
       case 'behavior':          return <ParentBehavior navigateTo={navigateTo} children={children} />;
       case 'fees':              return <ParentFees />;
       case 'verification':      return <ParentVerification />;
+      case 'announcements':     return <ParentAnnouncements />;
       case 'messages':          return <ParentMessages />;
       case 'conferences':       return <ParentTeacherConferences />;
       case 'wellbeing':         return <ParentWellbeing />;

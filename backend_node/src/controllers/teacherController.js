@@ -1844,6 +1844,23 @@ async function upsertLessonPlan(req, res) {
   }
 }
 
+async function deleteLessonPlan(req, res) {
+  try {
+    const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
+    if (!teacher) return res.status(404).json(errorResponse('Teacher profile not found'));
+
+    // Same ownership scope as upsert: only the authoring teacher's own plan.
+    const deleted = await LessonPlan.destroy({
+      where: { id: req.params.id, teacher_id: teacher.id, school_id: teacher.school_id },
+    });
+    if (!deleted) return res.status(404).json(errorResponse('Lesson plan not found'));
+    return res.json(successResponse({}, 'Lesson plan deleted'));
+  } catch (err) {
+    console.error('deleteLessonPlan Error:', err);
+    return res.status(500).json(errorResponse('Failed to delete lesson plan'));
+  }
+}
+
 async function getFeedbackTemplates(req, res) {
   try {
     const teacher = await Teacher.findOne({ where: { user_id: req.user.id } });
@@ -3372,6 +3389,7 @@ module.exports = {
   listSubstituteTokens,
   getLessonPlans,
   upsertLessonPlan,
+  deleteLessonPlan,
   getFeedbackTemplates,
   addFeedbackTemplate,
   recommendResource,

@@ -63,8 +63,11 @@ router.put('/principal-users/:id/', requireRole(PRINCIPAL_WRITE), updatePrincipa
 // router-wide PRINCIPAL_ACCESS gate that includes school_admin.
 router.get('/grade-audit/', requireRole(PRINCIPAL_ONLY_READ), getGradeAudit);
 router.get('/academics-analytics/', requireRole(PRINCIPAL_ONLY_READ), getAcademicsAnalytics);
-router.get('/announcements/', requireRole(PRINCIPAL_ONLY_READ), listAnnouncements);
-router.post('/announcements/', requireRole(PRINCIPAL_WRITE), postAnnouncement);
+// Announcements: school_admin sends school notices too (permissions.js
+// 'principal-announcements' now includes school_admin — same audited fan-out).
+const ANNOUNCE_ROLES = ['superadmin', 'principal', 'school_admin'];
+router.get('/announcements/', requireRole(ANNOUNCE_ROLES), listAnnouncements);
+router.post('/announcements/', requireRole(ANNOUNCE_ROLES), postAnnouncement);
 router.get('/at-risk/', requireRole(PRINCIPAL_ONLY_READ), getAtRisk);
 // P1 oversight surfaces (leadership reads).
 router.get('/discipline/', requireRole(PRINCIPAL_ONLY_READ), getDisciplineIncidents);

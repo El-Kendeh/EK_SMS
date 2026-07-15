@@ -929,19 +929,28 @@ async function assignStudentsToClass(req, res) {
       return res.status(400).json(errorResponse('student_ids must be an array'));
     }
 
-    // Update all specified students to this class
+    // Report the ids that actually belong to this school, not the input length —
+    // a bad/foreign id used to produce a false "N assigned" success toast.
+    // Counted explicitly (not from update's return): mysql2 reports CHANGED rows,
+    // so re-assigning an already-assigned student would read as "not found".
+    const uniqueIds = [...new Set(student_ids.map(Number))];
+    const assigned = await Student.count({ where: { id: uniqueIds, school_id: school.id } });
     await Student.update(
       { classroom_id: cls.id },
-      { where: { id: student_ids, school_id: school.id } }
+      { where: { id: uniqueIds, school_id: school.id } }
     );
 
     // Unassign students not in the list (optional: only if they were previously in this class)
     await Student.update(
       { classroom_id: null },
-      { where: { school_id: school.id, classroom_id: cls.id, id: { [Op.notIn]: student_ids } } }
+      { where: { school_id: school.id, classroom_id: cls.id, id: { [Op.notIn]: uniqueIds } } }
     );
 
-    return res.json(successResponse({ assigned_count: student_ids.length }, 'Students assigned to class'));
+    const skipped = uniqueIds.length - assigned;
+    return res.json(successResponse(
+      { assigned_count: assigned, skipped_count: skipped },
+      skipped > 0 ? `${assigned} student(s) assigned; ${skipped} id(s) not found in this school` : 'Students assigned to class'
+    ));
   } catch (err) {
     console.error('assignStudentsToClass Error:', err);
     return res.status(500).json(errorResponse(`Failed to assign students`));

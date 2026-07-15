@@ -630,6 +630,12 @@ export const teacherApi = {
     const res = await fetch(`${API_BASE}${path}`, { method, headers: authHeaders(), body: JSON.stringify(plan) });
     return res.json();
   },
+  async deleteLessonPlan(id) {
+    const res = await fetch(`${API_BASE}/api/teacher/lesson-plans/${id}/`, {
+      method: 'DELETE', headers: authHeadersNoContent(),
+    });
+    return res.json();
+  },
 
   // ── Bulk feedback templates ────────────────────────────────────────
   async getFeedbackTemplates() {

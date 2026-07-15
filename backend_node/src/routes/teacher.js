@@ -63,6 +63,7 @@ const {
   listSubstituteTokens,
   getLessonPlans,
   upsertLessonPlan,
+  deleteLessonPlan,
   getFeedbackTemplates,
   addFeedbackTemplate,
   recommendResource,
@@ -233,6 +234,7 @@ router.get('/substitute-token/', listSubstituteTokens);
 router.get('/lesson-plans/', getLessonPlans);
 router.post('/lesson-plans/', upsertLessonPlan);
 router.put('/lesson-plans/:id/', upsertLessonPlan);
+router.delete('/lesson-plans/:id/', deleteLessonPlan);
 
 // Feedback Templates
 router.get('/feedback-templates/', getFeedbackTemplates);

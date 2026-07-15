@@ -76,7 +76,8 @@ export const PAGE_PERMISSIONS = {
      key below (that one is the platform-wide SAGradeAuditDetail). */
   'principal-grade-audit':   [ROLES.PRINCIPAL, ROLES.SUPERADMIN],
   'principal-analytics':     [ROLES.PRINCIPAL, ROLES.SUPERADMIN],
-  'principal-announcements': [ROLES.PRINCIPAL, ROLES.SUPERADMIN],
+  /* School admins send announcements too (same audited backend fan-out). */
+  'principal-announcements': [ROLES.PRINCIPAL, ROLES.SCHOOL_ADMIN, ROLES.SUPERADMIN],
   'principal-at-risk':       [ROLES.PRINCIPAL, ROLES.SUPERADMIN],
   /* P1 oversight pages (2026-07-13 production pass) */
   'principal-discipline':    [ROLES.PRINCIPAL, ROLES.SUPERADMIN],
@@ -171,6 +172,9 @@ export const PAGE_PERMISSIONS = {
   'teacher-assignments':  [ROLES.SCHOOL_ADMIN],
   'exam-officers':        [ROLES.SCHOOL_ADMIN],
   'ai-capture':           [ROLES.SCHOOL_ADMIN],
+  /* Editable school profile + badge/brand colours (POST /api/school/info/ is
+     already gated to school_admin/superadmin by schoolWriteGuard). */
+  'school-settings':      [ROLES.SCHOOL_ADMIN],
 
   /* ── Superadmin only: system ── */
   'security-logs':  [ROLES.SUPERADMIN],

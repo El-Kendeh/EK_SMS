@@ -31,7 +31,20 @@ async function resolveSchoolId(req) {
     return s?.school_id ?? null;
   }
   if (role === 'parent') {
-    // Parents have no school_id — resolve via a linked student.
+    // Parents have no school_id — resolve via a linked child. Standard-registered
+    // parents link through Student.user_id or an active CoGuardian row (same
+    // linkage parentController uses); the Parent/StudentParent tables are legacy
+    // and empty for them, which used to hide every meeting. Legacy kept as fallback.
+    const own = await Student.findOne({ where: { user_id: req.user.id, status: 'active' }, attributes: ['school_id'] });
+    if (own) return own.school_id;
+    const CoGuardian = require('../models/CoGuardian');
+    const cg = await CoGuardian.findOne({ where: { guardian_user_id: req.user.id, status: 'active' }, attributes: ['student_id'] });
+    if (cg) {
+      // status:'active' matches parentController.getParentStudentIds — a withdrawn
+      // child must not keep leaking that school's meeting links to the guardian.
+      const child = await Student.findOne({ where: { id: cg.student_id, status: 'active' }, attributes: ['school_id'] });
+      if (child) return child.school_id;
+    }
     const p = await Parent.findOne({ where: { user_id: req.user.id }, attributes: ['id'] });
     if (!p) return null;
     const link = await StudentParent.findOne({ where: { parent_id: p.id }, attributes: ['student_id'] });

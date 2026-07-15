@@ -28,6 +28,9 @@ const RISK_CFG = {
   low: { color: 'var(--sa-green)', bg: 'var(--sa-green-dim)', label: 'Low' },
   medium: { color: 'var(--sa-amber)', bg: 'var(--sa-amber-dim)', label: 'Medium' },
   high: { color: 'var(--sa-red)', bg: 'var(--sa-red-dim)', label: 'High' },
+  /* riskLevel null = backend had no audit-log data for this user — say so
+     instead of a reassuring green "Low". */
+  unknown: { color: 'var(--sa-text-3)', bg: 'var(--sa-card-bg2)', label: 'Not measured' },
 };
 
 /* The fabricated 30-day "Risk Trend" sparkline (a pseudo-random walk seeded from
@@ -238,12 +241,12 @@ function CreateUserModal({ onClose, onCreated }) {
    User Profile view
    ============================================================ */
 function UserProfile({ user, onBack, onNavigate, showToast }) {
-  const risk = RISK_CFG[user.riskLevel] || RISK_CFG.low;
+  const risk = RISK_CFG[user.riskLevel] || RISK_CFG.unknown;
   const suspended = user.status === 'suspended';   // reflects backend status (read-only; suspend toggle not implemented yet)
   const [resetSent, setResetSent] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [sessions, setSessions] = useState(user.sessions);
-  const twoFA = user.twoFAEnabled;                  // backend currently always reports false (2FA enrollment not implemented)
+  const twoFA = user.twoFAEnabled;                  // real column (SA-46)
 
   const initials = (user.name || user.username || 'U').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
   const roleColor = ROLE_COLORS[user.role] || '#64748B';
@@ -343,16 +346,17 @@ function UserProfile({ user, onBack, onNavigate, showToast }) {
               <span style={{ fontWeight: 700, fontSize: '0.9375rem' }}>Security Risk Profile</span>
             </div>
             <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '4px 12px', borderRadius: 8, background: risk.bg, color: risk.color }}>
-              Risk Level: {risk.label}
+              {user.riskLevel ? `Risk Level: ${risk.label}` : 'Not measured'}
             </span>
           </div>
           <div className="sa-user-stat-grid">
             {/* Trend chips removed — the +5%/-10%/0% deltas were hardcoded and the
                 underlying counts are backend-zero (no real time-series). */}
+            {/* Counts come from the security audit log; null = not measured. */}
             {[
-              { label: 'Successful Logins', value: user.successLogins, trendUp: null },
-              { label: 'Failed Attempts', value: user.failedAttempts, trendUp: null },
-              { label: 'Alerts Triggered', value: user.alertsTriggered, trendUp: null },
+              { label: 'Successful Logins', value: user.successLogins ?? '—', trendUp: null },
+              { label: 'Failed Attempts', value: user.failedAttempts ?? '—', trendUp: null },
+              { label: 'Alerts Triggered', value: user.alertsTriggered ?? '—', trendUp: null },
             ].map((stat, i) => (
               <div key={i} style={{ background: 'var(--sa-card-bg2)', borderRadius: 10, padding: '14px 16px', border: '1px solid var(--sa-border)' }}>
                 <p style={{ margin: '0 0 8px', fontSize: '0.72rem', color: 'var(--sa-text-2)', fontWeight: 500 }}>{stat.label}</p>
@@ -368,16 +372,16 @@ function UserProfile({ user, onBack, onNavigate, showToast }) {
               </div>
             ))}
           </div>
-          {/* Risk score bar. Risk scoring is not implemented (the backend returns 0
-              for every user), so it's labelled "not yet tracked"; the fabricated
-              pseudo-random 30-day "Risk Trend" sparkline was removed. */}
+          {/* Risk score bar — derived from real failed-login counts in the
+              security audit log; null = no data for this user ("not measured").
+              The fabricated pseudo-random 30-day "Risk Trend" sparkline stays removed. */}
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 500, marginBottom: 6 }}>
-              <span>Risk Assessment Score <span style={{ color: 'var(--sa-text-3)', fontWeight: 400 }}>· not yet tracked</span></span>
-              <span style={{ color: risk.color }}>{user.riskScore}/100</span>
+              <span>Risk Assessment Score <span style={{ color: 'var(--sa-text-3)', fontWeight: 400 }}>· {user.riskScore == null ? 'not measured' : 'based on failed logins'}</span></span>
+              <span style={{ color: risk.color }}>{user.riskScore == null ? '—' : `${user.riskScore}/100`}</span>
             </div>
             <div style={{ height: 6, width: '100%', background: 'var(--sa-border)', borderRadius: 999, overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${user.riskScore}%`, background: risk.color, borderRadius: 999, transition: 'width 0.5s ease' }} />
+              <div style={{ height: '100%', width: `${user.riskScore || 0}%`, background: risk.color, borderRadius: 999, transition: 'width 0.5s ease' }} />
             </div>
           </div>
         </div>
@@ -537,14 +541,17 @@ export default function SAUsers({ onNavigate }) {
       const data = await ApiClient.get('/api/users/');
       if (data.success) {
         // Enforce some structure for the UI
+        // null risk fields = "not measured" (backend only computes them from the
+        // security audit log) — keep them null so the UI says so instead of
+        // rendering a fake reassuring 0/low.
         const mapped = data.users.map(u => ({
           ...u,
-          riskLevel: u.riskLevel || 'low',
-          riskScore: u.riskScore || 0,
-          failedAttempts: u.failedAttempts || 0,
-          successLogins: u.successLogins || 0,
+          riskLevel: u.riskLevel ?? null,
+          riskScore: u.riskScore ?? null,
+          failedAttempts: u.failedAttempts ?? null,
+          successLogins: u.successLogins ?? null,
           twoFAEnabled: !!u.twoFAEnabled,
-          alertsTriggered: u.alertsTriggered || 0,
+          alertsTriggered: u.alertsTriggered ?? null,
           lastSeen: u.last_login ? new Date(u.last_login).toLocaleString() : 'Never',
           recentActivity: u.recentActivity || [],
           sessions: u.sessions || []
@@ -651,7 +658,7 @@ export default function SAUsers({ onNavigate }) {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {filtered.map(user => {
-            const risk = RISK_CFG[user.riskLevel] || RISK_CFG.low;
+            const risk = RISK_CFG[user.riskLevel] || RISK_CFG.unknown;
             const roleColor = ROLE_COLORS[user.role] || '#64748B';
             const initials = (user.name || user.username || 'U').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
             return (
@@ -696,7 +703,7 @@ export default function SAUsers({ onNavigate }) {
 
                 {/* Risk */}
                 <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '3px 10px', borderRadius: 999, background: risk.bg, color: risk.color, flexShrink: 0, whiteSpace: 'nowrap' }}>
-                  {risk.label} Risk
+                  {user.riskLevel ? `${risk.label} Risk` : risk.label}
                 </span>
 
                 {/* Last seen */}

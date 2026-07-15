@@ -81,6 +81,7 @@ const GradeApprovals     = lazy(() => import('../principal/GradeApprovals'));
 const ReportCardApproval = lazy(() => import('../principal/ReportCardApproval'));
 const PrincipalHome      = lazy(() => import('../principal/PrincipalHome'));
 const SchoolAdminHome    = lazy(() => import('../schooladmin/SchoolAdminHome'));
+const SchoolSettings     = lazy(() => import('../schooladmin/SchoolSettings'));
 const PrincipalUsers     = lazy(() => import('../principal/PrincipalUsers'));
 const SyllabusProgress   = lazy(() => import('../principal/SyllabusProgress'));
 const AttendanceReport   = lazy(() => import('../principal/AttendanceReport'));
@@ -531,10 +532,12 @@ export default function Dashboard({ onNavigate }) {
     finally { setIsLoading(false); }
   }, []);
 
-  const fetchMySchool = useCallback(async (schoolId) => {
+  const fetchMySchool = useCallback(async () => {
     try {
-      const data = await ApiClient.get(`/api/schools/${schoolId}/`);
-      if (data.success) setSchools([data.school]);
+      // /api/schools/:id/ never existed (404 on every school-scoped login) —
+      // /api/school/info/ returns the caller's own school, flat.
+      const data = await ApiClient.get('/api/school/info/');
+      if (data.success && data.id) setSchools([data]);
     } catch { /* silently ignore */ }
     finally { setIsLoading(false); }
   }, []);
@@ -555,7 +558,7 @@ export default function Dashboard({ onNavigate }) {
         // tenant roles don't fire a swallowed 403 or surface cross-school alerts.
         fetchGradeAlerts();
       } else if (parsed.school_id) {
-        fetchMySchool(parsed.school_id);
+        fetchMySchool();
       } else {
         setIsLoading(false);
       }
@@ -932,6 +935,8 @@ export default function Dashboard({ onNavigate }) {
     { key: 'exam-officers',       label: 'Exam Officers',       icon: <IcGen />, badge: 0, section: 'School Admin' },
     { key: 'finance-users',       label: 'Finance Users',       icon: <IcGen />, badge: 0, section: 'School Admin' },
     { key: 'ai-capture',          label: 'AI Capture',          icon: <IcGen />, badge: 0, section: 'School Admin' },
+    { key: 'principal-announcements', label: 'Announcements',   icon: <IcGen />, badge: 0, section: 'School Admin' },
+    { key: 'school-settings',     label: 'School Settings',     icon: <IcGen />, badge: 0, section: 'School Admin' },
 
     /* Virtual Meeting (enabled for school admins in permissions.js) */
     { key: 'vm-parents',  label: 'Parents',  icon: <IcGen />, badge: 0, section: 'Virtual Meeting' },
@@ -1571,6 +1576,7 @@ export default function Dashboard({ onNavigate }) {
           {activePage === 'principal-grade-audit'   && scoped(<PrincipalGradeAudit />,    'Pick a school to view its grade audit trail.')}
           {activePage === 'principal-analytics'     && scoped(<PrincipalAnalytics />,     'Pick a school to view its academics analytics.')}
           {activePage === 'principal-announcements' && scoped(<PrincipalAnnouncements />, 'Pick a school to manage its announcements.')}
+          {activePage === 'school-settings'          && <SchoolSettings />}
           {activePage === 'principal-at-risk'       && scoped(<PrincipalAtRisk />,        'Pick a school to view its at-risk students.')}
 
           {/* Principal P1 oversight pages (2026-07-13 production pass) */}

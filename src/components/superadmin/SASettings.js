@@ -310,10 +310,11 @@ function PasswordView({ onBack, onSubmit }) {
 
 /* ================================================================
    2FA Setup sub-view — real TOTP enrolment (SA-46).
-   GET /api/sa/2fa/ begins enrolment (QR + key + recovery codes);
-   POST {action:'verify', code} enables; POST {action:'disable'} disables.
-   Nothing is enforced until the first code verifies, so re-opening this
-   view before enabling simply issues a fresh secret.
+   GET /api/sa/2fa/ is a side-effect-free status read; POST {action:'begin'}
+   starts enrolment (QR + key + recovery codes); POST {action:'verify', code}
+   enables; POST {action:'disable'} disables. Nothing is enforced until the
+   first code verifies, so re-opening this view before enabling simply
+   issues a fresh secret.
    ================================================================ */
 function TwoFAView({ onBack, onEnabled, onDisabled }) {
   const otpRefs                         = useRef([]);
@@ -331,11 +332,15 @@ function TwoFAView({ onBack, onEnabled, onDisabled }) {
     let cancelled = false;
     (async () => {
       try {
-        const d = await ApiClient.get('/api/sa/2fa/');
+        const status = await ApiClient.get('/api/sa/2fa/');
         if (cancelled) return;
-        if (d?.enabled) {
+        if (status?.enabled) {
           setEnabled(true);
         } else {
+          // Opening the wizard is the explicit intent to enrol — begin here
+          // (a plain status read must never rotate the pending secret).
+          const d = await ApiClient.post('/api/sa/2fa/', { action: 'begin' });
+          if (cancelled) return;
           setQrCode(d?.qr_code || '');
           setTotpKey(d?.manual_key || '');
           setRecoveryCodes(Array.isArray(d?.recovery_codes) ? d.recovery_codes : []);
