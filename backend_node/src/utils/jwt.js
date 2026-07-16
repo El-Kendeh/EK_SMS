@@ -1,6 +1,15 @@
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your_super_secret_key_change_in_production';
+// In production, refuse to start on a public default signing key — a known
+// secret means anyone can forge a token for any user (incl. superadmin).
+// Dev/test may fall back to a fixed insecure secret so local work isn't blocked.
+const JWT_SECRET = process.env.JWT_SECRET || (() => {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('JWT_SECRET is not set. Refusing to start with a public default signing key.');
+  }
+  console.warn('⚠️  JWT_SECRET not set — using an insecure dev-only key. NEVER run production like this.');
+  return 'dev-only-insecure-secret-do-not-use-in-production';
+})();
 
 function generateToken(user, options = {}) {
   const { expiresIn = '24h', extraClaims = {} } = options;

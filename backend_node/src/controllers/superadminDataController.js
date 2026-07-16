@@ -981,18 +981,18 @@ async function postSaLockdown(req, res) {
 
 async function postSaBackupManual(req, res) {
   try {
+    // Produce a REAL dump (was a fake row: hardcoded ~2MB size, no data written).
+    const { runBackup } = require('../../scripts/backup');
+    const result = await runBackup();
     const now = new Date().toISOString();
-    const backupTimestamp = new Date(now).getTime();
-    const backupFilename = `eksms-backup-${backupTimestamp}.sql`;
-    const estimatedSizeBytes = 2048000; // ~2MB estimated backup size
-    
+
     const { parsed } = await loadSettings();
     parsed.last_backup_at = now;
     parsed.last_backup_meta = {
       manual: true,
       by: req.user.username,
-      filename: backupFilename,
-      size_bytes: estimatedSizeBytes,
+      filename: result.filename,
+      size_bytes: result.size_bytes,
     };
     await saveSettings(parsed);
     await appendSecurityAuditLog({
@@ -1000,16 +1000,16 @@ async function postSaBackupManual(req, res) {
       severity: 'low',
       actor: req.user.username,
       ip: clientIp(req),
-      action: `Manual backup created: ${backupFilename}`,
+      action: `Manual backup created: ${result.filename} (${result.size_bytes} bytes)`,
     });
     return res.json(successResponse({
       created_at: now,
-      filename: backupFilename,
-      size_bytes: estimatedSizeBytes,
-    }, 'Backup recorded successfully'));
+      filename: result.filename,
+      size_bytes: result.size_bytes,
+    }, 'Backup created successfully'));
   } catch (err) {
-    console.error(err);
-    return res.status(500).json(errorResponse('Internal server error', 500));
+    console.error('Manual backup failed:', err);
+    return res.status(500).json(errorResponse('Backup failed. Check the server logs.', 500));
   }
 }
 

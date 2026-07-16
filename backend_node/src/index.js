@@ -4,6 +4,8 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const cors = require('cors');
+const helmet = require('helmet');
+const morgan = require('morgan');
 const bodyParser = require('body-parser');
 const db = require('./config/db');
 require('./models');
@@ -50,7 +52,13 @@ if (process.env.RESEND_API_KEY) {
 const isAllowedOrigin = (origin) => {
   if (!origin) return true;
   if (allowedOrigins.includes(origin)) return true;
-  if (origin.includes('pruhsms.africa')) return true;
+  // Match the pruhsms.africa apex + its subdomains ONLY. The old
+  // origin.includes('pruhsms.africa') also matched attacker lookalikes like
+  // https://pruhsms.africa.evil.com — check the parsed hostname instead.
+  try {
+    const host = new URL(origin).hostname;
+    if (host === 'pruhsms.africa' || host.endsWith('.pruhsms.africa')) return true;
+  } catch { /* non-URL origin → not allowed */ }
   return false;
 };
 
@@ -72,6 +80,19 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
+
+// Security headers. CSP is disabled here — this is a JSON API and the SPA
+// (served from Vercel) owns its own CSP; a restrictive default would break
+// nothing useful. crossOriginResourcePolicy is relaxed so the frontend origin
+// can load badge/branding images served from /uploads.
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+}));
+
+// Request logging (morgan was installed but never wired). 'combined' (Apache
+// common log) in prod for log aggregators; concise 'dev' locally.
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
 
 
@@ -95,32 +116,6 @@ app.get('/', (req, res) => {
     version: '1.0.0',
     documentation: '/api/health'
   });
-});
-
-// DEBUG: DB Structure & Files (Temporary)
-app.get('/api/debug/db-structure/:table', async (req, res) => {
-  try {
-    const { table } = req.params;
-    const [results] = await db.query(`DESCRIBE ${table}`);
-
-    // Also list uploads dir for debugging
-    let files = [];
-    try {
-      files = fs.readdirSync(path.join(uploadsRoot, 'badges'));
-    } catch (e) {
-      files = [`Error reading uploads: ${e.message}`];
-    }
-
-    res.json({
-      table,
-      columns: results,
-      dirname: __dirname,
-      uploadsRoot,
-      badgeFiles: files.slice(0, 20)
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
 });
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
@@ -166,6 +161,20 @@ app.use((req, res) => {
     success: false,
     message: `Route ${req.originalUrl} not found on this server.`,
     status: 404
+  });
+});
+
+// Central error handler — catches anything routes forward via next(err) or a
+// sync throw, logs it, and returns generic JSON. Without this, Express's
+// default handler renders an HTML stack trace (info leak) on unexpected errors.
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  console.error(`[error] ${req.method} ${req.originalUrl}:`, err.message);
+  if (res.headersSent) return next(err);
+  res.status(err.status || 500).json({
+    success: false,
+    message: 'Internal server error',
+    status: err.status || 500,
   });
 });
 

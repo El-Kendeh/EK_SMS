@@ -35,11 +35,19 @@ const storage = multer.diskStorage({
     cb(null, badgeDir);
   },
   filename: (req, file, cb) => {
-    cb(null, `${Date.now()}-${file.originalname}`);
+    // Strip any path component + unsafe chars: file.originalname is attacker-
+    // controlled on the public /register/ endpoint, and a raw `../` here would
+    // let multer write outside badgeDir (path.join normalises `..`).
+    const safe = path.basename(file.originalname || 'file').replace(/[^a-zA-Z0-9._-]/g, '');
+    cb(null, `${Date.now()}-${safe || 'upload'}`);
   }
 });
-const upload = multer({ 
+const upload = multer({
   storage,
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype && file.mimetype.startsWith('image/')) return cb(null, true);
+    cb(new Error('Invalid file type. Please upload a valid image file.'), false);
+  },
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
 });
 

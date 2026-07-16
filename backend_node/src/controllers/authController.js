@@ -61,7 +61,6 @@ async function login(req, res) {
       include: [{ model: Role, as: 'role', required: false }],
     });
     if (!user) {
-      console.log(`[LOGIN DEBUG] User not found for identifier: ${identifier}`);
       await appendSecurityAuditLog({
         type: 'login_failure',
         severity: 'medium',
@@ -74,11 +73,8 @@ async function login(req, res) {
 
     let valid = false;
     valid = await bcrypt.compare(cleanPassword, user.password);
-    console.log(`[LOGIN DEBUG] Bcrypt check for ${user.username}: ${valid}`);
 
     if (!valid) {
-      console.log(`[LOGIN DEBUG] Password mismatch for user: ${user.username}`);
-      console.log(`[LOGIN DEBUG] Provided pass length: ${cleanPassword.length}, Hash starts with: ${user.password ? user.password.slice(0, 10) : 'missing'}`);
       await appendSecurityAuditLog({
         type: 'login_failure',
         severity: 'medium',

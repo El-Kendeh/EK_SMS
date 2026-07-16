@@ -6,6 +6,8 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "npx nodemon src/index.js",
+    "test": "node --test",
+    "backup": "node scripts/backup.js",
     "seed:superadmin": "node scripts/seedSuperAdmin.js",
     "seed:roles": "node scripts/seedRoles.js"
   },

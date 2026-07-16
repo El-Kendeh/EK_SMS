@@ -73,6 +73,9 @@ eksms/media/
 # to backend_node/uploads/; this /uploads/ is not source). Never commit.
 /uploads/
 
+# Database backups (contain full PII — never commit)
+backend_node/backups/
+
 # ── Debug & utility scripts (local dev only) ──────────────────────
 eksms/check_*.py
 eksms/test_migrate.py
