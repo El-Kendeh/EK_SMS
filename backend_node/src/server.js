@@ -12,7 +12,7 @@ if (process.env.RESEND_API_KEY) {
 }
 
 Promise.resolve(db.databaseReady)
-  .then(() => db.sync({ alter: process.env.NODE_ENV !== 'production' }))
+  .then(() => db.sync({ alter: !!process.env.DB_SYNC_ALTER }))
   .then(() => console.log('Database synchronized'))
   .catch(err => {
     console.error('Database sync failed:', err.message);

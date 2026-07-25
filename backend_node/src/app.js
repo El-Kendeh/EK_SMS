@@ -3,6 +3,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const cors = require('cors');
+const morgan = require('morgan');
 const bodyParser = require('body-parser');
 require('./models');
 
@@ -64,6 +65,10 @@ app.options('*', cors(corsOptions));
 
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+
+if (process.env.NODE_ENV !== 'test') {
+  app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+}
 
 const uploadsRoot = path.join(__dirname, '../../uploads');
 try {

@@ -7,7 +7,9 @@
     "start": "node src/index.js",
     "dev": "npx nodemon src/index.js",
     "seed:superadmin": "node scripts/seedSuperAdmin.js",
-    "seed:roles": "node scripts/seedRoles.js"
+    "seed:roles": "node scripts/seedRoles.js",
+    "migrate": "node scripts/run-migrations.js",
+    "test": "node --experimental-vm-modules node_modules/.bin/jest --forceExit --detectOpenHandles"
   },
   "author": "Princess Magbie",
   "license": "MIT",
@@ -33,6 +35,8 @@
     "sequelize": "^6.37.4"
   },
   "devDependencies": {
-    "nodemon": "^3.1.0"
+    "jest": "^29.7.0",
+    "nodemon": "^3.1.0",
+    "supertest": "^6.3.4"
   }
 }
