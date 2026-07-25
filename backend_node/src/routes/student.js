@@ -91,6 +91,7 @@ router.delete('/devices/:id/', revokeDevice);
 
 router.get('/2fa/setup/', get2FASetup);
 router.post('/2fa/setup/', enable2FA);
+router.post('/2fa/disable/', disable2FA);
 
 router.get('/report-cards/', getReportCards);
 router.get('/report-cards/:id/download/', downloadReportCard);

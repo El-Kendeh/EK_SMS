@@ -77,10 +77,12 @@ export const SECURITY_CONFIG = {
   CSP: {
     'default-src': ["'self'"],
     'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'blob:', 'https://embed.tawk.to', 'https://*.tawk.to', 'https://vercel.live', 'chrome-extension:'],
-    'style-src': ["'self'", "'unsafe-inline'"],
-    'img-src': ["'self'", 'data:', 'blob:', 'https:'],
+    'style-src': ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://*.tawk.to'],
+    'img-src': ["'self'", 'data:', 'blob:', 'https:', 'http://localhost:8000', 'http://localhost:3000'],
     'font-src': ["'self'", "https://fonts.gstatic.com", "https://*.tawk.to", "https://vercel.live"],
-    'connect-src': ["'self'", API_ORIGIN, 'https://backend.pruhsms.africa', 'https://pruhsms.africa','https://*.vercel.app','wss://*.pusher.com', 'wss://ws-us3.pusher.com', 'https://*.pusher.com', 'blob:', 'https://api.bigdatacloud.net', 'https://ipapi.co', 'https://countriesnow.space'],
+    'media-src': ["'self'", 'data:', 'blob:'],
+    'connect-src': ["'self'", API_ORIGIN, 'http://localhost:8000', 'http://localhost:5000', 'http://localhost:3000', 'http://localhost:3001', 'http://web:8000', 'https://ek-sms-backend.onrender.com', 'https://backend.pruhsms.africa', 'https://pruhsms.africa','https://*.vercel.app','wss://*.pusher.com', 'wss://ws-us3.pusher.com', 'https://*.pusher.com', 'blob:', 'https://api.bigdatacloud.net', 'https://ipapi.co', 'https://countriesnow.space', 'https://*.tawk.to', 'wss://*.tawk.to', 'https://www.google-analytics.com'],
+    'frame-src': ['https://tawk.to', 'https://*.tawk.to', 'https://vercel.live'],
     'frame-ancestors': ["'none'"],
     'base-uri': ["'self'"],
     'form-action': ["'self'"],
@@ -98,7 +100,7 @@ export const SECURITY_CONFIG = {
   // Security Headers for Production
   PRODUCTION_HEADERS: {
     'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
-    'Content-Security-Policy': `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://embed.tawk.to https://*.tawk.to https://vercel.live chrome-extension:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' https://fonts.gstatic.com https://*.tawk.to https://vercel.live; connect-src 'self' ${API_ORIGIN} https://backend.pruhsms.africa https://pruhsms.africa https://countriesnow.space https://api.bigdatacloud.net https://ipapi.co https://*.vercel.app blob: wss://*.pusher.com wss://ws-us3.pusher.com https://*.pusher.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'`,
+    'Content-Security-Policy': `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://embed.tawk.to https://*.tawk.to https://vercel.live chrome-extension:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.tawk.to; img-src 'self' data: blob: https: http://localhost:8000 http://localhost:3000; font-src 'self' https://fonts.gstatic.com https://*.tawk.to https://vercel.live; media-src 'self' data: blob:; connect-src 'self' http://localhost:8000 http://localhost:5000 http://localhost:3000 http://localhost:3001 http://web:8000 https://ek-sms-backend.onrender.com https://backend.pruhsms.africa https://pruhsms.africa https://countriesnow.space https://api.bigdatacloud.net https://ipapi.co https://*.tawk.to wss://*.tawk.to https://vercel.live https://*.vercel.app wss://*.pusher.com wss://ws-us3.pusher.com https://*.pusher.com https://www.google-analytics.com; frame-src https://tawk.to https://*.tawk.to https://vercel.live; frame-ancestors 'none'; base-uri 'self'; form-action 'self'`,
     'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
   },
 };
