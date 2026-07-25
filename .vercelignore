@@ -1,14 +1,5 @@
 node_modules
 build
-eksms/__pycache__
-eksms/eksms/__pycache__
-eksms/eksms_core/__pycache__
-eksms/staticfiles
-eksms/db.sqlite3
-eksms/media
-venv
-*.pyc
-*.pyo
 
 # ── Environment files — never upload to the deploy/build env ───────────
 .env
