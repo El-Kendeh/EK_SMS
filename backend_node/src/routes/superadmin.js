@@ -7,6 +7,7 @@ const authenticateToken = require('../middleware/auth');
 const schoolScope = require('../middleware/schoolScope');
 const requireRole = require('../middleware/requireRole');
 const requireActiveAccount = require('../middleware/requireActiveAccount');
+const { ROLE_GATES } = require('../config/permissions');
 
 const {
   getAllSchools,
@@ -105,7 +106,7 @@ router.post('/change-password/', data.postChangePassword);
 
 /* ── Superadmin-only routes ── */
 const sa = express.Router();
-sa.use(requireRole(['superadmin']));
+sa.use(requireRole(ROLE_GATES.SUPERADMIN_ONLY));
 
 /* Operator-only platform reads/writes. These were previously mounted on the
    shared router above, which let ANY authenticated user (incl. an impersonating
@@ -231,7 +232,7 @@ sa.post('/users/', data.postUsers);
 // Phase 1: re-check approval/is_active per request for the shared school routes.
 // Superadmin bypasses requireActiveAccount; a suspended/rejected school_admin is
 // blocked immediately even with a still-valid token.
-const sla = [requireActiveAccount, requireRole(['superadmin', 'school_admin'])];
+const sla = [requireActiveAccount, requireRole(ROLE_GATES.SCHOOL_WRITE)];
 
 /* Classes CRUD */
 router.get('/classes/', sla, data.getSuperClasses);

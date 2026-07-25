@@ -7,6 +7,7 @@ const authenticateToken = require('../middleware/auth');
 const schoolScope = require('../middleware/schoolScope');
 const requireRole = require('../middleware/requireRole');
 const requireActiveAccount = require('../middleware/requireActiveAccount');
+const { ROLE_GATES } = require('../config/permissions');
 const {
   // School info
   getSchoolInfo, updateSchoolInfo, checkSchoolName,
@@ -150,7 +151,7 @@ router.get('/check-school-name/', checkSchoolName);
 const MUTATING_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'];
 function schoolWriteGuard(req, res, next) {
   if (MUTATING_METHODS.includes(req.method)) {
-    return requireRole(['school_admin', 'superadmin'])(req, res, next);
+    return requireRole(ROLE_GATES.SCHOOL_WRITE)(req, res, next);
   }
   return next();
 }
@@ -162,8 +163,8 @@ const applyAuth = [authenticateToken, requireActiveAccount, schoolScope, schoolW
 // schoolWriteGuard only gates writes, so sensitive LISTINGS were readable by any
 // authenticated tenant user (student/parent/teacher). These endpoints are only ever
 // called by the school-admin / leadership UIs, so gate their reads explicitly.
-const LEADERSHIP_READ = requireRole(['superadmin', 'school_admin', 'principal']);
-const FINANCE_READ = requireRole(['superadmin', 'school_admin', 'principal', 'bursar']);
+const LEADERSHIP_READ = requireRole(ROLE_GATES.LEADERSHIP_READ);
+const FINANCE_READ = requireRole(ROLE_GATES.FINANCE_READ);
 
 // ==================== SCHOOL INFO ====================
 router.get('/school/info/', applyAuth, getSchoolInfo);

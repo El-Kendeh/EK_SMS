@@ -3,14 +3,12 @@ const router = express.Router();
 const authenticateToken = require('../middleware/auth');
 const requireRole = require('../middleware/requireRole');
 const requireActiveAccount = require('../middleware/requireActiveAccount');
+const { ROLES } = require('../config/permissions');
 const parent = require('../controllers/parentController');
 
 router.use(authenticateToken);
-// Re-check is_active on every request (tokens outlive suspensions).
 router.use(requireActiveAccount);
-// Every handler scopes data by the parent's own id — no other role has any
-// business on this router.
-router.use(requireRole(['parent']));
+router.use(requireRole([ROLES.PARENT]));
 
 router.get('/children/', parent.getChildren);
 

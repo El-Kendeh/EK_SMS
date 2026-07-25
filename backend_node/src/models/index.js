@@ -1,97 +1,12 @@
-/**
- * Side-effect imports so `sequelize.sync({ alter: true })` creates only the minimal schema.
- */
-require('./Role');
-require('./User');
-require('./School');
-require('./SchoolAdmin');
-require('./Teacher');
-require('./Student');
-require('./Class');
-require('./Subject');
-require('./ClassSubject');
-require('./ClassAssistantTeacher');
-require('./TimetableSlot');
-require('./AcademicYear');
-require('./Term');
-require('./Grade');
-require('./GradeEvent');
-require('./GradeReceipt');
-require('./ReportCardReceipt');
-require('./Attendance');
-require('./GradingScheme');
-require('./Room');
-require('./Exam');
-require('./ExamResult');
-require('./Notification');
-require('./OTP');
-require('./SyllabusTopic');
-require('./SecurityAuditLog');
-require('./ForensicEvent');
-require('./BroadcastAlert');
-require('./SystemOpsAlert');
-require('./SuperadminSettings');
-require('./FeeCategory');
-require('./Fee');
-require('./Payment');
-require('./Expense');
+const fs = require('fs');
+const path = require('path');
 
-// New models for full dashboard functionality
-require('./Message');
-require('./Assignment');
-require('./AssignmentSubmission');
-require('./LearningResource');
-require('./OfficeHour');
-require('./OfficeHourBooking');
-require('./BehaviourIncident');
-require('./LessonPlan');
-require('./Goal');
-require('./StudyGroup');
-require('./StudyGroupMember');
-require('./ConferenceSlot');
-require('./PickupPerson');
-require('./PermissionSlip');
-require('./PermissionSlipSignature');
-require('./Document');
-require('./TranscriptRequest');
-require('./StudyPlan');
-require('./ResourceVisit');
-require('./DonationCampaign');
-require('./Donation');
-require('./Acknowledgment');
-require('./CoGuardian');
-require('./ChannelPreference');
-require('./ModificationRequest');
-require('./WhistleblowerReport');
-require('./WhistleblowerCategory');
-require('./LiveClass');
-require('./VirtualMeeting');
-require('./AIDocumentCapture');
-require('./PeerReview');
-require('./FeedbackTemplate');
-require('./SpotlightStudent');
-require('./ExamDuty');
+const modelFiles = fs.readdirSync(__dirname)
+  .filter(f => f.endsWith('.js') && f !== 'index.js' && f !== 'associations.js')
+  .sort();
 
-require('./SystemAcademicYear');
-require('./SystemTerm');
-require('./InstitutionType');
-require('./CapacityCategory');
-require('./SchoolCapacity');
-require('./Country');
-require('./Region');
-require('./City');
-require('./SchoolType');
-require('./SyllabusType');
-require('./ClassSubtype');
-require('./AcademicSystem');
-require('./GradingSystem');
-require('./LessonPlanType');
-require('./Principal');
-require('./Bursar');
-require('./Parent');
-require('./StudentParent');
-require('./CoreBursar');
-require('./CorePrincipal');
+for (const file of modelFiles) {
+  require(path.join(__dirname, file));
+}
 
-// Load all cross-model associations
 require('./associations');

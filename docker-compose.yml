@@ -1,32 +1,22 @@
 services:
-  web:
+  backend:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        BUILDKIT_INLINE_CACHE: 1
     container_name: ek-sms-backend
     ports:
-      - "8000:8000"
+      - "3000:3000"
     environment:
-      DEBUG: 'True'
-      SECRET_KEY: django-insecure-dev-key-for-development-only
-      ALLOWED_HOSTS: localhost,127.0.0.1,backend.pruhsms.africa,pruhsms.africa
-      CORS_ALLOWED_ORIGINS: https://backend.pruhsms.africa,https://pruhsms.africa,https://www.pruhsms.africa,https://ek-sms-one.vercel.app
-      SECURE_SSL_REDIRECT: 'True'
-      SESSION_COOKIE_SECURE: 'True'
-      CSRF_COOKIE_SECURE: 'True'
-      SECURE_HSTS_SECONDS: '31536000'
-      DB_ENGINE: sqlite
-    volumes:
-      - ./eksms:/app/eksms
+      NODE_ENV: development
+      DB_HOST: mysql
+      DB_USER: root
+      DB_PASSWORD: root
+      DB_NAME: pruh_db
+      JWT_SECRET: dev-secret-change-in-production
+    depends_on:
+      mysql:
+        condition: service_healthy
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
     networks:
       - ek-sms-network
 
@@ -34,28 +24,40 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.frontend
-      args:
-        BUILDKIT_INLINE_CACHE: 1
-        NODE_OPTIONS: "--max_old_space_size=2048"
     container_name: ek-sms-frontend
     ports:
-      - "3000:3000"
+      - "3001:3000"
     environment:
-      REACT_APP_API_URL: https://backend.pruhsms.africa
-      REACT_APP_API_HOST: http://web:8000
-      NODE_ENV: production
+      REACT_APP_API_URL: http://localhost:3000
+      NODE_ENV: development
     depends_on:
-      - web
+      - backend
     restart: unless-stopped
+    networks:
+      - ek-sms-network
+
+  mysql:
+    image: mysql:8.0
+    container_name: ek-sms-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: pruh_db
+    volumes:
+      - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
-      interval: 30s
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
       timeout: 5s
-      retries: 3
-      start_period: 30s
+      retries: 5
+    restart: unless-stopped
     networks:
       - ek-sms-network
 
 networks:
   ek-sms-network:
     driver: bridge
+
+volumes:
+  mysql_data:
